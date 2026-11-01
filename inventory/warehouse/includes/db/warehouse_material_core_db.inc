@@ -1,6 +1,17 @@
 <?php
 /** Standalone material demand uses the registered core, never local approval. */
 require_once __DIR__.'/../../../../dimensions/includes/dimension_reference_writer_fence.inc';
+require_once __DIR__.'/warehouse_review_lock_db.inc';
+
+/** Serialize direct core actions before locking one member of the Material family. */
+function lock_material_core_action($draft, $actor)
+{
+    return material_core_context() && isset($draft['trans_type'], $actor['user_id'], $actor['role_id'])
+        && (int)$draft['trans_type'] === ST_WH_MATERIAL_REQUEST
+        && (int)$actor['user_id'] === (int)$_SESSION['wa_current_user']->user
+        && (int)$actor['role_id'] === (int)$_SESSION['wa_current_user']->access
+        && lock_warehouse_review_family(ST_WH_MATERIAL_REQUEST);
+}
 
 /** Bind native admission to the current actor, role, company and connection. */
 function material_core_context($portable = false)

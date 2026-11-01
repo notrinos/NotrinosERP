@@ -72,6 +72,7 @@ class ApprovalWorkflow {
 	 *   'edit_url'       => string   URL for editing the draft
 	 *   'number_context' => array    Context for reference number generation (optional)
 	 *   'action_validator' => callable Optional source validation before actions/automatic approval
+	 *   'action_locker' => callable Optional family locks before the selected draft lock; grants no authority
 	 *   'action_completion_validator' => callable Optional final approve/reject/cancel verification
 	 *   'submitted'      => callable Optional atomic business custody after draft submission
 	 *   'independent_approval' => bool Require a checker; disallow direct/self/automatic approval
@@ -90,6 +91,7 @@ class ApprovalWorkflow {
 			'edit_url'       => '',
 			'number_context' => array(),
 			'action_validator' => null,
+			'action_locker' => null,
 			'action_completion_validator' => null,
 			'independent_approval' => false,
 			'submitted'      => null,
@@ -410,8 +412,12 @@ class ApprovalWorkflow {
 	 */
 	public function approve($draft_id, $comments = '', $edited = false)
 	{
+		// Probe before opening a transaction: type discovery must not start an
+		// earlier repeatable-read snapshot while waiting for the selected draft.
+		$probe = get_approval_draft($draft_id);
 		begin_transaction();
-		$draft = get_approval_draft_for_update($draft_id);
+		$draft = $this->lockRegisteredActionFamily($probe) ? get_approval_draft_for_update($draft_id) : false;
+		if ($draft && (int)$draft['trans_type'] !== (int)$probe['trans_type']) $draft = false;
 
 		if (!$draft) {
 			cancel_transaction();
@@ -614,8 +620,12 @@ class ApprovalWorkflow {
 	 */
 	public function reject($draft_id, $comments)
 	{
+		// Probe before opening a transaction: type discovery must not start an
+		// earlier repeatable-read snapshot while waiting for the selected draft.
+		$probe = get_approval_draft($draft_id);
 		begin_transaction();
-		$draft = get_approval_draft_for_update($draft_id);
+		$draft = $this->lockRegisteredActionFamily($probe) ? get_approval_draft_for_update($draft_id) : false;
+		if ($draft && (int)$draft['trans_type'] !== (int)$probe['trans_type']) $draft = false;
 
 		if (!$draft) {
 			cancel_transaction();
@@ -701,8 +711,12 @@ class ApprovalWorkflow {
 	 */
 	public function cancel($draft_id, $comments = '')
 	{
+		// Probe before opening a transaction: type discovery must not start an
+		// earlier repeatable-read snapshot while waiting for the selected draft.
+		$probe = get_approval_draft($draft_id);
 		begin_transaction();
-		$draft = get_approval_draft_for_update($draft_id);
+		$draft = $this->lockRegisteredActionFamily($probe) ? get_approval_draft_for_update($draft_id) : false;
+		if ($draft && (int)$draft['trans_type'] !== (int)$probe['trans_type']) $draft = false;
 
 		if (!$draft) {
 			cancel_transaction();
@@ -1244,6 +1258,28 @@ class ApprovalWorkflow {
 			$comments
 		);
 	}
+
+    /**
+     * Acquire opted-in family locks before a selected draft can invert their order.
+     * The caller's unlocked probe selects a registration only. Each action then
+     * locks the current draft and rejects type drift; validators own authority.
+     * Missing, failed or throwing lockers fail closed in the caller transaction.
+     */
+    private function lockRegisteredActionFamily($probe)
+    {
+        if (!$probe) return false;
+        $config = self::getTypeConfig((int)$probe['trans_type']);
+        if ($config && !empty($config['action_locker'])) {
+            if (empty($GLOBALS['transaction_level'])) return false;
+            if (!is_callable($config['action_locker'])) return false;
+            try {
+                if (call_user_func($config['action_locker'], $probe,
+                    array('user_id'=>$this->user_id, 'role_id'=>$this->role_id)) !== true) return false;
+            } catch (Exception $exception) { return false;
+            } catch (Throwable $exception) { return false; }
+        }
+        return true;
+    }
 
     /** Verify opted-in actions after all core writes, before relinquishing SQL ownership. */
     private function validateRegisteredCompletion($outcome, $draft, $comments)

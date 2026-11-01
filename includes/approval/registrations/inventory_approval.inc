@@ -41,6 +41,7 @@ ApprovalWorkflow::registerTransactionType(ST_LOCTRANSFER, array(
 ));
 
 ApprovalWorkflow::registerTransactionType(ST_WH_MATERIAL_REQUEST, array(
+	'action_locker' => 'lock_material_core_action',
 	'independent_approval' => true,
 	'action_validator' => 'validate_material_core_action',
 	'action_completion_validator' => 'verify_material_core_completion',
@@ -55,6 +56,7 @@ ApprovalWorkflow::registerTransactionType(ST_WH_MATERIAL_REQUEST, array(
 ));
 
 ApprovalWorkflow::registerTransactionType(ST_WH_TRANSFER_ORDER, array(
+    'action_locker' => 'lock_transfer_core_action',
     'independent_approval' => true,
     'action_validator' => 'validate_transfer_core_action',
     'action_completion_validator' => 'verify_transfer_core_completion',

@@ -1,6 +1,18 @@
 <?php
 /** Transfer review uses the registered core, never local approval. */
 require_once __DIR__.'/../../../../dimensions/includes/dimension_reference_writer_fence.inc';
+require_once __DIR__.'/warehouse_review_lock_db.inc';
+
+/** Material history precedes Transfer history for native and direct core commands. */
+function lock_transfer_core_action($draft, $actor)
+{
+    return transfer_core_context() && isset($draft['trans_type'], $actor['user_id'], $actor['role_id'])
+        && (int)$draft['trans_type'] === ST_WH_TRANSFER_ORDER
+        && (int)$actor['user_id'] === (int)$_SESSION['wa_current_user']->user
+        && (int)$actor['role_id'] === (int)$_SESSION['wa_current_user']->access
+        && lock_warehouse_review_family(ST_WH_MATERIAL_REQUEST)
+        && lock_warehouse_review_family(ST_WH_TRANSFER_ORDER);
+}
 
 /** Bind native admission to the current actor, role, company and connection. */
 function transfer_core_context($portable = false)
@@ -56,6 +68,9 @@ function release_transfer_core_permit()
 /** All family histories are decoded by the core; unknown custody is not absent. */
 function transfer_core_history($identity)
 {
+    // Retain legacy read-only callers outside a transaction. Authoritative
+    // commands own a transaction and must take Material history first.
+    if (!empty($GLOBALS['transaction_level']) && !lock_warehouse_review_family(ST_WH_MATERIAL_REQUEST)) return false;
     $drafts = transfer_core_rows('SELECT * FROM '.TB_PREF.'approval_drafts WHERE trans_type='
         .ST_WH_TRANSFER_ORDER.' ORDER BY id FOR UPDATE');
     if ($drafts === false) return false;

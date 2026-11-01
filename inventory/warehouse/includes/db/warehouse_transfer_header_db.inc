@@ -46,6 +46,7 @@ function transfer_header_history_editable($history, $maker)
 /** Lock complete current native numbering and raw family review/reservation state. */
 function transfer_header_creation_state()
 {
+    if (!lock_warehouse_review_family(ST_WH_MATERIAL_REQUEST)) return false;
     $state = array();
     foreach (array(
         'SELECT * FROM '.TB_PREF.'approval_drafts WHERE trans_type='.ST_WH_TRANSFER_ORDER.' ORDER BY id FOR UPDATE',
