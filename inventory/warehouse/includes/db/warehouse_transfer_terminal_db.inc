@@ -13,7 +13,21 @@ function transfer_approved_custody($identity)
         || !($identity = dimension_writer_reference_id($identity))) return false;
     $history = transfer_core_history($identity);
     $source = transfer_core_source($identity, 'approved', false, true);
-    if (!$history || !$source || empty($source['header']['approved_by'])
+    return transfer_approved_history_custody($identity, $source, $history);
+}
+
+/**
+ * Internal receipt comparison for an already locked source/history projection.
+ * Callers must load current rows or reconstruct only receipt-bound transitions;
+ * this comparison alone grants no command admission or ordinary writer authority.
+ */
+function transfer_approved_history_custody($identity, $source, $history)
+{
+    if (!transfer_core_context() || empty($GLOBALS['transaction_level'])
+        || !($identity = dimension_writer_reference_id($identity))) return false;
+    if (!$history || !$source || !isset($source['header']['transfer_id'], $source['header']['status'])
+        || (int)$source['header']['transfer_id'] !== $identity || $source['header']['status'] !== 'approved'
+        || empty($source['header']['approved_by'])
         || (int)$source['header']['approved_by'] === (int)$source['header']['requested_by']) return false;
     $approved = array(); $approval = get_approval_workflow_service();
     foreach ($history['drafts'] as $draft) {
@@ -46,6 +60,55 @@ function transfer_approved_custody($identity)
         'source_sha256'=>transfer_core_source_fingerprint($source));
     if ($receipt !== $expected) return false;
     return array('source'=>$source, 'history'=>$history, 'draft'=>$draft);
+}
+
+/**
+ * Verify a current linked cancellation without mutating or normalizing history.
+ * v2 preserves the overwritten approved timestamp; v1 cannot be reconstructed
+ * safely and remains readable as raw history only. The owning transaction keeps
+ * Material-before-Transfer locks until its caller finishes. No release, edit,
+ * approval, replacement or financial fulfillment authority follows this read.
+ */
+function transfer_cancelled_linked_custody($transfer_id)
+{
+    $identity = dimension_writer_reference_id($transfer_id);
+    if (!$identity || !transfer_core_context() || empty($GLOBALS['transaction_level'])) return false;
+    $history = transfer_core_history($identity);
+    if (!$history || !$history['actions']) return false;
+    $prior = $history; $action = array_pop($prior['actions']);
+    $approval = get_approval_workflow_service();
+    $receipt = $action['draft_data_snapshot'] === null ? false
+        : $approval->decodeStoredDraftData($action['draft_data_snapshot']);
+    if (!is_array($receipt) || array_keys($receipt) !== array('schema','transfer_id','draft_id',
+        'company_sha256','approved_source_sha256','source_sha256','approved_updated_at','material_origin')
+        || $receipt['schema'] !== 'transfer-source-cancel-v2'
+        || $receipt['transfer_id'] !== $identity
+        || $receipt['company_sha256'] !== transfer_core_context(true)
+        || ($receipt['approved_updated_at'] !== null && !is_string($receipt['approved_updated_at']))
+        || $action['action_type'] !== 'source_cancel') return false;
+    $origin = transfer_review_material_origin($identity);
+    if (!is_array($origin) || $origin !== $receipt['material_origin']) return false;
+    $headers = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_orders WHERE transfer_id='.$identity.' FOR UPDATE');
+    $lines = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_order_lines WHERE transfer_id='.$identity.' ORDER BY line_id FOR UPDATE');
+    $clock = transfer_core_rows('SELECT NOW() AS now_');
+    if (!$headers || count($headers) !== 1 || !$lines || !$clock
+        || $headers[0]['status'] !== 'cancelled' || !$headers[0]['updated_at']
+        || !$action['action_date'] || $action['action_date'] < $headers[0]['updated_at']
+        || $action['action_date'] > $clock[0]['now_'] || $action['ip_address'] === null
+        || (int)$action['user_id'] !== (int)$headers[0]['requested_by']) return false;
+    $source = array('header'=>$headers[0], 'lines'=>$lines);
+    $approved = $source;
+    $approved['header']['status'] = 'approved';
+    $approved['header']['updated_at'] = $receipt['approved_updated_at'];
+    $custody = transfer_approved_history_custody($identity, $approved, $prior);
+    if (!$custody || $receipt['draft_id'] !== (int)$custody['draft']['id']
+        || (int)$action['draft_id'] !== (int)$custody['draft']['id']
+        || (int)$action['level'] !== (int)$custody['draft']['current_level']
+        || $action['action_date'] < $custody['draft']['completed_date']
+        || $receipt['approved_source_sha256'] !== transfer_core_source_fingerprint($approved)
+        || $receipt['source_sha256'] !== transfer_core_source_fingerprint($source)) return false;
+    return array('source'=>$source, 'approved'=>$custody, 'history'=>$history,
+        'action'=>$action, 'receipt'=>$receipt, 'material_origin'=>$origin);
 }
 
 /** Unreviewed, original-maker Draft cancellation with complete source/history custody. */
@@ -158,6 +221,7 @@ function cancel_native_transfer_approved($transfer_id, $comments = '')
             || $new['action_date'] > $literal[0]['now_']
             || transfer_cancelled_source_matches($identity, $custody['source'], $clock[0]['now_']) !== $source
             || transfer_review_material_origin($identity) !== $origin
+            || ($origin !== null && !transfer_cancelled_linked_custody($identity))
             || transfer_core_context() !== $context || !commit_transaction()) { cancel_transaction(); return false; }
         return true;
     } catch (Exception $exception) { cancel_transaction(); return false;
