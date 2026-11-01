@@ -12,7 +12,7 @@ function transfer_approved_custody($identity)
     if (!transfer_core_context() || empty($GLOBALS['transaction_level'])
         || !($identity = dimension_writer_reference_id($identity))) return false;
     $history = transfer_core_history($identity);
-    $source = transfer_core_source($identity, 'approved');
+    $source = transfer_core_source($identity, 'approved', false, true);
     if (!$history || !$source || empty($source['header']['approved_by'])
         || (int)$source['header']['approved_by'] === (int)$source['header']['requested_by']) return false;
     $approved = array(); $approval = get_approval_workflow_service();
@@ -28,7 +28,8 @@ function transfer_approved_custody($identity)
     }
     if (count($approved) !== 1) return false;
     $draft = $approved[0]; $data = $approval->decodeStoredDraftData($draft['draft_data']);
-    if (!isset($data['transfer_id']) || (int)$data['transfer_id'] !== $identity
+    if (!transfer_review_origin_matches($identity, $data)
+        || !isset($data['transfer_id']) || (int)$data['transfer_id'] !== $identity
         || (int)$draft['approved_trans_no'] !== $identity || !$draft['completed_date']) return false;
     $actions = $history['actions']; $last = array_pop($actions);
     if (!$last || (int)$last['draft_id'] !== (int)$draft['id'] || $last['action_type'] !== 'approve'

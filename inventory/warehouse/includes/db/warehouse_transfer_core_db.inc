@@ -87,18 +87,73 @@ function transfer_core_history($identity)
     return $actions === false ? false : array('drafts'=>$matches, 'actions'=>$actions);
 }
 
+/**
+ * Bind a current v2 Material origin for independent Transfer core review only.
+ * Null means an unlinked source; false means unknown or inadmissible custody.
+ * This minimized binding grants no edit, shipping, cancellation or GL authority.
+ */
+function transfer_review_material_origin($identity)
+{
+    if (!transfer_core_context() || empty($GLOBALS['transaction_level'])
+        || !($identity = dimension_writer_reference_id($identity))) return false;
+    $links = transfer_core_rows('SELECT request_id FROM '.TB_PREF.'wh_material_requests WHERE linked_doc_type='
+        .ST_LOCTRANSFER.' AND linked_doc_no='.$identity.' ORDER BY request_id FOR UPDATE');
+    if ($links === false) return false;
+    if (!$links) return null;
+    if (count($links) !== 1) return false;
+    require_once __DIR__.'/warehouse_material_transfer_link_db.inc';
+    $origin = material_transfer_origin_custody($links[0]['request_id']);
+    // v1 cannot reconstruct the submitted/terminal source. Preserve it for
+    // historical reads; do not rewrite its immutable receipt to enable review.
+    if (!$origin || $origin['receipt']['schema'] !== 'material-transfer-link-v2'
+        || (int)$origin['receipt']['transfer_id'] !== $identity) return false;
+    return array('schema'=>'transfer-material-origin-v1',
+        'request_id'=>(int)$origin['receipt']['request_id'],
+        'receipt_sha256'=>hash('sha256', serialize($origin['receipt'])),
+        'material_source_sha256'=>material_core_source_fingerprint($origin['material']),
+        'material_history_sha256'=>material_core_source_fingerprint(array('header'=>array(),
+            'lines'=>array_merge($origin['material_history']['drafts'], $origin['material_history']['actions']))),
+        'original_transfer_sha256'=>transfer_core_source_fingerprint($origin['original_transfer']));
+}
+
+/** Exact current origin must match the stored review; standalone legacy stays compatible. */
+function transfer_review_origin_matches($identity, $data)
+{
+    $origin = transfer_review_material_origin($identity);
+    if ($origin === false || !is_array($data)) return false;
+    return $origin === null ? !array_key_exists('transfer_material_origin', $data)
+        : isset($data['transfer_material_origin']) && $data['transfer_material_origin'] === $origin;
+}
+
+/** Hold review-family custody while unsupported linked stock/GL fulfillment denies. */
+function transfer_fulfillment_origin_allowed($identity)
+{
+    if (!transfer_core_context() || empty($GLOBALS['transaction_level'])
+        || !($identity = dimension_writer_reference_id($identity))
+        || !lock_warehouse_review_family(ST_WH_MATERIAL_REQUEST)
+        || !lock_warehouse_review_family(ST_WH_TRANSFER_ORDER)) return false;
+    $links = transfer_core_rows('SELECT request_id FROM '.TB_PREF.'wh_material_requests WHERE linked_doc_type='
+        .ST_LOCTRANSFER.' AND linked_doc_no='.$identity.' ORDER BY request_id FOR UPDATE');
+    return $links === array();
+}
+
 /** Lock the complete unshipped transfer header and raw children. */
-function transfer_core_source($identity, $status, $allow_empty = false)
+function transfer_core_source($identity, $status, $allow_empty = false, $core_review = false)
 {
     $headers = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_orders WHERE transfer_id='.$identity.' FOR UPDATE');
     if (!$headers || count($headers) !== 1 || $headers[0]['status'] !== $status
         || !empty($headers[0]['shipped_by']) || !empty($headers[0]['received_by'])
         || $headers[0]['actual_ship_date'] !== null || $headers[0]['actual_recv_date'] !== null) return false;
-    // Material conversion must first establish its own attributable downstream
-    // command. An existing numeric link alone is not that approval authority.
+    // Ordinary writers remain standalone-only. Core review separately verifies
+    // the immutable v2 origin; a numeric link is never approval authority.
     $links = transfer_core_rows('SELECT request_id FROM '.TB_PREF.'wh_material_requests WHERE linked_doc_type='
         .ST_LOCTRANSFER.' AND linked_doc_no='.$identity.' ORDER BY request_id FOR UPDATE');
-    if ($links === false || $links) return false;
+    if ($links === false || ($links && (!$core_review
+        || !is_array(transfer_review_material_origin($identity))))) return false;
+    // Provenance reconstructs the original fields; it does not endorse an
+    // unreviewed current approver. Only the core terminal command authors one.
+    if ($links && $status !== 'approved'
+        && ($headers[0]['approved_by'] !== null || $headers[0]['approval_date'] !== null)) return false;
     $lines = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_order_lines WHERE transfer_id='.$identity.' ORDER BY line_id FOR UPDATE');
     if ($lines === false || (!$allow_empty && !$lines)) return false;
     foreach ($lines as $line)
@@ -197,7 +252,8 @@ function validate_transfer_core_action($action, $data, $draft, $actor, $comments
         $permit = transfer_core_permit('take');
         return $permit && $permit['action'] === 'submit' && $permit['context'] === $context
             && $permit['data'] === $data && $permit['actor'] === $actor
-            && transfer_core_source((int)$data['transfer_id'], 'submitted') === $permit['source'];
+            && transfer_review_origin_matches((int)$data['transfer_id'], $data)
+            && transfer_core_source((int)$data['transfer_id'], 'submitted', false, true) === $permit['source'];
     }
     if (!in_array($action, array('approve','reject','cancel'), true) || !is_string($comments)
         || strpos($comments, "\0") !== false || !is_array($data) || !is_array($draft)
@@ -205,8 +261,9 @@ function validate_transfer_core_action($action, $data, $draft, $actor, $comments
         || !($identity = dimension_writer_reference_id($data['transfer_id']))
         || $data['transfer_company_sha256'] !== transfer_core_context(true)) return false;
     $history = transfer_core_history($identity);
-    $source = transfer_core_source($identity, 'submitted');
-    if (!$history || !$source || transfer_core_source_fingerprint($source) !== $data['transfer_source_sha256']
+    $source = transfer_core_source($identity, 'submitted', false, true);
+    if (!$history || !$source || !transfer_review_origin_matches($identity, $data)
+        || transfer_core_source_fingerprint($source) !== $data['transfer_source_sha256']
         || !transfer_core_review_matches($data, $source, $draft)
         || !($dependencies = transfer_core_dependencies($source))) return false;
     $reference = $source['header']['reference'] === null || $source['header']['reference'] === ''
@@ -260,11 +317,11 @@ function execute_transfer_core_transition($action, $data, $draft_id)
     $identity = (int)$data['transfer_id'];
     if (!$draft || (int)$draft['status'] !== $terminal
         || get_approval_workflow_service()->decodeStoredDraftData($draft['draft_data']) !== $data
-        || transfer_core_source($identity, 'submitted') !== $permit['source']) return false;
+        || transfer_core_source($identity, 'submitted', false, true) !== $permit['source']) return false;
     if (!db_query("UPDATE ".TB_PREF."wh_transfer_orders SET status=".db_escape($status).",updated_at=NOW()"
         .($action === 'approve' ? ',approval_date=NOW(),approved_by='.(int)$permit['actor']['user_id'] : '')
         .' WHERE transfer_id='.$identity." AND status='submitted'") || db_num_affected_rows() !== 1) return false;
-    $current = transfer_core_source($identity, $status);
+    $current = transfer_core_source($identity, $status, false, true);
     if (!$current) return false;
     $expected = $permit['source']; $expected['header']['status'] = $status;
     $expected['header']['updated_at'] = $current['header']['updated_at'];
@@ -288,8 +345,9 @@ function verify_transfer_core_completion($outcome, $draft, $actor, $comments)
     $terminal = in_array($outcome, array('approved','rejected','cancelled'), true);
     if ($terminal !== $permit['executed']) return false;
     $source = $terminal ? $permit['completed_source'] : $permit['source'];
-    if (transfer_core_source((int)$permit['data']['transfer_id'], $source['header']['status']) !== $source
-        || transfer_core_dependencies($source) !== $permit['dependencies']) return false;
+    if (transfer_core_source((int)$permit['data']['transfer_id'], $source['header']['status'], false, true) !== $source
+        || transfer_core_dependencies($source) !== $permit['dependencies']
+        || !transfer_review_origin_matches((int)$permit['data']['transfer_id'], $permit['data'])) return false;
     $history = transfer_core_history((int)$permit['data']['transfer_id']);
     if (!$history || count($history['drafts']) !== count($permit['history']['drafts'])
         || count($history['actions']) !== count($permit['history']['actions']) + 1) return false;
@@ -337,11 +395,12 @@ function verify_transfer_core_completion($outcome, $draft, $actor, $comments)
         $history['actions'][] = $new;
         $expected_history = transfer_core_history((int)$permit['data']['transfer_id']);
         if ($expected_history !== $history
-            || transfer_core_source((int)$permit['data']['transfer_id'], 'approved') !== $source
+            || transfer_core_source((int)$permit['data']['transfer_id'], 'approved', false, true) !== $source
             || transfer_core_rows('SELECT * FROM '.TB_PREF.'voided WHERE type='.ST_WH_TRANSFER_ORDER
                 .' AND id='.(int)$permit['draft']['reserved_trans_no'].' FOR UPDATE') !== $expected
             || transfer_core_dependencies($source) !== $permit['dependencies']
-            || transfer_core_context() !== $permit['context']) return false;
+            || transfer_core_context() !== $permit['context']
+            || !transfer_review_origin_matches((int)$permit['data']['transfer_id'], $permit['data'])) return false;
     }
     return true;
 }
@@ -357,7 +416,7 @@ function submit_native_transfer_to_core($transfer_id)
             .db_escape(isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '').' AS ip');
         if (!$audit) { cancel_transaction(); return false; }
         $history = transfer_core_history($identity);
-        $source = transfer_core_source($identity, 'draft');
+        $source = transfer_core_source($identity, 'draft', false, true);
         if (!$source || $history === false || (int)$source['header']['requested_by'] !== (int)$_SESSION['wa_current_user']->user) { cancel_transaction(); return false; }
         foreach ($history['drafts'] as $draft) {
             $prior_workflow = transfer_core_rows('SELECT trans_type FROM '.TB_PREF.'approval_workflows WHERE id='.(int)$draft['workflow_id'].' FOR UPDATE');
@@ -367,11 +426,12 @@ function submit_native_transfer_to_core($transfer_id)
         }
         $workflow = get_approval_workflow_by_type(ST_WH_TRANSFER_ORDER, true);
         if (!$workflow || empty($workflow['is_active']) || !workflow_has_active_levels($workflow['id'], true)) { cancel_transaction(); return false; }
+        $origin_before = transfer_review_material_origin($identity);
         $dependencies = transfer_core_dependencies($source);
-        if (!$dependencies) { cancel_transaction(); return false; }
+        if ($origin_before === false || !$dependencies) { cancel_transaction(); return false; }
         if (!db_query("UPDATE ".TB_PREF."wh_transfer_orders SET status='submitted',updated_at=NOW() WHERE transfer_id=".$identity." AND status='draft'")
             || db_num_affected_rows() !== 1) { cancel_transaction(); return false; }
-        $submitted = transfer_core_source($identity, 'submitted');
+        $submitted = transfer_core_source($identity, 'submitted', false, true);
         $expected = $source; $expected['header']['status'] = 'submitted';
         if (!$submitted) { cancel_transaction(); return false; }
         $expected['header']['updated_at'] = $submitted['header']['updated_at'];
@@ -380,6 +440,9 @@ function submit_native_transfer_to_core($transfer_id)
         if (!$data || !is_finite((float)$data['total_estimated']) || (float)$data['total_estimated'] < 0) { cancel_transaction(); return false; }
         $data['transfer_source_sha256'] = transfer_core_source_fingerprint($submitted);
         $data['transfer_company_sha256'] = transfer_core_context(true);
+        $origin = transfer_review_material_origin($identity);
+        if ($origin === false || $origin !== $origin_before) { cancel_transaction(); return false; }
+        if ($origin !== null) $data['transfer_material_origin'] = $origin;
         $actor = array('user_id'=>(int)$_SESSION['wa_current_user']->user, 'role_id'=>(int)$_SESSION['wa_current_user']->access);
         if (!register_transaction_resource_release('transfer-core', 'release_transfer_core_permit')) { cancel_transaction(); return false; }
         transfer_core_permit('set', array('action'=>'submit','context'=>$context,'data'=>$data,'actor'=>$actor,'source'=>$submitted));
@@ -409,7 +472,8 @@ function submit_native_transfer_to_core($transfer_id)
             || $reserved[0]['memo_'] !== 'APPROVAL_RESERVED'
             || !$now || $new_draft['submitted_date'] < $audit[0]['started'] || $new_draft['submitted_date'] > $now[0]['now_']
             || !transfer_core_new_action($new_action, $result['draft_id'], 'submit', 0, array('actor'=>$actor,'audit'=>$audit[0]))
-            || transfer_core_source($identity, 'submitted') !== $submitted || transfer_core_context() !== $context
+            || transfer_core_source($identity, 'submitted', false, true) !== $submitted || transfer_core_context() !== $context
+            || !transfer_review_origin_matches($identity, $data)
             || transfer_core_dependencies($submitted) !== $dependencies
             || !commit_transaction()) { cancel_transaction(); return false; }
         return $result;

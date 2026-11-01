@@ -517,10 +517,15 @@ function reject_transfer_order($transfer_id)
  */
 function ship_transfer_order($transfer_id, $ship_date) {
 	global $path_to_root;
+    require_once __DIR__.'/warehouse_transfer_core_db.inc';
 
+    if (!transfer_core_context() || !dimension_writer_reference_id($transfer_id)) return false;
 	$order = get_transfer_order($transfer_id);
 	if (!$order || !in_array($order['status'], array('approved')))
 		return false;
+
+    if (!begin_transaction()) return false;
+    if (!transfer_fulfillment_origin_allowed($transfer_id)) { cancel_transaction(); return false; }
 
 	$inv_root = dirname(dirname(dirname(dirname(dirname(__FILE__))))); // → project root
 	include_once($inv_root . '/includes/db/inventory_db.inc');
@@ -528,8 +533,6 @@ function ship_transfer_order($transfer_id, $ship_date) {
 	include_once($inv_root . '/inventory/includes/db/serial_numbers_db.inc');
 	include_once($inv_root . '/inventory/includes/db/stock_batches_db.inc');
 	include_once($inv_root . '/inventory/warehouse/includes/warehouse_operations.inc');
-
-	begin_transaction();
 
 	// Create a system transfer transaction for stock moves
 	$transfer_trans_no = get_next_trans_no(ST_LOCTRANSFER);
@@ -636,14 +639,23 @@ function ship_transfer_order($transfer_id, $ship_date) {
  */
 function receive_transfer_order($transfer_id, $recv_date, $received = array()) {
 	global $path_to_root;
+    require_once __DIR__.'/warehouse_transfer_core_db.inc';
 
 	$result = array('success' => false, 'backorder_id' => null, 'message' => '');
 
+    if (!transfer_core_context() || !dimension_writer_reference_id($transfer_id)) return $result;
 	$order = get_transfer_order($transfer_id);
 	if (!$order || !in_array($order['status'], array('in_transit', 'shipped'))) {
 		$result['message'] = _('Transfer order is not in a receivable state.');
 		return $result;
 	}
+
+    if (!begin_transaction()) return $result;
+    if (!transfer_fulfillment_origin_allowed($transfer_id)) {
+        cancel_transaction();
+        $result['message'] = _('Linked Material transfer fulfillment requires verified stock and ledger custody.');
+        return $result;
+    }
 
 	$inv_root = dirname(dirname(dirname(dirname(dirname(__FILE__))))); // → project root
 	include_once($inv_root . '/includes/db/inventory_db.inc');
@@ -651,8 +663,6 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array()) {
 	include_once($inv_root . '/inventory/includes/db/serial_numbers_db.inc');
 	include_once($inv_root . '/inventory/includes/db/stock_batches_db.inc');
 	include_once($inv_root . '/inventory/warehouse/includes/warehouse_operations.inc');
-
-	begin_transaction();
 
 	$transfer_trans_no = get_next_trans_no(ST_LOCTRANSFER);
 	$sql_date = date2sql($recv_date);
