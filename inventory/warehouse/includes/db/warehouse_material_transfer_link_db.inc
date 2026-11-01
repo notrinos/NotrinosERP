@@ -140,15 +140,17 @@ function material_transfer_original_draft($transfer, $receipt)
 }
 
 /**
- * Verify the retained source before accepting any future Material-origin
- * Transfer implementation. This reader does not authorize Transfer approval,
- * shipping, GL posting, cancellation or fulfillment.
+ * Verify immutable Material origin independently of current Transfer review.
+ * Return the exact locked current source/history and its original Draft, so a
+ * future core command can bind both explicitly. Transfer histories are read,
+ * not endorsed: this reader does not prove approval, authorize a transition,
+ * or grant shipping, GL posting, cancellation or fulfillment authority.
  *
  * All reads are locked in the same company and owning transaction. Rebuild
  * the original approved source only from the new immutable link receipt;
  * source history and its *older* signed core decision must both still match.
  */
-function material_transfer_link_custody($request_id)
+function material_transfer_origin_custody($request_id)
 {
     $identity = dimension_writer_reference_id($request_id);
     $actor = isset($_SESSION['wa_current_user']->user)
@@ -193,7 +195,7 @@ function material_transfer_link_custody($request_id)
         'purch_requisition_lines WHERE material_request_line_id IN ('.implode(',', $line_ids).
         ') ORDER BY id FOR UPDATE') : false;
     if (!$headers || count($headers) !== 1 || !$lines || $pairs !== array() || $requisition_lines !== array()
-        || !$to_history || $to_history['drafts'] || $to_history['actions']
+        || !$to_history
         || !$to_header || count($to_header) !== 1 || !$to_lines || !$links || count($links) !== 1
         || (int)$links[0]['request_id'] !== $identity
         || $headers[0]['status'] !== 'ordered' || $headers[0]['request_type'] !== 'transfer'
@@ -240,11 +242,10 @@ function material_transfer_link_custody($request_id)
         'action_sha256'=>material_core_source_fingerprint(array('header'=>$unsigned, 'lines'=>array())),
         'source_sha256'=>material_core_source_fingerprint($approved));
     $transfer = array('header'=>$to_header[0], 'lines'=>$to_lines);
-    // This command still admits only an unreviewed, byte-exact Draft. The
-    // original projection is a prerequisite for a separately authorized bridge.
-    if (material_transfer_original_draft($transfer, $receipt) !== $transfer) return false;
+    $original = material_transfer_original_draft($transfer, $receipt);
+    if (!$original) return false;
     $custody = array('source'=>$approved, 'history'=>$prior_history, 'draft'=>$draft);
-    $expected = material_transfer_link_intent($custody, $transfer, (int)$receipt['maker_id'],
+    $expected = material_transfer_link_intent($custody, $original, (int)$receipt['maker_id'],
         isset($receipt['from_loc_code']) ? $receipt['from_loc_code'] : '',
         $receipt['authored_reference'], $receipt['schema']);
     if ($terminal !== $terminal_expected || !$expected || $receipt !== $expected
@@ -254,7 +255,22 @@ function material_transfer_link_custody($request_id)
         || !$link['action_date'] || $link['ip_address'] === null
         || $source['header']['updated_at'] === null) return false;
     return array('material'=>$source, 'approved'=>$approved, 'transfer'=>$transfer,
-        'material_history'=>$history, 'transfer_history'=>$to_history, 'receipt'=>$receipt);
+        'material_history'=>$history, 'transfer_history'=>$to_history, 'receipt'=>$receipt,
+        'original_transfer'=>$original);
+}
+
+/**
+ * Preserve the converter's strict unreviewed Draft completion contract.
+ * Origin verification alone must never admit an existing Transfer review or
+ * normalize its current transition fields on behalf of a writing command.
+ */
+function material_transfer_link_custody($request_id)
+{
+    $custody = material_transfer_origin_custody($request_id);
+    if (!$custody || $custody['original_transfer'] !== $custody['transfer']
+        || $custody['transfer_history']['drafts'] || $custody['transfer_history']['actions']) return false;
+    unset($custody['original_transfer']);
+    return $custody;
 }
 
 /**
