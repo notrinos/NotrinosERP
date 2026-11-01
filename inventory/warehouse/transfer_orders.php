@@ -120,7 +120,7 @@ if (isset($_POST['Receive']) && $selected_id > 0) {
 // --- Cancel action ---
 if (isset($_POST['Cancel']) && $selected_id > 0) {
 	if (cancel_transfer_order($selected_id)) {
-		display_notification(_('Transfer order has been cancelled.'));
+		display_notification(_('Transfer order has been cancelled.').' '._('Cancellation does not release linked Material demand.'));
 	} else {
 		display_error(_('Cannot cancel this transfer order.'));
 	}

@@ -80,7 +80,32 @@ function cancel_native_transfer_draft($transfer_id)
 }
 
 /**
- * Original maker may cancel only an unshipped, unconsumed approved standalone TO.
+ * Read a cancellation result against its exact admitted approved source.
+ * This grants no ordinary writer or fulfillment authority to a linked source.
+ */
+function transfer_cancelled_source_matches($identity, $approved, $started)
+{
+    if (!transfer_core_context() || empty($GLOBALS['transaction_level'])
+        || !($identity = dimension_writer_reference_id($identity))
+        || !is_array($approved) || !isset($approved['header']['transfer_id'], $approved['header']['status'], $approved['lines'])
+        || (int)$approved['header']['transfer_id'] !== $identity || $approved['header']['status'] !== 'approved'
+        || !is_string($started)) return false;
+    $headers = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_orders WHERE transfer_id='.$identity.' FOR UPDATE');
+    $lines = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_order_lines WHERE transfer_id='.$identity.' ORDER BY line_id FOR UPDATE');
+    $clock = transfer_core_rows('SELECT NOW() AS now_');
+    if (!$headers || count($headers) !== 1 || $lines === false || !$clock
+        || !$headers[0]['updated_at'] || $headers[0]['updated_at'] < $started
+        || $headers[0]['updated_at'] > $clock[0]['now_']) return false;
+    $expected = $approved;
+    $expected['header']['status'] = 'cancelled';
+    $expected['header']['updated_at'] = $headers[0]['updated_at'];
+    $source = array('header'=>$headers[0], 'lines'=>$lines);
+    return $source === $expected ? $source : false;
+}
+
+/**
+ * Original maker may cancel an unshipped, unconsumed independently approved TO.
+ * Linked v2 origin must remain exact; cancellation does not release Material demand.
  * The approved decision is immutable. Record a separately attributable cancel action.
  */
 function cancel_native_transfer_approved($transfer_id, $comments = '')
@@ -93,20 +118,25 @@ function cancel_native_transfer_approved($transfer_id, $comments = '')
         if (!$custody || (int)$custody['source']['header']['requested_by'] !== (int)$_SESSION['wa_current_user']->user) {
             cancel_transaction(); return false;
         }
+        $origin = transfer_review_material_origin($identity);
+        if ($origin === false) { cancel_transaction(); return false; }
         $clock = transfer_core_rows('SELECT NOW() AS now_');
         if (!$clock || !db_query('UPDATE '.TB_PREF."wh_transfer_orders SET status='cancelled',updated_at=NOW() WHERE transfer_id="
             .$identity." AND status='approved'") || db_num_affected_rows() !== 1) { cancel_transaction(); return false; }
-        $source = transfer_core_source($identity, 'cancelled');
-        $now = transfer_core_rows('SELECT NOW() AS now_'); $expected = $custody['source'];
-        if (!$source || !$now || !$source['header']['updated_at']
-            || $source['header']['updated_at'] < $clock[0]['now_']
-            || $source['header']['updated_at'] > $now[0]['now_']) { cancel_transaction(); return false; }
-        $expected['header']['status'] = 'cancelled'; $expected['header']['updated_at'] = $source['header']['updated_at'];
-        if ($source !== $expected) { cancel_transaction(); return false; }
-        $snapshot = json_encode(array('schema'=>'transfer-source-cancel-v1', 'transfer_id'=>$identity,
+        $source = transfer_cancelled_source_matches($identity, $custody['source'], $clock[0]['now_']);
+        if (!$source) { cancel_transaction(); return false; }
+        $receipt = array('schema'=>'transfer-source-cancel-v1', 'transfer_id'=>$identity,
             'draft_id'=>(int)$custody['draft']['id'], 'company_sha256'=>transfer_core_context(true),
             'approved_source_sha256'=>transfer_core_source_fingerprint($custody['source']),
-            'source_sha256'=>transfer_core_source_fingerprint($source)));
+            'source_sha256'=>transfer_core_source_fingerprint($source));
+        if ($origin !== null) {
+            // Preserve the overwritten value exactly, including SQL NULL, so
+            // a later recovery reader never guesses its approved timestamp.
+            $receipt['schema'] = 'transfer-source-cancel-v2';
+            $receipt['approved_updated_at'] = $custody['source']['header']['updated_at'];
+            $receipt['material_origin'] = $origin;
+        }
+        $snapshot = json_encode($receipt);
         if ($snapshot === false) { cancel_transaction(); return false; }
         $action_id = add_approval_action($custody['draft']['id'], 'source_cancel', null,
             $custody['draft']['current_level'], $comments, $snapshot, null);
@@ -126,7 +156,8 @@ function cancel_native_transfer_approved($transfer_id, $comments = '')
             || $new['comments'] !== $literal[0]['comments'] || $new['draft_data_snapshot'] !== $literal[0]['snapshot_']
             || $new['ip_address'] !== $literal[0]['ip'] || $new['action_date'] < $clock[0]['now_']
             || $new['action_date'] > $literal[0]['now_']
-            || transfer_core_source($identity, 'cancelled') !== $source
+            || transfer_cancelled_source_matches($identity, $custody['source'], $clock[0]['now_']) !== $source
+            || transfer_review_material_origin($identity) !== $origin
             || transfer_core_context() !== $context || !commit_transaction()) { cancel_transaction(); return false; }
         return true;
     } catch (Exception $exception) { cancel_transaction(); return false;
