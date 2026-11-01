@@ -107,6 +107,21 @@ function transfer_review_material_origin($identity)
     // historical reads; do not rewrite its immutable receipt to enable review.
     if (!$origin || $origin['receipt']['schema'] !== 'material-transfer-link-v2'
         || (int)$origin['receipt']['transfer_id'] !== $identity) return false;
+    return material_transfer_origin_binding($origin);
+}
+
+/**
+ * Minimize an already verified origin projection for exact core comparison.
+ * This is a value projection, not current-link or command authority. Historical
+ * callers must verify the full projection first and compare the returned value
+ * to the immutable Transfer review and cancellation receipts.
+ */
+function material_transfer_origin_binding($origin)
+{
+    if (!is_array($origin) || !isset($origin['receipt'], $origin['material'],
+        $origin['material_history']['drafts'], $origin['material_history']['actions'], $origin['original_transfer'])
+        || !is_array($origin['receipt']) || !isset($origin['receipt']['request_id'])
+        || !dimension_writer_reference_id($origin['receipt']['request_id'])) return false;
     return array('schema'=>'transfer-material-origin-v1',
         'request_id'=>(int)$origin['receipt']['request_id'],
         'receipt_sha256'=>hash('sha256', serialize($origin['receipt'])),

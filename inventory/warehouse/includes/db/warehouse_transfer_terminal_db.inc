@@ -23,8 +23,38 @@ function transfer_approved_custody($identity)
  */
 function transfer_approved_history_custody($identity, $source, $history)
 {
+    $origin = transfer_review_material_origin($identity);
+    if ($origin === false) return false;
+    return transfer_approved_projection_custody($identity, $source, $history, $origin);
+}
+
+/**
+ * Compare a receipt-bound approved projection with an independently proved origin.
+ * This internal comparison neither loads current source nor admits any command.
+ * Historical callers must prove their reconstructed source and origin separately.
+ */
+function transfer_approved_projection_custody($identity, $source, $history, $origin)
+{
     if (!transfer_core_context() || empty($GLOBALS['transaction_level'])
         || !($identity = dimension_writer_reference_id($identity))) return false;
+    if (($origin !== null && (!is_array($origin) || !material_core_context()))
+        || !is_array($source) || !isset($source['header'], $source['lines'])
+        || !is_array($source['header']) || !is_array($source['lines']) || !$source['lines']
+        || !is_array($history) || !isset($history['drafts'], $history['actions'])
+        || !is_array($history['drafts']) || !is_array($history['actions'])) return false;
+    foreach (array('requested_by','approved_by') as $field)
+        if (!array_key_exists($field, $source['header'])) return false;
+    foreach ($source['lines'] as $row) if (!is_array($row)) return false;
+    foreach ($history['drafts'] as $row) {
+        if (!is_array($row)) return false;
+        foreach (array('id','status','workflow_id','submitted_by','draft_data','approved_trans_no',
+            'completed_date','current_level') as $field) if (!array_key_exists($field, $row)) return false;
+    }
+    foreach ($history['actions'] as $row) {
+        if (!is_array($row)) return false;
+        foreach (array('draft_id','action_type','user_id','level','draft_data_snapshot') as $field)
+            if (!array_key_exists($field, $row)) return false;
+    }
     if (!$history || !$source || !isset($source['header']['transfer_id'], $source['header']['status'])
         || (int)$source['header']['transfer_id'] !== $identity || $source['header']['status'] !== 'approved'
         || empty($source['header']['approved_by'])
@@ -42,7 +72,8 @@ function transfer_approved_history_custody($identity, $source, $history)
     }
     if (count($approved) !== 1) return false;
     $draft = $approved[0]; $data = $approval->decodeStoredDraftData($draft['draft_data']);
-    if (!transfer_review_origin_matches($identity, $data)
+    if (($origin === null ? array_key_exists('transfer_material_origin', $data)
+        : (!is_array($origin) || !isset($data['transfer_material_origin']) || $data['transfer_material_origin'] !== $origin))
         || !isset($data['transfer_id']) || (int)$data['transfer_id'] !== $identity
         || (int)$draft['approved_trans_no'] !== $identity || !$draft['completed_date']) return false;
     $actions = $history['actions']; $last = array_pop($actions);
@@ -75,7 +106,36 @@ function transfer_cancelled_linked_custody($transfer_id)
     if (!$identity || !transfer_core_context() || empty($GLOBALS['transaction_level'])) return false;
     $history = transfer_core_history($identity);
     if (!$history || !$history['actions']) return false;
+    $origin = transfer_review_material_origin($identity);
+    if (!is_array($origin)) return false;
+    $headers = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_orders WHERE transfer_id='.$identity.' FOR UPDATE');
+    $lines = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_order_lines WHERE transfer_id='.$identity.' ORDER BY line_id FOR UPDATE');
+    if (!$headers || count($headers) !== 1 || !$lines) return false;
+    return transfer_cancelled_projection_custody($identity,
+        array('header'=>$headers[0], 'lines'=>$lines), $history, $origin);
+}
+
+/**
+ * Compare exact cancelled history against an independently reconstructed origin.
+ * No current-link lookup or state mutation occurs. A future release command must
+ * prove its own transition before using these historical comparison results.
+ */
+function transfer_cancelled_projection_custody($identity, $source, $history, $origin)
+{
+    if (!transfer_core_context() || !material_core_context() || empty($GLOBALS['transaction_level'])
+        || !($identity = dimension_writer_reference_id($identity)) || !is_array($origin)
+        || !is_array($source) || !isset($source['header'], $source['lines'])
+        || !is_array($source['header']) || !is_array($source['lines']) || !$source['lines']
+        || !is_array($history) || !isset($history['drafts'], $history['actions'])
+        || !is_array($history['drafts']) || !is_array($history['actions']) || !$history['actions']) return false;
+    foreach (array('transfer_id','status','updated_at','requested_by') as $field)
+        if (!array_key_exists($field, $source['header'])) return false;
+    if (dimension_writer_reference_id($source['header']['transfer_id']) !== $identity) return false;
+    foreach ($source['lines'] as $row) if (!is_array($row)) return false;
     $prior = $history; $action = array_pop($prior['actions']);
+    if (!is_array($action)) return false;
+    foreach (array('draft_id','action_type','user_id','level','draft_data_snapshot','action_date','ip_address') as $field)
+        if (!array_key_exists($field, $action)) return false;
     $approval = get_approval_workflow_service();
     $receipt = $action['draft_data_snapshot'] === null ? false
         : $approval->decodeStoredDraftData($action['draft_data_snapshot']);
@@ -86,21 +146,17 @@ function transfer_cancelled_linked_custody($transfer_id)
         || $receipt['company_sha256'] !== transfer_core_context(true)
         || ($receipt['approved_updated_at'] !== null && !is_string($receipt['approved_updated_at']))
         || $action['action_type'] !== 'source_cancel') return false;
-    $origin = transfer_review_material_origin($identity);
-    if (!is_array($origin) || $origin !== $receipt['material_origin']) return false;
-    $headers = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_orders WHERE transfer_id='.$identity.' FOR UPDATE');
-    $lines = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_order_lines WHERE transfer_id='.$identity.' ORDER BY line_id FOR UPDATE');
+    if ($origin !== $receipt['material_origin']) return false;
     $clock = transfer_core_rows('SELECT NOW() AS now_');
-    if (!$headers || count($headers) !== 1 || !$lines || !$clock
-        || $headers[0]['status'] !== 'cancelled' || !$headers[0]['updated_at']
-        || !$action['action_date'] || $action['action_date'] < $headers[0]['updated_at']
+    if (!$clock
+        || $source['header']['status'] !== 'cancelled' || !$source['header']['updated_at']
+        || !$action['action_date'] || $action['action_date'] < $source['header']['updated_at']
         || $action['action_date'] > $clock[0]['now_'] || $action['ip_address'] === null
-        || (int)$action['user_id'] !== (int)$headers[0]['requested_by']) return false;
-    $source = array('header'=>$headers[0], 'lines'=>$lines);
+        || (int)$action['user_id'] !== (int)$source['header']['requested_by']) return false;
     $approved = $source;
     $approved['header']['status'] = 'approved';
     $approved['header']['updated_at'] = $receipt['approved_updated_at'];
-    $custody = transfer_approved_history_custody($identity, $approved, $prior);
+    $custody = transfer_approved_projection_custody($identity, $approved, $prior, $origin);
     if (!$custody || $receipt['draft_id'] !== (int)$custody['draft']['id']
         || (int)$action['draft_id'] !== (int)$custody['draft']['id']
         || (int)$action['level'] !== (int)$custody['draft']['current_level']
