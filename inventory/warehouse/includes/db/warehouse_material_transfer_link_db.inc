@@ -97,10 +97,25 @@ function material_transfer_link_intent($custody, $transfer, $actor, $from, $auth
             $transition[$field] = $transfer['header'][$field];
         }
         if ($transition['status'] !== 'draft' || $transition['approved_by'] !== null
-            || $transition['approval_date'] !== null) return false;
+            || $transition['approval_date'] !== null
+            || !material_transfer_v2_timestamp($custody['source']['header']['updated_at'])
+            || ($transition['updated_at'] !== null
+                && !material_transfer_v2_timestamp($transition['updated_at']))) return false;
         $intent['transfer_draft_transition'] = $transition;
     }
     return $intent;
+}
+
+/**
+ * SQL DATETIME(0) calendar validity for immutable v2 Material/Transfer custody.
+ * Do not impose this validator on v1 receipts retained before the v2 contract.
+ */
+function material_transfer_v2_timestamp($value)
+{
+    if (!is_string($value) || !preg_match('/^([0-9]{4})-([0-9]{2})-([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})$/D', $value, $parts)) return false;
+    return (int)$parts[1] >= 1000
+        && checkdate((int)$parts[2], (int)$parts[3], (int)$parts[1])
+        && (int)$parts[4] < 24 && (int)$parts[5] < 60 && (int)$parts[6] < 60;
 }
 
 /**
@@ -123,12 +138,14 @@ function material_transfer_original_draft($transfer, $receipt)
         || !preg_match('/^[a-f0-9]{64}$/D', $receipt['transfer_draft_sha256'])) return false;
     $original = $transfer;
     if ($receipt['schema'] === 'material-transfer-link-v2') {
+        if (!isset($receipt['approved_updated_at'])
+            || !material_transfer_v2_timestamp($receipt['approved_updated_at'])) return false;
         if (!isset($receipt['transfer_draft_transition']) || !is_array($receipt['transfer_draft_transition'])
             || array_keys($receipt['transfer_draft_transition']) !== array('status','updated_at','approved_by','approval_date')) return false;
         $transition = $receipt['transfer_draft_transition'];
         if ($transition['status'] !== 'draft' || $transition['approved_by'] !== null || $transition['approval_date'] !== null
-            || ($transition['updated_at'] !== null && (!is_string($transition['updated_at'])
-                || !preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/D', $transition['updated_at'])))) return false;
+            || ($transition['updated_at'] !== null
+                && !material_transfer_v2_timestamp($transition['updated_at']))) return false;
         foreach ($transition as $field=>$value) {
             if (!array_key_exists($field, $original['header'])) return false;
             $original['header'][$field] = $value;
@@ -208,6 +225,19 @@ function material_transfer_link_receipt($link)
     if (is_array($receipt) && isset($receipt['schema']) && $receipt['schema'] === 'material-transfer-link-v2')
         $receipt_keys[] = 'transfer_draft_transition';
     if (!is_array($receipt) || array_keys($receipt) !== $receipt_keys
+        || ($receipt['schema'] === 'material-transfer-link-v2'
+            && (!is_int($receipt['request_id']) || $receipt['request_id'] <= 0
+                || !is_int($receipt['transfer_id']) || $receipt['transfer_id'] <= 0
+                || !is_int($receipt['approved_draft_id']) || $receipt['approved_draft_id'] <= 0
+                || !is_int($receipt['maker_id']) || $receipt['maker_id'] <= 0
+                || !material_transfer_v2_timestamp($receipt['approved_updated_at'])
+                || !is_array($receipt['transfer_draft_transition'])
+                || array_keys($receipt['transfer_draft_transition']) !== array('status','updated_at','approved_by','approval_date')
+                || $receipt['transfer_draft_transition']['status'] !== 'draft'
+                || $receipt['transfer_draft_transition']['approved_by'] !== null
+                || $receipt['transfer_draft_transition']['approval_date'] !== null
+                || ($receipt['transfer_draft_transition']['updated_at'] !== null
+                    && !material_transfer_v2_timestamp($receipt['transfer_draft_transition']['updated_at']))))
         || !is_string($receipt['from_loc_code']) || $receipt['from_loc_code'] === ''
         || !is_string($receipt['authored_reference'])
         || !is_string($receipt['approved_updated_at'])

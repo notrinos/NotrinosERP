@@ -10,15 +10,6 @@ function material_transfer_release_history_hash($history)
         'lines'=>array_merge($history['drafts'], $history['actions'])));
 }
 
-/** SQL DATETIME calendar validity for new v2 custody; historical v1 stays unchanged. */
-function material_transfer_v2_timestamp($value)
-{
-    if (!is_string($value) || !preg_match('/^([0-9]{4})-([0-9]{2})-([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})$/D', $value, $parts)) return false;
-    return (int)$parts[1] >= 1000
-        && checkdate((int)$parts[2], (int)$parts[3], (int)$parts[1])
-        && (int)$parts[4] < 24 && (int)$parts[5] < 60 && (int)$parts[6] < 60;
-}
-
 /** Decode the exact versioned release envelope without granting source authority. */
 function material_transfer_release_receipt($action)
 {
@@ -106,6 +97,7 @@ function material_transfer_release_lineage($history, $request_id, $selected_even
                 || (string)$receipt['ordered_transition']['linked_doc_type'] !== (string)ST_LOCTRANSFER
                 || (string)$receipt['ordered_transition']['linked_doc_no'] !== (string)$pending['transfer_id']
                 || !material_transfer_v2_timestamp($receipt['ordered_transition']['updated_at'])
+                || $receipt['ordered_transition']['updated_at'] < $link['approved_updated_at']
                 || $receipt['released_transition']['updated_at'] < $receipt['ordered_transition']['updated_at']) return false;
             $unsigned = $action;
             $unsigned['draft_data_snapshot'] = null;
