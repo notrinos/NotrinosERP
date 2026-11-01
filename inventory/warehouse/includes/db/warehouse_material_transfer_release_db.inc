@@ -107,6 +107,9 @@ function material_transfer_release_lineage($history, $request_id, $selected_even
                 || !material_transfer_v2_timestamp($receipt['ordered_transition']['updated_at'])
                 || $receipt['ordered_transition']['updated_at'] < $pending_approved_at
                 || $receipt['released_transition']['updated_at'] < $receipt['ordered_transition']['updated_at']
+                // A later raw audit action cannot retroactively assert a release
+                // transition before the source-link audit action was recorded.
+                || $receipt['released_transition']['updated_at'] < $pending_link_at
                 || !isset($action['action_date']) || !material_transfer_v2_timestamp($action['action_date'])
                 || $action['action_date'] < $receipt['released_transition']['updated_at']
                 || $action['action_date'] < $pending_link_at) return false;
@@ -118,7 +121,9 @@ function material_transfer_release_lineage($history, $request_id, $selected_even
             $cycle['release_event_id'] = $event_id;
             $cycle['release_receipt_sha256'] = hash('sha256', $action['draft_data_snapshot']);
             $cycles[] = $cycle;
-            $last_released_at = $receipt['released_transition']['updated_at'];
+            // The next approval cannot predate this immutable raw action, even
+            // if the status transition was recorded earlier within this command.
+            $last_released_at = $action['action_date'];
             $pending_approved_at = null; $pending_link_at = null;
             if ($selected !== null && $selected === $event_id) $selected_cycle = $cycle;
             $pending = false;
