@@ -10,6 +10,15 @@ function material_transfer_release_history_hash($history)
         'lines'=>array_merge($history['drafts'], $history['actions'])));
 }
 
+/** SQL DATETIME calendar validity for new v2 custody; historical v1 stays unchanged. */
+function material_transfer_v2_timestamp($value)
+{
+    if (!is_string($value) || !preg_match('/^([0-9]{4})-([0-9]{2})-([0-9]{2}) ([0-9]{2}):([0-9]{2}):([0-9]{2})$/D', $value, $parts)) return false;
+    return (int)$parts[1] >= 1000
+        && checkdate((int)$parts[2], (int)$parts[3], (int)$parts[1])
+        && (int)$parts[4] < 24 && (int)$parts[5] < 60 && (int)$parts[6] < 60;
+}
+
 /** Decode the exact versioned release envelope without granting source authority. */
 function material_transfer_release_receipt($action)
 {
@@ -27,8 +36,8 @@ function material_transfer_release_receipt($action)
             || array_keys($receipt['released_transition']) !== array('status','linked_doc_type','linked_doc_no','updated_at')) return false;
         $transition = $receipt['released_transition'];
         if ($transition['status'] !== 'approved' || $transition['linked_doc_type'] !== null
-            || $transition['linked_doc_no'] !== null || !is_string($transition['updated_at'])
-            || !preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/D', $transition['updated_at'])) return false;
+            || $transition['linked_doc_no'] !== null
+            || !material_transfer_v2_timestamp($transition['updated_at'])) return false;
     } elseif ($receipt['schema'] !== 'material-transfer-release-v1') return false;
     return array_keys($receipt) === $keys ? $receipt : false;
 }
@@ -96,9 +105,8 @@ function material_transfer_release_lineage($history, $request_id, $selected_even
                 || $receipt['ordered_transition']['status'] !== 'ordered'
                 || (string)$receipt['ordered_transition']['linked_doc_type'] !== (string)ST_LOCTRANSFER
                 || (string)$receipt['ordered_transition']['linked_doc_no'] !== (string)$pending['transfer_id']
-                || !is_string($receipt['ordered_transition']['updated_at'])
-                || !preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/D',
-                    $receipt['ordered_transition']['updated_at'])) return false;
+                || !material_transfer_v2_timestamp($receipt['ordered_transition']['updated_at'])
+                || $receipt['released_transition']['updated_at'] < $receipt['ordered_transition']['updated_at']) return false;
             $unsigned = $action;
             $unsigned['draft_data_snapshot'] = null;
             if ($receipt['action_sha256'] !== material_core_source_fingerprint(array(
@@ -238,6 +246,13 @@ function material_released_transfer_projection($request_id, $source, $history, $
         || !preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/D', $receipt['ordered_transition']['updated_at'])
         || $action['action_type'] !== 'source_release') return false;
     if ($receipt['schema'] === 'material-transfer-release-v2') {
+        // Both current and historical readers must prove the same complete raw
+        // link/release chain. This is never a replacement or financial grant.
+        $lineage = material_transfer_release_lineage($history, $identity, $action['id']);
+        if (!$lineage || $lineage['selected'] === null
+            || $lineage['selected']['transfer_id'] !== $transfer_id
+            || !material_transfer_v2_timestamp($receipt['ordered_transition']['updated_at'])
+            || $receipt['released_transition']['updated_at'] < $receipt['ordered_transition']['updated_at']) return false;
         $transition = array();
         foreach (array('status','linked_doc_type','linked_doc_no','updated_at') as $field)
             $transition[$field] = $source['header'][$field];
