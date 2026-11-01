@@ -33,13 +33,24 @@ function material_transfer_release_receipt($action)
             'transfer_source_sha256','transfer_history_sha256','action_sha256') as $digest_key)
             if (!isset($receipt[$digest_key]) || !is_string($receipt[$digest_key])
                 || !preg_match('/^[a-f0-9]{64}$/D', $receipt[$digest_key])) return false;
+        // The ordered snapshot is consumed by both current and historical
+        // readers. Validate its complete native shape before either reader can
+        // reconstruct a past state; do not coerce IDs or guess a clock.
+        if (!isset($receipt['ordered_transition']) || !is_array($receipt['ordered_transition'])
+            || array_keys($receipt['ordered_transition']) !== array('status','linked_doc_type','linked_doc_no','updated_at')) return false;
+        $ordered = $receipt['ordered_transition'];
+        if ($ordered['status'] !== 'ordered'
+            || dimension_writer_reference_id($ordered['linked_doc_type']) !== ST_LOCTRANSFER
+            || dimension_writer_reference_id($ordered['linked_doc_no']) !== $receipt['transfer_id']
+            || !material_transfer_v2_timestamp($ordered['updated_at'])) return false;
         $keys[] = 'released_transition';
         if (!isset($receipt['released_transition']) || !is_array($receipt['released_transition'])
             || array_keys($receipt['released_transition']) !== array('status','linked_doc_type','linked_doc_no','updated_at')) return false;
         $transition = $receipt['released_transition'];
         if ($transition['status'] !== 'approved' || $transition['linked_doc_type'] !== null
             || $transition['linked_doc_no'] !== null
-            || !material_transfer_v2_timestamp($transition['updated_at'])) return false;
+            || !material_transfer_v2_timestamp($transition['updated_at'])
+            || $transition['updated_at'] < $ordered['updated_at']) return false;
     } elseif ($receipt['schema'] !== 'material-transfer-release-v1') return false;
     return array_keys($receipt) === $keys ? $receipt : false;
 }
