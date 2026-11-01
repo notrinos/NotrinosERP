@@ -57,6 +57,9 @@ function material_transfer_release_lineage($history, $request_id, $selected_even
     $prior = array('drafts'=>$history['drafts'], 'actions'=>array());
     $previous_id = 0; $pending = false; $cycles = array(); $seen_transfers = array();
     $selected_cycle = null;
+    // Link/release receipts cover distinct immutable cycles. An exact raw event
+    // clock and each next approval must not precede the previous release.
+    $last_released_at = null; $pending_approved_at = null; $pending_link_at = null;
     foreach ($history['actions'] as $action) {
         if (!is_array($action) || !isset($action['id'], $action['action_type'])
             || !($event_id = dimension_writer_reference_id($action['id']))
@@ -72,9 +75,14 @@ function material_transfer_release_lineage($history, $request_id, $selected_even
                 || !($maker = dimension_writer_reference_id($link['maker_id']))
                 || dimension_writer_reference_id($action['user_id']) !== $maker
                 || dimension_writer_reference_id($action['draft_id']) !== $draft_id
-                || !isset($link['approved_history_sha256'])
+                || !isset($link['approved_history_sha256'], $action['action_date'])
+                || !material_transfer_v2_timestamp($action['action_date'])
+                || $action['action_date'] < $link['approved_updated_at']
+                || ($last_released_at !== null && $link['approved_updated_at'] < $last_released_at)
                 || $link['approved_history_sha256'] !== material_transfer_release_history_hash($prior)) return false;
             $seen_transfers[$to_id] = true;
+            $pending_approved_at = $link['approved_updated_at'];
+            $pending_link_at = $action['action_date'];
             $pending = array('link_event_id'=>$event_id, 'transfer_id'=>$to_id,
                 'draft_id'=>$draft_id, 'maker_id'=>$maker,
                 'material_company_sha256'=>$link['material_company_sha256'],
@@ -97,8 +105,11 @@ function material_transfer_release_lineage($history, $request_id, $selected_even
                 || (string)$receipt['ordered_transition']['linked_doc_type'] !== (string)ST_LOCTRANSFER
                 || (string)$receipt['ordered_transition']['linked_doc_no'] !== (string)$pending['transfer_id']
                 || !material_transfer_v2_timestamp($receipt['ordered_transition']['updated_at'])
-                || $receipt['ordered_transition']['updated_at'] < $link['approved_updated_at']
-                || $receipt['released_transition']['updated_at'] < $receipt['ordered_transition']['updated_at']) return false;
+                || $receipt['ordered_transition']['updated_at'] < $pending_approved_at
+                || $receipt['released_transition']['updated_at'] < $receipt['ordered_transition']['updated_at']
+                || !isset($action['action_date']) || !material_transfer_v2_timestamp($action['action_date'])
+                || $action['action_date'] < $receipt['released_transition']['updated_at']
+                || $action['action_date'] < $pending_link_at) return false;
             $unsigned = $action;
             $unsigned['draft_data_snapshot'] = null;
             if ($receipt['action_sha256'] !== material_core_source_fingerprint(array(
@@ -107,6 +118,8 @@ function material_transfer_release_lineage($history, $request_id, $selected_even
             $cycle['release_event_id'] = $event_id;
             $cycle['release_receipt_sha256'] = hash('sha256', $action['draft_data_snapshot']);
             $cycles[] = $cycle;
+            $last_released_at = $receipt['released_transition']['updated_at'];
+            $pending_approved_at = null; $pending_link_at = null;
             if ($selected !== null && $selected === $event_id) $selected_cycle = $cycle;
             $pending = false;
         }
