@@ -65,7 +65,7 @@ function material_transfer_pair_matches($material, $transfer, $actor, $from, $au
  * original approval-custody state is used: a numeric Transfer link alone does
  * not prove that the maker obtained an independent Material approval.
  */
-function material_transfer_link_intent($custody, $transfer, $actor, $from, $authored_reference = null)
+function material_transfer_link_intent($custody, $transfer, $actor, $from, $authored_reference = null, $schema = 'material-transfer-link-v2')
 {
     if (!is_array($custody) || !isset($custody['source'], $custody['history'], $custody['draft'])
         || !isset($custody['source']['header']['request_id']) || !isset($transfer['header']['transfer_id'])
@@ -74,7 +74,8 @@ function material_transfer_link_intent($custody, $transfer, $actor, $from, $auth
     $material_company = material_core_context(true);
     $transfer_company = transfer_core_context(true);
     if (!$material_company || !$transfer_company) return false;
-    return array('schema'=>'material-transfer-link-v1',
+    if (!in_array($schema, array('material-transfer-link-v1', 'material-transfer-link-v2'), true)) return false;
+    $intent = array('schema'=>$schema,
         'request_id'=>(int)$custody['source']['header']['request_id'],
         'transfer_id'=>(int)$transfer['header']['transfer_id'],
         'approved_draft_id'=>(int)$custody['draft']['id'],
@@ -87,6 +88,55 @@ function material_transfer_link_intent($custody, $transfer, $actor, $from, $auth
         'approved_history_sha256'=>material_core_source_fingerprint(array('header'=>array(),
             'lines'=>array_merge($custody['history']['drafts'], $custody['history']['actions']))),
         'transfer_draft_sha256'=>transfer_core_source_fingerprint($transfer));
+    if ($schema === 'material-transfer-link-v2') {
+        // Capture actual pre-review values, including SQL NULL. A later reader
+        // must never guess updated_at from created_at or its current clock.
+        $transition = array();
+        foreach (array('status','updated_at','approved_by','approval_date') as $field) {
+            if (!array_key_exists($field, $transfer['header'])) return false;
+            $transition[$field] = $transfer['header'][$field];
+        }
+        if ($transition['status'] !== 'draft' || $transition['approved_by'] !== null
+            || $transition['approval_date'] !== null) return false;
+        $intent['transfer_draft_transition'] = $transition;
+    }
+    return $intent;
+}
+
+/**
+ * Reconstruct only the original Draft described by a retained link receipt.
+ * This pure provenance check grants no workflow/terminal/financial authority.
+ * Callers must independently verify the receipt's immutable Material history,
+ * company, current Transfer review and the allowed transition before writing.
+ * Legacy v1 can prove its unchanged Draft only; no historical timestamp guess.
+ */
+function material_transfer_original_draft($transfer, $receipt)
+{
+    if (!is_array($transfer) || !isset($transfer['header'], $transfer['lines'])
+        || !is_array($transfer['header']) || !is_array($transfer['lines'])
+        || !is_array($receipt) || !isset($receipt['schema'], $receipt['transfer_id'], $receipt['transfer_draft_sha256'])
+        || !isset($transfer['header']['transfer_id'], $transfer['header']['status'])
+        || !in_array($transfer['header']['status'], array('draft','submitted','approved','cancelled'), true)
+        || !($identity = dimension_writer_reference_id($receipt['transfer_id']))
+        || dimension_writer_reference_id($transfer['header']['transfer_id']) !== $identity
+        || !is_string($receipt['transfer_draft_sha256'])
+        || !preg_match('/^[a-f0-9]{64}$/D', $receipt['transfer_draft_sha256'])) return false;
+    $original = $transfer;
+    if ($receipt['schema'] === 'material-transfer-link-v2') {
+        if (!isset($receipt['transfer_draft_transition']) || !is_array($receipt['transfer_draft_transition'])
+            || array_keys($receipt['transfer_draft_transition']) !== array('status','updated_at','approved_by','approval_date')) return false;
+        $transition = $receipt['transfer_draft_transition'];
+        if ($transition['status'] !== 'draft' || $transition['approved_by'] !== null || $transition['approval_date'] !== null
+            || ($transition['updated_at'] !== null && (!is_string($transition['updated_at'])
+                || !preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/D', $transition['updated_at'])))) return false;
+        foreach ($transition as $field=>$value) {
+            if (!array_key_exists($field, $original['header'])) return false;
+            $original['header'][$field] = $value;
+        }
+    } elseif ($receipt['schema'] !== 'material-transfer-link-v1'
+        || isset($receipt['transfer_draft_transition'])) return false;
+    return isset($original['header']['status']) && $original['header']['status'] === 'draft'
+        && transfer_core_source_fingerprint($original) === $receipt['transfer_draft_sha256'] ? $original : false;
 }
 
 /**
@@ -114,11 +164,13 @@ function material_transfer_link_custody($request_id)
     $receipt_keys = array('schema','request_id','transfer_id','approved_draft_id','maker_id',
         'from_loc_code','authored_reference','material_company_sha256','transfer_company_sha256',
         'approved_updated_at','approved_source_sha256','approved_history_sha256','transfer_draft_sha256');
+    if (is_array($receipt) && isset($receipt['schema']) && $receipt['schema'] === 'material-transfer-link-v2')
+        $receipt_keys[] = 'transfer_draft_transition';
     if (!is_array($receipt) || array_keys($receipt) !== $receipt_keys
         || !is_string($receipt['from_loc_code']) || $receipt['from_loc_code'] === ''
         || !is_string($receipt['authored_reference'])
         || !is_string($receipt['approved_updated_at'])
-        || $receipt['schema'] !== 'material-transfer-link-v1'
+        || !in_array($receipt['schema'], array('material-transfer-link-v1','material-transfer-link-v2'), true)
         || !($transfer_id = dimension_writer_reference_id($receipt['transfer_id']))
         || $link['action_type'] !== 'source_transfer'
         || (int)$link['user_id'] !== (int)$receipt['maker_id']
@@ -188,10 +240,13 @@ function material_transfer_link_custody($request_id)
         'action_sha256'=>material_core_source_fingerprint(array('header'=>$unsigned, 'lines'=>array())),
         'source_sha256'=>material_core_source_fingerprint($approved));
     $transfer = array('header'=>$to_header[0], 'lines'=>$to_lines);
+    // This command still admits only an unreviewed, byte-exact Draft. The
+    // original projection is a prerequisite for a separately authorized bridge.
+    if (material_transfer_original_draft($transfer, $receipt) !== $transfer) return false;
     $custody = array('source'=>$approved, 'history'=>$prior_history, 'draft'=>$draft);
     $expected = material_transfer_link_intent($custody, $transfer, (int)$receipt['maker_id'],
         isset($receipt['from_loc_code']) ? $receipt['from_loc_code'] : '',
-        $receipt['authored_reference']);
+        $receipt['authored_reference'], $receipt['schema']);
     if ($terminal !== $terminal_expected || !$expected || $receipt !== $expected
         || (int)$receipt['request_id'] !== $identity || (int)$receipt['approved_draft_id'] !== (int)$draft['id']
         || (int)$link['level'] !== (int)$draft['current_level']
