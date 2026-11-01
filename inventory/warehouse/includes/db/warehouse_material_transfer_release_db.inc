@@ -10,6 +10,70 @@ function material_transfer_release_history_hash($history)
         'lines'=>array_merge($history['drafts'], $history['actions'])));
 }
 
+/** Decode the exact versioned release envelope without granting source authority. */
+function material_transfer_release_receipt($action)
+{
+    if (!is_array($action) || !isset($action['action_type'], $action['draft_data_snapshot'])
+        || $action['action_type'] !== 'source_release') return false;
+    $approval = get_approval_workflow_service();
+    $receipt = $approval->decodeStoredDraftData($action['draft_data_snapshot']);
+    $keys = array('schema','request_id','transfer_id','draft_id','material_company_sha256',
+        'transfer_company_sha256','ordered_transition','ordered_source_sha256','source_sha256',
+        'history_sha256','transfer_source_sha256','transfer_history_sha256','action_sha256');
+    if (!is_array($receipt) || !isset($receipt['schema'])) return false;
+    if ($receipt['schema'] === 'material-transfer-release-v2') {
+        $keys[] = 'released_transition';
+        if (!isset($receipt['released_transition']) || !is_array($receipt['released_transition'])
+            || array_keys($receipt['released_transition']) !== array('status','linked_doc_type','linked_doc_no','updated_at')) return false;
+        $transition = $receipt['released_transition'];
+        if ($transition['status'] !== 'approved' || $transition['linked_doc_type'] !== null
+            || $transition['linked_doc_no'] !== null || !is_string($transition['updated_at'])
+            || !preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/D', $transition['updated_at'])) return false;
+    } elseif ($receipt['schema'] !== 'material-transfer-release-v1') return false;
+    return array_keys($receipt) === $keys ? $receipt : false;
+}
+
+/**
+ * Load one persisted v2 historical release by its exact immutable action identity.
+ * Lock Material history/source before Transfer history/source. Restore only the
+ * receipt's four transition fields and verify every other source/history byte.
+ * Later actions are excluded only from this historical prefix; no current-link,
+ * replacement, approval or financial command may use this read as admission.
+ * v1 has no retained release timestamp and is deliberately not reconstructed.
+ */
+function material_historical_transfer_release($request_id, $action_id)
+{
+    $identity = dimension_writer_reference_id($request_id);
+    $event = dimension_writer_reference_id($action_id);
+    if (!$identity || !$event || !material_core_context() || !transfer_core_context()
+        || empty($GLOBALS['transaction_level'])) return false;
+    $history = material_core_history($identity);
+    if (!$history) return false;
+    $prefix = array('drafts'=>$history['drafts'], 'actions'=>array()); $receipt = false;
+    foreach ($history['actions'] as $action) {
+        $prefix['actions'][] = $action;
+        if ((int)$action['id'] === $event) {
+            $receipt = material_transfer_release_receipt($action); break;
+        }
+    }
+    if (!$receipt || $receipt['schema'] !== 'material-transfer-release-v2'
+        || $receipt['request_id'] !== $identity
+        || !($transfer_id = dimension_writer_reference_id($receipt['transfer_id']))
+        || $receipt['material_company_sha256'] !== material_core_context(true)
+        || $receipt['transfer_company_sha256'] !== transfer_core_context(true)) return false;
+    $headers = material_core_rows('SELECT * FROM '.TB_PREF.'wh_material_requests WHERE request_id='.$identity.' FOR UPDATE');
+    $lines = material_core_rows('SELECT * FROM '.TB_PREF.'wh_material_request_lines WHERE request_id='.$identity.' ORDER BY line_id FOR UPDATE');
+    $to_history = transfer_core_history($transfer_id);
+    $to_headers = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_orders WHERE transfer_id='.$transfer_id.' FOR UPDATE');
+    $to_lines = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_order_lines WHERE transfer_id='.$transfer_id.' ORDER BY line_id FOR UPDATE');
+    if (!$headers || count($headers) !== 1 || !$lines || !$to_history
+        || !$to_headers || count($to_headers) !== 1 || !$to_lines) return false;
+    $source = array('header'=>$headers[0], 'lines'=>$lines);
+    foreach ($receipt['released_transition'] as $field=>$value) $source['header'][$field] = $value;
+    return material_released_transfer_projection($identity, $source, $prefix,
+        array('header'=>$to_headers[0], 'lines'=>$to_lines), $to_history);
+}
+
 /**
  * Read only a current, receipt-bound released source. Restore the former ordered
  * projection from its retained transition, then independently prove both original
@@ -75,14 +139,8 @@ function material_released_transfer_projection($request_id, $source, $history, $
         || $source['header']['linked_doc_type'] !== null || $source['header']['linked_doc_no'] !== null) return false;
     if (!$history['actions']) return false;
     $prior = $history; $action = array_pop($prior['actions']);
-    $approval = get_approval_workflow_service();
-    $receipt = $action['draft_data_snapshot'] === null ? false
-        : $approval->decodeStoredDraftData($action['draft_data_snapshot']);
-    if (!is_array($receipt) || array_keys($receipt) !== array('schema','request_id','transfer_id',
-        'draft_id','material_company_sha256','transfer_company_sha256','ordered_transition',
-        'ordered_source_sha256','source_sha256','history_sha256','transfer_source_sha256',
-        'transfer_history_sha256','action_sha256')
-        || $receipt['schema'] !== 'material-transfer-release-v1' || $receipt['request_id'] !== $identity
+    $receipt = material_transfer_release_receipt($action);
+    if (!$receipt || $receipt['request_id'] !== $identity
         || !($transfer_id = dimension_writer_reference_id($receipt['transfer_id']))
         || $receipt['material_company_sha256'] !== material_core_context(true)
         || $receipt['transfer_company_sha256'] !== transfer_core_context(true)
@@ -94,6 +152,12 @@ function material_released_transfer_projection($request_id, $source, $history, $
         || !is_string($receipt['ordered_transition']['updated_at'])
         || !preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/D', $receipt['ordered_transition']['updated_at'])
         || $action['action_type'] !== 'source_release') return false;
+    if ($receipt['schema'] === 'material-transfer-release-v2') {
+        $transition = array();
+        foreach (array('status','linked_doc_type','linked_doc_no','updated_at') as $field)
+            $transition[$field] = $source['header'][$field];
+        if ($receipt['released_transition'] !== $transition) return false;
+    }
     $ordered = $source;
     foreach ($receipt['ordered_transition'] as $field=>$value) $ordered['header'][$field] = $value;
     $origin = material_transfer_origin_projection($identity, $ordered, $prior, $transfer, $to_history);
@@ -170,7 +234,7 @@ function release_cancelled_material_transfer($request_id, $comments = '')
         $transition = array();
         foreach (array('status','linked_doc_type','linked_doc_no','updated_at') as $field)
             $transition[$field] = $origin['material']['header'][$field];
-        $receipt = array('schema'=>'material-transfer-release-v1', 'request_id'=>$identity, 'transfer_id'=>$transfer_id,
+        $receipt = array('schema'=>'material-transfer-release-v2', 'request_id'=>$identity, 'transfer_id'=>$transfer_id,
             'draft_id'=>$draft_id, 'material_company_sha256'=>material_core_context(true),
             'transfer_company_sha256'=>transfer_core_context(true), 'ordered_transition'=>$transition,
             'ordered_source_sha256'=>material_core_source_fingerprint($origin['material']),
@@ -179,6 +243,9 @@ function release_cancelled_material_transfer($request_id, $comments = '')
             'transfer_source_sha256'=>transfer_core_source_fingerprint($origin['transfer']),
             'transfer_history_sha256'=>material_transfer_release_history_hash($origin['transfer_history']),
             'action_sha256'=>material_core_source_fingerprint(array('header'=>$action, 'lines'=>array())));
+        $receipt['released_transition'] = array();
+        foreach (array('status','linked_doc_type','linked_doc_no','updated_at') as $field)
+            $receipt['released_transition'][$field] = $source['header'][$field];
         $snapshot = json_encode($receipt);
         if ($snapshot === false || !db_query('UPDATE '.TB_PREF.'approval_actions SET draft_data_snapshot='.db_escape($snapshot, true)
             .' WHERE id='.(int)$action_id.' AND draft_id='.$draft_id.' AND draft_data_snapshot IS NULL')
