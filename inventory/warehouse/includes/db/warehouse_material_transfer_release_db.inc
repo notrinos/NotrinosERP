@@ -23,6 +23,57 @@ function material_released_transfer_custody($request_id)
         || empty($GLOBALS['transaction_level'])) return false;
     $history = material_core_history($identity);
     if (!$history || !$history['actions']) return false;
+    $last = $history['actions'][count($history['actions'])-1];
+    $approval = get_approval_workflow_service();
+    $receipt = $last['draft_data_snapshot'] === null ? false
+        : $approval->decodeStoredDraftData($last['draft_data_snapshot']);
+    if (!is_array($receipt) || !isset($receipt['transfer_id'])
+        || !($transfer_id = dimension_writer_reference_id($receipt['transfer_id']))) return false;
+    $source = material_core_source($identity, 'approved');
+    if (!$source || $source['header']['linked_doc_type'] !== null || $source['header']['linked_doc_no'] !== null
+        || $source['header']['request_type'] !== 'transfer') return false;
+    $ids = array(); foreach ($source['lines'] as $line) $ids[] = (int)$line['line_id'];
+    $pairs = material_core_rows('SELECT id FROM '.TB_PREF.'purch_requisition_lines WHERE material_request_line_id IN ('
+        .implode(',', $ids).') ORDER BY id FOR UPDATE');
+    $to_history = transfer_core_history($transfer_id);
+    $headers = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_orders WHERE transfer_id='.$transfer_id.' FOR UPDATE');
+    $lines = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_order_lines WHERE transfer_id='.$transfer_id.' ORDER BY line_id FOR UPDATE');
+    $links = material_core_rows('SELECT request_id FROM '.TB_PREF.'wh_material_requests WHERE linked_doc_type='
+        .ST_LOCTRANSFER.' AND linked_doc_no='.$transfer_id.' ORDER BY request_id FOR UPDATE');
+    if ($pairs !== array() || !$to_history || !$headers || count($headers) !== 1 || !$lines || $links !== array()) return false;
+    $transfer = array('header'=>$headers[0], 'lines'=>$lines);
+    return material_released_transfer_projection($identity, $source, $history, $transfer, $to_history);
+}
+
+/**
+ * Compare an exact receipt-bound historical release independently of current links.
+ * Callers must load/lock complete persisted rows and prove any reconstruction.
+ * This comparison grants no reuse, replacement, approval or financial authority.
+ */
+function material_released_transfer_projection($request_id, $source, $history, $transfer, $to_history)
+{
+    $identity = dimension_writer_reference_id($request_id);
+    if (!$identity || !material_core_context() || !transfer_core_context()
+        || empty($GLOBALS['transaction_level'])) return false;
+    foreach (array($source, $transfer) as $rows) {
+        if (!is_array($rows) || !isset($rows['header'], $rows['lines'])
+            || !is_array($rows['header']) || !is_array($rows['lines']) || !$rows['lines']) return false;
+        foreach ($rows['lines'] as $line) if (!is_array($line)) return false;
+    }
+    foreach (array($history, $to_history) as $rows) {
+        if (!is_array($rows) || !isset($rows['drafts'], $rows['actions'])
+            || !is_array($rows['drafts']) || !is_array($rows['actions'])) return false;
+        foreach (array_merge($rows['drafts'], $rows['actions']) as $row) if (!is_array($row)) return false;
+    }
+    foreach (array('request_id','status','request_type','linked_doc_type','linked_doc_no','requested_by','updated_at') as $field)
+        if (!array_key_exists($field, $source['header'])) return false;
+    foreach ($history['actions'] as $row)
+        foreach (array('id','draft_id','action_type','user_id','level','draft_data_snapshot','action_date','ip_address') as $field)
+            if (!array_key_exists($field, $row)) return false;
+    if (dimension_writer_reference_id($source['header']['request_id']) !== $identity
+        || $source['header']['status'] !== 'approved' || $source['header']['request_type'] !== 'transfer'
+        || $source['header']['linked_doc_type'] !== null || $source['header']['linked_doc_no'] !== null) return false;
+    if (!$history['actions']) return false;
     $prior = $history; $action = array_pop($prior['actions']);
     $approval = get_approval_workflow_service();
     $receipt = $action['draft_data_snapshot'] === null ? false
@@ -43,19 +94,6 @@ function material_released_transfer_custody($request_id)
         || !is_string($receipt['ordered_transition']['updated_at'])
         || !preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/D', $receipt['ordered_transition']['updated_at'])
         || $action['action_type'] !== 'source_release') return false;
-    $source = material_core_source($identity, 'approved');
-    if (!$source || $source['header']['linked_doc_type'] !== null || $source['header']['linked_doc_no'] !== null
-        || $source['header']['request_type'] !== 'transfer') return false;
-    $ids = array(); foreach ($source['lines'] as $line) $ids[] = (int)$line['line_id'];
-    $pairs = material_core_rows('SELECT id FROM '.TB_PREF.'purch_requisition_lines WHERE material_request_line_id IN ('
-        .implode(',', $ids).') ORDER BY id FOR UPDATE');
-    $to_history = transfer_core_history($transfer_id);
-    $headers = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_orders WHERE transfer_id='.$transfer_id.' FOR UPDATE');
-    $lines = transfer_core_rows('SELECT * FROM '.TB_PREF.'wh_transfer_order_lines WHERE transfer_id='.$transfer_id.' ORDER BY line_id FOR UPDATE');
-    $links = material_core_rows('SELECT request_id FROM '.TB_PREF.'wh_material_requests WHERE linked_doc_type='
-        .ST_LOCTRANSFER.' AND linked_doc_no='.$transfer_id.' ORDER BY request_id FOR UPDATE');
-    if ($pairs !== array() || !$to_history || !$headers || count($headers) !== 1 || !$lines || $links !== array()) return false;
-    $transfer = array('header'=>$headers[0], 'lines'=>$lines);
     $ordered = $source;
     foreach ($receipt['ordered_transition'] as $field=>$value) $ordered['header'][$field] = $value;
     $origin = material_transfer_origin_projection($identity, $ordered, $prior, $transfer, $to_history);
