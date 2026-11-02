@@ -49,10 +49,10 @@ function get_transfer_order_core_form_context()
     return hash_hmac('sha256', serialize(array($actor->user, $actor->access, $actor->cur_con,
         $db_connections[$actor->cur_con])), ensure_csrf_token());
 }
-if (isset($_POST['Submit']) || isset($_POST['Cancel']) || isset($_POST['AddLine']) || isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || find_submit('DeleteLine') > 0) {
+if (isset($_POST['Submit']) || isset($_POST['Cancel']) || isset($_POST['Ship']) || isset($_POST['Receive']) || isset($_POST['Delete']) || isset($_POST['AddLine']) || isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM']) || find_submit('DeleteLine') > 0) {
     $context = get_post('transfer_core_context', '');
     if (!is_string($context) || !hash_equals(get_transfer_order_core_form_context(), $context)) {
-        unset($_POST['Submit'], $_POST['Cancel'], $_POST['AddLine'], $_POST['ADD_ITEM'], $_POST['UPDATE_ITEM']);
+        unset($_POST['Submit'], $_POST['Cancel'], $_POST['Ship'], $_POST['Receive'], $_POST['Delete'], $_POST['AddLine'], $_POST['ADD_ITEM'], $_POST['UPDATE_ITEM']);
         foreach (array_keys($_POST) as $key) if (preg_match('/^DeleteLine[0-9]+$/D', $key)) unset($_POST[$key]);
         display_error(_('The transfer order form context has changed. Reload this page before changing this order.'));
     }
