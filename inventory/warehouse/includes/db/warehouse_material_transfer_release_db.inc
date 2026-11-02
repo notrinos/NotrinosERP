@@ -192,13 +192,15 @@ function material_transfer_link_asof_draft_prefix($history, $request_id, $link_e
             || ($draft['completed_date'] !== null && $draft['completed_date'] < $draft['submitted_date'])) return false;
         $last_draft = $id;
     }
-    $previous = 0; $before = array(); $link_row = null;
+    $previous = 0; $previous_clock = null; $before = array(); $link_row = null;
     foreach ($history['actions'] as $action) {
         if (!is_array($action) || !isset($action['id'], $action['draft_id'], $action['action_type'], $action['action_date'])
             || !($action_id = dimension_writer_reference_id($action['id'])) || $action_id <= $previous
             || !dimension_writer_reference_id($action['draft_id'])
-            || !material_transfer_v2_timestamp($action['action_date'])) return false;
+            || !material_transfer_v2_timestamp($action['action_date'])
+            || ($previous_clock !== null && $action['action_date'] < $previous_clock)) return false;
         $previous = $action_id;
+        $previous_clock = $action['action_date'];
         if ($action_id === $event) {
             if ($action['action_type'] !== 'source_transfer') return false;
             $link_row = $action;
@@ -241,16 +243,21 @@ function material_transfer_link_asof_draft_prefix($history, $request_id, $link_e
         // Signed Material approval cannot predate the recorded independent
         // completion, even if a later link was created after that completion.
         || $approved['completed_date'] > $receipt['approved_updated_at']) return false;
-    $terminal_approval = null;
+    $terminal_review = null;
     foreach ($before as $action) {
-        // The final raw approve event (not an earlier workflow level) must
-        // have an independent checker. A signed draft/status is not sufficient.
-        if ($action['action_type'] === 'approve'
-            && dimension_writer_reference_id($action['draft_id']) === $receipt['approved_draft_id'])
-            $terminal_approval = $action;
         if ($action['action_date'] > $link_row['action_date']
             || !isset($included_ids[dimension_writer_reference_id($action['draft_id'])])) return false;
+        // Later reject/cancel/edit/delegate/resubmit rows supersede an earlier
+        // approve. Link/release custody events are not review decisions.
+        // Only the last raw review decision of the selected draft can certify
+        // an independently approved terminal state.
+        if (dimension_writer_reference_id($action['draft_id']) === $receipt['approved_draft_id']
+            && $action['action_type'] !== 'source_transfer'
+            && $action['action_type'] !== 'source_release')
+            $terminal_review = $action;
     }
+    $terminal_approval = $terminal_review !== null && $terminal_review['action_type'] === 'approve'
+        ? $terminal_review : null;
     if ($terminal_approval === null || !isset($terminal_approval['user_id'])
         || !($checker = dimension_writer_reference_id($terminal_approval['user_id']))
         || $checker === $receipt['maker_id']
