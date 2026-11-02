@@ -264,11 +264,11 @@ function verify_material_core_completion($outcome, $draft, $actor, $comments)
     if ($outcome === 'approved') $expected = array();
     elseif ($outcome === 'rejected' || $outcome === 'cancelled') $expected[0]['memo_'] = 'APPROVAL_'.strtoupper($outcome);
     if ($reserved !== $expected) return false;
-    if ($outcome === 'approved') {
-        // This action was authored by the core in this transaction. Freeze the
+    if ($terminal) {
+        // This terminal action was authored by the core in this transaction. Freeze the
         // complete terminal source only after every core effect reconciles;
         // never replace an older action, draft payload or submitted fingerprint.
-        $receipt = json_encode(array('schema'=>'material-approved-source-v1',
+        $receipt = json_encode(array('schema'=>$outcome === 'approved' ? 'material-approved-source-v1' : 'material-terminal-source-v1',
             'request_id'=>(int)$permit['data']['request_id'], 'draft_id'=>(int)$draft['id'],
             'company_sha256'=>material_core_context(true),
             'submitted_source_sha256'=>$permit['data']['material_source_sha256'],
@@ -284,7 +284,7 @@ function verify_material_core_completion($outcome, $draft, $actor, $comments)
         $history['actions'][] = $new;
         $expected_history = material_core_history((int)$permit['data']['request_id']);
         if ($expected_history !== $history
-            || material_core_source((int)$permit['data']['request_id'], 'approved') !== $source
+            || material_core_source((int)$permit['data']['request_id'], $source['header']['status']) !== $source
             || material_core_rows('SELECT * FROM '.TB_PREF.'voided WHERE type='.ST_WH_MATERIAL_REQUEST
                 .' AND id='.(int)$permit['draft']['reserved_trans_no'].' FOR UPDATE') !== $expected
             || material_core_context() !== $permit['context']) return false;
@@ -301,7 +301,16 @@ function submit_standalone_material_to_core($request_id)
         if (!begin_transaction()) return false;
         $history = material_core_history($identity);
         $source = material_core_source($identity, 'draft');
-        $released = false;
+        $released = false; $recovery = false;
+        foreach ($history === false ? array() : $history['drafts'] as $prior_draft) {
+            if ((int)$prior_draft['status'] !== APPROVAL_STATUS_APPROVED) continue;
+            require_once __DIR__.'/warehouse_material_recovery_db.inc';
+            $recovery = material_replacement_recovery_custody($identity, $history);
+            if ($recovery) {
+                $source = $recovery['source']; $released = $recovery['release'];
+            }
+            break;
+        }
         if (!$source) {
             require_once __DIR__.'/warehouse_material_transfer_release_db.inc';
             // Only the native current release reader grants this transition.
@@ -340,6 +349,7 @@ function submit_standalone_material_to_core($request_id)
         $data['material_source_sha256'] = material_core_source_fingerprint($submitted);
         $data['material_company_sha256'] = material_core_context(true);
         if ($released) $data['material_previous_release_id'] = (int)$released['action']['id'];
+        if ($recovery) $data['material_previous_terminal_id'] = (int)$recovery['terminal']['action']['id'];
         $actor = array('user_id'=>(int)$_SESSION['wa_current_user']->user, 'role_id'=>(int)$_SESSION['wa_current_user']->access);
         if (!register_transaction_resource_release('material-core', 'release_material_core_permit')) { cancel_transaction(); return false; }
         material_core_permit('set', array('action'=>'submit','context'=>$context,'data'=>$data,'actor'=>$actor,'source'=>$submitted));

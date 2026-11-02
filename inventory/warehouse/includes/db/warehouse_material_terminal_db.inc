@@ -59,6 +59,10 @@ function material_core_approved_projection($identity, $source, $history)
             }
             $previous = $row;
         }
+        if ($release && $release['action_type'] !== 'source_release') {
+            require_once __DIR__.'/warehouse_material_recovery_db.inc';
+            $release = material_submission_previous_release($history, $draft, $data);
+        }
         if (!$release || $release['action_type'] !== 'source_release'
             || !isset($data['material_previous_release_id'])
             || !is_int($data['material_previous_release_id'])

@@ -88,6 +88,10 @@ function material_transfer_native_cycle_drafts($history, $draft_id)
             }
             $previous = $action;
         }
+        if ($previous && $previous['action_type'] !== 'source_release') {
+            require_once __DIR__.'/warehouse_material_recovery_db.inc';
+            $previous = material_submission_previous_release($history, $draft, $data);
+        }
         $release = $previous ? material_transfer_release_receipt($previous) : false;
         if (!$submit || !$release || $release['schema'] !== 'material-transfer-release-v2'
             || $release['request_id'] !== dimension_writer_reference_id($data['request_id'])

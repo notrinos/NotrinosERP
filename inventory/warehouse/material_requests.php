@@ -99,7 +99,7 @@ if (isset($_POST['Submit']) && $selected_id > 0) {
 			display_notification(_('Material request has been submitted.'));
 		}
 	} else {
-		display_error(_('Cannot submit this material request. The original maker must retain exact Draft or released Transfer demand custody and valid independent approval setup.'));
+		display_error(_('Cannot submit this material request. The original maker must retain exact Draft, released Transfer demand or receipt-bound rejected/cancelled replacement custody and valid independent approval setup.'));
 	}
 	$Ajax->activate('mr_list');
 	$Ajax->activate('mr_detail');
