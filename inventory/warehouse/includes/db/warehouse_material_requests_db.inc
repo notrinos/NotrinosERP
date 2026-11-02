@@ -493,80 +493,52 @@ function cancel_material_request($request_id, $comments = '') {
  * Transitions: approved → ordered
  *
  * @param int    $request_id    Request ID
- * @param int    $linked_type   Linked document type (ST_PURCHORDER, ST_LOCTRANSFER, ST_WORKORDER)
+ * @param int    $linked_type   Supported native type: ST_PURCHORDER or ST_LOCTRANSFER
  * @param int    $linked_no     Linked document number
  * @param array  $purchase_snapshot Native paired PO source intent, required for PO linkage
  * @return bool Success
  */
 function mark_material_request_ordered($request_id, $linked_type, $linked_no, $purchase_snapshot = null) {
+	if (!is_int($linked_type) && !is_string($linked_type)) return false;
 	// Standalone PO conversion owns its separate approved-source receipt path.
 	// A paired PO transition must carry the native writer's actual source intent.
-	if ((int)$linked_type === ST_PURCHORDER) {
+	if ((string)$linked_type === (string)ST_PURCHORDER) {
 		require_once $GLOBALS['path_to_root'].'/inventory/warehouse/includes/db/warehouse_material_order_db.inc';
 		return link_paired_material_purchase_order($request_id, $linked_no, $purchase_snapshot);
 	}
 	// Numeric Transfer links are not approval or company authority. Require
 	// the transaction's exact standalone source and native draft custody.
-	if ((int)$linked_type === ST_LOCTRANSFER) {
+	if ((string)$linked_type === (string)ST_LOCTRANSFER) {
 		require_once __DIR__.'/warehouse_material_transfer_link_db.inc';
 		return link_approved_material_transfer($request_id, $linked_no, $purchase_snapshot);
 	}
-	$mr = get_material_request($request_id);
-	if (!$mr || $mr['status'] !== 'approved')
-		return false;
-
-	$sql = "UPDATE " . TB_PREF . "wh_material_requests SET "
-		. "status = 'ordered',"
-		. "linked_doc_type = " . (int)$linked_type . ","
-		. "linked_doc_no = " . (int)$linked_no . ","
-		. "updated_at = NOW()"
-		. " WHERE request_id = " . (int)$request_id
-		. " AND status = 'approved'";
-
-	db_query($sql, 'could not mark material request as ordered');
-	return db_num_affected_rows() > 0;
+	// No native reviewed source/receipt contract exists for other families.
+	// A numeric document identity cannot stand in for downstream custody.
+	return false;
 }
 
 /**
- * Update fulfillment quantity for a material request line.
+ * Compatibility denial for the former arbitrary fulfillment quantity setter.
+ * Only a native receiving command with stock and approval custody may author
+ * fulfillment. No maintained caller uses this evidence-free legacy setter.
  *
  * @param int   $line_id        Line ID
  * @param float $qty_fulfilled  Total fulfilled quantity
- * @return void
+ * @return bool Always false; no source read or write
  */
 function update_material_request_line_fulfillment($line_id, $qty_fulfilled) {
-	$sql = "UPDATE " . TB_PREF . "wh_material_request_lines SET "
-		. "qty_fulfilled = " . db_escape($qty_fulfilled)
-		. " WHERE line_id = " . (int)$line_id;
-
-	db_query($sql, 'could not update line fulfillment');
+	return false;
 }
 
 /**
- * Check if all lines of a material request are fully fulfilled.
- * If so, automatically transition status to 'fulfilled'.
+ * Compatibility denial for the former quantity-only fulfillment transition.
+ * Matching quantities do not prove an approved downstream receipt. Preserve
+ * historical rows; the read-only fulfillment percentage remains available.
  *
  * @param int $request_id Request ID
- * @return bool True if all lines fulfilled
+ * @return bool Always false; no source read or write
  */
 function check_material_request_fulfillment($request_id) {
-	$sql = "SELECT COUNT(*) AS total,
-		SUM(CASE WHEN qty_fulfilled >= qty_requested THEN 1 ELSE 0 END) AS fulfilled_count
-	FROM " . TB_PREF . "wh_material_request_lines
-	WHERE request_id = " . (int)$request_id;
-
-	$result = db_query($sql, 'could not check fulfillment');
-	$row = db_fetch($result);
-
-	if ($row['total'] > 0 && $row['fulfilled_count'] == $row['total']) {
-		$sql = "UPDATE " . TB_PREF . "wh_material_requests SET "
-			. "status = 'fulfilled',"
-			. "updated_at = NOW()"
-			. " WHERE request_id = " . (int)$request_id
-			. " AND status IN ('ordered', 'approved')";
-		db_query($sql, 'could not mark request as fulfilled');
-		return true;
-	}
 	return false;
 }
 
