@@ -237,13 +237,27 @@ function material_transfer_link_asof_draft_prefix($history, $request_id, $link_e
     if ($approved === null || !isset($approved['submitted_by'], $approved['approved_trans_no'])
         || (string)$approved['status'] !== '1' || $approved['completed_date'] === null
         || dimension_writer_reference_id($approved['submitted_by']) !== $receipt['maker_id']
-        || dimension_writer_reference_id($approved['approved_trans_no']) !== $identity) return false;
+        || dimension_writer_reference_id($approved['approved_trans_no']) !== $identity
+        // Signed Material approval cannot predate the recorded independent
+        // completion, even if a later link was created after that completion.
+        || $approved['completed_date'] > $receipt['approved_updated_at']) return false;
+    $terminal_approval = null;
     foreach ($before as $action) {
+        // The final raw approve event (not an earlier workflow level) must
+        // have an independent checker. A signed draft/status is not sufficient.
+        if ($action['action_type'] === 'approve'
+            && dimension_writer_reference_id($action['draft_id']) === $receipt['approved_draft_id'])
+            $terminal_approval = $action;
         if ($action['action_date'] > $link_row['action_date']
             || !isset($included_ids[dimension_writer_reference_id($action['draft_id'])])) return false;
     }
-    if ($receipt['approved_history_sha256'] !== material_transfer_release_history_hash(array(
-        'drafts'=>$drafts, 'actions'=>$before))) return false;
+    if ($terminal_approval === null || !isset($terminal_approval['user_id'])
+        || !($checker = dimension_writer_reference_id($terminal_approval['user_id']))
+        || $checker === $receipt['maker_id']
+        || $terminal_approval['action_date'] < $approved['submitted_date']
+        || $terminal_approval['action_date'] > $approved['completed_date']
+        || $receipt['approved_history_sha256'] !== material_transfer_release_history_hash(array(
+            'drafts'=>$drafts, 'actions'=>$before))) return false;
     return array('drafts'=>$drafts, 'actions'=>$before, 'link_event_id'=>$event,
         'approved_draft_id'=>$receipt['approved_draft_id'], 'future_draft_ids'=>$future,
         'signed_history_sha256'=>$receipt['approved_history_sha256']);
@@ -268,7 +282,8 @@ function material_transfer_release_asof_draft_prefix($history, $request_id, $rel
     if (!$identity || !$selected || !is_array($history)
         || !isset($history['drafts'], $history['actions'])
         || !is_array($history['drafts']) || !is_array($history['actions'])) return false;
-    $prior = array(); $pending = false; $cycles = array(); $seen_transfers = array();
+    $prior = array(); $pending = false; $cycles = array();
+    $seen_transfers = array(); $seen_approved_drafts = array();
     $previous_id = 0; $previous_date = null; $released_date = null;
     foreach ($history['actions'] as $action) {
         if (!is_array($action) || !isset($action['id'], $action['draft_id'],
@@ -289,6 +304,9 @@ function material_transfer_release_asof_draft_prefix($history, $request_id, $rel
                 || $proof['approved_draft_id'] !== $link['approved_draft_id']
                 || $link['request_id'] !== $identity
                 || isset($seen_transfers[$link['transfer_id']])
+                // A replacement cycle needs a newly approved draft, not just
+                // a new Transfer number reusing a formerly signed review.
+                || isset($seen_approved_drafts[$link['approved_draft_id']])
                 || !isset($action['user_id'])
                 || dimension_writer_reference_id($action['user_id']) !== $link['maker_id']
                 || dimension_writer_reference_id($action['draft_id']) !== $link['approved_draft_id']
@@ -297,6 +315,7 @@ function material_transfer_release_asof_draft_prefix($history, $request_id, $rel
             $pending = array('link'=>$link, 'proof'=>$proof, 'link_event_id'=>$event_id,
                 'link_date'=>$action['action_date']);
             $seen_transfers[$link['transfer_id']] = true;
+            $seen_approved_drafts[$link['approved_draft_id']] = true;
         } elseif ($action['action_type'] === 'source_release') {
             if (!$pending || !($receipt = material_transfer_release_receipt($action))
                 || $receipt['schema'] !== 'material-transfer-release-v2') return false;
