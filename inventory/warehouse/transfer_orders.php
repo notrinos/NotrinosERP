@@ -29,6 +29,7 @@ include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/includes/ui/ui_lists.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_transfers_db.inc');
+include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_transfer_fulfillment_db.inc');
 include_once($path_to_root . '/inventory/includes/db/serial_batch_db.inc');
 
 $js = '';
@@ -105,7 +106,7 @@ if (isset($_POST['Receive']) && $selected_id > 0) {
 		}
 	}
 
-	$recv_result = receive_transfer_order($selected_id, $recv_date, $received);
+	$recv_result = receive_transfer_order($selected_id, $recv_date, $received, get_post('transfer_receipt_source', ''));
 	if ($recv_result['success']) {
 		display_notification($recv_result['message']);
 		if ($recv_result['backorder_id']) {
@@ -518,6 +519,8 @@ if ($selected_id > 0 || isset($_POST['New'])) {
 			submit('Ship', _('Ship Items'), true, _('Mark as shipped and create stock moves'));
 		}
 		if ($show_receive_qty) {
+			$receipt_source = transfer_fulfillment_source((int)$selected_id);
+			hidden('transfer_receipt_source', $receipt_source ? transfer_core_source_fingerprint($receipt_source) : '');
 			echo '<br><br>';
 			start_table(TABLESTYLE_NOBORDER);
 			date_row(_('Receive Date:'), 'recv_date', '', true);
