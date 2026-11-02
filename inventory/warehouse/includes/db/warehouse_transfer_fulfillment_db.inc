@@ -2,6 +2,37 @@
 /** Persist standalone movement custody on the existing immutable core action trail. */
 require_once __DIR__.'/warehouse_transfer_terminal_db.inc';
 
+/**
+ * Admit a new stock event against current committed accounting settings.
+ * Apply the native GL closing-date/current-year/multiyear policy using locking
+ * reads: cached company preferences and an earlier page check cannot authorize
+ * a posting after another connection closes its period. Historical receipt
+ * verification deliberately does not call this command-only gate.
+ */
+function transfer_fulfillment_period_allowed($date)
+{
+    if (!transfer_core_context() || empty($GLOBALS['transaction_level'])
+        || !is_string($date) || !preg_match('/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/D', $date, $parts)
+        || (int)$parts[1] < 1000 || !checkdate((int)$parts[2], (int)$parts[3], (int)$parts[1])) return false;
+    $rows = transfer_core_rows('SELECT name,value FROM '.TB_PREF."sys_prefs WHERE name IN ('f_year','gl_closing_date') ORDER BY name FOR UPDATE");
+    if (!$rows || count($rows) !== 2) return false;
+    $prefs = array();
+    foreach ($rows as $row) $prefs[$row['name']] = $row['value'];
+    if (!isset($prefs['f_year'], $prefs['gl_closing_date'])
+        || !dimension_writer_reference_id($prefs['f_year'])) return false;
+    $closing = $prefs['gl_closing_date'];
+    // Empty is the canonical install's explicit "no closing date" setting.
+    if ($closing !== '' && (!preg_match('/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/D', $closing, $parts)
+        || (int)$parts[1] < 1000 || !checkdate((int)$parts[2], (int)$parts[3], (int)$parts[1])
+        || $date <= $closing)) return false;
+    $years = transfer_core_rows('SELECT id,closed FROM '.TB_PREF.'fiscal_year WHERE begin<='
+        .db_escape($date).' AND end>='.db_escape($date).' ORDER BY id FOR UPDATE');
+    // Ambiguous/absent or closed years cannot acquire new posting authority.
+    return $years && count($years) === 1 && (string)$years[0]['closed'] === '0'
+        && ((int)$years[0]['id'] === (int)$prefs['f_year']
+            || $_SESSION['wa_current_user']->can_access('SA_MULTIFISCALYEARS'));
+}
+
 /** Load exact current rows; the caller owns Material/Transfer family locks. */
 function transfer_fulfillment_source($identity)
 {

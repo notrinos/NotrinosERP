@@ -539,7 +539,9 @@ function ship_transfer_order($transfer_id, $ship_date) {
     if (!is_string($sql_date) || !preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D', $sql_date)) {
         cancel_transaction(); return false;
     }
-    if ($sql_date < $order['request_date']) { cancel_transaction(); return false; }
+    if ($sql_date < $order['request_date'] || !transfer_fulfillment_period_allowed($sql_date)) {
+        cancel_transaction(); return false;
+    }
     $movement_ids = array();
 
 	$inv_root = dirname(dirname(dirname(dirname(dirname(__FILE__))))); // → project root
@@ -647,7 +649,8 @@ function ship_transfer_order($transfer_id, $ship_date) {
 
 	add_audit_trail(ST_LOCTRANSFER, $transfer_trans_no, $ship_date);
 
-	if (!transfer_fulfillment_record($identity, $custody, 'dispatch', $sql_date, $movement_ids)
+	if (!transfer_fulfillment_period_allowed($sql_date)
+        || !transfer_fulfillment_record($identity, $custody, 'dispatch', $sql_date, $movement_ids)
         || transfer_core_context() !== $context) { cancel_transaction(); return false; }
 	if (!commit_transaction()) { cancel_transaction(); return false; }
 	return true;
@@ -751,7 +754,11 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array(), $
 	$sql_date = date2sql($recv_date);
     if (!dimension_writer_reference_id($transfer_trans_no) || !is_string($sql_date)
         || !preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D', $sql_date)) { cancel_transaction(); return $result; }
-    if ($sql_date < $order['actual_ship_date']) { cancel_transaction(); return $result; }
+    if ($sql_date < $order['actual_ship_date'] || !transfer_fulfillment_period_allowed($sql_date)) {
+        cancel_transaction();
+        $result['message'] = _('The receipt date must be in an authorized open accounting period.');
+        return $result;
+    }
 	$movement_ids = array();
 	$has_shortage = false;
 
@@ -898,7 +905,8 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array(), $
     // Creating a dispatchable backorder here would issue the same goods twice.
     $backorder_id = null;
 
-	if (!transfer_fulfillment_record($identity, $custody, 'receipt', $sql_date, $movement_ids)
+	if (!transfer_fulfillment_period_allowed($sql_date)
+        || !transfer_fulfillment_record($identity, $custody, 'receipt', $sql_date, $movement_ids)
         || transfer_core_context() !== $context) { cancel_transaction(); return $result; }
 	if (!commit_transaction()) { cancel_transaction(); return $result; }
 

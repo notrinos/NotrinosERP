@@ -86,7 +86,7 @@ if (isset($_POST['Ship']) && $selected_id > 0) {
 	if (ship_transfer_order($selected_id, $ship_date)) {
 		display_notification(_('Transfer order has been shipped and is now in transit.'));
 	} else {
-		display_error(_('Cannot ship this transfer order. It must be in Approved status.'));
+		display_error(_('Cannot ship this transfer order. Verify its approval evidence and choose a date in an authorized open accounting period.'));
 	}
 	$selected_id = -1;
 }
