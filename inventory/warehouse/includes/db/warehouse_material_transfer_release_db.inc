@@ -272,15 +272,17 @@ function material_transfer_link_asof_draft_prefix($history, $request_id, $link_e
 
 /**
  * Reconstruct a signed v2 release prefix across successive DISTINCT approval
- * drafts. Diagnostic only: a hash-match is not independent SQL approval,
+ * drafts. A hash-match alone is not independent SQL approval,
  * authorization, company isolation, stock, finance, or replacement authority.
  *
  * Unlike the legacy full-history reader, a historical link's draft collection
  * is reconstructed using the separately verified, raw signed as-of prefix.
  * Every intervening link and release is verified in order; a pending link,
  * draft added between its link/release, replayed Transfer or amended raw event
- * cannot be silently skipped. Never use this in an application command/read
- * path without independent persisted-DB provenance, locking and acceptance.
+ * cannot be silently skipped. Application callers must independently verify
+ * persisted provenance and hold locks. The first-release historical reader
+ * additionally verifies the native approval and source/Transfer projections;
+ * later-cycle native replacement and financial acceptance remain pending.
  */
 function material_transfer_release_asof_draft_prefix($history, $request_id, $release_event_id)
 {
@@ -371,11 +373,55 @@ function material_transfer_release_asof_draft_prefix($history, $request_id, $rel
 }
 
 /**
+ * Select an immutable release's actual signed draft/action prefix. The caller
+ * must obtain the COMPLETE persisted Material review history using FOR UPDATE;
+ * passing an arbitrary subset cannot grant any native command authority.
+ *
+ * Keep the original full-history decoder for unchanged single-cycle receipts.
+ * Future independently created drafts cannot be retroactively included in a
+ * signed prior receipt, but only the FIRST complete release may use the as-of
+ * fallback: second-cycle origin/financial reconstruction is not yet admitted.
+ */
+function material_transfer_historical_release_prefix($history, $request_id, $release_event_id)
+{
+    $identity = dimension_writer_reference_id($request_id);
+    $event = dimension_writer_reference_id($release_event_id);
+    if (!$identity || !$event || !is_array($history)
+        || !isset($history['drafts'], $history['actions'])
+        || !is_array($history['drafts']) || !is_array($history['actions'])) return false;
+    $prefix = array('drafts'=>$history['drafts'], 'actions'=>array()); $receipt = false;
+    foreach ($history['actions'] as $action) {
+        if (!is_array($action) || !isset($action['id'])) return false;
+        $prefix['actions'][] = $action;
+        if (dimension_writer_reference_id($action['id']) === $event) {
+            $receipt = material_transfer_release_receipt($action); break;
+        }
+    }
+    if (!$receipt || $receipt['schema'] !== 'material-transfer-release-v2'
+        || $receipt['request_id'] !== $identity) return false;
+    if (!material_transfer_release_lineage($prefix, $identity, $event)) {
+        $witness = material_transfer_release_asof_draft_prefix($history, $identity, $event);
+        if (!$witness || count($witness['cycles']) !== 1
+            || $witness['selected']['release_event_id'] !== $event
+            || !($link_proof = material_transfer_link_asof_draft_prefix(
+                $history, $identity, $witness['selected']['link_event_id']))
+            || $link_proof['approved_draft_id'] !== $receipt['draft_id']) return false;
+        $prefix['drafts'] = $link_proof['drafts'];
+        if (!material_transfer_release_lineage($prefix, $identity, $event)) return false;
+    }
+    return array('prefix'=>$prefix, 'receipt'=>$receipt);
+}
+
+/**
  * Load one persisted v2 historical release by its exact immutable action identity.
  * Lock Material history/source before Transfer history/source. Restore only the
  * receipt's four transition fields and verify every other source/history byte.
- * Later actions are excluded only from this historical prefix; no current-link,
- * replacement, approval or financial command may use this read as admission.
+ * Later actions and later independently submitted drafts are excluded only
+ * after the full locked history verifies their original as-of signed boundary.
+ * Only the first historical release can be reconstructed by the current v2
+ * origin projection; later cycles remain denied pending native replacement
+ * provenance and financial acceptance. No current-link, replacement, approval
+ * or financial command may use this read as admission.
  * v1 has no retained release timestamp and is deliberately not reconstructed.
  */
 function material_historical_transfer_release($request_id, $action_id)
@@ -386,16 +432,12 @@ function material_historical_transfer_release($request_id, $action_id)
         || empty($GLOBALS['transaction_level'])) return false;
     $history = material_core_history($identity);
     if (!$history) return false;
-    $prefix = array('drafts'=>$history['drafts'], 'actions'=>array()); $receipt = false;
-    foreach ($history['actions'] as $action) {
-        $prefix['actions'][] = $action;
-        if ((int)$action['id'] === $event) {
-            $receipt = material_transfer_release_receipt($action); break;
-        }
-    }
-    if (!$receipt || $receipt['schema'] !== 'material-transfer-release-v2'
-        || !material_transfer_release_lineage($prefix, $identity, $event)
-        || $receipt['request_id'] !== $identity
+    // The native loader has already obtained the complete raw history under
+    // row locks. A historical prefix never grants a new approval or release.
+    $historical = material_transfer_historical_release_prefix($history, $identity, $event);
+    if (!$historical) return false;
+    $prefix = $historical['prefix']; $receipt = $historical['receipt'];
+    if ($receipt['request_id'] !== $identity
         || !($transfer_id = dimension_writer_reference_id($receipt['transfer_id']))
         || $receipt['material_company_sha256'] !== material_core_context(true)
         || $receipt['transfer_company_sha256'] !== transfer_core_context(true)) return false;
