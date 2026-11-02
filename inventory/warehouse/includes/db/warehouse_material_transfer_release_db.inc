@@ -250,6 +250,101 @@ function material_transfer_link_asof_draft_prefix($history, $request_id, $link_e
 }
 
 /**
+ * Reconstruct a signed v2 release prefix across successive DISTINCT approval
+ * drafts. Diagnostic only: a hash-match is not independent SQL approval,
+ * authorization, company isolation, stock, finance, or replacement authority.
+ *
+ * Unlike the legacy full-history reader, a historical link's draft collection
+ * is reconstructed using the separately verified, raw signed as-of prefix.
+ * Every intervening link and release is verified in order; a pending link,
+ * draft added between its link/release, replayed Transfer or amended raw event
+ * cannot be silently skipped. Never use this in an application command/read
+ * path without independent persisted-DB provenance, locking and acceptance.
+ */
+function material_transfer_release_asof_draft_prefix($history, $request_id, $release_event_id)
+{
+    $identity = dimension_writer_reference_id($request_id);
+    $selected = dimension_writer_reference_id($release_event_id);
+    if (!$identity || !$selected || !is_array($history)
+        || !isset($history['drafts'], $history['actions'])
+        || !is_array($history['drafts']) || !is_array($history['actions'])) return false;
+    $prior = array(); $pending = false; $cycles = array(); $seen_transfers = array();
+    $previous_id = 0; $previous_date = null; $released_date = null;
+    foreach ($history['actions'] as $action) {
+        if (!is_array($action) || !isset($action['id'], $action['draft_id'],
+                $action['action_type'], $action['action_date'])
+            || !($event_id = dimension_writer_reference_id($action['id']))
+            || !dimension_writer_reference_id($action['draft_id'])
+            || $event_id <= $previous_id
+            || !material_transfer_v2_timestamp($action['action_date'])
+            || ($previous_date !== null && $action['action_date'] < $previous_date)) return false;
+        $previous_id = $event_id;
+        $previous_date = $action['action_date'];
+        if ($action['action_type'] === 'source_transfer') {
+            if ($pending !== false) return false;
+            $link = material_transfer_link_receipt($action);
+            $proof = material_transfer_link_asof_draft_prefix($history, $identity, $event_id);
+            if (!$link || !$proof || $link['schema'] !== 'material-transfer-link-v2'
+                || $proof['actions'] !== $prior
+                || $proof['approved_draft_id'] !== $link['approved_draft_id']
+                || $link['request_id'] !== $identity
+                || isset($seen_transfers[$link['transfer_id']])
+                || !isset($action['user_id'])
+                || dimension_writer_reference_id($action['user_id']) !== $link['maker_id']
+                || dimension_writer_reference_id($action['draft_id']) !== $link['approved_draft_id']
+                || ($released_date !== null && $link['approved_updated_at'] < $released_date)
+                || $action['action_date'] < $link['approved_updated_at']) return false;
+            $pending = array('link'=>$link, 'proof'=>$proof, 'link_event_id'=>$event_id,
+                'link_date'=>$action['action_date']);
+            $seen_transfers[$link['transfer_id']] = true;
+        } elseif ($action['action_type'] === 'source_release') {
+            if (!$pending || !($receipt = material_transfer_release_receipt($action))
+                || $receipt['schema'] !== 'material-transfer-release-v2') return false;
+            $link = $pending['link'];
+            // A second review started before the first release cannot be
+            // dropped from an older envelope merely because it was approved
+            // later. Only the exact link-bound draft collection is admitted.
+            foreach ($history['drafts'] as $draft)
+                if (!is_array($draft) || !isset($draft['submitted_date'])
+                    || !material_transfer_v2_timestamp($draft['submitted_date'])
+                    || ($draft['submitted_date'] <= $action['action_date']
+                        && !in_array(dimension_writer_reference_id($draft['id']),
+                            array_map('dimension_writer_reference_id',
+                                array_column($pending['proof']['drafts'], 'id')), true))) return false;
+            if ($receipt['request_id'] !== $identity
+                || $receipt['transfer_id'] !== $link['transfer_id']
+                || $receipt['draft_id'] !== $link['approved_draft_id']
+                || !isset($action['user_id'])
+                || dimension_writer_reference_id($action['user_id']) !== $link['maker_id']
+                || dimension_writer_reference_id($action['draft_id']) !== $link['approved_draft_id']
+                || $receipt['material_company_sha256'] !== $link['material_company_sha256']
+                || $receipt['transfer_company_sha256'] !== $link['transfer_company_sha256']
+                || $receipt['history_sha256'] !== material_transfer_release_history_hash(array(
+                    'drafts'=>$pending['proof']['drafts'], 'actions'=>$prior))
+                || $receipt['ordered_transition']['updated_at'] < $link['approved_updated_at']
+                || $receipt['ordered_transition']['updated_at'] > $receipt['released_transition']['updated_at']
+                || $receipt['released_transition']['updated_at'] < $pending['link_date']
+                || $action['action_date'] < $receipt['released_transition']['updated_at']) return false;
+            $unsigned = $action;
+            $unsigned['draft_data_snapshot'] = null;
+            if ($receipt['action_sha256'] !== material_core_source_fingerprint(array(
+                'header'=>$unsigned, 'lines'=>array()))) return false;
+            $cycle = array('link_event_id'=>$pending['link_event_id'],
+                'release_event_id'=>$event_id, 'transfer_id'=>$link['transfer_id'],
+                'draft_id'=>$link['approved_draft_id'], 'signed_history_sha256'=>$receipt['history_sha256'],
+                'release_receipt_sha256'=>hash('sha256', $action['draft_data_snapshot']));
+            $cycles[] = $cycle;
+            $released_date = $action['action_date'];
+            $pending = false;
+            if ($event_id === $selected) return array('selected'=>$cycle,
+                'cycles'=>$cycles, 'historical_prefix_actions'=>count($prior) + 1);
+        }
+        $prior[] = $action;
+    }
+    return false;
+}
+
+/**
  * Load one persisted v2 historical release by its exact immutable action identity.
  * Lock Material history/source before Transfer history/source. Restore only the
  * receipt's four transition fields and verify every other source/history byte.
