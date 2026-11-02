@@ -13,7 +13,30 @@ function material_approved_custody($identity)
         || !dimension_writer_reference_id($identity)) return false;
     $history = material_core_history((int)$identity);
     $source = material_core_source((int)$identity, 'approved');
-    if (!$history || !$source || empty($source['header']['approved_by'])
+    $custody = material_core_approved_projection($identity, $source, $history);
+    if (!$custody) return false;
+    $ids = array();
+    foreach ($source['lines'] as $line) $ids[] = (int)$line['line_id'];
+    $links = material_core_rows('SELECT id FROM '.TB_PREF.'purch_requisition_lines WHERE material_request_line_id IN ('
+        .implode(',', $ids).') ORDER BY id FOR UPDATE');
+    return $links === array() ? $custody : false;
+}
+
+/** Verify the latest independent native decision against its complete signed history.
+ * Earlier approvals require a completed release before the next native submission.
+ * This comparison is shared by locked current and immutable origin readers.
+ */
+function material_core_approved_projection($identity, $source, $history)
+{
+    if (!material_core_context() || empty($GLOBALS['transaction_level'])
+        || !dimension_writer_reference_id($identity)) return false;
+    if (!is_array($history) || !isset($history['drafts'], $history['actions'])
+        || !is_array($history['drafts']) || !is_array($history['actions'])
+        || !is_array($source) || !isset($source['header'], $source['lines'])
+        || !is_array($source['header']) || !is_array($source['lines']) || !$source['lines']
+        || !isset($source['header']['request_id'], $source['header']['status'], $source['header']['requested_by'])
+        || dimension_writer_reference_id($source['header']['request_id']) !== (int)$identity
+        || $source['header']['status'] !== 'approved' || empty($source['header']['approved_by'])
         || (int)$source['header']['approved_by'] === (int)$source['header']['requested_by']) return false;
     $approved = array(); $approval = get_approval_workflow_service();
     foreach ($history['drafts'] as $draft) {
@@ -25,8 +48,31 @@ function material_approved_custody($identity)
         if ((int)$draft['status'] === APPROVAL_STATUS_APPROVED) $approved[] = $draft;
         elseif (!in_array((int)$draft['status'], array(APPROVAL_STATUS_REJECTED, APPROVAL_STATUS_CANCELLED), true)) return false;
     }
-    if (count($approved) !== 1) return false;
-    $draft = $approved[0]; $data = $approval->decodeStoredDraftData($draft['draft_data']);
+    if (!$approved) return false;
+    $draft = $approved[count($approved)-1];
+    if (count($approved) > 1) {
+        $data = $approval->decodeStoredDraftData($draft['draft_data']);
+        $previous = null; $release = null;
+        foreach ($history['actions'] as $row) {
+            if ((int)$row['draft_id'] === (int)$draft['id'] && $row['action_type'] === 'submit') {
+                $release = $previous; break;
+            }
+            $previous = $row;
+        }
+        if (!$release || $release['action_type'] !== 'source_release'
+            || !isset($data['material_previous_release_id'])
+            || !is_int($data['material_previous_release_id'])
+            || $data['material_previous_release_id'] !== (int)$release['id']) return false;
+        foreach ($approved as $old) {
+            if ((int)$old['id'] === (int)$draft['id']) continue;
+            $found = false;
+            foreach ($history['actions'] as $row)
+                if ((int)$row['draft_id'] === (int)$old['id'] && $row['action_type'] === 'source_release'
+                    && (int)$row['id'] <= (int)$release['id']) $found = true;
+            if (!$found) return false;
+        }
+    }
+    $data = $approval->decodeStoredDraftData($draft['draft_data']);
     if ((int)$draft['approved_trans_no'] !== (int)$identity || !$draft['completed_date']
         || !isset($data['material_company_sha256'], $data['material_source_sha256'])
         || $data['material_company_sha256'] !== material_core_context(true)) return false;
@@ -43,11 +89,6 @@ function material_approved_custody($identity)
         'action_sha256'=>material_core_source_fingerprint(array('header'=>$unsigned, 'lines'=>array())),
         'source_sha256'=>material_core_source_fingerprint($source));
     if ($receipt !== $expected) return false;
-    $ids = array();
-    foreach ($source['lines'] as $line) $ids[] = (int)$line['line_id'];
-    $links = material_core_rows('SELECT id FROM '.TB_PREF.'purch_requisition_lines WHERE material_request_line_id IN ('
-        .implode(',', $ids).') ORDER BY id FOR UPDATE');
-    if ($links !== array()) return false;
     return array('source'=>$source, 'history'=>$history, 'draft'=>$draft);
 }
 

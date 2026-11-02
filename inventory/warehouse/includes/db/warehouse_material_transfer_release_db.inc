@@ -56,6 +56,54 @@ function material_transfer_release_receipt($action)
 }
 
 /**
+ * Recover a receipt's exact draft boundary only across native release submissions.
+ * Every excluded draft must name its immediately preceding persisted release,
+ * with a real maker submission after that event. The caller still verifies the
+ * signed full prefix, native terminal approval, company and source projections.
+ * SQL action IDs disambiguate commands recorded within the same DATETIME second.
+ */
+function material_transfer_native_cycle_drafts($history, $draft_id)
+{
+    $draft_id = dimension_writer_reference_id($draft_id);
+    if (!$draft_id || !isset($history['drafts'], $history['actions'])) return false;
+    $prefix = array(); $last = 0; $selected = false;
+    foreach ($history['drafts'] as $draft) {
+        if (!isset($draft['id']) || !($id = dimension_writer_reference_id($draft['id'])) || $id <= $last) return false;
+        $last = $id;
+        if ($id <= $draft_id) {
+            $prefix[] = $draft;
+            if ($id === $draft_id) $selected = true;
+            continue;
+        }
+        if (!isset($draft['draft_data'], $draft['submitted_by'], $draft['submitted_date'])
+            || !is_string($draft['draft_data'])) return false;
+        $data = get_approval_workflow_service()->decodeStoredDraftData($draft['draft_data']);
+        if (!is_array($data) || !isset($data['request_id'], $data['material_previous_release_id'], $data['material_company_sha256'])
+            || !is_int($data['material_previous_release_id']) || $data['material_previous_release_id'] <= 0
+            || $data['material_company_sha256'] !== material_core_context(true)) return false;
+        $previous = null; $submit = null;
+        foreach ($history['actions'] as $action) {
+            if ((int)$action['draft_id'] === $id && $action['action_type'] === 'submit') {
+                $submit = $action; break;
+            }
+            $previous = $action;
+        }
+        $release = $previous ? material_transfer_release_receipt($previous) : false;
+        if (!$submit || !$release || $release['schema'] !== 'material-transfer-release-v2'
+            || $release['request_id'] !== dimension_writer_reference_id($data['request_id'])
+            || $release['material_company_sha256'] !== material_core_context(true)
+            || (int)$previous['id'] !== $data['material_previous_release_id']
+            || (int)$submit['id'] <= (int)$previous['id']
+            || (int)$submit['user_id'] !== (int)$draft['submitted_by']
+            || (int)$previous['user_id'] !== (int)$draft['submitted_by']
+            || !material_transfer_v2_timestamp($draft['submitted_date'])
+            || $draft['submitted_date'] < $previous['action_date']
+            || $submit['action_date'] < $previous['action_date']) return false;
+    }
+    return $selected ? $prefix : false;
+}
+
+/**
  * Examine ordered persisted Material source-link/release events without granting
  * any replacement, approval, edit, or stock/GL authority. Each receipt is
  * compared to the complete earlier raw action prefix (including unrelated
@@ -89,6 +137,14 @@ function material_transfer_release_lineage($history, $request_id, $selected_even
         $previous_id = $event_id;
         if ($action['action_type'] === 'source_transfer') {
             $link = material_transfer_link_receipt($action);
+            $prior['drafts'] = $history['drafts'];
+            if ($link && $link['approved_history_sha256'] !== material_transfer_release_history_hash($prior)) {
+                $native_drafts = material_transfer_native_cycle_drafts($history, $link['approved_draft_id']);
+                if ($native_drafts === false) return false;
+                $prior['drafts'] = $native_drafts;
+            } elseif ($link) {
+                $prior['drafts'] = $history['drafts'];
+            }
             if (!$link || $link['schema'] !== 'material-transfer-link-v2'
                 || $pending !== false || $link['request_id'] !== $identity
                 || !($to_id = dimension_writer_reference_id($link['transfer_id']))
@@ -378,9 +434,9 @@ function material_transfer_release_asof_draft_prefix($history, $request_id, $rel
  * passing an arbitrary subset cannot grant any native command authority.
  *
  * Keep the original full-history decoder for unchanged single-cycle receipts.
- * Future independently created drafts cannot be retroactively included in a
- * signed prior receipt, but only the FIRST complete release may use the as-of
- * fallback: second-cycle origin/financial reconstruction is not yet admitted.
+ * Native successor submissions carry an exact prior-release identity. Their
+ * persisted action order and each original signed prefix admit multiple cycles.
+ * The older clock-only as-of fallback remains restricted to the first release.
  */
 function material_transfer_historical_release_prefix($history, $request_id, $release_event_id)
 {
@@ -399,6 +455,8 @@ function material_transfer_historical_release_prefix($history, $request_id, $rel
     }
     if (!$receipt || $receipt['schema'] !== 'material-transfer-release-v2'
         || $receipt['request_id'] !== $identity) return false;
+    $native_drafts = material_transfer_native_cycle_drafts($history, $receipt['draft_id']);
+    if ($native_drafts !== false) $prefix['drafts'] = $native_drafts;
     if (!material_transfer_release_lineage($prefix, $identity, $event)) {
         $witness = material_transfer_release_asof_draft_prefix($history, $identity, $event);
         if (!$witness || count($witness['cycles']) !== 1
@@ -415,13 +473,13 @@ function material_transfer_historical_release_prefix($history, $request_id, $rel
 /**
  * Load one persisted v2 historical release by its exact immutable action identity.
  * Lock Material history/source before Transfer history/source. Restore only the
- * receipt's four transition fields and verify every other source/history byte.
+ * receipt's four transition fields and, for native successors, the signed
+ * original checker identity; verify every other source/history byte.
  * Later actions and later independently submitted drafts are excluded only
  * after the full locked history verifies their original as-of signed boundary.
- * Only the first historical release can be reconstructed by the current v2
- * origin projection; later cycles remain denied pending native replacement
- * provenance and financial acceptance. No current-link, replacement, approval
- * or financial command may use this read as admission.
+ * Native cycle boundaries require persisted release/submission provenance.
+ * No current-link, replacement, approval or financial command may use this
+ * historical read as admission.
  * v1 has no retained release timestamp and is deliberately not reconstructed.
  */
 function material_historical_transfer_release($request_id, $action_id)
@@ -450,6 +508,16 @@ function material_historical_transfer_release($request_id, $action_id)
         || !$to_headers || count($to_headers) !== 1 || !$to_lines) return false;
     $source = array('header'=>$headers[0], 'lines'=>$lines);
     foreach ($receipt['released_transition'] as $field=>$value) $source['header'][$field] = $value;
+    // A native successor may change approved_by. Recover only that field from
+    // the original signed independent decision; the original source hash below
+    // proves the value. All intrinsic demand and opaque fields stay byte exact.
+    $native_drafts = material_transfer_native_cycle_drafts($history, $receipt['draft_id']);
+    if ($native_drafts && count($native_drafts) < count($history['drafts'])) {
+        foreach ($prefix['actions'] as $row)
+            if ((int)$row['draft_id'] === $receipt['draft_id'] && $row['action_type'] === 'approve')
+                $source['header']['approved_by'] = is_string($source['header']['approved_by'])
+                    ? (string)$row['user_id'] : (int)$row['user_id'];
+    }
     return material_released_transfer_projection($identity, $source, $prefix,
         array('header'=>$to_headers[0], 'lines'=>$to_lines), $to_history);
 }

@@ -296,45 +296,16 @@ function material_transfer_origin_projection($request_id, $source, $history, $tr
     $approved['header']['linked_doc_no'] = null;
     $approved['header']['updated_at'] = $receipt['approved_updated_at'];
     $prior_history = array('drafts'=>$history['drafts'], 'actions'=>$actions);
-    $draft = false;
-    foreach ($history['drafts'] as $row) {
-        if ((int)$row['status'] === APPROVAL_STATUS_APPROVED) {
-            if ($draft) return false;
-            $draft = $row;
-        } elseif (!in_array((int)$row['status'], array(APPROVAL_STATUS_REJECTED, APPROVAL_STATUS_CANCELLED), true)) return false;
-        $workflow = material_core_rows('SELECT trans_type FROM '.TB_PREF.'approval_workflows WHERE id='.(int)$row['workflow_id'].' FOR UPDATE');
-        if (!$workflow || count($workflow) !== 1 || (int)$workflow[0]['trans_type'] !== ST_WH_MATERIAL_REQUEST
-            || (int)$row['submitted_by'] !== (int)$receipt['maker_id']) return false;
-    }
-    $signed = $actions ? $actions[count($actions)-1] : false;
-    $data = $draft ? $approval->decodeStoredDraftData($draft['draft_data']) : false;
-    $terminal = $signed && $signed['draft_data_snapshot'] !== null
-        ? $approval->decodeStoredDraftData($signed['draft_data_snapshot']) : false;
-    if (!$draft || !is_array($data) || !is_array($terminal)
-        || !isset($data['material_company_sha256'], $data['material_source_sha256'])
-        || $data['material_company_sha256'] !== material_core_context(true)
-        || (int)$draft['approved_trans_no'] !== $identity || !$draft['completed_date']
-        || (int)$approved['header']['approved_by'] !== (int)$signed['user_id']
-        || (int)$signed['user_id'] === (int)$receipt['maker_id'] || $signed['action_type'] !== 'approve'
-        || (int)$signed['draft_id'] !== (int)$draft['id']
-        || (int)$signed['level'] !== (int)$draft['current_level']) return false;
-    $without_terminal = $actions;
-    array_pop($without_terminal);
-    $unsigned = $signed; $unsigned['draft_data_snapshot'] = null;
-    $terminal_expected = array('schema'=>'material-approved-source-v1', 'request_id'=>$identity,
-        'draft_id'=>(int)$draft['id'], 'company_sha256'=>material_core_context(true),
-        'submitted_source_sha256'=>$data['material_source_sha256'],
-        'history_sha256'=>material_core_source_fingerprint(array('header'=>array(),
-            'lines'=>array_merge($history['drafts'], $without_terminal))),
-        'action_sha256'=>material_core_source_fingerprint(array('header'=>$unsigned, 'lines'=>array())),
-        'source_sha256'=>material_core_source_fingerprint($approved));
+    $custody = material_core_approved_projection($identity, $approved, $prior_history);
+    if (!$custody) return false;
+    $draft = $custody['draft'];
     $original = material_transfer_original_draft($transfer, $receipt);
     if (!$original) return false;
     $custody = array('source'=>$approved, 'history'=>$prior_history, 'draft'=>$draft);
     $expected = material_transfer_link_intent($custody, $original, (int)$receipt['maker_id'],
         isset($receipt['from_loc_code']) ? $receipt['from_loc_code'] : '',
         $receipt['authored_reference'], $receipt['schema']);
-    if ($terminal !== $terminal_expected || !$expected || $receipt !== $expected
+    if (!$expected || $receipt !== $expected
         || (int)$receipt['request_id'] !== $identity || (int)$receipt['approved_draft_id'] !== (int)$draft['id']
         || (int)$link['level'] !== (int)$draft['current_level']
         || $link['comments'] !== 'Material-to-Transfer source link'

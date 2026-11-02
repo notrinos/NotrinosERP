@@ -64,11 +64,13 @@ if ($material_line_post || isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITE
 	}
 }
 
-// A release is one native command, never part of a mixed submit/conversion POST.
-if (isset($_POST['ReleaseTO'])) {
+// Submission and release each own one command; never combine with an edit/conversion.
+if (isset($_POST['ReleaseTO']) || isset($_POST['Submit'])) {
 	$release_conflict = $material_line_post;
-	foreach (array('ADD_ITEM','UPDATE_ITEM','Submit','CancelMR','Delete','ConvertPO','ConvertTO') as $command)
-		if (isset($_POST[$command])) $release_conflict = true;
+	$material_command_count = 0;
+	foreach (array('ADD_ITEM','UPDATE_ITEM','Submit','CancelMR','Delete','ConvertPO','ConvertTO','ReleaseTO') as $command)
+		if (isset($_POST[$command])) $material_command_count++;
+	if ($material_command_count > 1) $release_conflict = true;
 	if ($release_conflict) {
 		unset($_POST['ReleaseTO'], $_POST['ADD_ITEM'], $_POST['UPDATE_ITEM'], $_POST['Submit'],
 			$_POST['CancelMR'], $_POST['Delete'], $_POST['ConvertPO'], $_POST['ConvertTO']);
@@ -97,7 +99,7 @@ if (isset($_POST['Submit']) && $selected_id > 0) {
 			display_notification(_('Material request has been submitted.'));
 		}
 	} else {
-		display_error(_('Cannot submit this material request. It must be in Draft status, have at least one line, and pass approval setup validation.'));
+		display_error(_('Cannot submit this material request. The original maker must retain exact Draft or released Transfer demand custody and valid independent approval setup.'));
 	}
 	$Ajax->activate('mr_list');
 	$Ajax->activate('mr_detail');
@@ -107,7 +109,7 @@ if (isset($_POST['Submit']) && $selected_id > 0) {
 if (isset($_POST['ReleaseTO']) && $selected_id > 0) {
 	include_once($path_to_root.'/inventory/warehouse/includes/db/warehouse_material_transfer_release_db.inc');
 	if (release_cancelled_material_transfer($selected_id, _('Released from material request entry.'))) {
-		display_notification(_('Cancelled Transfer demand has been released. Replacement requires separate validated recovery.'));
+		display_notification(_('Cancelled Transfer demand has been released. Request a new independent approval before creating a replacement.'));
 	} else {
 		display_error(_('Cannot release this demand. The original maker must retain both native permissions and exact independently cancelled Transfer custody.'));
 	}
@@ -597,6 +599,18 @@ if ($selected_id > 0 || $is_new_request) {
 			submit('Submit', _('Submit for Approval'), true, _('Submit this request for approval'));
 			echo ' ';
 			submit('Delete', _('Delete'), true, _('Delete this material request'));
+		}
+		if ($mr['status'] === 'approved' && $mr['request_type'] === 'transfer'
+			&& (int)$mr['requested_by'] === (int)$_SESSION['wa_current_user']->user
+			&& $_SESSION['wa_current_user']->can_access('SA_TRANSFERORDERS')) {
+			include_once($path_to_root.'/inventory/warehouse/includes/db/warehouse_material_transfer_release_db.inc');
+			$can_request_replacement = false;
+			if (begin_transaction()) {
+				$can_request_replacement = material_released_transfer_custody((int)$selected_id) !== false;
+				if (!commit_transaction()) $can_request_replacement = false;
+			}
+			if ($can_request_replacement)
+				submit('Submit', _('Request Replacement Approval'), true, _('Obtain a new independent approval for this released demand'));
 		}
 
 		if ($mr['status'] === 'ordered' && $mr['request_type'] === 'transfer'

@@ -301,10 +301,20 @@ function submit_standalone_material_to_core($request_id)
         if (!begin_transaction()) return false;
         $history = material_core_history($identity);
         $source = material_core_source($identity, 'draft');
+        $released = false;
+        if (!$source) {
+            require_once __DIR__.'/warehouse_material_transfer_release_db.inc';
+            // Only the native current release reader grants this transition.
+            // Historical/as-of projections cannot authorize a new submission.
+            $released = material_released_transfer_custody($identity);
+            if ($released && $released['receipt']['schema'] === 'material-transfer-release-v2')
+                $source = $released['source'];
+        }
         if (!$source || $history === false || (int)$source['header']['requested_by'] !== (int)$_SESSION['wa_current_user']->user) { cancel_transaction(); return false; }
         foreach ($history['drafts'] as $draft) {
             $prior_workflow = material_core_rows('SELECT trans_type FROM '.TB_PREF.'approval_workflows WHERE id='.(int)$draft['workflow_id'].' FOR UPDATE');
-            if (!in_array((int)$draft['status'], array(APPROVAL_STATUS_REJECTED, APPROVAL_STATUS_CANCELLED), true)
+            if ((!in_array((int)$draft['status'], array(APPROVAL_STATUS_REJECTED, APPROVAL_STATUS_CANCELLED), true)
+                && !($released && (int)$draft['status'] === APPROVAL_STATUS_APPROVED))
                 || (int)$draft['submitted_by'] !== (int)$source['header']['requested_by']
                 || !$prior_workflow || (int)$prior_workflow[0]['trans_type'] !== ST_WH_MATERIAL_REQUEST) { cancel_transaction(); return false; }
         }
@@ -318,7 +328,7 @@ function submit_standalone_material_to_core($request_id)
             $stock = material_core_rows('SELECT stock_id,material_cost FROM '.TB_PREF.'stock_master WHERE stock_id='.db_escape($line['stock_id']).' AND inactive=0 FOR UPDATE');
             if (!$stock || !is_numeric($stock[0]['material_cost']) || !is_finite((float)$stock[0]['material_cost']) || (float)$stock[0]['material_cost'] < 0) { cancel_transaction(); return false; }
         }
-        if (!db_query("UPDATE ".TB_PREF."wh_material_requests SET status='submitted',updated_at=NOW() WHERE request_id=".$identity." AND status='draft'")
+        if (!db_query("UPDATE ".TB_PREF."wh_material_requests SET status='submitted',updated_at=NOW() WHERE request_id=".$identity.' AND status='.db_escape($source['header']['status']))
             || db_num_affected_rows() !== 1) { cancel_transaction(); return false; }
         $submitted = material_core_source($identity, 'submitted');
         $expected = $source; $expected['header']['status'] = 'submitted';
@@ -329,6 +339,7 @@ function submit_standalone_material_to_core($request_id)
         if (!$data || !is_finite((float)$data['total_estimated']) || (float)$data['total_estimated'] < 0) { cancel_transaction(); return false; }
         $data['material_source_sha256'] = material_core_source_fingerprint($submitted);
         $data['material_company_sha256'] = material_core_context(true);
+        if ($released) $data['material_previous_release_id'] = (int)$released['action']['id'];
         $actor = array('user_id'=>(int)$_SESSION['wa_current_user']->user, 'role_id'=>(int)$_SESSION['wa_current_user']->access);
         if (!register_transaction_resource_release('material-core', 'release_material_core_permit')) { cancel_transaction(); return false; }
         material_core_permit('set', array('action'=>'submit','context'=>$context,'data'=>$data,'actor'=>$actor,'source'=>$submitted));
