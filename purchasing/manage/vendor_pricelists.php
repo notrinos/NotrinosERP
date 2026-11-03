@@ -160,6 +160,7 @@ function reset_vendor_pricelist_form()
 	$_POST['pricelist_inactive'] = 0;
 }
 
+$pricelist_save_failed=false;
 $selected_id = (int)get_post('selected_id', 0);
 $edit_id = find_submit('Edit');
 $delete_id = find_submit('Delete');
@@ -171,15 +172,16 @@ if ($edit_id > 0)
 	$selected_id = $edit_id;
 
 if ($delete_id > 0) {
-	delete_vendor_pricelist_entry($delete_id);
-	display_notification(_('Vendor pricelist entry has been deleted.'));
-	$selected_id = 0;
+	if(delete_vendor_pricelist_entry($delete_id)){
+		display_notification(_('Vendor pricelist entry has been deleted.'));
+		$selected_id = 0;
+	}else{$pricelist_save_failed=true;display_error(_('The vendor pricelist entry could not be deleted. No changes were saved.'));}
 }
 
 if ((isset($_POST['save_pricelist']) || isset($_POST['update_pricelist'])) && can_save_vendor_pricelist_form()) {
 	$prices = get_vendor_pricelist_form_prices();
 	if ((int)get_post('selected_id') > 0) {
-		update_vendor_pricelist_entry(
+		$saved=update_vendor_pricelist_entry(
 			(int)get_post('selected_id'),
 			(int)get_post('pricelist_supplier_id'),
 			trim(get_post('pricelist_stock_id')),
@@ -196,10 +198,10 @@ if ((isset($_POST['save_pricelist']) || isset($_POST['update_pricelist'])) && ca
 			input_num('pricelist_discount_percent'),
 			trim(get_post('pricelist_notes')),
 			check_value('pricelist_is_preferred') ? 1 : 0,
-			check_value('pricelist_inactive') ? 1 : 0,
-			array('updated_by_ui' => 1)
+			check_value('pricelist_inactive') ? 1 : 0
 		);
-		display_notification(_('Vendor pricelist entry has been updated.'));
+		if($saved)display_notification(_('Vendor pricelist entry has been updated.'));
+		else{$pricelist_save_failed=true;display_error(_('The vendor pricelist entry could not be saved. No changes were saved.'));}
 	} else {
 		$selected_id = add_vendor_pricelist_entry(
 			(int)get_post('pricelist_supplier_id'),
@@ -220,7 +222,8 @@ if ((isset($_POST['save_pricelist']) || isset($_POST['update_pricelist'])) && ca
 			check_value('pricelist_inactive') ? 1 : 0,
 			array('created_by_ui' => 1)
 		);
-		display_notification(_('Vendor pricelist entry has been added.'));
+		if($selected_id)display_notification(_('Vendor pricelist entry has been added.'));
+		else{$pricelist_save_failed=true;display_error(_('The vendor pricelist entry could not be saved. No changes were saved.'));}
 	}
 }
 
@@ -243,12 +246,12 @@ if (isset($_POST['import_pricelist'])) {
 			$import_result = import_vendor_pricelist($import_supplier_id, $csv_data);
 			if (!empty($import_result['errors']))
 				display_error(implode('<br>', $import_result['errors']));
-			display_notification(sprintf(_('Vendor pricelist import complete. Imported: %s'), (int)$import_result['imported']));
+			if(empty($import_result['errors']) && !empty($import_result['committed']))display_notification(sprintf(_('Vendor pricelist import complete. Imported: %s'), (int)$import_result['imported']));
 		}
 	}
 }
 
-if ($selected_id > 0) {
+if ($selected_id > 0 && !$pricelist_save_failed) {
 	$selected_entry = get_vendor_pricelist_entry($selected_id);
 	if ($selected_entry)
 		load_vendor_pricelist_form($selected_entry);

@@ -146,7 +146,7 @@ function update_record_status($id, $status, $table, $key) {
         if(!$result)display_error(_('Cannot change item status because retained classification could not be verified.'));return $result;
     }
 
-    if(preg_match('/^\s*`?(?:areas|tax_types|chart_types|chart_class|sales_pos|sales_types|salesman)\b/i',$table)){
+    if(preg_match('/^\s*`?(?:areas|tax_types|chart_types|chart_class|sales_pos|sales_types|salesman|vendor_pricelists)\b/i',$table)){
         require_once __DIR__.'/../../dimensions/includes/dimension_master_metadata_writer.inc';$sources=dimension_master_metadata_sources();
         if(!isset($sources[$table]) || $sources[$table]!==$key)return false;
         $result=dimension_master_metadata_write($table,$id,array(),function($admitted)use($id,$status,$table,$key){return db_query('UPDATE '.TB_PREF.$table.' SET inactive='.(int)$status.' WHERE '.$key.'='.db_escape($id));});

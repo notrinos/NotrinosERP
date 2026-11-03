@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+require_once __DIR__.'/vendor_pricelist_dimension_db.inc';
 include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/hooks.inc');
 include_once($path_to_root . '/purchasing/includes/db/suppliers_db.inc');
@@ -553,6 +554,8 @@ function get_best_vendor_price($stock_id, $quantity, $currency = '', $date = '',
  */
 function add_vendor_pricelist_entry($supplier_id, $stock_id, $vendor_product_code, $currency, $prices, $vendor_product_name = '', $vendor_uom = '', $conversion_factor = 1, $min_order_qty = 0, $lead_time_days = 0, $valid_from = '', $valid_until = '', $discount_percent = 0, $notes = '', $is_preferred = 0, $inactive = 0, $custom_data = array())
 {
+	$encoded_metadata=encode_vendor_pricelist_custom_data($custom_data);
+	if($encoded_metadata===null && $custom_data!==null && $custom_data!=='' && $custom_data!==array())return false;
 	$prices = normalize_vendor_pricelist_prices($prices);
 	$valid_from = normalize_vendor_pricelist_sql_date($valid_from, null);
 	$valid_until = normalize_vendor_pricelist_sql_date($valid_until, null);
@@ -590,10 +593,8 @@ function add_vendor_pricelist_entry($supplier_id, $stock_id, $vendor_product_cod
 			" . db_escape($notes) . ",
 			" . db_escape((int)$is_preferred) . ",
 			" . db_escape((int)$inactive) . ",
-			" . sql_vendor_pricelist_custom_data($custom_data) . ")";
-	db_query($sql, 'could not add vendor pricelist entry');
-
-	return db_insert_id();
+			" . sql_vendor_pricelist_custom_data($encoded_metadata) . ")";
+	return dimension_master_metadata_write('vendor_pricelists',null,array('custom_data'=>$encoded_metadata),function($admitted)use($sql){return db_query($sql, 'could not add vendor pricelist entry')?db_insert_id():false;});
 }
 
 /**
@@ -621,6 +622,10 @@ function add_vendor_pricelist_entry($supplier_id, $stock_id, $vendor_product_cod
  */
 function update_vendor_pricelist_entry($id, $supplier_id, $stock_id, $vendor_product_code, $currency, $prices, $vendor_product_name = '', $vendor_uom = '', $conversion_factor = 1, $min_order_qty = 0, $lead_time_days = 0, $valid_from = '', $valid_until = '', $discount_percent = 0, $notes = '', $is_preferred = 0, $inactive = 0, $custom_data = array())
 {
+	$has_custom_data=func_num_args()>=18;
+	$encoded_metadata=$has_custom_data?encode_vendor_pricelist_custom_data($custom_data):null;
+	if($has_custom_data && $encoded_metadata===null && $custom_data!==null && $custom_data!=='' && $custom_data!==array())return false;
+	$next=$has_custom_data?array('custom_data'=>$encoded_metadata):array();
 	$prices = normalize_vendor_pricelist_prices($prices);
 	$valid_from = normalize_vendor_pricelist_sql_date($valid_from, null);
 	$valid_until = normalize_vendor_pricelist_sql_date($valid_until, null);
@@ -648,12 +653,10 @@ function update_vendor_pricelist_entry($id, $supplier_id, $stock_id, $vendor_pro
 		discount_percent = " . db_escape((float)$discount_percent) . ",
 		notes = " . db_escape($notes) . ",
 		is_preferred = " . db_escape((int)$is_preferred) . ",
-		inactive = " . db_escape((int)$inactive) . ",
-		custom_data = " . sql_vendor_pricelist_custom_data($custom_data) . "
-		WHERE id = " . (int)$id;
-	db_query($sql, 'could not update vendor pricelist entry');
-
-	return true;
+		inactive = " . db_escape((int)$inactive)
+		. ($has_custom_data ? ",custom_data = " . sql_vendor_pricelist_custom_data($encoded_metadata) : "")
+		. " WHERE id = " . (int)$id;
+	return dimension_master_metadata_write('vendor_pricelists',$id,$next,function($admitted)use($sql){return db_query($sql, 'could not update vendor pricelist entry')?true:false;});
 }
 
 /**
@@ -665,9 +668,7 @@ function update_vendor_pricelist_entry($id, $supplier_id, $stock_id, $vendor_pro
 function delete_vendor_pricelist_entry($id)
 {
 	$sql = "DELETE FROM " . TB_PREF . "vendor_pricelists WHERE id = " . (int)$id;
-	db_query($sql, 'could not delete vendor pricelist entry');
-
-	return true;
+	return dimension_master_metadata_write('vendor_pricelists',$id,array(),function($admitted)use($sql){return db_query($sql, 'could not delete vendor pricelist entry')?true:false;},true);
 }
 
 /**
@@ -681,18 +682,24 @@ function delete_vendor_pricelist_entry($id)
  */
 function update_last_purchase_price($supplier_id, $stock_id, $price, $date)
 {
+	if(!begin_transaction())dimension_financial_reference_failure();
+	try {
 	$price = round((float)$price, user_price_dec());
 	$effective_date = normalize_vendor_pricelist_sql_date($date, date('Y-m-d'));
-	$existing_entry = get_vendor_pricelist_entry_by_key($supplier_id, $stock_id);
+
 	$sql = "UPDATE " . TB_PREF . "vendor_pricelists
 		SET last_purchase_date = " . db_escape($effective_date) . ",
 			last_purchase_price = " . db_escape($price) . "
 		WHERE supplier_id = " . db_escape($supplier_id) . "
 			AND stock_id = " . db_escape($stock_id);
-	db_query($sql, 'could not update last purchase price in vendor pricelist');
-
-	if ($existing_entry)
-		return db_num_affected_rows() > 0 ? db_num_affected_rows() : (int)$existing_entry['id'];
+	$existed=false;
+	$result=vendor_pricelist_dimension_group_write($supplier_id,$stock_id,function($rows)use($sql,&$existed){
+		$existed=count($rows)>0;if(!$existed)return true;
+		if(!db_query($sql, 'could not update last purchase price in vendor pricelist'))return false;
+		$affected=db_num_affected_rows();$latest=end($rows);return $affected>0?$affected:(int)$latest['id'];
+	});
+	if(!$result)dimension_financial_reference_failure();
+	if($existed){if(!commit_transaction())dimension_financial_reference_failure();return $result;}
 
 	$purchase_data = get_purchase_data_row_direct($supplier_id, $stock_id);
 	$stock_defaults = get_vendor_pricelist_stock_defaults($stock_id);
@@ -727,15 +734,18 @@ function update_last_purchase_price($supplier_id, $stock_id, $price, $date)
 		array('auto_created_from_last_purchase' => 1)
 	);
 
+	if (!$entry_id)dimension_financial_reference_failure();
 	if ($entry_id > 0) {
 		$sql = "UPDATE " . TB_PREF . "vendor_pricelists
 			SET last_purchase_date = " . db_escape($effective_date) . ",
 				last_purchase_price = " . db_escape($price) . "
 			WHERE id = " . (int)$entry_id;
-		db_query($sql, 'could not update newly created vendor pricelist last purchase fields');
+		if(!dimension_master_metadata_write('vendor_pricelists',$entry_id,array(),function($admitted)use($sql){return db_query($sql, 'could not update newly created vendor pricelist last purchase fields');}))dimension_financial_reference_failure();
 	}
 
+	if(!commit_transaction())dimension_financial_reference_failure();
 	return $entry_id;
+	} catch(Exception $e){cancel_transaction();throw $e;} catch(Throwable $e){cancel_transaction();throw $e;}
 }
 
 /**
@@ -747,12 +757,17 @@ function update_last_purchase_price($supplier_id, $stock_id, $price, $date)
  */
 function sync_purchase_data_to_vendor_pricelist($supplier_id, $stock_id)
 {
-	$purchase_data = get_purchase_data_row_direct($supplier_id, $stock_id);
-	if (!$purchase_data)
-		return 0;
+	if(!begin_transaction())dimension_financial_reference_failure();
+	try {
+	$rows=db_query('SELECT * FROM '.TB_PREF.'purch_data WHERE supplier_id='.db_escape($supplier_id).' AND stock_id='.db_escape($stock_id).' FOR UPDATE');
+	if(!$rows || db_num_rows($rows)>1)dimension_financial_reference_failure();
+	$purchase_data=db_num_rows($rows)?db_fetch_assoc($rows):false;
+	if (!$purchase_data) {if(!commit_transaction())dimension_financial_reference_failure();return 0;}
 
 	$currency = get_supplier_currency($supplier_id);
-	$existing = get_vendor_pricelist_entry_by_key($supplier_id, $stock_id, $currency);
+	$rows=db_query('SELECT * FROM '.TB_PREF.'vendor_pricelists WHERE supplier_id='.db_escape($supplier_id).' AND stock_id='.db_escape($stock_id).($currency!==''?' AND currency='.db_escape($currency):'').' ORDER BY id DESC FOR UPDATE');
+	if(!$rows || ($currency!=='' && db_num_rows($rows)>1))dimension_financial_reference_failure();
+	$existing=db_num_rows($rows)?db_fetch_assoc($rows):false;
 	if ($existing) {
 		$sql = "UPDATE " . TB_PREF . "vendor_pricelists SET
 			vendor_product_name = CASE WHEN vendor_product_name = '' THEN " . db_escape($purchase_data['supplier_description']) . " ELSE vendor_product_name END,
@@ -760,12 +775,13 @@ function sync_purchase_data_to_vendor_pricelist($supplier_id, $stock_id)
 			conversion_factor = CASE WHEN conversion_factor <= 0 THEN " . db_escape((float)$purchase_data['conversion_factor']) . " ELSE conversion_factor END,
 			price_1 = CASE WHEN price_1 <= 0 THEN " . db_escape((float)$purchase_data['price']) . " ELSE price_1 END
 			WHERE id = " . (int)$existing['id'];
-		db_query($sql, 'could not sync purchase data into vendor pricelist');
+		if(!dimension_master_metadata_write('vendor_pricelists',$existing['id'],array(),function($admitted)use($sql){return db_query($sql, 'could not sync purchase data into vendor pricelist');}))dimension_financial_reference_failure();
+		if(!commit_transaction())dimension_financial_reference_failure();
 
 		return (int)$existing['id'];
 	}
 
-	return add_vendor_pricelist_entry(
+	$entry_id=add_vendor_pricelist_entry(
 		$supplier_id,
 		$stock_id,
 		'',
@@ -793,6 +809,9 @@ function sync_purchase_data_to_vendor_pricelist($supplier_id, $stock_id)
 		0,
 		array('synced_from_purch_data' => 1)
 	);
+	if(!$entry_id || !commit_transaction())dimension_financial_reference_failure();
+	return $entry_id;
+	} catch(Exception $e){cancel_transaction();throw $e;} catch(Throwable $e){cancel_transaction();throw $e;}
 }
 
 /**
@@ -811,6 +830,10 @@ function import_vendor_pricelist($supplier_id, $csv_data)
 	fwrite($stream, $csv_data);
 	rewind($stream);
 
+	$context=dimension_financial_reference_context();
+	if(!$context || !begin_transaction()){fclose($stream);return array('imported'=>0,'errors'=>array(_('The vendor pricelist import transaction could not start.')),'committed'=>false);}
+	try {
+	if(!db_query('SELECT custom_data FROM '.TB_PREF.'vendor_pricelists LIMIT 0'))throw new RuntimeException('Unavailable retained vendor-price store');
 	$line_number = 0;
 	$imported_count = 0;
 	$errors = array();
@@ -840,9 +863,11 @@ function import_vendor_pricelist($supplier_id, $csv_data)
 			'price_4' => isset($row[14]) ? (float)$row[14] : 0,
 		);
 
-		$existing = get_vendor_pricelist_entry_by_key($supplier_id, $stock_id, $currency);
+		$query='SELECT * FROM '.TB_PREF.'vendor_pricelists WHERE supplier_id='.db_escape($supplier_id).' AND stock_id='.db_escape($stock_id).($currency!==''?' AND currency='.db_escape($currency):'').' ORDER BY id DESC FOR UPDATE';
+		$matches=db_query($query);if(!$matches)throw new RuntimeException('Unavailable current vendor price');
+		$existing=db_fetch_assoc($matches);
 		if ($existing) {
-			update_vendor_pricelist_entry(
+			$saved=update_vendor_pricelist_entry(
 				(int)$existing['id'],
 				$supplier_id,
 				$stock_id,
@@ -859,11 +884,10 @@ function import_vendor_pricelist($supplier_id, $csv_data)
 				isset($row[18]) ? (float)$row[18] : 0,
 				isset($row[19]) ? trim($row[19]) : '',
 				isset($row[20]) ? (int)$row[20] : 0,
-				isset($row[21]) ? (int)$row[21] : 0,
-				array('imported' => 1)
+				isset($row[21]) ? (int)$row[21] : 0
 			);
 		} else {
-			add_vendor_pricelist_entry(
+			$saved=add_vendor_pricelist_entry(
 				$supplier_id,
 				$stock_id,
 				isset($row[1]) ? trim($row[1]) : '',
@@ -884,11 +908,12 @@ function import_vendor_pricelist($supplier_id, $csv_data)
 			);
 		}
 
+		if(!$saved)throw new RuntimeException('Vendor price persistence refused');
 		$imported_count++;
 	}
 
 	fclose($stream);
-
+	if(count($errors)){cancel_transaction();return array('imported'=>0,'errors'=>$errors,'committed'=>false);}
 	$hook_data = array(
 		'supplier_id' => (int)$supplier_id,
 		'imported_count' => (int)$imported_count,
@@ -896,7 +921,10 @@ function import_vendor_pricelist($supplier_id, $csv_data)
 	);
 	hook_invoke_all('vendor_pricelist_imported', $hook_data);
 
-	return array('imported' => $imported_count, 'errors' => $errors);
+	if(dimension_financial_reference_context()!==$context || !commit_transaction())throw new RuntimeException('Vendor import completion refused');
+	return array('imported' => $imported_count, 'errors' => $errors, 'committed'=>true);
+	} catch(Exception $e){cancel_transaction();if(is_resource($stream))fclose($stream);return array('imported'=>0,'errors'=>array(sprintf(_('Line %s: Vendor pricelist import could not be saved. No changes were saved.'),isset($line_number)?$line_number:0)),'committed'=>false);
+	} catch(Throwable $e){cancel_transaction();if(is_resource($stream))fclose($stream);return array('imported'=>0,'errors'=>array(sprintf(_('Line %s: Vendor pricelist import could not be saved. No changes were saved.'),isset($line_number)?$line_number:0)),'committed'=>false);}
 }
 
 /**

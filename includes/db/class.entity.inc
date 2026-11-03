@@ -664,7 +664,7 @@ class Entity extends record_set {
 		if (preg_match('/^\s*`?(?:warranty_provision_log|gl_trans|bank_trans|debtor_trans|debtor_trans_details|supp_trans|supp_invoice_items|stock_moves|sales_orders|sales_order_details)\b/i', $this->name)) return false;
 		$keys = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id', 'purch_rfq'=>'id', 'purch_rfq_items'=>'id', 'purch_rfq_vendors'=>'id', 'purch_rfq_vendor_lines'=>'id');
 		$keys['areas']='area_code';$keys['tax_types']='id';$keys['chart_types']='id';$keys['chart_class']='cid';
-		$keys['item_codes']='id';$keys['sales_pos']='id';$keys['sales_types']='id';$keys['salesman']='salesman_code';$keys['prices']='id';
+		$keys['vendor_pricelists']='id';$keys['item_codes']='id';$keys['sales_pos']='id';$keys['sales_types']='id';$keys['salesman']='salesman_code';$keys['prices']='id';
 		$keys['purch_requisitions'] = 'id';
 		$keys['purch_requisition_lines'] = 'id';
 		$keys['sales_agreements'] = 'id';
@@ -680,7 +680,7 @@ class Entity extends record_set {
 		if (preg_match('/^\s*`?(?:wh_material_requests|wh_material_request_lines|wh_transfer_orders|wh_transfer_order_lines)\b/i', $this->name)
 			&& !isset($keys[strtolower(trim($this->name))])) return false;
 		if (preg_match('/^\s*`(?:purch_requisitions|purch_requisition_lines)`/i', $this->name)) return false;
-		if(preg_match('/^\s*`?(?:areas|tax_types|chart_types|chart_class|sales_pos|sales_types|salesman|prices|item_codes)\b/i',$this->name) && !isset($keys[$this->name]))return false;
+		if(preg_match('/^\s*`?(?:areas|tax_types|chart_types|chart_class|sales_pos|sales_types|salesman|prices|item_codes|vendor_pricelists)\b/i',$this->name) && !isset($keys[$this->name]))return false;
 		$owner = strtolower(trim($this->name));
 		if (!isset($keys[$owner])) {
 			// SQL aliases/comments are not canonical owner identities.
@@ -712,7 +712,7 @@ class Entity extends record_set {
 		}
 		// Match native field filtering before interpreting any serialized payload.
 		$next = array_intersect_key($data, array_flip($this->fields));
-		if(in_array($owner,array('areas','tax_types','chart_types','chart_class','sales_pos','sales_types','salesman','prices','item_codes'),true)){
+		if(in_array($owner,array('areas','tax_types','chart_types','chart_class','sales_pos','sales_types','salesman','prices','item_codes','vendor_pricelists'),true)){
 			require_once __DIR__.'/../../dimensions/includes/dimension_master_metadata_writer.inc';
 			if($this->subset!==null && $this->subset!==false && $this->subset!=='')return false;
 			return dimension_master_metadata_write($owner,$key,$next,function($admitted)use($operation,$key,$data){return $this->ordinary_dimension_persist($operation,$key,$admitted+$data);},$operation==='delete');

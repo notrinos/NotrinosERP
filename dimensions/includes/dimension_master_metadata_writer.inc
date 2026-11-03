@@ -3,7 +3,7 @@
 require_once __DIR__.'/dimension_financial_reference_writer.inc';
 
 /** Only these native key/metadata contracts are admitted here; no caller-selected schema. */
-function dimension_master_metadata_sources(){return array('areas'=>'area_code','tax_types'=>'id','chart_types'=>'id','chart_class'=>'cid','chart_master'=>'account_code','sales_pos'=>'id','sales_types'=>'id','salesman'=>'salesman_code','prices'=>'id','item_codes'=>'id');}
+function dimension_master_metadata_sources(){return array('areas'=>'area_code','tax_types'=>'id','chart_types'=>'id','chart_class'=>'cid','chart_master'=>'account_code','sales_pos'=>'id','sales_types'=>'id','salesman'=>'salesman_code','prices'=>'id','item_codes'=>'id','vendor_pricelists'=>'id');}
 
 /** Read one exact current native key without case-folding or numeric truncation. */
 function dimension_master_metadata_row($owner,$id)
@@ -37,7 +37,7 @@ function dimension_master_metadata_write($owner,$key,$next,$persist,$remove=fals
             $identity=$final_key!==null?$final_key:($key!==null?$key:(array_key_exists($sources[$owner],$admitted)?$admitted[$sources[$owner]]:db_insert_id()));
             if($key===null)$insert_id=$identity;$after=dimension_master_metadata_row($owner,$identity);
             if($remove){$rows=db_query('SELECT '.$sources[$owner].',custom_data FROM '.TB_PREF.$owner.' WHERE '.$sources[$owner].'='.db_escape($identity).' FOR UPDATE');return $rows && db_num_rows($rows)===0?$result:false;}
-            $expected=array_key_exists('custom_data',$admitted)?$admitted['custom_data']:($before?$before['custom_data']:'{}');
+            $expected=array_key_exists('custom_data',$admitted)?$admitted['custom_data']:($before?$before['custom_data']:($owner==='vendor_pricelists'?null:'{}'));
             if(!$after || $after['custom_data']!==$expected)return false;
             if($key!==null && $final_key!==null && (string)$key!==(string)$final_key && dimension_master_metadata_row($owner,$key)!==false)return false;
             if($key===null && !in_array($owner,array('chart_master','chart_types','chart_class'),true) && !db_preserve_insert_id($insert_id))return false;

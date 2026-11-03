@@ -133,7 +133,7 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
     $sources['debtor_trans_details'] = 'id';
     $sources['stock_moves'] = 'trans_id';
     $sources['areas']='area_code';$sources['tax_types']='id';$sources['chart_types']='id';$sources['chart_class']='cid';
-    $sources['item_codes']='id';$sources['sales_pos']='id';$sources['sales_types']='id';$sources['salesman']='salesman_code';$sources['prices']='id';
+    $sources['vendor_pricelists']='id';$sources['item_codes']='id';$sources['sales_pos']='id';$sources['sales_types']='id';$sources['salesman']='salesman_code';$sources['prices']='id';
     $sources['sales_agreements'] = 'id';
     $sources['sales_agreement_lines'] = 'id';
     $sources['sales_orders'] = 'order_no';
@@ -147,7 +147,7 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
     // Chart and bank accounts retain JSON but have no scalar Dimension slots.
     if ($owner === 'purch_requisition_lines' || $owner === 'wh_material_request_lines' || $owner === 'wh_transfer_order_lines' || $owner === 'wh_material_requests' || $owner === 'wh_transfer_orders' || $owner === 'chart_master' || $owner === 'bank_accounts' || $owner === 'purch_rfq_items' || $owner === 'purch_rfq_vendors' || $owner === 'purch_rfq_vendor_lines') $columns = array();
     if ($owner === 'purch_agreement_lines' || $owner === 'sales_agreement_lines') $columns = array();
-    if (in_array($owner,array('sales_orders','sales_order_details','supp_trans','debtor_trans_details','stock_moves','areas','tax_types','chart_types','chart_class','sales_pos','sales_types','salesman','prices','item_codes'),true)) $columns = array();
+    if (in_array($owner,array('sales_orders','sales_order_details','supp_trans','debtor_trans_details','stock_moves','areas','tax_types','chart_types','chart_class','sales_pos','sales_types','salesman','prices','item_codes','vendor_pricelists'),true)) $columns = array();
     $composite = in_array($owner,array('debtor_trans','supp_trans','sales_orders'),true);
     if ($compound) $columns = array();
     $string_key = in_array($owner,array('stock_master','chart_master','chart_types','chart_class'),true);
@@ -184,7 +184,7 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
     try {
         if (!function_exists('begin_transaction') || !begin_transaction()) return false;
         if ($compound && !db_query('SELECT custom_data FROM '.TB_PREF.$owner.' LIMIT 0')) { cancel_transaction(); return false; }
-        if ($identity === null && in_array($owner, array('purch_agreements','purch_agreement_lines','sales_agreements','sales_agreement_lines','sales_orders','sales_order_details','supp_trans','debtor_trans_details','stock_moves','areas','tax_types','chart_types','chart_class','sales_pos','sales_types','salesman','prices','item_codes'), true)
+        if ($identity === null && in_array($owner, array('purch_agreements','purch_agreement_lines','sales_agreements','sales_agreement_lines','sales_orders','sales_order_details','supp_trans','debtor_trans_details','stock_moves','areas','tax_types','chart_types','chart_class','sales_pos','sales_types','salesman','prices','item_codes','vendor_pricelists'), true)
             && !db_query('SELECT custom_data FROM '.TB_PREF.$owner.' LIMIT 0')) {
             cancel_transaction(); return false;
         }
