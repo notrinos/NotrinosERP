@@ -88,7 +88,7 @@ function transfer_core_history($identity)
 }
 
 /**
- * Bind a current v2 Material origin for independent Transfer core review only.
+ * Bind a current v2/v3 Material origin for independent Transfer core review only.
  * Null means an unlinked source; false means unknown or inadmissible custody.
  * This minimized binding grants no edit, shipping, cancellation or GL authority.
  */
@@ -105,7 +105,7 @@ function transfer_review_material_origin($identity)
     $origin = material_transfer_origin_custody($links[0]['request_id']);
     // v1 cannot reconstruct the submitted/terminal source. Preserve it for
     // historical reads; do not rewrite its immutable receipt to enable review.
-    if (!$origin || $origin['receipt']['schema'] !== 'material-transfer-link-v2'
+    if (!$origin || !in_array($origin['receipt']['schema'], array('material-transfer-link-v2','material-transfer-link-v3'), true)
         || (int)$origin['receipt']['transfer_id'] !== $identity) return false;
     return material_transfer_origin_binding($origin);
 }
@@ -217,10 +217,16 @@ function transfer_core_review_matches($data, $source, $draft)
         && is_finite((float)$draft['amount']) && abs($total-(float)$draft['amount']) < 0.00000001;
 }
 
-/** Lock and validate current native location, item and optional tracking dependencies. */
-function transfer_core_dependencies($source)
+/**
+ * Lock current native dependencies for review/dispatch or selected receipt lines.
+ * Receipt phases reflect the actual serial transition, rather than reusing the
+ * pre-dispatch Available-at-source predicate after shipment.
+ */
+function transfer_core_dependencies($source, $phase = 'review')
 {
-    $header = $source['header']; $rows = array();
+    if (!in_array($phase, array('review','dispatch','receipt','received'), true)) return false;
+    $at_source = $phase === 'review' || $phase === 'dispatch';
+    $header = $source['header']; $rows = array(); $serials = array();
     if (!in_array($header['transfer_type'], array('standard','urgent','backorder'), true)
         || $header['from_loc_code'] === $header['to_loc_code']) return false;
     $locations = array($header['from_loc_code'], $header['to_loc_code']); sort($locations, SORT_STRING);
@@ -231,7 +237,12 @@ function transfer_core_dependencies($source)
     }
     foreach ($source['lines'] as $line) {
         $stock = transfer_core_rows('SELECT * FROM '.TB_PREF.'stock_master WHERE stock_id='.db_escape($line['stock_id']).' AND inactive=0 FOR UPDATE');
-        if (!$stock || count($stock) !== 1) return false;
+        if (!$stock || count($stock) !== 1
+            || ($phase !== 'review' && !in_array($stock[0]['mb_flag'], array('B','M'), true))) return false;
+        if ($phase !== 'review' && (!isset($stock[0]['track_by'])
+            || !in_array($stock[0]['track_by'], array('none','serial','batch','serial_batch'), true)
+            || (in_array($stock[0]['track_by'], array('serial','serial_batch'), true) && empty($line['serial_id']))
+            || (in_array($stock[0]['track_by'], array('batch','serial_batch'), true) && empty($line['batch_id'])))) return false;
         $rows['stock'][$line['stock_id']] = $stock;
         foreach (array('from_bin_id'=>'from_loc_code', 'to_bin_id'=>'to_loc_code') as $field=>$location) {
             if ($line[$field] === null || (int)$line[$field] === 0) continue;
@@ -242,13 +253,26 @@ function transfer_core_dependencies($source)
         }
         foreach (array('batch_id'=>'stock_batches', 'serial_id'=>'serial_numbers') as $field=>$table) {
             if ($line[$field] === null || (int)$line[$field] === 0) continue;
+            if ($field === 'serial_id') {
+                if ($phase !== 'review' && isset($serials[(int)$line[$field]])) return false;
+                $serials[(int)$line[$field]] = true;
+            }
             $tracking = transfer_core_rows('SELECT * FROM '.TB_PREF.$table.' WHERE id='.(int)$line[$field]
                 .' AND stock_id='.db_escape($line['stock_id']).' AND inactive=0 FOR UPDATE');
             if (!$tracking || count($tracking) !== 1) return false;
-            if ($field === 'serial_id' && ($tracking[0]['loc_code'] !== $header['from_loc_code']
-                || $tracking[0]['status'] !== 'available' || (float)$line['qty_requested'] !== 1.0
-                || ($line['batch_id'] !== null && (int)$tracking[0]['batch_id'] !== (int)$line['batch_id'])
-                || ($line['from_bin_id'] !== null && (int)$tracking[0]['wh_loc_id'] !== (int)$line['from_bin_id']))) return false;
+            if ($field === 'serial_id') {
+                $location = $at_source ? 'from_loc_code' : 'to_loc_code';
+                $status = $phase === 'receipt' ? 'in_transit' : 'available';
+                $bin_field = $at_source ? 'from_bin_id' : 'to_bin_id';
+                $bin_matches = $line[$bin_field] === null
+                    || (int)$tracking[0]['wh_loc_id'] === (int)$line[$bin_field];
+                if ($phase === 'receipt') $bin_matches = $tracking[0]['wh_loc_id'] === null;
+                if ($phase === 'received') $bin_matches = (int)$tracking[0]['wh_loc_id'] === (int)$line[$bin_field];
+                if ($tracking[0]['loc_code'] !== $header[$location]
+                    || $tracking[0]['status'] !== $status || (float)$line['qty_requested'] !== 1.0
+                    || ($line['batch_id'] !== null && (int)$tracking[0]['batch_id'] !== (int)$line['batch_id'])
+                    || !$bin_matches) return false;
+            }
             if ($field === 'batch_id' && $tracking[0]['status'] !== 'active') return false;
             $rows[$table][(int)$line[$field]] = $tracking;
         }

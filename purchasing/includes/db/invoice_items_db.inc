@@ -10,14 +10,17 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+
 function add_supp_invoice_item($supp_trans_type, $supp_trans_no, $stock_id, $description, $gl_code, $unit_price, $unit_tax, $quantity, $grn_item_id, $po_detail_item_id, $memo_, $dim_id=0, $dim2_id=0) {
 
+    $dim_id=dimension_writer_reference_id($dim_id);$dim2_id=dimension_writer_reference_id($dim2_id);
+    if($dim_id===false||$dim2_id===false)dimension_financial_reference_failure();
 	$sql = "INSERT INTO ".TB_PREF."supp_invoice_items (supp_trans_type, supp_trans_no, stock_id, description, gl_code, unit_price, unit_tax, quantity, grn_item_id, po_detail_item_id, memo_, dimension_id, dimension2_id) 
 	VALUES (".db_escape($supp_trans_type).", ".db_escape($supp_trans_no).", ".db_escape($stock_id).", ".db_escape($description).", ".db_escape($gl_code).", ".db_escape($unit_price).", ".db_escape($unit_tax).", ".db_escape($quantity).", ".db_escape($grn_item_id).", ".db_escape($po_detail_item_id).", ".db_escape($memo_).", ".db_escape($dim_id).", ".db_escape($dim2_id).")";
 
-	db_query($sql, 'Cannot insert a supplier transaction detail record');
-
-	return db_insert_id();
+    return dimension_financial_reference_write('supp_invoice_items',null,array('dimension_id'=>$dim_id,'dimension2_id'=>$dim2_id),
+        function($admitted) use ($sql) {return db_query($sql)?db_insert_id():false;});
 }
 
 function add_supp_invoice_gl_item($supp_trans_type, $supp_trans_no, $gl_code, $amount, $memo_, $dim_id=0, $dim2_id=0) {
@@ -37,6 +40,7 @@ function get_supp_invoice_items($supp_trans_type, $supp_trans_no) {
 }
 
 function void_supp_invoice_items($type, $type_no) {
-	$sql = "UPDATE ".TB_PREF."supp_invoice_items SET quantity=0, unit_price=0 WHERE supp_trans_type = ".db_escape($type)." AND supp_trans_no=".db_escape($type_no);
-	db_query($sql, 'could not void supptrans details');
+    return dimension_financial_reference_group('supp_invoice_items',$type,$type_no,function($row) {
+        return db_query('UPDATE '.TB_PREF.'supp_invoice_items SET quantity=0,unit_price=0 WHERE id='.(int)$row['id'])!==false;
+    });
 }

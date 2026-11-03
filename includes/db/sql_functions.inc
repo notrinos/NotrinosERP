@@ -138,6 +138,21 @@ function release_transaction_resources() {
 //	Update record activity status.
 //
 function update_record_status($id, $status, $table, $key) {
+    if(preg_match('/^\s*`?(?:stock_master|item_codes)\b/i',$table)){
+        require_once __DIR__.'/../../inventory/includes/db/item_dimension_maintenance_db.inc';$result=false;
+        if($table==='stock_master' && $key==='stock_id')$result=item_dimension_stock_status_write($id,$status);
+        elseif($table==='item_codes' && $key==='id')$result=dimension_master_metadata_write('item_codes',$id,array(),function($admitted)use($id,$status){return db_query('UPDATE '.TB_PREF.'item_codes SET inactive='.(int)$status.' WHERE id='.db_escape($id));});
+        elseif($table==='item_codes' && $key==='item_code')$result=item_code_dimension_group_write($id,array('inactive'=>(int)$status),function()use($id,$status){return db_query('UPDATE '.TB_PREF.'item_codes SET inactive='.(int)$status.' WHERE item_code='.db_escape($id));});
+        if(!$result)display_error(_('Cannot change item status because retained classification could not be verified.'));return $result;
+    }
+
+    if(preg_match('/^\s*`?(?:areas|tax_types|chart_types|chart_class|sales_pos|sales_types|salesman)\b/i',$table)){
+        require_once __DIR__.'/../../dimensions/includes/dimension_master_metadata_writer.inc';$sources=dimension_master_metadata_sources();
+        if(!isset($sources[$table]) || $sources[$table]!==$key)return false;
+        $result=dimension_master_metadata_write($table,$id,array(),function($admitted)use($id,$status,$table,$key){return db_query('UPDATE '.TB_PREF.$table.' SET inactive='.(int)$status.' WHERE '.$key.'='.db_escape($id));});
+        if(!$result)display_error(_('Cannot change record status because its retained classification could not be verified.'));return $result;
+    }
+
 	$sql = "UPDATE ".TB_PREF.$table." SET inactive = ".((int)$status)." WHERE $key=".db_escape($id);
 		
 	db_query($sql, "Can't update record status");

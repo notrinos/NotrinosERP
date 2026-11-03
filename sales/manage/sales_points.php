@@ -34,30 +34,30 @@ function can_process() {
 //----------------------------------------------------------------------------------------------------
 
 if ($Mode=='ADD_ITEM' && can_process()) {
-	sales_points_entity::create(array(
+	$saved=sales_points_entity::create(array(
 		'pos_name' => $_POST['name'],
 		'pos_location' => $_POST['location'],
 		'pos_account' => $_POST['account'],
 		'cash_sale' => check_value('cash') ? 1 : 0,
 		'credit_sale' => check_value('credit') ? 1 : 0
 	));
-	display_notification(_('New point of sale has been added'));
-	$Mode = 'RESET';
+	if($saved!==false){display_notification(_('New point of sale has been added'));$Mode='RESET';}
+    else display_error(_('Cannot save this point of sale because its retained classification could not be verified.'));
 }
 
 //----------------------------------------------------------------------------------------------------
 
 if ($Mode=='UPDATE_ITEM' && can_process()) {
 
-	sales_points_entity::modify($selected_id, array(
+	$saved=sales_points_entity::modify($selected_id, array(
 		'pos_name' => $_POST['name'],
 		'pos_location' => $_POST['location'],
 		'pos_account' => $_POST['account'],
 		'cash_sale' => check_value('cash') ? 1 : 0,
 		'credit_sale' => check_value('credit') ? 1 : 0
 	));
-	display_notification(_('Selected point of sale has been updated'));
-	$Mode = 'RESET';
+	if($saved!==false){display_notification(_('Selected point of sale has been updated'));$Mode='RESET';}
+    else display_error(_('Cannot save this point of sale because its retained classification could not be verified.'));
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -66,9 +66,9 @@ if ($Mode == 'Delete') {
 	if (key_in_foreign_table($selected_id, 'users', 'pos'))
 		display_error(_('Cannot delete this POS because it is used in users setup.'));
 	else {
-		sales_points_entity::remove($selected_id);
-		display_notification(_('Selected point of sale has been deleted'));
-		$Mode = 'RESET';
+		$removed=sales_points_entity::remove($selected_id);
+		if($removed){display_notification(_('Selected point of sale has been deleted'));$Mode='RESET';}
+        else display_error(_('Cannot delete this point of sale because retained classification history must be preserved.'));
 	}
 }
 

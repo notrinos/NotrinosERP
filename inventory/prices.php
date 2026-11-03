@@ -83,18 +83,18 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 
 		if ($selected_id != -1) {
 			//editing an existing price
-			update_item_price($selected_id, $_POST['sales_type_id'],
+			$saved=update_item_price($selected_id, $_POST['sales_type_id'],
 			$_POST['curr_abrev'], input_num('price'));
 
 			$msg = _('This price has been updated.');
 		}
 		else {
-			add_item_price($_POST['stock_id'], $_POST['sales_type_id'], $_POST['curr_abrev'], input_num('price'));
+			$saved=add_item_price($_POST['stock_id'], $_POST['sales_type_id'], $_POST['curr_abrev'], input_num('price'));
 
 			$msg = _('The new price has been added.');
 		}
-		display_notification($msg);
-		$Mode = 'RESET';
+		if($saved!==false){display_notification($msg);$Mode='RESET';}
+        else display_error(_('Cannot save this price because its retained classification could not be verified.'));
 	}
 }
 
@@ -102,9 +102,8 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 
 if ($Mode == 'Delete') {
 	//the link to delete a selected record was clicked
-	delete_item_price($selected_id);
-	display_notification(_('The selected price has been deleted.'));
-	$Mode = 'RESET';
+	if(delete_item_price($selected_id)){display_notification(_('The selected price has been deleted.'));$Mode='RESET';}
+    else display_error(_('Cannot delete this price because retained classification history must be preserved.'));
 }
 
 if ($Mode == 'RESET')

@@ -182,6 +182,11 @@ class references {
 			." WHERE ISNULL(v.id)"
 			.($type_fld ? " AND tbl.`$type_fld`=$type" : '')
 			." AND `$ref_fld` REGEXP ".db_escape('^'.preg_quote($prefix).'[0-9]*'.preg_quote($postfix).'$');
+        if ((int)$type===ST_SALESORDER) {
+            $sql="SELECT MAX(CAST(SUBSTR(reference,".(strlen($prefix)+1).",LENGTH(reference)-".(strlen($postfix)+strlen($prefix)).") AS UNSIGNED)) FROM ("
+                ."SELECT tbl.`$ref_fld` AS reference FROM `$trans_table` tbl LEFT JOIN ".TB_PREF."voided v ON tbl.`$tno_fld`=v.id AND v.type=$type WHERE ISNULL(v.id) AND tbl.`$type_fld`=$type"
+                ." UNION ALL SELECT reference FROM ".TB_PREF."approval_drafts WHERE trans_type=$type AND status IN (0,1)) native_sales_refs WHERE reference REGEXP ".db_escape('^'.preg_quote($prefix).'[0-9]*'.preg_quote($postfix).'$');
+        }
 		$result = db_query($sql, 'cannot retrieve last reference');
 		$result = db_fetch_row($result);
 

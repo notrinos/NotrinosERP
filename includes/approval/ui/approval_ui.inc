@@ -220,7 +220,7 @@ function restore_items_cart_from_data($data)
  * @param object $cart The Cart instance (sales/includes/cart_class.inc)
  * @return array Plain array representation
  */
-function collect_sales_cart_data($cart)
+function collect_sales_cart_data($cart, $legacy = false)
 {
 	$data = array(
 		'trans_type'         => $cart->trans_type,
@@ -288,6 +288,18 @@ function collect_sales_cart_data($cart)
 			);
 		}
 	}
+
+    // Existing factory native-v1 keeps its exact stored wire; new ordinary carts
+    // retain the fields already understood by their native restorer.
+    if (!$legacy) {
+        $data['agreement_id']=isset($cart->agreement_id)?$cart->agreement_id:0;
+        $defaults=array('company'=>null,'company_prefix'=>null,'company_sha256'=>null,'cust_ref'=>'',
+            'template_id'=>0,'validity_date'=>null,'opportunity_id'=>0,'terms_and_conditions'=>'',
+            'margin_total'=>0,'cost_total'=>0,'optional_items'=>array(),'src_docs'=>array());
+        foreach($defaults as $field=>$value)$data[$field]=isset($cart->$field)?$cart->$field:$value;
+        $data['sales_discount_state']=array('coupon_code'=>isset($cart->coupon_code)?(string)$cart->coupon_code:'',
+            'applied_discounts'=>isset($cart->applied_discounts)&&is_array($cart->applied_discounts)?array_values($cart->applied_discounts):array());
+    }
 
 	return $data;
 }

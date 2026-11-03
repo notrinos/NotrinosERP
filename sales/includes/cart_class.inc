@@ -94,6 +94,9 @@ class Cart {
 	public $optional_items = array();  // Optional/upsell items from template (not in line_items)
 
 	// --- Phase 3: Sales Agreements & Contracts ---
+	public $company = null;
+	public $company_prefix = null;
+	public $company_sha256 = null;
 	public $agreement_id = 0;          // FK to 0_sales_agreements (0 = no agreement)
 
 	// --- Phase 4: Advanced Discount & Promotion Engine ---
@@ -108,6 +111,12 @@ class Cart {
 	//	$prepare_child is set to ST_SALESINVOICE for prepayment invoices
 	//
 	function __construct($type, $trans_no=0, $prepare_child=false) {
+        global $db_connections;
+        $user=isset($_SESSION['wa_current_user'])?$_SESSION['wa_current_user']:null;
+        if(is_object($user) && isset($user->cur_con,$db_connections[$user->cur_con]['tbpref'])) {
+            $this->company=$user->cur_con;$this->company_prefix=$db_connections[$user->cur_con]['tbpref'];
+            $this->company_sha256=hash('sha256',serialize(array($user->cur_con,$db_connections[$user->cur_con])));
+        }
 		/*Constructor function initialises a new shopping cart */
 		$this->line_items = array();
 		$this->sales_type = '';
@@ -121,6 +130,16 @@ class Cart {
 		$this->read($type, $trans_no, $prepare_child);
 		$this->cart_id = uniqid('');
 	}
+
+    /** Retain the trusted company of a live cart across session requests. */
+    function is_current_company() {
+        global $db_connections;
+        $user=isset($_SESSION['wa_current_user'])?$_SESSION['wa_current_user']:null;
+        return is_object($user) && isset($user->cur_con,$db_connections[$user->cur_con]['tbpref'])
+            && isset($this->company,$this->company_prefix,$this->company_sha256)
+            && (string)$this->company===(string)$user->cur_con && $this->company_prefix===$db_connections[$user->cur_con]['tbpref']
+            && $this->company_sha256===hash('sha256',serialize(array($user->cur_con,$db_connections[$user->cur_con])));
+    }
 
 	/*
 		Optional sorting items by stock_id.
@@ -296,7 +315,10 @@ class Cart {
 	function write($policy=0) {
 		
 		global $SysPrefs, $Refs;
-		
+        if(method_exists($this,'is_current_company') && !$this->is_current_company()) {cancel_transaction();return -3;}
+		$original = clone $this;
+        foreach($original->line_items as $index=>$line)$original->line_items[$index]=clone $line;
+        try {
 		begin_transaction(); // prevents partial database changes in case of direct delivery/invoice
 		if ($this->reference != 'auto' && $this->trans_no == 0 && !is_new_reference($this->reference, $this->trans_type)) {
 			if (!empty($SysPrefs->prefs['ref_no_auto_increase']))
@@ -316,7 +338,12 @@ class Cart {
 			$this->trans_type = get_parent_type($this->trans_type);
 
 			$this->reference = 'auto'; 
-			$trans_no = $this->write(1); 
+			$trans_no = $this->write(1);
+            if ($trans_no === false || $trans_no <= 0) {
+                cancel_transaction();
+                foreach (get_object_vars($original) as $field=>$value) $this->$field = $value;
+                return $trans_no === false ? -3 : $trans_no;
+            }
 
 			// re-read parent document converting it to child
 			$this->read($this->trans_type, $trans_no, true); 
@@ -347,9 +374,19 @@ class Cart {
 					$ret = update_sales_order($this);
 		}
 
-		commit_transaction();
-
-		return $ret;
+        $failed = $ret === false || (is_numeric($ret) && $ret <= 0);
+        if ($failed || !commit_transaction()) {
+            cancel_transaction();
+            foreach (get_object_vars($original) as $field=>$value) $this->$field = $value;
+            return $failed && is_numeric($ret) ? $ret : -3;
+        }
+        return $ret;
+        }catch(DimensionFinancialReferenceWriteException $exception){
+            cancel_transaction();
+            foreach(get_object_vars($this) as $field=>$value)if(!array_key_exists($field,get_object_vars($original)))unset($this->$field);
+            foreach(get_object_vars($original) as $field=>$value)$this->$field=$value;
+            return -3;
+        }
 	}
 
 	function set_customer($customer_id, $customer_name, $currency, $discount, $payment, $cdiscount=0) {

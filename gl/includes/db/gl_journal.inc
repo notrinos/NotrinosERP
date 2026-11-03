@@ -9,6 +9,8 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+
 function add_journal($type, $trans_no, $amount, $tran_date, $currency, $reference, $source_ref='', $rate=1, $event_date='', $doc_date='') {
 	$sql = "INSERT INTO ".TB_PREF."journal(
 	`type`,`trans_no`, `amount`, `currency`, `rate`, `reference`, `source_ref`, `tran_date`,`event_date`,`doc_date`)
@@ -60,6 +62,8 @@ function get_journal($type, $trans_no) {
 *	Amount in customer currency
 */
 function write_cust_journal($trans_type, $trans_no, $branch_id, $date, $ref, $amount, $rate) {
+    if(!begin_transaction())dimension_financial_reference_failure();
+    try {
 
 	$pos = user_pos();
 	// we have to select any branch_id for given AR_act - in fact w
@@ -70,7 +74,14 @@ function write_cust_journal($trans_type, $trans_no, $branch_id, $date, $ref, $am
 		.db_escape($amount).", ".db_escape($rate).", ".db_escape($pos)." 
 		FROM ".TB_PREF."cust_branch WHERE branch_code=".db_escape($branch_id);
 
-	return db_query($sql, 'cannot write cust_journal');
+
+    $branch=db_query('SELECT debtor_no FROM '.TB_PREF.'cust_branch WHERE branch_code='.db_escape($branch_id).' FOR UPDATE');
+    $customer=$branch?db_fetch_assoc($branch):false;if(!$customer)dimension_financial_reference_failure();
+    $key=array('type'=>$trans_type,'trans_no'=>$trans_no,'debtor_no'=>$customer['debtor_no']);
+    $result=dimension_financial_reference_write('debtor_trans',null,array('dimension_id'=>0,'dimension2_id'=>0),
+        function($admitted)use($sql,$key){return db_query($sql)?$key:false;})!==false;
+    if(!commit_transaction())dimension_financial_reference_failure();return $result;
+    }catch(DimensionFinancialReferenceWriteException $exception){cancel_transaction();throw $exception;}
 }
 
 /*
@@ -82,13 +93,17 @@ function write_supp_journal($trans_type, $trans_no, $supp_id, $date, $ref, $amou
 		VALUES (".db_escape($trans_no).", ".db_escape($trans_type).", ".db_escape($supp_id).", '".date2sql($date)."',"
 		.db_escape($ref).", ".db_escape($amount).",".db_escape($rate).",".db_escape($src_ref).")";
 
-	return db_query($sql, 'cannot write supp_journal');
+	dimension_financial_reference_write('supp_trans',null,array(),function($admitted)use($sql,$trans_type,$trans_no,$supp_id,&$result){$result=db_query($sql,'cannot write supp_journal');return $result?array('type'=>$trans_type,'trans_no'=>$trans_no,'supplier_id'=>$supp_id):false;});
+    return $result;
 }
 
 /*
 *	Write/update journal entries.
 */
 function write_journal_entries(&$cart) {
+    $original=clone $cart;
+    foreach($original->gl_items as $index=>$line)$original->gl_items[$index]=clone $line;
+    try {
 	global $Refs;
 
 	$date_ = $cart->tran_date;
@@ -136,10 +151,25 @@ function write_journal_entries(&$cart) {
 	add_audit_trail($trans_type, $trans_id, $date_);
 
 	hook_db_postwrite($cart, ST_JOURNAL);
+    if(isset($cart->reconciled_date)) {
+        $date=$cart->reconciled_date;
+        if(!is_string($date) || !preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D',$date))dimension_financial_reference_failure();
+        dimension_financial_reference_group('bank_trans',ST_JOURNAL,$trans_id,function($row)use($date){
+            return db_query('UPDATE '.TB_PREF.'bank_trans SET reconciled='.db_escape($date).' WHERE id='.(int)$row['id'])!==false;
+        });
+    }
+
 
 	commit_transaction();
 
 	return $trans_id;
+    }catch(DimensionFinancialReferenceWriteException $exception){
+        cancel_transaction();
+        foreach(get_object_vars($cart) as $field=>$value)if(!array_key_exists($field,get_object_vars($original)))unset($cart->$field);
+        foreach(get_object_vars($original) as $field=>$value)$cart->$field=$value;
+        throw $exception;
+    }
+
 }
 
 function void_journal_trans($type, $type_no, $use_transaction=true) {

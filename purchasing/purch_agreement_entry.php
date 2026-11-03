@@ -416,7 +416,7 @@ if (isset($_POST['DeleteAgreement']) && $selected_id > 0) {
 if (isset($_POST['ConfirmAgreement']) && $selected_id > 0) {
 	$result = submit_purchase_agreement($selected_id);
 	if ($result === false) {
-		display_error(_('The purchase agreement could not be confirmed or submitted for approval. Ensure at least one line exists.'));
+		display_error(_('The purchase agreement could not be submitted. Check its lines, retained history and active shared approval policy.'));
 	} elseif (is_array($result) && isset($result['status']) && $result['status'] === 'pending') {
 		display_notification_centered(sprintf(
 			_('Purchase agreement has been submitted for approval. Draft #%d, Reference: %s'),
@@ -434,6 +434,14 @@ if (isset($_POST['ActivateAgreement']) && $selected_id > 0) {
 		meta_forward($_SERVER['PHP_SELF'], 'agreement_id=' . $selected_id . '&sel_app=AP&notice=activated');
 	else
 		display_error(_('The purchase agreement could not be activated.'));
+}
+
+if (isset($_POST['RenewAgreement']) && $selected_id > 0) {
+	$renewed_id = renew_purchase_agreement($selected_id);
+	if ($renewed_id)
+		meta_forward($_SERVER['PHP_SELF'], 'agreement_id='.$renewed_id.'&sel_app=AP');
+	else
+		display_error(_('The agreement could not be renewed. Check its period, retained references and active shared approval policy. No renewal changes were saved.'));
 }
 
 if (isset($_POST['ExpireAgreement']) && $selected_id > 0) {
@@ -698,6 +706,11 @@ if ($agreement) {
 		submit('CancelAgreement', _('Cancel Agreement'), true, _('Cancel this agreement'));
 	}
 	if (in_array($agreement['status'], array('confirmed', 'active'))) {
+		if (!empty($agreement['auto_renew']) && $agreement['date_end'] && $agreement['date_end'] !== '0000-00-00'
+			&& $agreement['date_end'] < date2sql(Today())) {
+			echo '&nbsp;';
+			submit('RenewAgreement', _('Renew Agreement'), true, _('Create the next agreement and submit its approval'));
+		}
 		echo '<div style="max-width:420px;margin:12px auto 0;">';
 		text_row(_('Cancellation Reason:'), 'cancellation_reason', null, 40, 255);
 		echo '</div>';

@@ -1,6 +1,7 @@
 <?php
-/** Persist standalone movement custody on the existing immutable core action trail. */
+/** Persist standalone and explicitly valued linked stock custody on the core action trail. */
 require_once __DIR__.'/warehouse_transfer_terminal_db.inc';
+require_once __DIR__.'/warehouse_material_transfer_fulfillment_db.inc';
 
 /**
  * Admit a new stock event against current committed accounting settings.
@@ -128,11 +129,14 @@ function transfer_fulfillment_transition($before, $after, $event, $actor, $date,
 function transfer_fulfillment_custody($identity)
 {
     if (!transfer_core_context() || empty($GLOBALS['transaction_level'])
-        || !($identity = dimension_writer_reference_id($identity)) || !transfer_fulfillment_origin_allowed($identity)) return false;
+        || !($identity = dimension_writer_reference_id($identity))) return false;
+    $material = transfer_fulfillment_material($identity);
+    if ($material === false) return false;
     $history = transfer_core_history($identity); $source = transfer_fulfillment_source($identity);
     if (!$history || !$source) return false;
     $prefix = array('drafts'=>$history['drafts'], 'actions'=>array()); $current = null; $draft = null;
     $approval = get_approval_workflow_service(); $seen = array(); $last_date = null;
+    $material_current = null; $material_origin = null;
     foreach ($history['actions'] as $action) {
         if ($current === null && $action['action_type'] !== 'stock_dispatch') {
             $prefix['actions'][] = $action; continue;
@@ -140,19 +144,38 @@ function transfer_fulfillment_custody($identity)
         $event = $current === null ? 'dispatch' : 'receipt';
         if ($action['action_type'] !== 'stock_'.$event || $action['draft_data_snapshot'] === null) return false;
         $receipt = $approval->decodeStoredDraftData($action['draft_data_snapshot']);
-        if (!is_array($receipt) || array_keys($receipt) !== array('schema','transfer_id','company_sha256',
-            'history_sha256','action_sha256','date','before','after','moves','movement_sha256')
-            || $receipt['schema'] !== 'transfer-stock-'.$event.'-v1' || $receipt['transfer_id'] !== $identity
+        $keys = array('schema','transfer_id','company_sha256',
+            'history_sha256','action_sha256','date','before','after','moves','movement_sha256');
+        if ($material !== null) $keys[] = 'material';
+        if (!is_array($receipt) || array_keys($receipt) !== $keys
+            || $receipt['schema'] !== 'transfer-stock-'.$event.($material === null ? '-v1' : '-v2') || $receipt['transfer_id'] !== $identity
             || $receipt['company_sha256'] !== transfer_core_context(true)) return false;
         $unsigned = $action; $unsigned['draft_data_snapshot'] = null;
         if ($receipt['history_sha256'] !== transfer_core_source_fingerprint(array('header'=>array(),
                 'lines'=>array_merge($prefix['drafts'], $prefix['actions'])))
             || $receipt['action_sha256'] !== transfer_core_source_fingerprint(array('header'=>$unsigned, 'lines'=>array()))) return false;
         if ($current === null) {
-            $approved = transfer_approved_projection_custody($identity, $receipt['before'], $prefix, null);
+            if ($material !== null) {
+                if (!isset($receipt['material']) || !is_array($receipt['material'])
+                    || array_keys($receipt['material']) !== array('origin','before','after')) return false;
+                $origin = material_transfer_origin_projection((int)$material['source']['header']['request_id'],
+                    $receipt['material']['before'], $material['history'], $receipt['before'], $prefix);
+                if (!$origin || $origin['receipt']['schema'] !== 'material-transfer-link-v3') return false;
+                $material_origin = material_transfer_origin_binding($origin);
+            }
+            $approved = transfer_approved_projection_custody($identity, $receipt['before'], $prefix, $material_origin);
             if (!$approved) return false;
             $draft = $approved['draft'];
         } elseif (!transfer_fulfillment_equal($current, $receipt['before'])) return false;
+        if ($material !== null) {
+            if (!isset($receipt['material']) || !is_array($receipt['material'])
+                || array_keys($receipt['material']) !== array('origin','before','after')
+                || $receipt['material']['origin'] !== $material_origin
+                || ($material_current !== null && !transfer_fulfillment_equal($material_current, $receipt['material']['before']))
+                || !transfer_fulfillment_material_transition($receipt['material']['before'], $receipt['material']['after'],
+                    $receipt['before'], $receipt['after'], $event)) return false;
+            $material_current = $receipt['material']['after'];
+        }
         $prior_action = end($prefix['actions']);
         if (!$prior_action || $action['action_date'] < $prior_action['action_date']
             || ($last_date !== null && $receipt['date'] < $last_date)
@@ -163,8 +186,15 @@ function transfer_fulfillment_custody($identity)
         foreach ($receipt['moves'] as $move) { if (isset($seen[$move])) return false; $seen[$move] = true; }
         $current = $receipt['after']; $prefix['actions'][] = $action; $last_date = $receipt['date'];
     }
-    return $current !== null && transfer_fulfillment_equal($current, $source)
-        ? array('source'=>$source, 'history'=>$history, 'draft'=>$draft) : false;
+    if ($current === null || !transfer_fulfillment_equal($current, $source)
+        || ($material !== null && !transfer_fulfillment_equal($material_current, $material['source']))) return false;
+    $custody = array('source'=>$source, 'history'=>$history, 'draft'=>$draft);
+    if ($material !== null) {
+        $custody['material'] = $material['source'];
+        $custody['material_history'] = $material['history'];
+        $custody['material_origin'] = $material_origin;
+    }
+    return $custody;
 }
 
 /** Append and independently reread a movement receipt in the owning stock transaction. */
@@ -174,18 +204,24 @@ function transfer_fulfillment_record($identity, $custody, $event, $date, $moves)
     $history = transfer_core_history($identity);
     if (!$after || $history !== $custody['history'] || !transfer_fulfillment_transition($before, $after, $event,
         $_SESSION['wa_current_user']->user, $date, $moves)) return false;
+    $linked = isset($custody['material']);
+    $material_after = $linked ? transfer_fulfillment_material_apply($custody, $after, $event) : null;
+    if ($linked && (!$material_after || !transfer_fulfillment_material_transition($custody['material'],
+        $material_after, $before, $after, $event))) return false;
     $id = add_approval_action($custody['draft']['id'], 'stock_'.$event, null,
         $custody['draft']['current_level'], null, null, null);
     if (!$id) return false;
     $rows = transfer_core_rows('SELECT * FROM '.TB_PREF.'approval_actions WHERE id='.(int)$id.' FOR UPDATE');
     if (!$rows || count($rows) !== 1) return false;
-    $receipt = array('schema'=>'transfer-stock-'.$event.'-v1', 'transfer_id'=>$identity,
+    $receipt = array('schema'=>'transfer-stock-'.$event.($linked ? '-v2' : '-v1'), 'transfer_id'=>$identity,
         'company_sha256'=>transfer_core_context(true),
         'history_sha256'=>transfer_core_source_fingerprint(array('header'=>array(),
             'lines'=>array_merge($history['drafts'], $history['actions']))),
         'action_sha256'=>transfer_core_source_fingerprint(array('header'=>$rows[0], 'lines'=>array())),
         'date'=>$date, 'before'=>$before, 'after'=>$after, 'moves'=>$moves,
         'movement_sha256'=>transfer_fulfillment_movement_hash($moves));
+    if ($linked) $receipt['material'] = array('origin'=>$custody['material_origin'],
+        'before'=>$custody['material'], 'after'=>$material_after);
     $snapshot = json_encode($receipt);
     if ($snapshot === false || !db_query('UPDATE '.TB_PREF.'approval_actions SET draft_data_snapshot='
         .db_escape($snapshot, true).' WHERE id='.(int)$id.' AND draft_data_snapshot IS NULL')

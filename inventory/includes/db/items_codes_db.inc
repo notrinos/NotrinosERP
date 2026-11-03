@@ -17,6 +17,7 @@
 	Complex/reporting queries (JOINs, recursive checks) remain standalone.
 */
 include_once($path_to_root.'/inventory/includes/db/items_codes_entity.inc');
+require_once __DIR__.'/item_dimension_maintenance_db.inc';
 
 /**
  * Get all item codes for a stock item (with JOIN to stock_category).
@@ -40,7 +41,7 @@ function get_all_item_codes($stock_id, $foreign=1) {
 
 function delete_item_kit($item_code) {
 	$sql="DELETE FROM ".TB_PREF."item_codes WHERE item_code=".db_escape($item_code);
-	db_query($sql, 'an item kit could not be deleted');
+	return item_code_dimension_group_write($item_code,array(),function()use($sql){return db_query($sql,'an item kit could not be deleted');},true);
 }
 
 function get_item_kit($item_code) {
@@ -100,7 +101,7 @@ function update_kit_props($kit_code, $name, $category) {
 	$sql = "UPDATE ".TB_PREF."item_codes SET description="
 		. db_escape($name).",category_id=".db_escape($category)
 		. " WHERE item_code=".db_escape($kit_code);
-	db_query($sql, 'kit name update failed');
+	return item_code_dimension_group_write($kit_code,array('description'=>$name,'category_id'=>$category),function()use($sql){return db_query($sql,'kit name update failed');});
 }
 
 function get_where_used($item_code) {

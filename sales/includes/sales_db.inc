@@ -176,14 +176,21 @@ function update_parent_line($doc_type, $line_id, $qty_dispatched, $auto=false) {
 			if ($auto)
 				$sql .= ", quantity = quantity + $qty_dispatched";
 			$sql .= " WHERE id=".db_escape($line_id);
+            if (!function_exists('sales_order_dimension_command')) require_once __DIR__.'/db/sales_order_dimension_db.inc';
+            return sales_order_dimension_line_command($line_id,function() use ($sql) {
+                return db_query($sql, 'The parent order detail could not be updated');
+            });
 		}
 		else
 			$sql = "UPDATE ".TB_PREF."debtor_trans_details
 				SET qty_done = qty_done + $qty_dispatched
 				WHERE id=".db_escape($line_id);
 	}
-	db_query($sql, 'The parent document detail record could not be updated');
-	return true;
+    if(!function_exists('dimension_financial_reference_write'))require_once __DIR__.'/../../dimensions/includes/dimension_financial_reference_writer.inc';
+    return dimension_financial_reference_write('debtor_trans_details',$line_id,array(),function($admitted)use($sql,$line_id,$doc_type){
+        $row=dimension_financial_reference_row('debtor_trans_details',$line_id);if(!$row || (int)$row['debtor_trans_type']!==(int)$doc_type)return false;
+        return db_query($sql,'The parent document detail record could not be updated')?$line_id:false;
+    });
 }
 
 //--------------------------------------------------------------------------------------------------

@@ -57,14 +57,14 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	if (can_process($selected_id)) {
 
 		if ($selected_id != '') {
-			if (update_account_type($_POST['id'], $_POST['name'], $_POST['class_id'], $_POST['parent'], $_POST['old_id']))
-				display_notification(_('Selected account type has been updated'));
+			$saved=update_account_type($_POST['id'],$_POST['name'],$_POST['class_id'],$_POST['parent'],$_POST['old_id']);
+            if($saved)display_notification(_('Selected account type has been updated'));
 		} 
 		else {
-			if (add_account_type($_POST['id'], $_POST['name'], $_POST['class_id'], $_POST['parent']))
-				display_notification(_('New account type has been added'));
+			$saved=add_account_type($_POST['id'],$_POST['name'],$_POST['class_id'],$_POST['parent']);
+            if($saved)display_notification(_('New account type has been added'));
 		}
-		$Mode = 'RESET';
+		if($saved)$Mode='RESET';else display_error(_('Cannot save this account group because its retained classification could not be verified.'));
 	}
 }
 
@@ -91,10 +91,9 @@ function can_delete($type) {
 if ($Mode == 'Delete') {
 
 	if (can_delete($selected_id)) {
-		delete_account_type($selected_id);
-		display_notification(_('Selected account group has been deleted'));
+		if(delete_account_type($selected_id)){display_notification(_('Selected account group has been deleted'));$Mode='RESET';}
+        else display_error(_('Cannot delete this account group because retained classification history must be preserved.'));
 	}
-	$Mode = 'RESET';
 }
 if ($Mode == 'RESET') {
 	$selected_id = '';

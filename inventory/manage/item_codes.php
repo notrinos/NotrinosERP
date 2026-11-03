@@ -58,7 +58,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	
 	if ($input_error == 0) {
 		if ($Mode == 'ADD_ITEM') {
-			item_codes_entity::create(array(
+			$saved=item_codes_entity::create(array(
 				'item_code' => $_POST['item_code'],
 				'stock_id' => $_POST['stock_id'],
 				'description' => $_POST['description'],
@@ -67,24 +67,22 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 				'is_foreign' => 1
 			));
 
-			display_notification(_('New item code has been added.'));
+			if($saved)display_notification(_('New item code has been added.'));
 		}
 		else {
-			item_codes_entity::update_item_code($selected_id, $_POST['item_code'], $_POST['stock_id'], $_POST['description'], $_POST['category_id'], $_POST['quantity'], 1);
+			$saved=item_codes_entity::update_item_code($selected_id, $_POST['item_code'], $_POST['stock_id'], $_POST['description'], $_POST['category_id'], $_POST['quantity'], 1);
 
-			display_notification(_('Item code has been updated.'));
+			if($saved)display_notification(_('Item code has been updated.'));
 		}
-		$Mode = 'RESET';
+		if($saved)$Mode='RESET';else display_error(_('Cannot save this item code because retained classification could not be verified.'));
 	}
 }
 
 //--------------------------------------------------------------------------------------------------
 
 if ($Mode == 'Delete') {
-	item_codes_entity::remove($selected_id);
-	
-	display_notification(_('Item code has been successfully deleted.'));
-	$Mode = 'RESET';
+	if(item_codes_entity::remove($selected_id)){display_notification(_('Item code has been successfully deleted.'));$Mode='RESET';}
+    else display_error(_('Cannot delete this item code because retained classification history must be preserved.'));
 }
 
 if ($Mode == 'RESET') {

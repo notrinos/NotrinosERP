@@ -12,6 +12,8 @@
 /*
 *	Mark changes in debtor_trans_details
 */
+require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+
 function update_customer_trans_version($type, $versions) {
 
 	$sql = 'UPDATE '.TB_PREF.'debtor_trans SET version=version+1 WHERE type='.db_escape($type).' AND (';
@@ -54,6 +56,10 @@ function get_customer_trans_version($type, $trans_no) {
 *	date_ is display date (non-sql)
 */
 function write_customer_trans($trans_type, $trans_no, $debtor_no, $BranchNo, $date_, $reference, $Total, $discount=0, $Tax=0, $Freight=0, $FreightTax=0, $sales_type=0, $order_no=0, $ship_via=0, $due_date='', $AllocAmt=0, $rate=0, $dimension_id=0, $dimension2_id=0, $payment_terms=null, $tax_included=0, $prep_amount=0, $pos=0) {
+    $dimension_id=dimension_writer_reference_id($dimension_id);$dimension2_id=dimension_writer_reference_id($dimension2_id);
+    if($dimension_id===false||$dimension2_id===false)dimension_financial_reference_failure();
+    if(!begin_transaction())dimension_financial_reference_failure();
+    try {
 	$new = $trans_no == 0;
 	$curr = get_customer_currency($debtor_no);
 	if ($rate == 0)
@@ -67,9 +73,15 @@ function write_customer_trans($trans_type, $trans_no, $debtor_no, $BranchNo, $da
 
 	$pos = $pos == 0 ? user_pos() : $pos;
 
-	if ($new || !exists_customer_trans($trans_type, $trans_no)) {
-		if ($new)
-			$trans_no = get_next_trans_no($trans_type);
+    if($new)$trans_no=get_next_trans_no($trans_type);
+    $key=array('type'=>$trans_type,'trans_no'=>$trans_no,'debtor_no'=>$debtor_no);
+    $where=dimension_financial_reference_predicate('debtor_trans',$key);
+    if($where===false)dimension_financial_reference_failure();
+    $rows=db_query('SELECT type,trans_no FROM '.TB_PREF.'debtor_trans WHERE '.$where.' FOR UPDATE');
+    if(!$rows)dimension_financial_reference_failure();
+    $current=db_fetch_assoc($rows);
+    if($new&&$current)dimension_financial_reference_failure();
+    if (!$current) {
 
 		$sql = "INSERT INTO ".TB_PREF."debtor_trans (
 			trans_no, type,
@@ -102,14 +114,18 @@ function write_customer_trans($trans_type, $trans_no, $debtor_no, $BranchNo, $da
 		payment_terms=".db_escape($payment_terms, true).",
 		tax_included=".db_escape($tax_included).",
 		prep_amount =".db_escape($prep_amount)."
-		WHERE trans_no=".db_escape($trans_no)." AND type=".db_escape($trans_type);
+		WHERE trans_no=".db_escape($trans_no)." AND type=".db_escape($trans_type)." AND debtor_no=".db_escape($debtor_no);
 	}
-	db_query($sql, 'The debtor transaction record could not be inserted');
+    dimension_financial_reference_write('debtor_trans',$current?$key:null,array('dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id),
+        function($admitted) use($sql,$key) {return db_query($sql)?$key:false;});
 
 	if ($trans_type != ST_JOURNAL && $trans_type != ST_BANKDEPOSIT && $trans_type != ST_BANKPAYMENT)
 		add_audit_trail($trans_type, $trans_no, $date_, $new ? '' : _('Updated.'));
 
+    if(!commit_transaction())dimension_financial_reference_failure();
 	return $trans_no;
+    }catch(DimensionFinancialReferenceWriteException $exception){cancel_transaction();throw $exception;}
+
 }
 
 function get_customer_trans($trans_id, $trans_type, $customer_id=null) {
@@ -241,29 +257,24 @@ function get_customer_details_from_trans($type, $type_no) {
 }
 
 function void_customer_trans($type, $type_no) {
-	// clear all values and mark as void
-	$sql = "UPDATE ".TB_PREF."debtor_trans SET ov_amount=0, ov_discount=0, ov_gst=0, ov_freight=0,
-		ov_freight_tax=0, alloc=0, prep_amount=0, version=version+1 WHERE type=".db_escape($type)." AND trans_no=".db_escape($type_no);
-
-	db_query($sql, "could not void debtor transactions for type=$type and trans_no=$type_no");
+    return dimension_financial_reference_group('debtor_trans',$type,$type_no,function($row) use($type,$type_no) {
+        return db_query('UPDATE '.TB_PREF.'debtor_trans SET ov_amount=0,ov_discount=0,ov_gst=0,ov_freight=0,ov_freight_tax=0,alloc=0,prep_amount=0,version=version+1 WHERE type='.(int)$type.' AND trans_no='.(int)$type_no.' AND debtor_no='.(int)$row['debtor_no'])!==false;
+    });
 }
 
 function clear_customer_trans($type, $type_no) {
-	
-	$sql = "DELETE FROM ".TB_PREF."debtor_trans WHERE type=".db_escape($type)." AND trans_no=".db_escape($type_no);
-
-	db_query($sql, "could not clear debtor transactions for type=$type and trans_no=$type_no");
+    return dimension_financial_reference_group('debtor_trans',$type,$type_no,function($row)use($type,$type_no){
+        return db_query('DELETE FROM '.TB_PREF.'debtor_trans WHERE type='.(int)$type.' AND trans_no='.(int)$type_no.' AND debtor_no='.(int)$row['debtor_no'])!==false;
+    },true);
 }
 
 function post_void_customer_trans($type, $type_no) {
 	switch ($type) {
 		case ST_SALESINVOICE :
 		case ST_CUSTCREDIT   :
-			void_sales_invoice($type, $type_no);
-			break;
+			return void_sales_invoice($type, $type_no);
 		case ST_CUSTDELIVERY :
-			void_sales_delivery($type, $type_no);
-			break;
+			return void_sales_delivery($type, $type_no);
 		case ST_CUSTPAYMENT :
 			void_customer_payment($type, $type_no);
 			break;

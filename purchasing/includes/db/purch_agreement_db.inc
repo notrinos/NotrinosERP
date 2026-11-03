@@ -16,6 +16,8 @@ include_once($path_to_root . '/purchasing/includes/po_class.inc');
 include_once($path_to_root . '/purchasing/includes/db/po_db.inc');
 include_once($path_to_root . '/purchasing/includes/db/suppliers_db.inc');
 include_once(__DIR__.'/purch_agreement_po_approval_db.inc');
+require_once __DIR__.'/purch_agreement_dimension_db.inc';
+require_once __DIR__.'/purch_agreement_lifecycle_db.inc';
 
 /**
  * Get available purchase agreement types.
@@ -465,44 +467,15 @@ function get_purchase_agreement_submission_data($agreement_id)
 }
 
 /**
- * Submit one draft agreement for approval or auto-confirm it when no approval is required.
+ * Submit current agreement intent through the registered shared-core policy.
  *
  * @param int $agreement_id
  * @return array|false
  */
 function submit_purchase_agreement($agreement_id)
 {
-	$agreement = get_purch_agreement($agreement_id);
-	if (!$agreement || !can_submit_purch_agreement_draft($agreement_id))
-		return false;
+    return submit_purchase_agreement_lifecycle($agreement_id);
 
-	$approval_amount = (float)$agreement['total_committed'];
-	if (!class_exists('ApprovalWorkflow') || !ApprovalWorkflow::isRegistered(ST_PURCHAGREEMENT)) {
-		if (confirm_agreement($agreement_id))
-			return array('status' => 'auto_approved', 'agreement_id' => (int)$agreement_id);
-		return false;
-	}
-
-	$approval = get_approval_workflow_service();
-	if (!$approval->isApprovalRequired(ST_PURCHAGREEMENT, $approval_amount)) {
-		if (confirm_agreement($agreement_id))
-			return array('status' => 'auto_approved', 'agreement_id' => (int)$agreement_id);
-		return false;
-	}
-
-	$draft_data = get_purchase_agreement_submission_data($agreement_id);
-	return $approval->submit(
-		ST_PURCHAGREEMENT,
-		$draft_data,
-		$approval_amount,
-		array(
-			'summary' => sprintf(_('Purchase Agreement %s'), $agreement['reference']),
-			'currency' => $agreement['currency'] ? $agreement['currency'] : get_company_pref('curr_default'),
-			'person_type' => PT_SUPPLIER,
-			'person_id' => $agreement['supplier_id'],
-			'loc_code' => $agreement['delivery_location'],
-		)
-	);
 }
 
 /**
@@ -532,6 +505,8 @@ function add_purch_agreement($agreement_type, $supplier_id, $date_start, $date_e
 	$terms_and_conditions = '', $notes = '', $rfq_id = 0, $dimension_id = 0, $dimension2_id = 0,
 	$reference = '', $buyer_id = 0, $custom_data = array())
 {
+	$context = purch_agreement_dimension_context();
+	if (!$context) return false;
 	if ((int)$supplier_id <= 0 || !suppliers_entity::find((int)$supplier_id))
 		return false;
 
@@ -549,68 +524,74 @@ function add_purch_agreement($agreement_type, $supplier_id, $date_start, $date_e
 		'terms_and_conditions' => $terms_and_conditions,
 		'notes' => $notes,
 		'rfq_id' => (int)$rfq_id,
-		'dimension_id' => (int)$dimension_id,
-		'dimension2_id' => (int)$dimension2_id,
+		'dimension_id' => $dimension_id,
+		'dimension2_id' => $dimension2_id,
 		'reference' => $reference,
 		'created_by' => (int)$_SESSION['wa_current_user']->user,
 		'custom_data' => $custom_data,
 	);
 	hook_invoke_all('purch_agreement_before_save', $hook_data);
+	if (purch_agreement_dimension_context() !== $context) return false;
 
-	$sql = "INSERT INTO " . TB_PREF . "purch_agreements (
-		reference,
-		agreement_type,
-		supplier_id,
-		buyer_id,
-		status,
-		date_start,
-		date_end,
-		currency,
-		payment_terms,
-		delivery_location,
-		auto_renew,
-		renewal_period_months,
-		terms_and_conditions,
-		notes,
-		rfq_id,
-		dimension_id,
-		dimension2_id,
-		created_by,
-		created_date,
-		custom_data
-	) VALUES (
-		'',
-		" . db_escape($hook_data['agreement_type']) . ",
-		" . (int)$hook_data['supplier_id'] . ",
-		" . (int)$hook_data['buyer_id'] . ",
-		'draft',
-		" . db_escape($hook_data['date_start']) . ",
-		" . ($hook_data['date_end'] ? db_escape($hook_data['date_end']) : 'NULL') . ",
-		" . db_escape($hook_data['currency']) . ",
-		" . (int)$hook_data['payment_terms'] . ",
-		" . db_escape($hook_data['delivery_location']) . ",
-		" . (int)$hook_data['auto_renew'] . ",
-		" . max(1, (int)$hook_data['renewal_period_months']) . ",
-		" . ($hook_data['terms_and_conditions'] !== '' ? db_escape($hook_data['terms_and_conditions']) : 'NULL') . ",
-		" . ($hook_data['notes'] !== '' ? db_escape($hook_data['notes']) : 'NULL') . ",
-		" . (int)$hook_data['rfq_id'] . ",
-		" . (int)$hook_data['dimension_id'] . ",
-		" . (int)$hook_data['dimension2_id'] . ",
-		" . (int)$hook_data['created_by'] . ",
-		NOW(),
-		" . sql_purch_agreement_custom_data($hook_data['custom_data']) . "
-	)";
-	db_query($sql, 'could not insert purchase agreement');
+	$next = array('dimension_id'=>$hook_data['dimension_id'], 'dimension2_id'=>$hook_data['dimension2_id'],
+		'custom_data'=>encode_purch_agreement_custom_data($hook_data['custom_data']));
+	return purch_agreement_dimension_write('purch_agreements', null, $next, function($admitted) use ($hook_data) {
+		$sql = "INSERT INTO " . TB_PREF . "purch_agreements (
+			reference,
+			agreement_type,
+			supplier_id,
+			buyer_id,
+			status,
+			date_start,
+			date_end,
+			currency,
+			payment_terms,
+			delivery_location,
+			auto_renew,
+			renewal_period_months,
+			terms_and_conditions,
+			notes,
+			rfq_id,
+			dimension_id,
+			dimension2_id,
+			created_by,
+			created_date,
+			custom_data
+		) VALUES (
+			'',
+			" . db_escape($hook_data['agreement_type']) . ",
+			" . (int)$hook_data['supplier_id'] . ",
+			" . (int)$hook_data['buyer_id'] . ",
+			'draft',
+			" . db_escape($hook_data['date_start']) . ",
+			" . ($hook_data['date_end'] ? db_escape($hook_data['date_end']) : 'NULL') . ",
+			" . db_escape($hook_data['currency']) . ",
+			" . (int)$hook_data['payment_terms'] . ",
+			" . db_escape($hook_data['delivery_location']) . ",
+			" . (int)$hook_data['auto_renew'] . ",
+			" . max(1, (int)$hook_data['renewal_period_months']) . ",
+			" . ($hook_data['terms_and_conditions'] !== '' ? db_escape($hook_data['terms_and_conditions']) : 'NULL') . ",
+			" . ($hook_data['notes'] !== '' ? db_escape($hook_data['notes']) : 'NULL') . ",
+			" . (int)$hook_data['rfq_id'] . ",
+			" . (int)$hook_data['dimension_id'] . ",
+			" . (int)$hook_data['dimension2_id'] . ",
+			" . (int)$hook_data['created_by'] . ",
+			NOW(),
+			" . sql_purch_agreement_custom_data($hook_data['custom_data']) . "
+		)";
+		if (!db_query($sql, 'could not insert purchase agreement')) return false;
 
-	$agreement_id = db_insert_id();
-	$generated_reference = $hook_data['reference'] !== '' ? $hook_data['reference'] : format_purch_agreement_reference($agreement_id);
+		$agreement_id = db_insert_id();
+		$generated_reference = $hook_data['reference'] !== '' ? $hook_data['reference'] : format_purch_agreement_reference($agreement_id);
 
-	$sql = "UPDATE " . TB_PREF . "purch_agreements SET
-		reference = " . db_escape($generated_reference) . "
-		WHERE id = " . (int)$agreement_id;
-	db_query($sql, 'could not update purchase agreement reference');
+		$sql = "UPDATE " . TB_PREF . "purch_agreements SET
+			reference = " . db_escape($generated_reference) . "
+			WHERE id = " . (int)$agreement_id;
+		if (!db_query($sql, 'could not update purchase agreement reference')) return false;
 
-	return $agreement_id;
+		return $agreement_id;
+
+	});
 }
 
 /**
@@ -641,9 +622,14 @@ function update_purch_agreement($agreement_id, $agreement_type, $supplier_id, $d
 	$terms_and_conditions = '', $notes = '', $rfq_id = 0, $dimension_id = 0, $dimension2_id = 0,
 	$reference = '', $buyer_id = 0, $custom_data = array())
 {
+	$context = purch_agreement_dimension_context();
+	if (!$context || !dimension_writer_reference_id($agreement_id)) return false;
 	$agreement = get_editable_purch_agreement($agreement_id);
 	if (!$agreement || (int)$supplier_id <= 0 || !suppliers_entity::find((int)$supplier_id))
 		return false;
+	// Existing forms omit metadata. Preserve its original bytes rather than
+	// interpreting that omission as an instruction to erase retained bindings.
+	if (func_num_args() < 18) $custom_data = $agreement['custom_data'];
 
 	$hook_data = array(
 		'id' => (int)$agreement_id,
@@ -660,38 +646,44 @@ function update_purch_agreement($agreement_id, $agreement_type, $supplier_id, $d
 		'terms_and_conditions' => $terms_and_conditions,
 		'notes' => $notes,
 		'rfq_id' => (int)$rfq_id,
-		'dimension_id' => (int)$dimension_id,
-		'dimension2_id' => (int)$dimension2_id,
+		'dimension_id' => $dimension_id,
+		'dimension2_id' => $dimension2_id,
 		'reference' => $reference !== '' ? $reference : $agreement['reference'],
 		'custom_data' => $custom_data,
 	);
 	hook_invoke_all('purch_agreement_before_save', $hook_data);
+	if (purch_agreement_dimension_context() !== $context) return false;
 
-	$sql = "UPDATE " . TB_PREF . "purch_agreements SET
-		agreement_type = " . db_escape($hook_data['agreement_type']) . ",
-		supplier_id = " . (int)$hook_data['supplier_id'] . ",
-		buyer_id = " . (int)$hook_data['buyer_id'] . ",
-		date_start = " . db_escape($hook_data['date_start']) . ",
-		date_end = " . ($hook_data['date_end'] ? db_escape($hook_data['date_end']) : 'NULL') . ",
-		currency = " . db_escape($hook_data['currency']) . ",
-		payment_terms = " . (int)$hook_data['payment_terms'] . ",
-		delivery_location = " . db_escape($hook_data['delivery_location']) . ",
-		auto_renew = " . (int)$hook_data['auto_renew'] . ",
-		renewal_period_months = " . max(1, (int)$hook_data['renewal_period_months']) . ",
-		terms_and_conditions = " . ($hook_data['terms_and_conditions'] !== '' ? db_escape($hook_data['terms_and_conditions']) : 'NULL') . ",
-		notes = " . ($hook_data['notes'] !== '' ? db_escape($hook_data['notes']) : 'NULL') . ",
-		rfq_id = " . (int)$hook_data['rfq_id'] . ",
-		dimension_id = " . (int)$hook_data['dimension_id'] . ",
-		dimension2_id = " . (int)$hook_data['dimension2_id'] . ",
-		reference = " . db_escape($hook_data['reference']) . ",
-		custom_data = " . sql_purch_agreement_custom_data($hook_data['custom_data']) . "
-		WHERE id = " . (int)$agreement_id;
-	db_query($sql, 'could not update purchase agreement');
+	$next = array('dimension_id'=>$hook_data['dimension_id'], 'dimension2_id'=>$hook_data['dimension2_id'],
+		'custom_data'=>encode_purch_agreement_custom_data($hook_data['custom_data']));
+	return purch_agreement_dimension_write('purch_agreements', $agreement_id, $next, function($admitted) use ($hook_data, $agreement_id) {
+		$sql = "UPDATE " . TB_PREF . "purch_agreements SET
+			agreement_type = " . db_escape($hook_data['agreement_type']) . ",
+			supplier_id = " . (int)$hook_data['supplier_id'] . ",
+			buyer_id = " . (int)$hook_data['buyer_id'] . ",
+			date_start = " . db_escape($hook_data['date_start']) . ",
+			date_end = " . ($hook_data['date_end'] ? db_escape($hook_data['date_end']) : 'NULL') . ",
+			currency = " . db_escape($hook_data['currency']) . ",
+			payment_terms = " . (int)$hook_data['payment_terms'] . ",
+			delivery_location = " . db_escape($hook_data['delivery_location']) . ",
+			auto_renew = " . (int)$hook_data['auto_renew'] . ",
+			renewal_period_months = " . max(1, (int)$hook_data['renewal_period_months']) . ",
+			terms_and_conditions = " . ($hook_data['terms_and_conditions'] !== '' ? db_escape($hook_data['terms_and_conditions']) : 'NULL') . ",
+			notes = " . ($hook_data['notes'] !== '' ? db_escape($hook_data['notes']) : 'NULL') . ",
+			rfq_id = " . (int)$hook_data['rfq_id'] . ",
+			dimension_id = " . (int)$hook_data['dimension_id'] . ",
+			dimension2_id = " . (int)$hook_data['dimension2_id'] . ",
+			reference = " . db_escape($hook_data['reference']) . ",
+			custom_data = " . sql_purch_agreement_custom_data($hook_data['custom_data']) . "
+			WHERE id = " . (int)$agreement_id;
+		if (!db_query($sql, 'could not update purchase agreement')) return false;
 
-	update_purch_agreement_total_committed($agreement_id);
-	update_agreement_fulfillment($agreement_id);
+		update_purch_agreement_total_committed($agreement_id);
+		update_agreement_fulfillment($agreement_id);
 
-	return true;
+		return true;
+
+	});
 }
 
 /**
@@ -702,20 +694,21 @@ function update_purch_agreement($agreement_id, $agreement_type, $supplier_id, $d
  */
 function delete_purch_agreement($agreement_id)
 {
-	$agreement = get_purch_agreement($agreement_id);
-	if (!$agreement || $agreement['status'] !== 'draft')
-		return false;
+	return purch_agreement_dimension_write('purch_agreements', $agreement_id, array(), function($admitted) use ($agreement_id) {
+		$agreement = get_purch_agreement($agreement_id);
+		if (!$agreement || $agreement['status'] !== 'draft')
+			return false;
 
-	begin_transaction();
 
-	$sql = "DELETE FROM " . TB_PREF . "purch_agreement_lines WHERE agreement_id = " . (int)$agreement_id;
-	db_query($sql, 'could not delete purchase agreement lines');
+		$sql = "DELETE FROM " . TB_PREF . "purch_agreement_lines WHERE agreement_id = " . (int)$agreement_id;
+		if (!db_query($sql, 'could not delete purchase agreement lines')) return false;
 
-	$sql = "DELETE FROM " . TB_PREF . "purch_agreements WHERE id = " . (int)$agreement_id;
-	db_query($sql, 'could not delete purchase agreement');
+		$sql = "DELETE FROM " . TB_PREF . "purch_agreements WHERE id = " . (int)$agreement_id;
+		if (!db_query($sql, 'could not delete purchase agreement')) return false;
 
-	commit_transaction();
-	return true;
+		return true;
+
+	}, true);
 }
 
 /**
@@ -728,39 +721,8 @@ function delete_purch_agreement($agreement_id)
  */
 function set_purch_agreement_status($agreement_id, $status, $reason = '')
 {
-	$agreement = get_purch_agreement($agreement_id);
-	if (!$agreement)
-		return false;
+    return purch_agreement_lifecycle_transition($agreement_id,$status,$reason);
 
-	$allowed_statuses = get_purch_agreement_statuses();
-	if (!isset($allowed_statuses[$status]))
-		return false;
-
-	$custom_data = decode_purch_agreement_custom_data($agreement['custom_data']);
-	if ($reason !== '')
-		$custom_data['status_reason_' . $status] = $reason;
-
-	$inactive = in_array($status, array('expired', 'cancelled')) ? 1 : 0;
-
-	$sql = "UPDATE " . TB_PREF . "purch_agreements SET
-		status = " . db_escape($status) . ",
-		inactive = " . (int)$inactive . ",
-		custom_data = " . sql_purch_agreement_custom_data($custom_data) . "
-		WHERE id = " . (int)$agreement_id;
-	db_query($sql, 'could not update purchase agreement status');
-
-	if ($status === 'confirmed')
-	{
-		$hook_data = array('agreement_id' => (int)$agreement_id);
-		hook_invoke_all('purch_agreement_confirmed', $hook_data);
-	}
-	elseif ($status === 'expired')
-	{
-		$hook_data = array('agreement_id' => (int)$agreement_id);
-		hook_invoke_all('purch_agreement_expired', $hook_data);
-	}
-
-	return true;
 }
 
 /**
@@ -771,13 +733,8 @@ function set_purch_agreement_status($agreement_id, $status, $reason = '')
  */
 function confirm_agreement($agreement_id)
 {
-	$agreement = get_purch_agreement($agreement_id);
-	if (!$agreement || $agreement['status'] !== 'draft')
-		return false;
-	if (!can_submit_purch_agreement_draft($agreement_id))
-		return false;
+    return purch_agreement_lifecycle_transition($agreement_id,'confirmed');
 
-	return set_purch_agreement_status($agreement_id, 'confirmed');
 }
 
 /**
@@ -788,13 +745,8 @@ function confirm_agreement($agreement_id)
  */
 function activate_agreement($agreement_id)
 {
-	$agreement = get_purch_agreement($agreement_id);
-	if (!$agreement || $agreement['status'] !== 'confirmed')
-		return false;
-	if ($agreement['date_end'] && $agreement['date_end'] !== '0000-00-00' && $agreement['date_end'] < date2sql(Today()))
-		return false;
+    return purch_agreement_lifecycle_transition($agreement_id,'active');
 
-	return set_purch_agreement_status($agreement_id, 'active');
 }
 
 /**
@@ -805,11 +757,8 @@ function activate_agreement($agreement_id)
  */
 function expire_agreement($agreement_id)
 {
-	$agreement = get_purch_agreement($agreement_id);
-	if (!$agreement || !in_array($agreement['status'], array('confirmed', 'active')))
-		return false;
+    return purch_agreement_lifecycle_transition($agreement_id,'expired');
 
-	return set_purch_agreement_status($agreement_id, 'expired');
 }
 
 /**
@@ -821,11 +770,8 @@ function expire_agreement($agreement_id)
  */
 function cancel_agreement($agreement_id, $reason)
 {
-	$agreement = get_purch_agreement($agreement_id);
-	if (!$agreement || in_array($agreement['status'], array('expired', 'cancelled')))
-		return false;
+    return purch_agreement_lifecycle_transition($agreement_id,'cancelled',$reason);
 
-	return set_purch_agreement_status($agreement_id, 'cancelled', $reason);
 }
 
 /**
@@ -885,51 +831,54 @@ function get_purchase_agreement_item($stock_id)
 function add_agreement_line($agreement_id, $stock_id, $committed_qty, $unit_price, $discount = 0,
 	$description = '', $min_qty_per_order = 0, $price_valid_until = null, $custom_data = array())
 {
-	$agreement = get_editable_purch_agreement($agreement_id);
-	$item = get_purchase_agreement_item($stock_id);
-	if (!$agreement
-		|| trim($stock_id) === ''
-		|| !$item
-		|| purch_agreement_has_duplicate_stock($agreement_id, $stock_id)
-		|| !is_purch_agreement_line_data_valid(
-			$committed_qty,
-			$unit_price,
-			$discount,
-			$min_qty_per_order,
-			$price_valid_until
-		))
-		return false;
+	return purch_agreement_dimension_write('purch_agreement_lines', null, array('agreement_id'=>$agreement_id, 'custom_data'=>encode_purch_agreement_custom_data($custom_data)), function($admitted) use ($agreement_id, $stock_id, $committed_qty, $unit_price, $discount, $description, $min_qty_per_order, $price_valid_until, $custom_data) {
+		$agreement = get_editable_purch_agreement($agreement_id);
+		$item = get_purchase_agreement_item($stock_id);
+		if (!$agreement
+			|| trim($stock_id) === ''
+			|| !$item
+			|| purch_agreement_has_duplicate_stock($agreement_id, $stock_id)
+			|| !is_purch_agreement_line_data_valid(
+				$committed_qty,
+				$unit_price,
+				$discount,
+				$min_qty_per_order,
+				$price_valid_until
+			))
+			return false;
 
-	$line_description = $description !== '' ? $description : $item['description'];
+		$line_description = $description !== '' ? $description : $item['description'];
 
-	$sql = "INSERT INTO " . TB_PREF . "purch_agreement_lines (
-		agreement_id,
-		stock_id,
-		description,
-		committed_qty,
-		min_qty_per_order,
-		unit_price,
-		discount_percent,
-		price_valid_until,
-		custom_data
-	) VALUES (
-		" . (int)$agreement_id . ",
-		" . db_escape($stock_id) . ",
-		" . db_escape($line_description) . ",
-		" . db_escape($committed_qty) . ",
-		" . db_escape($min_qty_per_order) . ",
-		" . db_escape($unit_price) . ",
-		" . db_escape($discount) . ",
-		" . ($price_valid_until ? db_escape($price_valid_until) : 'NULL') . ",
-		" . sql_purch_agreement_custom_data($custom_data) . "
-	)";
-	db_query($sql, 'could not insert purchase agreement line');
-	$line_id = db_insert_id();
+		$sql = "INSERT INTO " . TB_PREF . "purch_agreement_lines (
+			agreement_id,
+			stock_id,
+			description,
+			committed_qty,
+			min_qty_per_order,
+			unit_price,
+			discount_percent,
+			price_valid_until,
+			custom_data
+		) VALUES (
+			" . (int)$agreement_id . ",
+			" . db_escape($stock_id) . ",
+			" . db_escape($line_description) . ",
+			" . db_escape($committed_qty) . ",
+			" . db_escape($min_qty_per_order) . ",
+			" . db_escape($unit_price) . ",
+			" . db_escape($discount) . ",
+			" . ($price_valid_until ? db_escape($price_valid_until) : 'NULL') . ",
+			" . sql_purch_agreement_custom_data($custom_data) . "
+		)";
+		if (!db_query($sql, 'could not insert purchase agreement line')) return false;
+		$line_id = db_insert_id();
 
-	update_purch_agreement_total_committed($agreement_id);
-	update_agreement_fulfillment($agreement_id);
+		update_purch_agreement_total_committed($agreement_id);
+		update_agreement_fulfillment($agreement_id);
 
-	return $line_id;
+		return $line_id;
+
+	}, false);
 }
 
 /**
@@ -949,43 +898,52 @@ function add_agreement_line($agreement_id, $stock_id, $committed_qty, $unit_pric
 function update_agreement_line($line_id, $stock_id, $committed_qty, $unit_price, $discount = 0,
 	$description = '', $min_qty_per_order = 0, $price_valid_until = null, $custom_data = array())
 {
-	$line = get_purch_agreement_line($line_id);
-	if (!$line)
-		return false;
+	if (!purch_agreement_dimension_context() || !dimension_writer_reference_id($line_id)) return false;
+	if (func_num_args() < 9) {
+		$current = get_purch_agreement_line($line_id);
+		if (!$current) return false;
+		$custom_data = $current['custom_data'];
+	}
+	return purch_agreement_dimension_write('purch_agreement_lines', $line_id, array('custom_data'=>encode_purch_agreement_custom_data($custom_data)), function($admitted) use ($line_id, $stock_id, $committed_qty, $unit_price, $discount, $description, $min_qty_per_order, $price_valid_until, $custom_data) {
+		$line = get_purch_agreement_line($line_id);
+		if (!$line)
+			return false;
 
-	$agreement = get_editable_purch_agreement((int)$line['agreement_id']);
-	$item = get_purchase_agreement_item($stock_id);
-	if (!$agreement
-		|| trim($stock_id) === ''
-		|| !$item
-		|| purch_agreement_has_duplicate_stock((int)$line['agreement_id'], $stock_id, $line_id)
-		|| !is_purch_agreement_line_data_valid(
-			$committed_qty,
-			$unit_price,
-			$discount,
-			$min_qty_per_order,
-			$price_valid_until
-		))
-		return false;
+		$agreement = get_editable_purch_agreement((int)$line['agreement_id']);
+		$item = get_purchase_agreement_item($stock_id);
+		if (!$agreement
+			|| trim($stock_id) === ''
+			|| !$item
+			|| purch_agreement_has_duplicate_stock((int)$line['agreement_id'], $stock_id, $line_id)
+			|| !is_purch_agreement_line_data_valid(
+				$committed_qty,
+				$unit_price,
+				$discount,
+				$min_qty_per_order,
+				$price_valid_until
+			))
+			return false;
 
-	$line_description = $description !== '' ? $description : $item['description'];
+		$line_description = $description !== '' ? $description : $item['description'];
 
-	$sql = "UPDATE " . TB_PREF . "purch_agreement_lines SET
-		stock_id = " . db_escape($stock_id) . ",
-		description = " . db_escape($line_description) . ",
-		committed_qty = " . db_escape($committed_qty) . ",
-		min_qty_per_order = " . db_escape($min_qty_per_order) . ",
-		unit_price = " . db_escape($unit_price) . ",
-		discount_percent = " . db_escape($discount) . ",
-		price_valid_until = " . ($price_valid_until ? db_escape($price_valid_until) : 'NULL') . ",
-		custom_data = " . sql_purch_agreement_custom_data($custom_data) . "
-		WHERE id = " . (int)$line_id;
-	db_query($sql, 'could not update purchase agreement line');
+		$sql = "UPDATE " . TB_PREF . "purch_agreement_lines SET
+			stock_id = " . db_escape($stock_id) . ",
+			description = " . db_escape($line_description) . ",
+			committed_qty = " . db_escape($committed_qty) . ",
+			min_qty_per_order = " . db_escape($min_qty_per_order) . ",
+			unit_price = " . db_escape($unit_price) . ",
+			discount_percent = " . db_escape($discount) . ",
+			price_valid_until = " . ($price_valid_until ? db_escape($price_valid_until) : 'NULL') . ",
+			custom_data = " . sql_purch_agreement_custom_data($custom_data) . "
+			WHERE id = " . (int)$line_id;
+		if (!db_query($sql, 'could not update purchase agreement line')) return false;
 
-	update_purch_agreement_total_committed((int)$line['agreement_id']);
-	update_agreement_fulfillment((int)$line['agreement_id']);
+		update_purch_agreement_total_committed((int)$line['agreement_id']);
+		update_agreement_fulfillment((int)$line['agreement_id']);
 
-	return true;
+		return true;
+
+	}, false);
 }
 
 /**
@@ -996,21 +954,24 @@ function update_agreement_line($line_id, $stock_id, $committed_qty, $unit_price,
  */
 function delete_agreement_line($line_id)
 {
-	$line = get_purch_agreement_line($line_id);
-	if (!$line)
-		return false;
+	return purch_agreement_dimension_write('purch_agreement_lines', $line_id, array(), function($admitted) use ($line_id) {
+		$line = get_purch_agreement_line($line_id);
+		if (!$line)
+			return false;
 
-	$agreement = get_editable_purch_agreement((int)$line['agreement_id']);
-	if (!$agreement)
-		return false;
+		$agreement = get_editable_purch_agreement((int)$line['agreement_id']);
+		if (!$agreement)
+			return false;
 
-	$sql = "DELETE FROM " . TB_PREF . "purch_agreement_lines WHERE id = " . (int)$line_id;
-	db_query($sql, 'could not delete purchase agreement line');
+		$sql = "DELETE FROM " . TB_PREF . "purch_agreement_lines WHERE id = " . (int)$line_id;
+		if (!db_query($sql, 'could not delete purchase agreement line')) return false;
 
-	update_purch_agreement_total_committed((int)$line['agreement_id']);
-	update_agreement_fulfillment((int)$line['agreement_id']);
+		update_purch_agreement_total_committed((int)$line['agreement_id']);
+		update_agreement_fulfillment((int)$line['agreement_id']);
 
-	return true;
+		return true;
+
+	}, true);
 }
 
 /**
@@ -1322,84 +1283,16 @@ function get_expiring_agreements($days_ahead = 30)
  */
 function auto_renew_agreements()
 {
-	$new_agreement_ids = array();
-	$sql = "SELECT *
-		FROM " . TB_PREF . "purch_agreements
-		WHERE auto_renew = 1
-		AND status IN ('confirmed', 'active')
-		AND date_end IS NOT NULL
-		AND date_end <> '0000-00-00'
-		AND date_end < " . db_escape(date2sql(Today()));
-	$result = db_query($sql, 'could not get auto-renew purchase agreements');
+    if (!purch_agreement_lifecycle_context()) return array();
+    $outer = !empty($GLOBALS['transaction_level']);
+    $result = purch_agreement_lifecycle_rows('SELECT id FROM '.TB_PREF."purch_agreements WHERE auto_renew=1 AND status IN ('confirmed','active') AND date_end IS NOT NULL AND date_end<".db_escape(date2sql(Today())).' ORDER BY id');
+    if ($result === false) return array();
+    $renewed = array();
+    foreach ($result as $row) {
+        $id = renew_purchase_agreement($row['id']);
+        if ($id) $renewed[] = (int)$id;
+        elseif ($outer) return array(); // A failed command rolled back the caller's entire transaction.
+    }
+    return $renewed;
 
-	while ($agreement = db_fetch($result)) {
-		$custom_data = decode_purch_agreement_custom_data($agreement['custom_data']);
-		if (!empty($custom_data['renewed_to_agreement_id']))
-			continue;
-
-		$months = max(1, (int)$agreement['renewal_period_months']);
-		$new_start = date('Y-m-d', strtotime($agreement['date_start'] . ' +' . $months . ' months'));
-		$new_end = $agreement['date_end'] ? date('Y-m-d', strtotime($agreement['date_end'] . ' +' . $months . ' months')) : null;
-		$new_custom_data = $custom_data;
-		$new_custom_data['renewed_from_agreement_id'] = (int)$agreement['id'];
-
-		$new_agreement_id = add_purch_agreement(
-			$agreement['agreement_type'],
-			(int)$agreement['supplier_id'],
-			$new_start,
-			$new_end,
-			$agreement['currency'],
-			(int)$agreement['payment_terms'],
-			$agreement['delivery_location'],
-			1,
-			$months,
-			$agreement['terms_and_conditions'],
-			$agreement['notes'],
-			(int)$agreement['rfq_id'],
-			(int)$agreement['dimension_id'],
-			(int)$agreement['dimension2_id'],
-			'',
-			(int)$agreement['buyer_id'],
-			$new_custom_data
-		);
-		if (!$new_agreement_id)
-			continue;
-
-		$lines = get_agreement_lines((int)$agreement['id']);
-		while ($line = db_fetch($lines)) {
-			add_agreement_line(
-				$new_agreement_id,
-				$line['stock_id'],
-				(float)$line['committed_qty'],
-				(float)$line['unit_price'],
-				(float)$line['discount_percent'],
-				$line['line_description'],
-				(float)$line['min_qty_per_order'],
-				$line['price_valid_until'],
-				decode_purch_agreement_custom_data($line['custom_data'])
-			);
-		}
-
-		confirm_agreement($new_agreement_id);
-		if ($new_start <= date2sql(Today()))
-			activate_agreement($new_agreement_id);
-
-		$custom_data['renewed_to_agreement_id'] = (int)$new_agreement_id;
-		$sql = "UPDATE " . TB_PREF . "purch_agreements SET
-			custom_data = " . sql_purch_agreement_custom_data($custom_data) . ",
-			status = 'expired',
-			inactive = 1
-			WHERE id = " . (int)$agreement['id'];
-		db_query($sql, 'could not mark renewed purchase agreement as expired');
-
-		$hook_data = array(
-			'old_id' => (int)$agreement['id'],
-			'new_id' => (int)$new_agreement_id,
-		);
-		hook_invoke_all('purch_agreement_renewed', $hook_data);
-
-		$new_agreement_ids[] = (int)$new_agreement_id;
-	}
-
-	return $new_agreement_ids;
 }

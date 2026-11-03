@@ -37,17 +37,19 @@ class sales_types_entity extends Entity {
 	 * @return bool True on success
 	 */
 	public static function remove($key) {
-		$e = new static();
-		begin_transaction();
-		$result = $e->delete($key);
-		if ($result) {
-			$sql = "DELETE FROM ".TB_PREF."prices WHERE sales_type_id=".db_escape($key);
-			db_query($sql, 'The Sales type prices could not be deleted');
-		}
-		if ($result)
-			commit_transaction();
-		else
-			rollback_transaction();
-		return $result;
-	}
+        require_once __DIR__.'/../../../dimensions/includes/dimension_master_metadata_writer.inc';
+        $context=dimension_financial_reference_context();if(!$context || !begin_transaction())return false;
+        try{
+            $parent=dimension_master_metadata_row('sales_types',$key);if(!$parent){cancel_transaction();return false;}$key=$parent['id'];
+            $result=db_query('SELECT id,custom_data FROM '.TB_PREF.'prices WHERE sales_type_id='.db_escape($key).' ORDER BY id FOR UPDATE');if(!$result){cancel_transaction();return false;}
+            $prices=array();$all=array($parent);while($row=db_fetch_assoc($result)){$prices[]=$row;$all[]=$row;}
+            if(!dimension_master_metadata_lock_rows($all)){cancel_transaction();return false;}
+            foreach($prices as $row)if(!dimension_ordinary_master_write('prices',$row['id'],array(),function($admitted){return true;},true,true)){cancel_transaction();return false;}
+            $entity=new static();$saved=$entity->delete($key);
+            if($saved)$saved=db_query('DELETE FROM '.TB_PREF.'prices WHERE sales_type_id='.db_escape($key),'The Sales type prices could not be deleted')!==false;
+            if($saved){$remaining=db_query('SELECT id FROM '.TB_PREF.'prices WHERE sales_type_id='.db_escape($key).' FOR UPDATE');$saved=$remaining && db_num_rows($remaining)===0;}
+            if($saved && dimension_financial_reference_context()===$context && commit_transaction())return true;
+            cancel_transaction();return false;
+        }catch(Exception $e){cancel_transaction();return false;}catch(Throwable $e){cancel_transaction();return false;}
+    }
 }

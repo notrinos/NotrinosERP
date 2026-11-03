@@ -343,11 +343,18 @@ if (isset($_POST['DeleteAgreement']) && $selected_id > 0) {
 }
 
 if (isset($_POST['ConfirmAgreement']) && $selected_id > 0) {
-	if (confirm_sales_agreement($selected_id)) {
-		meta_forward($_SERVER['PHP_SELF'], 'agreement_id=' . $selected_id . '&notice=confirmed');
-	} else {
-		display_error(_('The agreement could not be confirmed. Ensure at least one line has been added.'));
-	}
+    $result=submit_sales_agreement($selected_id);
+    if($result===false)display_error(_('The sales agreement could not be submitted. Check its lines, retained history and active shared approval policy.'));
+    elseif(is_array($result) && $result['status']==='pending'){
+        display_notification_centered(sprintf(_('Sales agreement has been submitted for approval. Draft #%d, Reference: %s'),$result['draft_id'],$result['reference']));
+        hyperlink_params($path_to_root.'/admin/approval_view_draft.php',_('View Approval Draft'),'draft_id='.(int)$result['draft_id']);
+    }else meta_forward($_SERVER['PHP_SELF'],'agreement_id='.$selected_id.'&notice=confirmed');
+}
+
+if(isset($_POST['RenewAgreement']) && $selected_id>0){
+    $renewed=renew_sales_agreement($selected_id);
+    if($renewed)meta_forward($_SERVER['PHP_SELF'],'agreement_id='.$renewed);
+    else display_error(_('The agreement could not be renewed. Check its period, retained references and active shared approval policy. No renewal changes were saved.'));
 }
 
 if (isset($_POST['ActivateAgreement']) && $selected_id > 0) {
@@ -378,8 +385,13 @@ if (isset($_POST['CancelAgreement']) && $selected_id > 0) {
 
 // ---- Create SO from agreement ----
 if (isset($_POST['CreateSO']) && $selected_id > 0) {
-	$so_number = create_order_from_agreement($selected_id);
-	if ($so_number > 0) {
+	require_once __DIR__.'/includes/db/sales_agreement_order_db.inc';
+	$so_result = submit_agreement_sales_order($selected_id);
+	$so_number = $so_result && $so_result['status']==='posted' ? (int)$so_result['trans_no'] : 0;
+	if ($so_result && $so_result['status']==='pending') {
+		display_notification(_('Sales order submitted for independent approval.'));
+		hyperlink($path_to_root.'/admin/approval_view_draft.php?draft_id='.(int)$so_result['draft_id'],_('Review Sales order draft'));
+	} elseif ($so_number > 0) {
 		meta_forward($_SERVER['PHP_SELF'], 'agreement_id=' . $selected_id . '&created_so=' . $so_number);
 	} else {
 		display_error(_('No sales order could be created from this agreement. Ensure the agreement is active and still has remaining valid lines.'));
@@ -657,6 +669,9 @@ if ($agreement) {
 		echo '&nbsp;';
 		submit('CancelAgreement', _('Cancel Agreement'), true, _('Cancel this agreement'));
 	}
+    if(!empty($agreement['auto_renew']) && in_array($agreement['status'],array('active','expired'),true)
+        && !empty($agreement['date_end']) && $agreement['date_end']<date2sql(Today()))
+        submit('RenewAgreement',_('Renew Agreement'),true,_('Create the next agreement and submit its approval'));
 	if (in_array($agreement['status'], array('confirmed', 'active'))) {
 		echo '<div style="max-width:420px;margin:12px auto 0;">';
 		textarea_row(_('Cancellation Reason:'), 'cancellation_reason', null, 300, 5);

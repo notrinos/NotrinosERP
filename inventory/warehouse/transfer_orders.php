@@ -86,7 +86,7 @@ if (isset($_POST['Ship']) && $selected_id > 0) {
 	if (ship_transfer_order($selected_id, $ship_date)) {
 		display_notification(_('Transfer order has been shipped and is now in transit.'));
 	} else {
-		display_error(_('Cannot ship this transfer order. Verify its approval evidence and choose a date in an authorized open accounting period.'));
+		display_error(_('Cannot ship this transfer order. Verify its approval evidence, available stock and required tracking, and choose a date in an authorized open accounting period.'));
 	}
 	$selected_id = -1;
 }
@@ -448,8 +448,10 @@ if ($selected_id > 0 || isset($_POST['New'])) {
 			if ($show_receive_qty) {
 				echo '<td>';
 				$outstanding = $line['qty_shipped'] - $line['qty_received'];
+				// The native receipt quantity is DECIMAL(15,4). A lower item
+				// display precision must not round the outstanding form value up.
 				echo '<input type="text" name="recv_qty_' . $line['line_id']
-					. '" value="' . number_format2($outstanding, get_qty_dec($line['stock_id']))
+					. '" value="' . number_format2($outstanding, max(4, get_qty_dec($line['stock_id'])))
 					. '" size="8" class="amount">';
 				echo '</td>';
 			}

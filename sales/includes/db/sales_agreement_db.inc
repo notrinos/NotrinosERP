@@ -12,6 +12,7 @@
 
 include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/hooks.inc');
+require_once __DIR__.'/sales_agreement_lifecycle_db.inc';
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -245,8 +246,12 @@ function generate_sales_agreement_reference()
  */
 function add_sales_agreement($agreement_type, $debtor_no, $branch_code, $date_start, $date_end,
 	$currency, $payment_terms, $auto_renew, $renewal_period_months,
-	$terms_and_conditions, $notes, $dimension_id, $dimension2_id, $reference = '', $salesman_id = 0)
+	$terms_and_conditions, $notes, $dimension_id, $dimension2_id, $reference = '', $salesman_id = 0, $custom_data = null)
 {
+    $next=array('dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id);
+    $next['custom_data']=sales_agreement_dimension_payload($custom_data);
+    return sales_agreement_dimension_write('sales_agreements',null,$next,function($admitted) use ($agreement_type,$debtor_no,$branch_code,$date_start,$date_end,$currency,$payment_terms,$auto_renew,$renewal_period_months,$terms_and_conditions,$notes,$dimension_id,$dimension2_id,$reference,$salesman_id,$custom_data) {
+    $dimension_id=$admitted['dimension_id'];$dimension2_id=$admitted['dimension2_id'];
 	global $_SESSION;
 
 	$data = compact('agreement_type', 'debtor_no', 'branch_code', 'date_start', 'date_end',
@@ -255,18 +260,18 @@ function add_sales_agreement($agreement_type, $debtor_no, $branch_code, $date_st
 
 	hook_invoke_all('sales_agreement_before_save', $data);
 
-	if (empty($reference))
-		$reference = generate_sales_agreement_reference();
+    $generate_reference=empty($reference);
+    if($generate_reference)$reference='';
 
 	$created_by   = isset($_SESSION['wa_current_user']) ? $_SESSION['wa_current_user']->user : 0;
 	$created_date = date('Y-m-d H:i:s');
-	$date_end_sql = ($date_end && $date_end != '0000-00-00') ? "'" . $date_end . "'" : 'NULL';
+	$date_end_sql = ($date_end && $date_end != '0000-00-00') ? db_escape($date_end) : 'NULL';
 
 	$sql = "INSERT INTO " . TB_PREF . "sales_agreements
 		(reference, agreement_type, debtor_no, branch_code, salesman_id, status,
 		 date_start, date_end, currency, payment_terms,
 		 auto_renew, renewal_period_months, terms_and_conditions, notes,
-		 dimension_id, dimension2_id, created_by, created_date)
+		 dimension_id, dimension2_id, created_by, created_date, custom_data)
 		VALUES (
 			" . db_escape($reference) . ",
 			" . db_escape($agreement_type) . ",
@@ -285,15 +290,19 @@ function add_sales_agreement($agreement_type, $debtor_no, $branch_code, $date_st
 			" . db_escape($dimension_id) . ",
 			" . db_escape($dimension2_id) . ",
 			" . db_escape($created_by) . ",
-			'" . $created_date . "'
+			'" . $created_date . "',
+            " . sales_agreement_dimension_payload_sql($admitted['custom_data']) . "
 		)";
 
-	db_query($sql, 'Cannot add sales agreement');
+	if(!db_query($sql))return false;
 	$agreement_id = db_insert_id();
+    if($generate_reference && !db_query('UPDATE '.TB_PREF.'sales_agreements SET reference='.db_escape('SA-'.str_pad($agreement_id,4,'0',STR_PAD_LEFT)).' WHERE id='.(int)$agreement_id))return false;
 
 	hook_invoke_all('sales_agreement_before_save', $agreement_id);
 
 	return $agreement_id;
+
+    },false);
 }
 
 /**
@@ -319,8 +328,12 @@ function add_sales_agreement($agreement_type, $debtor_no, $branch_code, $date_st
  */
 function update_sales_agreement($id, $agreement_type, $debtor_no, $branch_code, $date_start, $date_end,
 	$currency, $payment_terms, $auto_renew, $renewal_period_months,
-	$terms_and_conditions, $notes, $dimension_id, $dimension2_id, $reference = '', $salesman_id = 0)
+	$terms_and_conditions, $notes, $dimension_id, $dimension2_id, $reference = '', $salesman_id = 0, $custom_data = null)
 {
+    $next=array('dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id);
+    if(func_num_args()>=17)$next['custom_data']=sales_agreement_dimension_payload($custom_data);
+    return sales_agreement_dimension_write('sales_agreements',$id,$next,function($admitted) use ($id,$agreement_type,$debtor_no,$branch_code,$date_start,$date_end,$currency,$payment_terms,$auto_renew,$renewal_period_months,$terms_and_conditions,$notes,$dimension_id,$dimension2_id,$reference,$salesman_id,$custom_data) {
+    $dimension_id=$admitted['dimension_id'];$dimension2_id=$admitted['dimension2_id'];
 	$agreement = get_sales_agreement($id);
 	if (!$agreement || !is_sales_agreement_editable_status($agreement['status']))
 		return false;
@@ -328,7 +341,7 @@ function update_sales_agreement($id, $agreement_type, $debtor_no, $branch_code, 
 	$data = compact('id', 'agreement_type', 'debtor_no');
 	hook_invoke_all('sales_agreement_before_save', $data);
 
-	$date_end_sql = ($date_end && $date_end != '0000-00-00') ? "'" . $date_end . "'" : 'NULL';
+	$date_end_sql = ($date_end && $date_end != '0000-00-00') ? db_escape($date_end) : 'NULL';
 
 	$sql = "UPDATE " . TB_PREF . "sales_agreements SET
 		reference = " . db_escape($reference) . ",
@@ -345,15 +358,17 @@ function update_sales_agreement($id, $agreement_type, $debtor_no, $branch_code, 
 		terms_and_conditions = " . db_escape($terms_and_conditions) . ",
 		notes = " . db_escape($notes) . ",
 		dimension_id = " . db_escape($dimension_id) . ",
-		dimension2_id = " . db_escape($dimension2_id) . "
+		dimension2_id = " . db_escape($dimension2_id) . (array_key_exists('custom_data',$admitted) ? ",custom_data=".sales_agreement_dimension_payload_sql($admitted['custom_data']) : '') . "
 		WHERE id = " . db_escape($id) . "
 		  AND status = 'draft'";
 
-	db_query($sql, 'Cannot update sales agreement');
+	if(!db_query($sql))return false;
 
 	hook_invoke_all('sales_agreement_before_save', $id);
 
 	return true;
+
+    },false);
 }
 
 /**
@@ -364,14 +379,19 @@ function update_sales_agreement($id, $agreement_type, $debtor_no, $branch_code, 
  */
 function delete_sales_agreement($id)
 {
+    $next=array();
+    return sales_agreement_dimension_write('sales_agreements',$id,$next,function($admitted) use ($id) {
 	$agreement = get_sales_agreement($id);
 	if (!$agreement || $agreement['status'] !== 'draft')
 		return false;
 
+    if(!db_query('DELETE FROM '.TB_PREF.'sales_agreement_lines WHERE agreement_id='.(int)$id))return false;
 	$sql = "DELETE FROM " . TB_PREF . "sales_agreements WHERE id = " . db_escape($id);
-	db_query($sql, 'Cannot delete sales agreement');
+	if(!db_query($sql))return false;
 
 	return true;
+
+    },true);
 }
 
 /**
@@ -468,33 +488,7 @@ function get_sales_agreements($debtor_no = 0, $status = '', $active_only = false
  */
 function confirm_sales_agreement($id)
 {
-	$agreement = get_sales_agreement($id);
-	if (!$agreement || $agreement['status'] !== 'draft')
-		return false;
-
-	$lines = get_sales_agreement_lines($id);
-	if (!$lines || db_num_rows($lines) == 0)
-		return false;
-
-	while ($line = db_fetch($lines)) {
-		if (trim($line['stock_id']) === ''
-			|| !is_sales_agreement_line_data_valid(
-				$line['committed_qty'],
-				$line['unit_price'],
-				$line['discount_percent'],
-				$line['min_qty_per_order'],
-				$line['price_valid_until']
-			))
-			return false;
-	}
-
-	$sql = "UPDATE " . TB_PREF . "sales_agreements
-		SET status = 'confirmed'
-		WHERE id = " . db_escape($id) . " AND status = 'draft'";
-
-	db_query($sql, 'Cannot confirm sales agreement');
-
-	return db_num_affected_rows() > 0;
+    return sales_agreement_lifecycle_transition($id,'confirmed','');
 }
 
 /**
@@ -505,17 +499,7 @@ function confirm_sales_agreement($id)
  */
 function activate_sales_agreement($id)
 {
-	$sql = "UPDATE " . TB_PREF . "sales_agreements
-		SET status = 'active'
-		WHERE id = " . db_escape($id) . " AND status = 'confirmed'";
-
-	db_query($sql, 'Cannot activate sales agreement');
-	$activated = db_num_affected_rows() > 0;
-
-	if ($activated)
-		hook_invoke_all('sales_agreement_activated', $id);
-
-	return $activated;
+    return sales_agreement_lifecycle_transition($id,'active','');
 }
 
 /**
@@ -526,17 +510,7 @@ function activate_sales_agreement($id)
  */
 function expire_sales_agreement($id)
 {
-	$sql = "UPDATE " . TB_PREF . "sales_agreements
-		SET status = 'expired'
-		WHERE id = " . db_escape($id) . " AND status = 'active'";
-
-	db_query($sql, 'Cannot expire sales agreement');
-	$expired = db_num_affected_rows() > 0;
-
-	if ($expired)
-		hook_invoke_all('sales_agreement_expired', $id);
-
-	return $expired;
+    return sales_agreement_lifecycle_transition($id,'expired','');
 }
 
 /**
@@ -548,15 +522,7 @@ function expire_sales_agreement($id)
  */
 function cancel_sales_agreement($id, $reason)
 {
-	$sql = "UPDATE " . TB_PREF . "sales_agreements
-		SET status = 'cancelled',
-		    notes = CONCAT(IFNULL(notes, ''), '\nCancelled: " . db_escape_function($reason) . "')
-		WHERE id = " . db_escape($id) . "
-		  AND status IN ('confirmed','active')";
-
-	db_query($sql, 'Cannot cancel sales agreement');
-
-	return db_num_affected_rows() > 0;
+    return sales_agreement_lifecycle_transition($id,'cancelled',$reason);
 }
 
 // ============================================================================
@@ -577,8 +543,11 @@ function cancel_sales_agreement($id, $reason)
  * @return int  New line ID, or 0 on failure.
  */
 function add_sales_agreement_line($agreement_id, $stock_id, $committed_qty, $unit_price,
-	$discount_percent, $description = '', $min_qty_per_order = 0, $price_valid_until = null)
+	$discount_percent, $description = '', $min_qty_per_order = 0, $price_valid_until = null, $custom_data = null)
 {
+    $next=array('agreement_id'=>$agreement_id);
+    $next['custom_data']=sales_agreement_dimension_payload($custom_data);
+    return sales_agreement_dimension_write('sales_agreement_lines',null,$next,function($admitted) use ($agreement_id,$stock_id,$committed_qty,$unit_price,$discount_percent,$description,$min_qty_per_order,$price_valid_until,$custom_data) {
 	$agreement = get_sales_agreement($agreement_id);
 	if (!$agreement
 		|| !is_sales_agreement_editable_status($agreement['status'])
@@ -599,7 +568,7 @@ function add_sales_agreement_line($agreement_id, $stock_id, $committed_qty, $uni
 
 	$sql = "INSERT INTO " . TB_PREF . "sales_agreement_lines
 		(agreement_id, stock_id, description, committed_qty, min_qty_per_order,
-		 unit_price, discount_percent, price_valid_until)
+		 unit_price, discount_percent, price_valid_until, custom_data)
 		VALUES (
 			" . db_escape($agreement_id) . ",
 			" . db_escape($stock_id) . ",
@@ -608,10 +577,10 @@ function add_sales_agreement_line($agreement_id, $stock_id, $committed_qty, $uni
 			" . db_escape($min_qty_per_order) . ",
 			" . db_escape($unit_price) . ",
 			" . db_escape($discount_percent) . ",
-			" . $price_valid_sql . "
+			" . $price_valid_sql . "," . sales_agreement_dimension_payload_sql($admitted['custom_data']) . "
 		)";
 
-	db_query($sql, 'Cannot add sales agreement line');
+	if(!db_query($sql))return false;
 
 	$line_id = db_insert_id();
 
@@ -619,6 +588,8 @@ function add_sales_agreement_line($agreement_id, $stock_id, $committed_qty, $uni
 	update_agreement_committed_total($agreement_id);
 
 	return $line_id;
+
+    },false);
 }
 
 /**
@@ -635,8 +606,11 @@ function add_sales_agreement_line($agreement_id, $stock_id, $committed_qty, $uni
  * @return bool
  */
 function update_sales_agreement_line($line_id, $stock_id, $committed_qty, $unit_price,
-	$discount_percent, $description = '', $min_qty_per_order = 0, $price_valid_until = null)
+	$discount_percent, $description = '', $min_qty_per_order = 0, $price_valid_until = null, $custom_data = null)
 {
+    $next=array();
+    if(func_num_args()>=9)$next['custom_data']=sales_agreement_dimension_payload($custom_data);
+    return sales_agreement_dimension_write('sales_agreement_lines',$line_id,$next,function($admitted) use ($line_id,$stock_id,$committed_qty,$unit_price,$discount_percent,$description,$min_qty_per_order,$price_valid_until,$custom_data) {
 	$line = get_sales_agreement_line($line_id);
 	if (!$line)
 		return false;
@@ -667,15 +641,17 @@ function update_sales_agreement_line($line_id, $stock_id, $committed_qty, $unit_
 		min_qty_per_order = " . db_escape($min_qty_per_order) . ",
 		unit_price = " . db_escape($unit_price) . ",
 		discount_percent = " . db_escape($discount_percent) . ",
-		price_valid_until = " . $price_valid_sql . "
+		price_valid_until = " . $price_valid_sql . (array_key_exists('custom_data',$admitted) ? ",custom_data=".sales_agreement_dimension_payload_sql($admitted['custom_data']) : '') . "
 		WHERE id = " . db_escape($line_id);
 
-	db_query($sql, 'Cannot update sales agreement line');
+	if(!db_query($sql))return false;
 
 	if ($agreement_id)
 		update_agreement_committed_total($agreement_id);
 
 	return true;
+
+    },false);
 }
 
 /**
@@ -686,6 +662,8 @@ function update_sales_agreement_line($line_id, $stock_id, $committed_qty, $unit_
  */
 function delete_sales_agreement_line($line_id)
 {
+    $next=array();
+    return sales_agreement_dimension_write('sales_agreement_lines',$line_id,$next,function($admitted) use ($line_id) {
 	$line = get_sales_agreement_line($line_id);
 	if (!$line)
 		return false;
@@ -696,12 +674,15 @@ function delete_sales_agreement_line($line_id)
 		return false;
 
 	$sql = "DELETE FROM " . TB_PREF . "sales_agreement_lines WHERE id = " . db_escape($line_id);
-	db_query($sql, 'Cannot delete sales agreement line');
+	if(!db_query($sql))return false;
+    $deleted=db_num_affected_rows()>0;
 
 	if ($agreement_id)
 		update_agreement_committed_total($agreement_id);
 
-	return db_num_affected_rows() > 0;
+	return $deleted;
+
+    },true);
 }
 
 /**
@@ -728,6 +709,7 @@ function get_sales_agreement_lines($agreement_id)
  */
 function update_agreement_committed_total($agreement_id)
 {
+    return sales_agreement_dimension_maintenance($agreement_id,function()use($agreement_id){
 	$sql = "UPDATE " . TB_PREF . "sales_agreements sa
 		SET total_committed = (
 			SELECT IFNULL(SUM(sal.committed_qty * sal.unit_price * (1 - sal.discount_percent / 100)), 0)
@@ -736,7 +718,10 @@ function update_agreement_committed_total($agreement_id)
 		)
 		WHERE sa.id = " . db_escape($agreement_id);
 
-	db_query($sql, 'Cannot update agreement committed total');
+	if(!db_query($sql))return false;
+
+        return true;
+    });
 }
 
 /**
@@ -748,6 +733,7 @@ function update_agreement_committed_total($agreement_id)
  */
 function update_sales_agreement_fulfillment($agreement_id)
 {
+    return sales_agreement_dimension_maintenance($agreement_id,function()use($agreement_id){
 	// Update ordered total from linked SO lines using net line values.
 	$sql_ordered = "UPDATE " . TB_PREF . "sales_agreements sa
 		SET total_ordered = IFNULL((
@@ -758,7 +744,7 @@ function update_sales_agreement_fulfillment($agreement_id)
 		), 0)
 		WHERE sa.id = " . db_escape($agreement_id);
 
-	db_query($sql_ordered, 'Cannot update agreement ordered total');
+	if(!db_query($sql_ordered))return false;
 
 	$sql_delivered = "UPDATE " . TB_PREF . "sales_agreements sa
 		SET total_delivered = IFNULL((
@@ -769,7 +755,7 @@ function update_sales_agreement_fulfillment($agreement_id)
 		), 0)
 		WHERE sa.id = " . db_escape($agreement_id);
 
-	db_query($sql_delivered, 'Cannot update agreement delivered total');
+	if(!db_query($sql_delivered))return false;
 
 	$sql_invoiced = "UPDATE " . TB_PREF . "sales_agreements sa
 		SET total_invoiced = IFNULL((
@@ -786,7 +772,7 @@ function update_sales_agreement_fulfillment($agreement_id)
 		), 0)
 		WHERE sa.id = " . db_escape($agreement_id);
 
-	db_query($sql_invoiced, 'Cannot update agreement invoiced total');
+	if(!db_query($sql_invoiced))return false;
 
 	// Update per-line ordered quantities from linked sales order lines.
 	$lines = get_sales_agreement_lines($agreement_id);
@@ -823,8 +809,11 @@ function update_sales_agreement_fulfillment($agreement_id)
 			), 0)
 			WHERE sal.id = " . db_escape($line['id']);
 
-		db_query($sql_line_fulfillment, 'Cannot update agreement line fulfillment');
+		if(!db_query($sql_line_fulfillment))return false;
 	}
+
+        return true;
+    });
 }
 
 // ============================================================================
@@ -864,116 +853,9 @@ function check_sales_agreement_availability($agreement_id, $stock_id)
  */
 function create_order_from_agreement($agreement_id, $line_selections = array())
 {
-	global $path_to_root;
-
-	include_once($path_to_root . '/sales/includes/cart_class.inc');
-	include_once($path_to_root . '/sales/includes/sales_db.inc');
-	include_once($path_to_root . '/sales/includes/db/customers_db.inc');
-	include_once($path_to_root . '/sales/includes/db/branches_db.inc');
-
-	$agreement = get_sales_agreement($agreement_id);
-	if (!$agreement || $agreement['status'] !== 'active')
-		return 0;
-
-	update_sales_agreement_fulfillment($agreement_id);
-
-	$customer_row = debtors_master_entity::find($agreement['debtor_no']);
-	if (!$customer_row)
-		return 0;
-
-	$branch = get_branch($agreement['branch_code']);
-
-	$cart = new Cart(ST_SALESORDER);
-	$cart->set_customer(
-		$agreement['debtor_no'],
-		$customer_row['name'],
-		$customer_row['curr_code'],
-		isset($customer_row['discount']) ? (float)$customer_row['discount'] : 0,
-		isset($customer_row['payment_terms']) ? (int)$customer_row['payment_terms'] : 0
-	);
-	$cart->set_branch(
-		$agreement['branch_code'],
-		$branch ? (int)$branch['tax_group_id'] : 0,
-		'',
-		'',
-		''
-	);
-	$cart->set_sales_type(
-		isset($customer_row['sales_type']) ? $customer_row['sales_type'] : 0,
-		'',
-		0,
-		1
-	);
-	$cart->set_location(isset($branch['location_code']) ? $branch['location_code'] : '', '');
-	if (empty($cart->Location) && isset($branch['default_location']))
-		$cart->Location = $branch['default_location'];
-	$cart->ship_via     = isset($branch['default_ship_via']) ? (int)$branch['default_ship_via'] : 0;
-	$cart->deliver_to   = isset($branch['br_name']) ? $branch['br_name'] : '';
-	$cart->delivery_address = isset($branch['br_post_address']) && $branch['br_post_address'] !== ''
-		? $branch['br_post_address']
-		: (isset($branch['br_address']) ? $branch['br_address'] : '');
-	$cart->phone        = isset($branch['phone']) ? $branch['phone'] : '';
-	$cart->cust_ref     = isset($branch['branch_ref']) ? $branch['branch_ref'] : '';
-	$cart->salesman     = $agreement['salesman_id'];
-	$cart->agreement_id = $agreement_id;
-	$cart->document_date = today();
-	$cart->due_date      = add_days(today(), 1);
-	$cart->Comments     = _('From Agreement: ') . $agreement['reference'];
-
-	// Populate lines
-	$lines_result = get_sales_agreement_lines($agreement_id);
-	while ($line = db_fetch($lines_result)) {
-		if (!is_sales_agreement_line_data_valid(
-			$line['committed_qty'],
-			$line['unit_price'],
-			$line['discount_percent'],
-			$line['min_qty_per_order'],
-			$line['price_valid_until']
-		))
-			continue;
-
-		if ($line['price_valid_until'] && $line['price_valid_until'] < date('Y-m-d'))
-			continue;
-
-		$remaining_qty = max(0, (float)$line['committed_qty'] - (float)$line['ordered_qty']);
-		$requested_qty = isset($line_selections[$line['id']])
-			? (double)$line_selections[$line['id']]
-			: $remaining_qty;
-		$qty = min($requested_qty, $remaining_qty);
-
-		if ($qty <= 0)
-			continue;
-
-		$cart->add_to_cart(
-			count($cart->line_items),
-			$line['stock_id'],
-			$qty,
-			$line['unit_price'],
-			((float)$line['discount_percent']) / 100,
-			0,
-			0,
-			$line['description'] ? $line['description'] : $line['item_description']
-		);
-	}
-
-	if (empty($cart->line_items))
-		return 0;
-
-	$order_no = $cart->write(1);
-
-	if ($order_no > 0) {
-		// Store agreement_id on the created SO
-		$sql = "UPDATE " . TB_PREF . "sales_orders
-			SET agreement_id = " . db_escape($agreement_id) . "
-			WHERE order_no = " . db_escape($order_no) . " AND trans_type = " . ST_SALESORDER;
-		db_query($sql, 'Cannot link agreement to order');
-
-		update_sales_agreement_fulfillment($agreement_id);
-
-		hook_invoke_all('sales_agreement_order_created', $agreement_id, $order_no);
-	}
-
-	return $order_no > 0 ? $order_no : 0;
+    require_once __DIR__.'/sales_agreement_order_db.inc';
+    $result=submit_agreement_sales_order($agreement_id,$line_selections);
+    return $result && $result['status']==='posted' ? (int)$result['trans_no'] : 0;
 }
 
 // ============================================================================
@@ -1012,67 +894,11 @@ function get_expiring_sales_agreements($days_ahead = 30)
  */
 function auto_renew_sales_agreements()
 {
-	$today = date('Y-m-d');
-	$count = 0;
-
-	$sql = "SELECT * FROM " . TB_PREF . "sales_agreements
-		WHERE status IN ('active','expired')
-		  AND auto_renew = 1
-		  AND date_end IS NOT NULL
-		  AND date_end < '" . $today . "'";
-
-	$result = db_query($sql, 'Cannot fetch auto-renew agreements');
-
-	while ($agreement = db_fetch($result)) {
-		$new_start = date('Y-m-d', strtotime($agreement['date_end'] . ' +1 day'));
-		$new_end   = date('Y-m-d', strtotime($new_start . ' +' . (int)$agreement['renewal_period_months'] . ' months'));
-
-		$new_id = add_sales_agreement(
-			$agreement['agreement_type'],
-			$agreement['debtor_no'],
-			$agreement['branch_code'],
-			$new_start,
-			$new_end,
-			$agreement['currency'],
-			$agreement['payment_terms'],
-			$agreement['auto_renew'],
-			$agreement['renewal_period_months'],
-			$agreement['terms_and_conditions'],
-			$agreement['notes'],
-			$agreement['dimension_id'],
-			$agreement['dimension2_id'],
-			'',  // auto-generate new reference
-			$agreement['salesman_id']
-		);
-
-		if ($new_id) {
-			// Copy lines from original agreement
-			$lines = get_sales_agreement_lines($agreement['id']);
-			while ($line = db_fetch($lines)) {
-				add_sales_agreement_line(
-					$new_id,
-					$line['stock_id'],
-					$line['committed_qty'],
-					$line['unit_price'],
-					$line['discount_percent'],
-					$line['description'],
-					$line['min_qty_per_order'],
-					$line['price_valid_until']
-				);
-			}
-
-			// Expire the original
-			$sql_expire = "UPDATE " . TB_PREF . "sales_agreements
-				SET status = 'expired'
-				WHERE id = " . db_escape($agreement['id']) . " AND status = 'active'";
-			db_query($sql_expire, 'Cannot expire auto-renewed agreement');
-
-			hook_invoke_all('sales_agreement_renewed', $agreement['id'], $new_id);
-			$count++;
-		}
-	}
-
-	return $count;
+    $caller_owned=!empty($GLOBALS['transaction_level']);
+    $rows=db_query('SELECT id FROM '.TB_PREF.'sales_agreements WHERE status IN (\'active\',\'expired\') AND auto_renew=1 AND date_end IS NOT NULL AND date_end<'.db_escape(date2sql(Today())).' ORDER BY id');
+    if(!$rows)return 0;$ids=array();while($row=db_fetch($rows))$ids[]=(int)$row['id'];$count=0;
+    foreach($ids as $id){if(renew_sales_agreement($id))$count++;elseif($caller_owned && empty($GLOBALS['transaction_level']))return 0;}
+    return $count;
 }
 
 /**
@@ -1097,3 +923,6 @@ function render_sales_agreement_line_progress($current_qty, $committed_qty, $sto
 		. '<div style="width:' . $percentage . '%;height:8px;background:' . $color . ';"></div>'
 		. '</div></div>';
 }
+
+/** Submit the current native Sales agreement to its registered shared-core policy. */
+function submit_sales_agreement($id){return submit_sales_agreement_lifecycle($id);}

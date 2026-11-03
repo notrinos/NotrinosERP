@@ -287,6 +287,9 @@ if (isset($_POST['process_delivery']) && check_data()) {
 		display_error(_('The entered reference is already in use.'));
 		set_focus('ref');
 	}
+	elseif ($delivery_no == -3) {
+		display_error(_('Financial or warranty provision validation failed. No delivery changes were saved. Review its accounts, Dimensions and retained provision history.'));
+	}
 	elseif ($delivery_no == -2) {
 		display_error(_('Dispatch validation failed. Please correct serial/batch input and try again.'));
 	}
@@ -356,13 +359,20 @@ date_row(_('Invoice Dead-line:'), 'due_date', '', null, 0, 0, 0);
 
 customer_credit_row($_SESSION['Items']->customer_id, $_SESSION['Items']->credit);
 
+$retained_delivery = false;
+if (!empty($_SESSION['Items']->trans_no)) {
+	$retained_number = is_array($_SESSION['Items']->trans_no) ? key($_SESSION['Items']->trans_no) : $_SESSION['Items']->trans_no;
+	$retained_delivery = get_customer_trans($retained_number, ST_CUSTDELIVERY);
+}
 $dim = get_company_pref('use_dimension');
 if ($dim > 0)
-	dimensions_list_row(_('Dimension:'), 'dimension_id', null, true, ' ', false, 1, false);
+	dimensions_list_row(_('Dimension:'), 'dimension_id', null, true, ' ', false, 1, false,
+		$retained_delivery ? $retained_delivery['dimension_id'] : 0);
 else
 	hidden('dimension_id', 0);
 if ($dim > 1)
-	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', null, true, ' ', false, 2, false);
+	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', null, true, ' ', false, 2, false,
+		$retained_delivery ? $retained_delivery['dimension2_id'] : 0);
 else
 	hidden('dimension2_id', 0);
 

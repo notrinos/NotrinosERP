@@ -768,26 +768,29 @@ function convert_material_request_to_transfer($request_id, $from_loc_code) {
             || $custody['source']['header']['warehouse_loc_code'] === $from_loc_code
             || !$custody['source']['lines']) { cancel_transaction(); return false; }
         $source = $custody['source']; $header = $source['header'];
+        $valuation = material_transfer_current_valuation($source);
+        if ($valuation === false) { cancel_transaction(); return false; }
         $reference = sprintf(_('From MR %s'), format_material_request_no($header['request_no']));
         $to_id = add_transfer_order($from_loc_code, $header['warehouse_loc_code'],
             $header['request_date'], 'standard', $reference, $header['memo'], null, $header['required_date']);
         if (!$to_id) { cancel_transaction(); return false; }
-        foreach ($source['lines'] as $line) {
+        foreach ($source['lines'] as $index=>$line) {
             // No partial, lossy or implicitly rounded conversion quantities.
             $quantity = transfer_line_decimal($line['qty_requested'], true);
-            if ($quantity === false || !add_transfer_order_line($to_id, $line['stock_id'], $quantity)) {
+            if ($quantity === false || !add_transfer_order_line($to_id, $line['stock_id'], $quantity,
+                null, null, null, null, $valuation[$index]['unit_cost'])) {
                 cancel_transaction(); return false;
             }
         }
         $native = transfer_line_source((int)$to_id);
-        if (!$native || !material_transfer_pair_matches($source, $native, $actor, $from_loc_code)
+        if (!$native || !material_transfer_pair_matches($source, $native, $actor, $from_loc_code, null, $valuation)
             || material_approved_custody((int)$request_id) !== $custody
             || material_core_context() !== $material_context || transfer_core_context() !== $transfer_context) {
             cancel_transaction(); return false;
         }
         // The single native command owns the source linkage and checks all raw
         // review, child, number, company and transfer bytes before commit.
-        $snapshot = array('custody'=>$custody, 'transfer'=>$native, 'from'=>$from_loc_code);
+        $snapshot = array('custody'=>$custody, 'transfer'=>$native, 'from'=>$from_loc_code, 'valuation'=>$valuation);
         if (!mark_material_request_ordered($request_id, ST_LOCTRANSFER, $to_id, $snapshot)
             || material_core_context() !== $material_context || transfer_core_context() !== $transfer_context
             || !commit_transaction()) { cancel_transaction(); return false; }

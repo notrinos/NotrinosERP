@@ -42,6 +42,24 @@ ensure_sales_commission_transaction_registration();
 // TRANSACTION TYPE REGISTRATIONS
 // =====================================================
 
+require_once __DIR__.'/../../../sales/includes/db/sales_agreement_lifecycle_db.inc';
+require_once __DIR__.'/../../../sales/includes/db/sales_agreement_order_db.inc';
+require_once __DIR__.'/../../../sales/includes/db/sales_order_source_db.inc';
+
+ApprovalWorkflow::registerTransactionType(ST_SALESAGREEMENT, array(
+	'label'          => _('Sales Agreement'),
+	'application'    => 'orders',
+	'executor'       => 'execute_approved_sales_agreement',
+	'rejector'       => 'reject_sales_agreement_draft',
+	'canceler'       => 'cancel_sales_agreement_draft',
+	'amount_getter'  => 'get_sales_agreement_draft_amount',
+	'draft_renderer' => 'render_sales_agreement_draft',
+	'edit_url'       => 'sales/sales_agreement_entry.php',
+	'action_locker' => 'lock_sales_agreement_core_action',
+	'action_validator' => 'validate_sales_agreement_core_action',
+	'action_completion_validator' => 'verify_sales_agreement_core_completion',
+));
+
 ApprovalWorkflow::registerTransactionType(ST_SALESINVOICE, array(
 	'label'          => _('Sales Invoice'),
 	'application'    => 'orders',
@@ -58,6 +76,8 @@ ApprovalWorkflow::registerTransactionType(ST_SALESORDER, array(
 	'amount_getter'  => 'get_sales_draft_amount',
 	'draft_renderer' => 'render_sales_draft',
 	'edit_url'       => 'sales/sales_order_entry.php',
+	'action_validator' => 'validate_agreement_sales_order_action',
+	'action_completion_validator' => 'verify_agreement_sales_order_completion',
 ));
 
 ApprovalWorkflow::registerTransactionType(ST_CUSTDELIVERY, array(
@@ -108,9 +128,15 @@ ApprovalWorkflow::registerTransactionType(ST_SALESRETURN, array(
 function restore_sales_cart_from_data($data)
 {
 	global $path_to_root;
-	include_once($path_to_root . '/sales/includes/cart_class.inc');
-	include_once($path_to_root . '/sales/includes/db/sales_discount_db.inc');
+	if(!class_exists('Cart'))include_once($path_to_root . '/sales/includes/cart_class.inc');
+	if(!function_exists('restore_cart_discount_state'))include_once($path_to_root . '/sales/includes/db/sales_discount_db.inc');
 
+    if(isset($data['company'],$data['company_prefix'],$data['company_sha256'])) {
+        global $db_connections;
+        $user=$_SESSION['wa_current_user'];
+        if((string)$data['company']!==(string)$user->cur_con || $data['company_prefix']!==$db_connections[$user->cur_con]['tbpref']
+            || $data['company_sha256']!==hash('sha256',serialize(array($user->cur_con,$db_connections[$user->cur_con]))))throw new RuntimeException('Sales cart belongs to a different company.');
+    }
 	$cart = new Cart($data['trans_type']);
 
 	$customer_id = isset($data['customer_id']) ? $data['customer_id'] : '';
@@ -141,6 +167,8 @@ function restore_sales_cart_from_data($data)
 	$cart->due_date          = isset($data['due_date']) ? $data['due_date'] : '';
 	$cart->reference         = $data['reference'];
 	$cart->Comments          = isset($data['Comments']) ? $data['Comments'] : '';
+	$cart->cust_ref          = isset($data['cust_ref']) ? $data['cust_ref'] : '';
+	$cart->src_docs          = isset($data['src_docs']) ? $data['src_docs'] : array();
 	$cart->salesman          = isset($data['salesman']) ? $data['salesman'] : 0;
 	$cart->phone             = isset($data['phone']) ? $data['phone'] : '';
 	$cart->email             = isset($data['email']) ? $data['email'] : '';
@@ -185,8 +213,11 @@ function restore_sales_cart_from_data($data)
 				isset($line_data['standard_cost']) ? $line_data['standard_cost'] : 0,
 				isset($line_data['item_description']) ? $line_data['item_description'] : '',
 				isset($line_data['id']) ? $line_data['id'] : 0,
-				isset($line_data['src_no']) ? $line_data['src_no'] : 0
+				isset($line_data['src_no']) ? $line_data['src_no'] : 0,
+                isset($line_data['src_id']) ? $line_data['src_id'] : 0
 			);
+            $restored=$cart->line_items[count($cart->line_items)-1];
+            foreach(array('qty_dispatched','qty_old') as $field)if(isset($line_data[$field]))$restored->$field=$line_data[$field];
 		}
 	}
 
@@ -214,7 +245,7 @@ function execute_approved_sales_invoice($draft_data, $reserved_trans_no, $draft_
 
 	$invoice_no = $cart->write();
 
-	if ($invoice_no == -1)
+	if ($invoice_no === false || $invoice_no <= 0)
 		return false;
 
 	return $invoice_no;
@@ -230,18 +261,10 @@ function execute_approved_sales_invoice($draft_data, $reserved_trans_no, $draft_
  */
 function execute_approved_sales_order($draft_data, $reserved_trans_no, $draft_id)
 {
-	global $path_to_root;
-	include_once($path_to_root . '/sales/includes/sales_db.inc');
-
-	$cart = restore_sales_cart_from_data($draft_data);
-	$cart->trans_type = ST_SALESORDER;
-
-	$ret = $cart->write(1);
-
-	if ($ret == -1)
-		return false;
-
-	return key($cart->trans_no);
+	if (is_array($draft_data) && array_key_exists('agreement_conversion',$draft_data))
+		return execute_agreement_sales_order($draft_data,$reserved_trans_no,$draft_id);
+    if(is_array($draft_data) && isset($draft_data['native_sales_order']))return execute_native_sales_order($draft_data,$reserved_trans_no,$draft_id);
+    return false; // Unknown-company legacy drafts must withdraw and resubmit.
 }
 
 /**
@@ -263,7 +286,7 @@ function execute_approved_customer_delivery($draft_data, $reserved_trans_no, $dr
 	$policy = isset($draft_data['bo_policy']) ? (int)$draft_data['bo_policy'] : 0;
 	$ret = $cart->write($policy);
 
-	if ($ret == -1)
+	if ($ret === false || $ret <= 0)
 		return false;
 
 	return key($cart->trans_no);
@@ -511,6 +534,115 @@ function render_rma_draft($draft_data)
 		}
 		$html .= '<tr><td colspan="3"><b>' . _('Refund Amount') . '</b></td>';
 		$html .= '<td align="right" colspan="2"><b>' . number_format(isset($draft_data['refund_amount']) ? (float)$draft_data['refund_amount'] : $grand_total, 2) . '</b></td></tr>';
+		$html .= '</table>';
+	}
+
+	return $html;
+}
+
+
+/** Sales agreement shared-core callback, preserving the native source family. */
+function execute_approved_sales_agreement($draft_data, $reserved_trans_no, $draft_id)
+{
+	global $path_to_root;
+	require_once $path_to_root.'/sales/includes/db/sales_agreement_db.inc';
+	return execute_sales_agreement_core_action('approve',$draft_data,$draft_id);
+
+}
+
+
+/** Sales agreement shared-core callback, preserving the native source family. */
+function reject_sales_agreement_draft($draft_data, $draft_id, $comments)
+{
+	global $path_to_root;
+	require_once $path_to_root.'/sales/includes/db/sales_agreement_db.inc';
+	return execute_sales_agreement_core_action('reject',$draft_data,$draft_id,$comments);
+
+}
+
+
+/** Sales agreement shared-core callback, preserving the native source family. */
+function cancel_sales_agreement_draft($draft_data, $draft_id, $comments)
+{
+	global $path_to_root;
+	require_once $path_to_root.'/sales/includes/db/sales_agreement_db.inc';
+	return execute_sales_agreement_core_action('cancel',$draft_data,$draft_id,$comments);
+
+}
+
+
+/** Sales agreement shared-core callback, preserving the native source family. */
+function get_sales_agreement_draft_amount($draft_data)
+{
+	if (isset($draft_data['total_committed']))
+		return (float)$draft_data['total_committed'];
+
+	$total = 0;
+	if (!empty($draft_data['line_items'])) {
+		foreach ($draft_data['line_items'] as $line) {
+			$quantity = isset($line['committed_qty']) ? (float)$line['committed_qty'] : 0;
+			$price = isset($line['unit_price']) ? (float)$line['unit_price'] : 0;
+			$discount = isset($line['discount_percent']) ? (float)$line['discount_percent'] : 0;
+			$total += $quantity * ($price * (1 - ($discount / 100)));
+		}
+	}
+
+	return $total;
+}
+
+
+/** Sales agreement shared-core callback, preserving the native source family. */
+function render_sales_agreement_draft($draft_data)
+{
+	$classification = array(); $opaque = false;
+	foreach (array('dimension_id'=>1,'dimension2_id'=>2) as $field=>$axis)
+		if (!empty($draft_data[$field])) $classification[$axis.':'.(int)$draft_data[$field]] = sprintf(_('Dimension %d: #%d'),$axis,(int)$draft_data[$field]);
+	$payloads = array(isset($draft_data['custom_data']) ? $draft_data['custom_data'] : null);
+	foreach (isset($draft_data['line_items']) ? $draft_data['line_items'] : array() as $line)
+		$payloads[] = isset($line['custom_data']) ? $line['custom_data'] : null;
+	foreach ($payloads as $payload) {
+		$references = dimension_master_payload_references(is_array($payload) ? json_encode($payload) : $payload);
+		if ($references === false) { $opaque = true; continue; }
+		foreach ($references as $reference) $classification[$reference[1].':'.$reference[0]] = sprintf(_('Dimension %d: #%d'),$reference[1],$reference[0]);
+	}
+	$html = '<table class="tablestyle" width="100%">';
+	$html .= '<tr><th>' . _('Reference') . '</th><td>' . htmlspecialchars(isset($draft_data['reference']) ? $draft_data['reference'] : '') . '</td>';
+	$html .= '<th>' . _('Customer') . '</th><td>' . htmlspecialchars(isset($draft_data['customer_name']) ? $draft_data['customer_name'] : (isset($draft_data['debtor_no']) ? '#'.$draft_data['debtor_no'] : '')) . '</td></tr>';
+	$html .= '<tr><th>' . _('Agreement Type') . '</th><td>' . htmlspecialchars(isset($draft_data['agreement_type']) ? $draft_data['agreement_type'] : '') . '</td>';
+	$html .= '<th>' . _('Sales Person') . '</th><td>' . htmlspecialchars(isset($draft_data['salesman_name']) ? $draft_data['salesman_name'] : (isset($draft_data['salesman_id']) ? '#'.$draft_data['salesman_id'] : '')) . '</td></tr>';
+	$html .= '<tr><th>' . _('Start Date') . '</th><td>' . htmlspecialchars(isset($draft_data['date_start']) ? $draft_data['date_start'] : '') . '</td>';
+	$html .= '<th>' . _('End Date') . '</th><td>' . htmlspecialchars(isset($draft_data['date_end']) ? $draft_data['date_end'] : '') . '</td></tr>';
+	$html .= '<tr><th>' . _('Branch') . '</th><td>' . htmlspecialchars(isset($draft_data['branch_name']) ? $draft_data['branch_name'] : (isset($draft_data['branch_code']) ? $draft_data['branch_code'] : '')) . '</td>';
+	$html .= '<th>' . _('Committed Total') . '</th><td><b>' . number_format(get_sales_agreement_draft_amount($draft_data), 2) . '</b></td></tr>';
+	$html .= '<tr><th>'._('Classifications').'</th><td colspan="3">'.htmlspecialchars(implode(', ',$classification))
+		.($opaque ? ' '.htmlspecialchars(_('Additional retained classification requires owner review.')) : '').'</td></tr>';
+	if (!empty($draft_data['terms_and_conditions']))
+		$html .= '<tr><th>'._('Terms and Conditions').'</th><td colspan="3">'.htmlspecialchars($draft_data['terms_and_conditions']).'</td></tr>';
+
+	if (!empty($draft_data['notes']))
+		$html .= '<tr><th>' . _('Notes') . '</th><td colspan="3">' . htmlspecialchars($draft_data['notes']) . '</td></tr>';
+
+	$html .= '</table>';
+
+	if (!empty($draft_data['line_items'])) {
+		$html .= '<br><table class="tablestyle" width="100%">';
+		$html .= '<tr><th>' . _('Item Code') . '</th><th>' . _('Description') . '</th><th>' . _('Committed Qty') . '</th>';
+		$html .= '<th>' . _('Unit Price') . '</th><th>' . _('Discount %') . '</th><th>' . _('Line Total') . '</th></tr>';
+
+		foreach ($draft_data['line_items'] as $line) {
+			$quantity = isset($line['committed_qty']) ? (float)$line['committed_qty'] : 0;
+			$price = isset($line['unit_price']) ? (float)$line['unit_price'] : 0;
+			$discount = isset($line['discount_percent']) ? (float)$line['discount_percent'] : 0;
+			$line_total = round($quantity * ($price * (1 - ($discount / 100))), 2);
+
+			$html .= '<tr><td>' . htmlspecialchars(isset($line['stock_id']) ? $line['stock_id'] : '') . '</td>';
+			$html .= '<td>' . htmlspecialchars(isset($line['description']) ? $line['description'] : '') . '</td>';
+			$html .= '<td align="right">' . number_format($quantity, 2) . '</td>';
+			$html .= '<td align="right">' . number_format($price, 2) . '</td>';
+			$html .= '<td align="right">' . number_format($discount, 2) . '</td>';
+			$html .= '<td align="right">' . number_format($line_total, 2) . '</td></tr>';
+		}
+
 		$html .= '</table>';
 	}
 

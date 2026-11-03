@@ -15,6 +15,7 @@
 function write_sales_delivery(&$delivery,$bo_policy) {
 	global $Refs, $path_to_root;
 
+	$original_trans_no = $delivery->trans_no;
 	$trans_no = $delivery->trans_no;
 	if (is_array($trans_no)) $trans_no = key($trans_no);
 
@@ -55,6 +56,10 @@ function write_sales_delivery(&$delivery,$bo_policy) {
 	else {
 		move_trans_attachments(ST_CUSTDELIVERY, $trans_no, $delivery_no);
 		void_gl_trans(ST_CUSTDELIVERY, $delivery_no, true);
+        require_once __DIR__.'/../../../inventory/includes/db/warranty_provision_db.inc';
+        if (reverse_delivery_warranty_provisions(ST_CUSTDELIVERY, $delivery_no) === false) {
+            cancel_transaction(); $delivery->trans_no = $original_trans_no; return -3;
+        }
 		void_stock_move(ST_CUSTDELIVERY, $delivery_no);
 		void_trans_tax_details(ST_CUSTDELIVERY, $delivery_no);
 		delete_comments(ST_CUSTDELIVERY, $delivery_no);
@@ -186,7 +191,9 @@ function write_sales_delivery(&$delivery,$bo_policy) {
 	if (file_exists($warranty_prov_path)) {
 		include_once($warranty_prov_path);
 		if (function_exists('process_delivery_warranty_provisions')) {
-			process_delivery_warranty_provisions($delivery, $delivery_no, $delivery->document_date);
+            if (process_delivery_warranty_provisions($delivery, $delivery_no, $delivery->document_date) === false) {
+                cancel_transaction(); $delivery->trans_no = $original_trans_no; return -3;
+            }
 		}
 	}
 
@@ -308,6 +315,10 @@ function void_sales_delivery($type, $type_no, $transactions=true) {
 	hook_db_prevoid($type, $type_no);
 	
 	void_gl_trans($type, $type_no, true);
+    require_once __DIR__.'/../../../inventory/includes/db/warranty_provision_db.inc';
+    if (reverse_delivery_warranty_provisions($type, $type_no) === false) {
+        cancel_transaction(); return false;
+    }
 
 	// reverse all the changes in the sales order
 	$items_result = get_customer_trans_details($type, $type_no);
@@ -328,20 +339,12 @@ function void_sales_delivery($type, $type_no, $transactions=true) {
 
 	void_cust_allocations($type, $type_no);
 
-	// --- Reverse warranty provision accruals for voided delivery ---
-	$warranty_prov_path = dirname(dirname(dirname(dirname(__FILE__))))
-		. '/inventory/includes/db/warranty_provision_db.inc';
-	if (file_exists($warranty_prov_path)) {
-		include_once($warranty_prov_path);
-		if (function_exists('reverse_delivery_warranty_provisions')) {
-			reverse_delivery_warranty_provisions($type, $type_no);
-		}
-	}
 
 	// do this last because other voidings can depend on it
 	// DO NOT MOVE THIS ABOVE VOIDING or we can end up with trans with alloc < 0
 	void_customer_trans($type, $type_no);
 
 	if ($transactions)
-		commit_transaction();
+		return commit_transaction();
+    return true;
 }

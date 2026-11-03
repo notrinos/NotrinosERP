@@ -54,7 +54,10 @@ function link_quote_to_opportunity($order_no, $opportunity_id)
 		WHERE order_no = " . db_escape((int)$order_no) . "
 		AND trans_type = " . ST_SALESQUOTE;
 
+	if (!function_exists('sales_order_dimension_command')) require_once __DIR__.'/sales_order_dimension_db.inc';
+	return sales_order_dimension_command($order_no,ST_SALESQUOTE,'maintain',function() use ($sql) {
 	return db_query($sql, "Could not link quote to opportunity");
+	});
 }
 
 /**

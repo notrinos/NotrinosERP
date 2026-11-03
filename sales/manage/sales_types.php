@@ -40,26 +40,26 @@ function can_process() {
 //----------------------------------------------------------------------------------------------------
 
 if ($Mode=='ADD_ITEM' && can_process()) {
-	sales_types_entity::create(array(
+	$saved=sales_types_entity::create(array(
 		'sales_type' => $_POST['sales_type'],
 		'tax_included' => check_value('tax_included') ? 1 : 0,
 		'factor' => input_num('factor')
 	));
-	display_notification(_('New sales type has been added'));
-	$Mode = 'RESET';
+	if($saved!==false){display_notification(_('New sales type has been added'));$Mode='RESET';}
+    else display_error(_('Cannot save this sales type because its retained classification could not be verified.'));
 }
 
 //----------------------------------------------------------------------------------------------------
 
 if ($Mode=='UPDATE_ITEM' && can_process()) {
 
-	sales_types_entity::modify($selected_id, array(
+	$saved=sales_types_entity::modify($selected_id, array(
 		'sales_type' => $_POST['sales_type'],
 		'tax_included' => check_value('tax_included') ? 1 : 0,
 		'factor' => input_num('factor')
 	));
-	display_notification(_('Selected sales type has been updated'));
-	$Mode = 'RESET';
+	if($saved!==false){display_notification(_('Selected sales type has been updated'));$Mode='RESET';}
+    else display_error(_('Cannot save this sales type because its retained classification could not be verified.'));
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -73,11 +73,11 @@ if ($Mode == 'Delete') {
 		if (key_in_foreign_table($selected_id, 'debtors_master', 'sales_type'))
 			display_error(_('Cannot delete this sale type because customers are currently set up to use this sales type.'));
 		else {
-			sales_types_entity::remove($selected_id);
-			display_notification(_('Selected sales type has been deleted'));
+			$removed=sales_types_entity::remove($selected_id);
+			if($removed){display_notification(_('Selected sales type has been deleted'));$Mode='RESET';}
+        else display_error(_('Cannot delete this sales type because retained classification history must be preserved.'));
 		}
 	} //end if sales type used in debtor transactions or in customers set up
-	$Mode = 'RESET';
 }
 
 if ($Mode == 'RESET') {

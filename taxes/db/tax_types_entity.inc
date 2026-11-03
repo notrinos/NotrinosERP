@@ -104,18 +104,12 @@ class tax_types_entity extends Entity {
 	 * @return bool True on success
 	 */
 	public static function remove($key) {
-		$e = new static();
-		begin_transaction();
-		$result = $e->delete($key);
-		if ($result) {
-			// Also delete any item tax exemptions associated with this type
-			$sql = "DELETE FROM ".TB_PREF."item_tax_type_exemptions WHERE tax_type_id=".db_escape($key);
-			db_query($sql, 'could not delete item tax type exemptions');
-		}
-		if ($result)
-			commit_transaction();
-		else
-			rollback_transaction();
-		return $result;
-	}
+        $e=new static();if(!begin_transaction())return false;
+        try{
+            $result=$e->delete($key);
+            if($result)$result=db_query('DELETE FROM '.TB_PREF.'item_tax_type_exemptions WHERE tax_type_id='.db_escape($key),'could not delete item tax type exemptions')!==false;
+            if($result && commit_transaction())return true;
+            cancel_transaction();return false;
+        }catch(Exception $e){cancel_transaction();return false;}catch(Throwable $e){cancel_transaction();return false;}
+    }
 }

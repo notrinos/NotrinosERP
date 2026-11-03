@@ -149,7 +149,7 @@ function material_transfer_release_lineage($history, $request_id, $selected_even
             } elseif ($link) {
                 $prior['drafts'] = $history['drafts'];
             }
-            if (!$link || $link['schema'] !== 'material-transfer-link-v2'
+            if (!$link || !in_array($link['schema'], array('material-transfer-link-v2','material-transfer-link-v3'), true)
                 || $pending !== false || $link['request_id'] !== $identity
                 || !($to_id = dimension_writer_reference_id($link['transfer_id']))
                 || isset($seen_transfers[$to_id])
@@ -269,7 +269,7 @@ function material_transfer_link_asof_draft_prefix($history, $request_id, $link_e
         $before[] = $action;
     }
     if ($link_row === null || !($receipt = material_transfer_link_receipt($link_row))
-        || $receipt['schema'] !== 'material-transfer-link-v2' || $receipt['request_id'] !== $identity
+        || !in_array($receipt['schema'], array('material-transfer-link-v2','material-transfer-link-v3'), true) || $receipt['request_id'] !== $identity
         || dimension_writer_reference_id($link_row['user_id']) !== $receipt['maker_id']
         || $receipt['approved_updated_at'] > $link_row['action_date']) return false;
     $included_ids = array(); $excluded = false;
@@ -368,7 +368,7 @@ function material_transfer_release_asof_draft_prefix($history, $request_id, $rel
             if ($pending !== false) return false;
             $link = material_transfer_link_receipt($action);
             $proof = material_transfer_link_asof_draft_prefix($history, $identity, $event_id);
-            if (!$link || !$proof || $link['schema'] !== 'material-transfer-link-v2'
+            if (!$link || !$proof || !in_array($link['schema'], array('material-transfer-link-v2','material-transfer-link-v3'), true)
                 || $proof['actions'] !== $prior
                 || $proof['approved_draft_id'] !== $link['approved_draft_id']
                 || $link['request_id'] !== $identity
@@ -660,7 +660,7 @@ function release_cancelled_material_transfer($request_id, $comments = '')
         $origin = material_transfer_origin_custody($identity);
         $transfer_id = $origin ? (int)$origin['receipt']['transfer_id'] : 0;
         $cancelled = $transfer_id ? transfer_cancelled_linked_custody($transfer_id) : false;
-        if (!$origin || !$cancelled || $origin['receipt']['schema'] !== 'material-transfer-link-v2'
+        if (!$origin || !$cancelled || !in_array($origin['receipt']['schema'], array('material-transfer-link-v2','material-transfer-link-v3'), true)
             || (int)$origin['material']['header']['requested_by'] !== (int)$_SESSION['wa_current_user']->user
             || $cancelled['source'] !== $origin['transfer'] || $cancelled['history'] !== $origin['transfer_history']) {
             cancel_transaction(); return false;

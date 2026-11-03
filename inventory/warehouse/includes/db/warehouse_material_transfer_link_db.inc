@@ -7,8 +7,9 @@ require_once __DIR__.'/warehouse_transfer_line_db.inc';
  * Check the exact draft produced from an independently approved material demand.
  * Pure comparison is also used by DB-free negative/tamper regression tests.
  * No quantity, linked identity, source line or opaque financial field is inferred.
+ * Legacy v1/v2 pairs require zero cost; v3 pairs use their explicit valuation.
  */
-function material_transfer_pair_matches($material, $transfer, $actor, $from, $authored_reference = null)
+function material_transfer_pair_matches($material, $transfer, $actor, $from, $authored_reference = null, $valuation = null)
 {
     if (!is_array($material) || !isset($material['header'], $material['lines'])
         || !is_array($transfer) || !isset($transfer['header'], $transfer['lines'])
@@ -40,6 +41,7 @@ function material_transfer_pair_matches($material, $transfer, $actor, $from, $au
         || $to['approved_by'] !== null || $to['actual_ship_date'] !== null
         || $to['actual_recv_date'] !== null
         || count($material['lines']) === 0 || count($material['lines']) !== count($transfer['lines'])) return false;
+    if ($valuation !== null && !material_transfer_valuation_matches($material['lines'], $valuation)) return false;
     foreach ($material['lines'] as $index=>$line) {
         if (!isset($line['stock_id'], $line['qty_requested'], $line['qty_fulfilled'])
             || !isset($transfer['lines'][$index])) return false;
@@ -52,7 +54,8 @@ function material_transfer_pair_matches($material, $transfer, $actor, $from, $au
             || (float)$line['qty_fulfilled'] != 0 || $actual['stock_id'] !== $line['stock_id']
             || (string)$actual['qty_requested'] !== $quantity
             || (float)$actual['qty_shipped'] != 0 || (float)$actual['qty_received'] != 0
-            || (float)$actual['unit_cost'] != 0
+            || ($valuation === null ? (float)$actual['unit_cost'] != 0
+                : (string)$actual['unit_cost'] !== $valuation[$index]['unit_cost'])
             || (int)$actual['transfer_id'] !== (int)$to['transfer_id']) return false;
         foreach (array('from_bin_id','to_bin_id','batch_id','serial_id','memo','custom_data') as $field)
             if ($actual[$field] !== null) return false;
@@ -65,16 +68,17 @@ function material_transfer_pair_matches($material, $transfer, $actor, $from, $au
  * original approval-custody state is used: a numeric Transfer link alone does
  * not prove that the maker obtained an independent Material approval.
  */
-function material_transfer_link_intent($custody, $transfer, $actor, $from, $authored_reference = null, $schema = 'material-transfer-link-v2')
+function material_transfer_link_intent($custody, $transfer, $actor, $from, $authored_reference = null, $schema = 'material-transfer-link-v2', $valuation = null)
 {
     if (!is_array($custody) || !isset($custody['source'], $custody['history'], $custody['draft'])
         || !isset($custody['source']['header']['request_id']) || !isset($transfer['header']['transfer_id'])
         || !isset($custody['source']['header']['updated_at'])
-        || !material_transfer_pair_matches($custody['source'], $transfer, $actor, $from, $authored_reference)) return false;
+        || !material_transfer_pair_matches($custody['source'], $transfer, $actor, $from, $authored_reference, $valuation)
+        || (($schema === 'material-transfer-link-v3') !== ($valuation !== null))) return false;
     $material_company = material_core_context(true);
     $transfer_company = transfer_core_context(true);
     if (!$material_company || !$transfer_company) return false;
-    if (!in_array($schema, array('material-transfer-link-v1', 'material-transfer-link-v2'), true)) return false;
+    if (!in_array($schema, array('material-transfer-link-v1', 'material-transfer-link-v2', 'material-transfer-link-v3'), true)) return false;
     $intent = array('schema'=>$schema,
         'request_id'=>(int)$custody['source']['header']['request_id'],
         'transfer_id'=>(int)$transfer['header']['transfer_id'],
@@ -88,7 +92,7 @@ function material_transfer_link_intent($custody, $transfer, $actor, $from, $auth
         'approved_history_sha256'=>material_core_source_fingerprint(array('header'=>array(),
             'lines'=>array_merge($custody['history']['drafts'], $custody['history']['actions']))),
         'transfer_draft_sha256'=>transfer_core_source_fingerprint($transfer));
-    if ($schema === 'material-transfer-link-v2') {
+    if (in_array($schema, array('material-transfer-link-v2','material-transfer-link-v3'), true)) {
         // Capture actual pre-review values, including SQL NULL. A later reader
         // must never guess updated_at from created_at or its current clock.
         $transition = array();
@@ -103,7 +107,56 @@ function material_transfer_link_intent($custody, $transfer, $actor, $from, $auth
                 && !material_transfer_v2_timestamp($transition['updated_at']))) return false;
         $intent['transfer_draft_transition'] = $transition;
     }
+    if ($schema === 'material-transfer-link-v3') $intent['valuation'] = $valuation;
     return $intent;
+}
+
+/** Validate the ordered, lossless native cost snapshot without reading today's master. */
+function material_transfer_valuation_matches($lines, $valuation)
+{
+    if (!is_array($lines) || !$lines || !is_array($valuation)
+        || array_keys($valuation) !== range(0, count($lines)-1)) return false;
+    foreach ($lines as $index=>$line) {
+        $value = $valuation[$index];
+        if (!is_array($value) || array_keys($value) !== array('stock_id','unit_cost')
+            || !isset($line['stock_id']) || $value['stock_id'] !== $line['stock_id']
+            || !is_string($value['unit_cost'])
+            || !preg_match('/^(0|[1-9][0-9]{0,10})\.[0-9]{4}$/D', $value['unit_cost'])
+            || transfer_line_decimal($value['unit_cost'], false) !== $value['unit_cost']) return false;
+    }
+    return true;
+}
+
+/**
+ * Snapshot current company material_cost, the native get_unit_cost() basis,
+ * under deterministic item locks. Reject lossy/out-of-range costs before any
+ * Transfer is created; historical readers use only the immutable receipt.
+ */
+function material_transfer_current_valuation($source)
+{
+    if (!material_core_context() || !transfer_core_context() || empty($GLOBALS['transaction_level'])
+        || !is_array($source) || !isset($source['lines']) || !is_array($source['lines']) || !$source['lines']) return false;
+    $ids = array();
+    foreach ($source['lines'] as $line) {
+        if (!isset($line['stock_id']) || !is_string($line['stock_id']) || $line['stock_id'] === '') return false;
+        $ids[$line['stock_id']] = db_escape($line['stock_id']);
+    }
+    ksort($ids, SORT_STRING);
+    $rows = transfer_core_rows('SELECT stock_id,material_cost FROM '.TB_PREF.'stock_master WHERE stock_id IN ('
+        .implode(',', $ids).') ORDER BY stock_id FOR UPDATE');
+    if (!$rows || count($rows) !== count($ids)) return false;
+    $costs = array();
+    foreach ($rows as $row) {
+        $cost = transfer_line_decimal($row['material_cost'], false);
+        if (!array_key_exists($row['stock_id'], $ids) || $cost === false) return false;
+        $costs[$row['stock_id']] = $cost;
+    }
+    $valuation = array();
+    foreach ($source['lines'] as $line) {
+        if (!isset($costs[$line['stock_id']])) return false;
+        $valuation[] = array('stock_id'=>$line['stock_id'], 'unit_cost'=>$costs[$line['stock_id']]);
+    }
+    return material_transfer_valuation_matches($source['lines'], $valuation) ? $valuation : false;
 }
 
 /**
@@ -137,7 +190,7 @@ function material_transfer_original_draft($transfer, $receipt)
         || !is_string($receipt['transfer_draft_sha256'])
         || !preg_match('/^[a-f0-9]{64}$/D', $receipt['transfer_draft_sha256'])) return false;
     $original = $transfer;
-    if ($receipt['schema'] === 'material-transfer-link-v2') {
+    if (in_array($receipt['schema'], array('material-transfer-link-v2','material-transfer-link-v3'), true)) {
         if (!isset($receipt['approved_updated_at'])
             || !material_transfer_v2_timestamp($receipt['approved_updated_at'])) return false;
         if (!isset($receipt['transfer_draft_transition']) || !is_array($receipt['transfer_draft_transition'])
@@ -210,7 +263,7 @@ function material_transfer_origin_custody($request_id)
         array('header'=>$to_header[0], 'lines'=>$to_lines), $to_history);
 }
 
-/** Decode only a canonical immutable link action; this grants no source authority. */
+/** Decode canonical v1/v2 history or explicit v3 valuation; grant no source authority. */
 function material_transfer_link_receipt($link)
 {
     if (!is_array($link)) return false;
@@ -222,10 +275,12 @@ function material_transfer_link_receipt($link)
     $receipt_keys = array('schema','request_id','transfer_id','approved_draft_id','maker_id',
         'from_loc_code','authored_reference','material_company_sha256','transfer_company_sha256',
         'approved_updated_at','approved_source_sha256','approved_history_sha256','transfer_draft_sha256');
-    if (is_array($receipt) && isset($receipt['schema']) && $receipt['schema'] === 'material-transfer-link-v2')
+    if (is_array($receipt) && isset($receipt['schema']) && in_array($receipt['schema'], array('material-transfer-link-v2','material-transfer-link-v3'), true))
         $receipt_keys[] = 'transfer_draft_transition';
+    if (is_array($receipt) && isset($receipt['schema']) && $receipt['schema'] === 'material-transfer-link-v3')
+        $receipt_keys[] = 'valuation';
     if (!is_array($receipt) || array_keys($receipt) !== $receipt_keys
-        || ($receipt['schema'] === 'material-transfer-link-v2'
+        || (in_array($receipt['schema'], array('material-transfer-link-v2','material-transfer-link-v3'), true)
             && (!is_int($receipt['request_id']) || $receipt['request_id'] <= 0
                 || !is_int($receipt['transfer_id']) || $receipt['transfer_id'] <= 0
                 || !is_int($receipt['approved_draft_id']) || $receipt['approved_draft_id'] <= 0
@@ -241,7 +296,9 @@ function material_transfer_link_receipt($link)
         || !is_string($receipt['from_loc_code']) || $receipt['from_loc_code'] === ''
         || !is_string($receipt['authored_reference'])
         || !is_string($receipt['approved_updated_at'])
-        || !in_array($receipt['schema'], array('material-transfer-link-v1','material-transfer-link-v2'), true)
+        || !in_array($receipt['schema'], array('material-transfer-link-v1','material-transfer-link-v2','material-transfer-link-v3'), true)
+        || ($receipt['schema'] === 'material-transfer-link-v3'
+            && (!is_array($receipt['valuation']) || !material_transfer_valuation_matches($receipt['valuation'], $receipt['valuation'])))
         || !($transfer_id = dimension_writer_reference_id($receipt['transfer_id']))
         || $link['action_type'] !== 'source_transfer'
         || (int)$link['user_id'] !== (int)$receipt['maker_id']
@@ -304,7 +361,8 @@ function material_transfer_origin_projection($request_id, $source, $history, $tr
     $custody = array('source'=>$approved, 'history'=>$prior_history, 'draft'=>$draft);
     $expected = material_transfer_link_intent($custody, $original, (int)$receipt['maker_id'],
         isset($receipt['from_loc_code']) ? $receipt['from_loc_code'] : '',
-        $receipt['authored_reference'], $receipt['schema']);
+        $receipt['authored_reference'], $receipt['schema'],
+        isset($receipt['valuation']) ? $receipt['valuation'] : null);
     if (!$expected || $receipt !== $expected
         || (int)$receipt['request_id'] !== $identity || (int)$receipt['approved_draft_id'] !== (int)$draft['id']
         || (int)$link['level'] !== (int)$draft['current_level']
@@ -347,12 +405,14 @@ function link_approved_material_transfer($request_id, $transfer_id, $snapshot)
         || !isset($snapshot['custody'], $snapshot['transfer'], $snapshot['from'])
         || !is_string($snapshot['from']) || $snapshot['from'] === '') return false;
     $custody = material_approved_custody($identity);
+    $valuation = isset($snapshot['valuation']) ? $snapshot['valuation'] : null;
+    if ($valuation === null || !$custody || material_transfer_current_valuation($custody['source']) !== $valuation) return false;
     $history = transfer_core_history($to_identity);
     $native = transfer_line_source($to_identity);
     if (!$custody || $custody !== $snapshot['custody'] || !$history
         || $history['drafts'] || $history['actions'] || !$native
         || $native !== $snapshot['transfer']
-        || !material_transfer_pair_matches($custody['source'], $native, $actor, $snapshot['from'])) return false;
+        || !material_transfer_pair_matches($custody['source'], $native, $actor, $snapshot['from'], null, $valuation)) return false;
     $existing = material_core_rows('SELECT request_id FROM '.TB_PREF.'wh_material_requests WHERE linked_doc_type='
         .ST_LOCTRANSFER.' AND linked_doc_no='.$to_identity.' ORDER BY request_id FOR UPDATE');
     $started = material_core_rows('SELECT NOW() AS now_');
@@ -392,7 +452,8 @@ function link_approved_material_transfer($request_id, $transfer_id, $snapshot)
         .$to_identity.' ORDER BY line_id FOR UPDATE');
     if (!$to_headers || count($to_headers) !== 1 || $to_lines === false
         || array('header'=>$to_headers[0], 'lines'=>$to_lines) !== $native) return false;
-    $receipt = material_transfer_link_intent($custody, $native, $actor, $snapshot['from']);
+    if (material_transfer_current_valuation($custody['source']) !== $valuation) return false;
+    $receipt = material_transfer_link_intent($custody, $native, $actor, $snapshot['from'], null, 'material-transfer-link-v3', $valuation);
     $encoded = $receipt ? json_encode($receipt) : false;
     if ($encoded === false || strlen($encoded) > 16000000) return false;
     $draft_id = (int)$custody['draft']['id'];
@@ -413,5 +474,6 @@ function link_approved_material_transfer($request_id, $transfer_id, $snapshot)
         || $action['comments'] !== 'Material-to-Transfer source link'
         || $action['draft_data_snapshot'] !== $literal[0]['snapshot_']
         || transfer_core_history($to_identity) !== $history) return false;
-    return material_transfer_link_custody($identity) !== false;
+    return material_transfer_current_valuation($custody['source']) === $valuation
+        && material_transfer_link_custody($identity) !== false;
 }

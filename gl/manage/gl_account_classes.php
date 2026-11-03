@@ -48,14 +48,14 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	if (can_process()) {
 
 		if ($selected_id != '') {
-			if(update_account_class($selected_id, $_POST['name'], $_POST['ctype']))
-				display_notification(_('Selected account class settings has been updated'));
+			if(update_account_class($selected_id,$_POST['name'],$_POST['ctype']))display_notification(_('Selected account class settings has been updated'));
+            else display_error(_('Cannot update this account class because its retained classification could not be verified.'));
 		} 
 		else {
 			if(add_account_class($_POST['id'], $_POST['name'], $_POST['ctype'])) {
 				display_notification(_('New account class has been added'));
 				$Mode = 'RESET';
-			}
+			}else display_error(_('Cannot save this account class because its retained classification could not be verified.'));
 		}
 	}
 }
@@ -78,10 +78,9 @@ function can_delete($selected_id) {
 if ($Mode == 'Delete') {
 
 	if (can_delete($selected_id)) {
-		delete_account_class($selected_id);
-		display_notification(_('Selected account class has been deleted'));
+		if(delete_account_class($selected_id)){display_notification(_('Selected account class has been deleted'));$Mode='RESET';}
+        else display_error(_('Cannot delete this account class because retained classification history must be preserved.'));
 	}
-	$Mode = 'RESET';
 }
 
 //-----------------------------------------------------------------------------------

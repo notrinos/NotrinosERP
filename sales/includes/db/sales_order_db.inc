@@ -11,8 +11,15 @@
 ***********************************************************************/
 
 include_once($path_to_root . '/admin/db/payment_terms_entity.inc');
+require_once __DIR__.'/sales_order_dimension_db.inc';
 
+/** Preserve current retained metadata through the native whole command. */
 function add_sales_order(&$order) {
+	global $path_to_root;
+	if (!function_exists('get_discount_custom_data_for_save'))
+		include_once($path_to_root . '/sales/includes/db/sales_discount_db.inc');
+
+	return sales_order_dimension_command(0,$order->trans_type,'add',function($locked_payload,$line_payloads=array(),$inheritance=array()) use ($order) {
 	global $SysPrefs, $path_to_root, $Refs;
 
 	if (!function_exists('get_discount_custom_data_for_save'))
@@ -20,11 +27,14 @@ function add_sales_order(&$order) {
 
 	begin_transaction();
 	hook_db_prewrite($order, $order->trans_type);
-	$order_no = get_next_trans_no($order->trans_type);
+    $next=$order->trans_type==ST_SALESORDER?get_next_sales_order_approval_number():get_next_trans_no($order->trans_type);
+    if(!$next)dimension_financial_reference_failure();
+    $order_no = $inheritance && $inheritance['reserved_number'] ? $inheritance['reserved_number'] : $next;
+    if($order->trans_type==ST_SALESORDER && !sales_order_reference_available($order->reference,isset($inheritance['draft_id'])?$inheritance['draft_id']:0))dimension_financial_reference_failure();
 	$del_date = date2sql($order->due_date);
 	$order_type = 0; // this is default on new order
 	$total = $order->get_trans_total();
-	$custom_data_sql = get_discount_custom_data_sql_value(array(), $order);
+	$custom_data_sql = "'".db_escape_function($locked_payload)."'";
 
 // Phase 2: validity_date — for quotations, use validity_date if set, else due_date
 	$validity_date_sql = 'NULL';
@@ -78,17 +88,18 @@ function add_sales_order(&$order) {
 		$st_reorder = array();
 	}
 	// inserted line items into sales order details
-	foreach ($order->line_items as $line) {
+	foreach ($order->line_items as $line_index=>$line) {
 		if ($SysPrefs->loc_notification() == 1 && is_inventory_item($line->stock_id))
 			$loc = calculate_reorder_level($order->Location, $line, $st_ids, $st_names, $st_num, $st_reorder); 
 
-		$sql = "INSERT INTO ".TB_PREF."sales_order_details (order_no, trans_type, stk_code, description, unit_price, quantity, discount_percent) VALUES (";
+		$sql = "INSERT INTO ".TB_PREF."sales_order_details (order_no, trans_type, stk_code, description, unit_price, quantity, discount_percent, custom_data) VALUES (";
 		$sql .= $order_no.",".$order->trans_type.
 				",".db_escape($line->stock_id).", "
 				.db_escape($line->item_description).", $line->price,
 				$line->quantity,
-				$line->discount_percent)";
+				$line->discount_percent, '".db_escape_function(isset($line_payloads[$line_index])?$line_payloads[$line_index]:'{}')."')";
 		db_query($sql, 'order Details Cannot be Added');
+		if ($inheritance) $line->id = db_insert_id();
 
 		// Now mark quotation line as processed
 		if ($order->trans_type == ST_SALESORDER && $line->src_id)
@@ -111,15 +122,20 @@ function add_sales_order(&$order) {
 		send_reorder_email($loc, $st_ids, $st_names, $st_num, $st_reorder);
 
 	return $order_no;
+
+	},$order);
 }
 
+/** Preserve current retained metadata through the native whole command. */
 function delete_sales_order($order_no, $trans_type) {
+	return sales_order_dimension_command($order_no,$trans_type,'delete',function($locked_payload) use ($order_no,$trans_type) {
 	global $path_to_root;
 
 	begin_transaction();
 	hook_db_prevoid($trans_type, $order_no);
 
-	$order = get_sales_order_header($order_no, $trans_type);
+	$locked_headers = sales_order_dimension_rows('sales_orders',$order_no,$trans_type);
+	$order = $locked_headers ? $locked_headers[0] : false;
 	$agreement_id = $order && isset($order['agreement_id']) ? (int)$order['agreement_id'] : 0;
 
 	$sql = "DELETE FROM ".TB_PREF."sales_orders WHERE order_no=".db_escape($order_no)." AND trans_type=".db_escape($trans_type);
@@ -137,6 +153,9 @@ function delete_sales_order($order_no, $trans_type) {
 
 	add_audit_trail($trans_type, $order_no, sql2date($order['ord_date']), _('Deleted.'));
 	commit_transaction();
+
+	return true;
+	});
 }
 
 /*
@@ -144,13 +163,21 @@ function delete_sales_order($order_no, $trans_type) {
 */
 function update_sales_order_version($order) {
 	foreach ($order as $so_num => $so_ver) {
+		sales_order_dimension_command($so_num,ST_SALESORDER,'maintain',function() use ($so_num,$so_ver) {
 		$sql= 'UPDATE '.TB_PREF.'sales_orders SET version=version+1 WHERE order_no='. db_escape($so_num).
 		' AND version='.$so_ver . " AND trans_type=".ST_SALESORDER;
-		db_query($sql, 'Concurrent editing conflict while sales order update');
+		return db_query($sql, 'Concurrent editing conflict while sales order update');
+		});
 	}
 }
 
+/** Preserve current retained metadata through the native whole command. */
 function update_sales_order($order) {
+	global $path_to_root;
+	if (!function_exists('get_discount_custom_data_for_save'))
+		include_once($path_to_root . '/sales/includes/db/sales_discount_db.inc');
+
+	return sales_order_dimension_command(key($order->trans_no),$order->trans_type,'update',function($locked_payload,$line_payloads=array()) use ($order) {
 	global $SysPrefs, $path_to_root, $Refs;
 
 	if (!function_exists('get_discount_custom_data_for_save'))
@@ -159,10 +186,11 @@ function update_sales_order($order) {
 	$order_no =  key($order->trans_no);
 	$version= current($order->trans_no);
 	$total = $order->get_trans_total();
-	$existing_order = get_sales_order_header($order_no, $order->trans_type);
+	$locked_headers = sales_order_dimension_rows('sales_orders',$order_no,$order->trans_type);
+	$existing_order = $locked_headers ? $locked_headers[0] : false;
 	$previous_agreement_id = $existing_order && isset($existing_order['agreement_id']) ? (int)$existing_order['agreement_id'] : 0;
 	$current_agreement_id = isset($order->agreement_id) ? (int)$order->agreement_id : 0;
-	$custom_data_sql = get_discount_custom_data_sql_value(isset($existing_order['custom_data']) ? $existing_order['custom_data'] : array(), $order);
+	$custom_data_sql = "'".db_escape_function($locked_payload)."'";
 
 	begin_transaction();
 	hook_db_prewrite($order, $order->trans_type);
@@ -204,13 +232,13 @@ function update_sales_order($order) {
 	db_query($sql, 'order Cannot be Updated, this can be concurrent edition conflict');
 
 	$id_tokeep = array();
-	foreach ($order->line_items as $line) {
+	foreach ($order->line_items as $line_index=>$line) {
 		array_push($id_tokeep , $line->id);
 	}
 	$id_list = implode(', ', $id_tokeep);
 	
 	$sql = "DELETE FROM ".TB_PREF."sales_order_details WHERE order_no =" . db_escape($order_no) . " AND trans_type=".$order->trans_type;
-	$sql .= " AND id NOT IN ($id_list)";
+	if ($id_list !== '') $sql .= " AND id NOT IN ($id_list)";
 
 	db_query($sql, 'Old order Cannot be Deleted');
 
@@ -223,21 +251,21 @@ function update_sales_order($order) {
 	}
 
 	// insert line items into sales order details
-	foreach ($order->line_items as $line) {
+	foreach ($order->line_items as $line_index=>$line) {
 		if ($SysPrefs->loc_notification() == 1 && is_inventory_item($line->stock_id))
 			$loc = calculate_reorder_level($order->Location, $line, $st_ids, $st_names, $st_num, $st_reorder); 
 
 		if (!$line->id) //new line
 			$sql = "INSERT INTO ".TB_PREF."sales_order_details
 			 (order_no, trans_type, stk_code,  description, unit_price, quantity,
-			  discount_percent, qty_sent)
+			  discount_percent, qty_sent, custom_data)
 			 VALUES (".$order_no . ",".$order->trans_type.","
 				.db_escape($line->stock_id) . ","
 				.db_escape($line->item_description) . ", "
 				.db_escape($line->price) . ", "
 				.db_escape($line->quantity) . ", "
 				.db_escape($line->discount_percent) . ", "
-				.db_escape($line->qty_done) ." )";
+				.db_escape($line->qty_done) .", '".db_escape_function(isset($line_payloads[$line_index])?$line_payloads[$line_index]:'{}')."' )";
 		else
 			$sql = "UPDATE ".TB_PREF."sales_order_details
 			SET id=".db_escape($line->id).",
@@ -251,7 +279,9 @@ function update_sales_order($order) {
 				qty_sent=".db_escape($line->qty_done)."
 			 WHERE id = ".db_escape($line->id);
 
+		$new_line=empty($line->id);
 		db_query($sql, 'Old order Cannot be updated');
+        if($new_line)$line->id=db_insert_id();
 	}
 
 	if ($order->trans_type == ST_SALESORDER)
@@ -272,6 +302,9 @@ function update_sales_order($order) {
 	commit_transaction();
 	if ($SysPrefs->loc_notification() == 1 && count($st_ids) > 0)
 		send_reorder_email($loc, $st_ids, $st_names, $st_num, $st_reorder);
+
+	return $order_no;
+	},$order);
 }
 
 function get_sales_order_header($order_no, $trans_type) {
@@ -419,11 +452,16 @@ function sales_order_has_deliveries($order_no) {
 	return (db_num_rows($result) > 0);
 }
 
+/** Maintain native counters/status without changing retained classifications. */
 function close_sales_order($order_no) {
+	return sales_order_dimension_command($order_no,ST_SALESORDER,'maintain',function() use ($order_no) {
 	// set the quantity of each item to the already sent quantity. this will mark item as closed.
 	$sql = "UPDATE ".TB_PREF."sales_order_details SET quantity = qty_sent WHERE order_no = ".db_escape($order_no)." AND trans_type=".ST_SALESORDER;
 
 	db_query($sql, 'The sales order detail record could not be updated');
+
+	return true;
+	});
 }
 
 function get_invoice_duedate($terms, $invdate) {
@@ -610,13 +648,17 @@ function get_sql_for_sales_orders_view($trans_type, $trans_no, $filter, $stock_i
 	return $sql;
 }
 
+/** Maintain native counters/status without changing retained classifications. */
 function update_prepaid_so_line($line_id, $qty_invoiced) {
+	return sales_order_dimension_line_command($line_id,function() use ($line_id,$qty_invoiced) {
 	$sql = "UPDATE ".TB_PREF."sales_order_details
 		SET invoiced = invoiced + ".(float)$qty_invoiced."
 		WHERE id=".db_escape($line_id);
 
 	db_query($sql, 'The document detail record could not be updated with invoiced qty');
 	return true;
+
+	});
 }
 
 /*
@@ -644,9 +686,14 @@ function is_sales_order_started($order_no) {
 /*
 * Mark/unmark sales order as template.
 */
+/** Maintain native counters/status without changing retained classifications. */
 function sales_order_set_template($id, $status) {
-	$sql = "UPDATE ".TB_PREF."sales_orders SET type = ".db_escape($status)." WHERE order_no=".db_escape($id);
+	return sales_order_dimension_command($id,ST_SALESORDER,'maintain',function() use ($id,$status) {
+	$sql = "UPDATE ".TB_PREF."sales_orders SET type = ".db_escape($status)." WHERE trans_type=".ST_SALESORDER." AND order_no=".db_escape($id);
 	db_query($sql, "Can't change sales order type");
+
+	return true;
+	});
 }
 
 /*

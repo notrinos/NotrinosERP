@@ -13,6 +13,8 @@
 //
 //	FIXME - this should be revised for transaction update case.
 //
+require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+
 function write_supp_trans($type, $trans_no, $supplier_id, $date_, $due_date, $reference, $supp_reference, $amount, $amount_tax, $discount, $err_msg="", $rate=0, $included=0) {
 	$new = $trans_no==0;
 	$date = date2sql($date_);
@@ -37,7 +39,7 @@ function write_supp_trans($type, $trans_no, $supplier_id, $date_, $due_date, $re
 	if ($err_msg == '')
 		$err_msg = 'Cannot insert a supplier transaction record';
 
-	db_query($sql, $err_msg);
+	dimension_financial_reference_write('supp_trans',null,array(),function($admitted)use($sql,$err_msg,$type,$trans_no,$supplier_id){return db_query($sql,$err_msg)?array('type'=>$type,'trans_no'=>$trans_no,'supplier_id'=>$supplier_id):false;});
 	if ($type != ST_JOURNAL && $type != ST_BANKDEPOSIT && $type != ST_BANKPAYMENT) 
 		add_audit_trail($type, $trans_no, $date_);
 
@@ -146,7 +148,7 @@ function void_supp_trans($type, $type_no) {
 	$sql = "UPDATE ".TB_PREF."supp_trans SET ov_amount=0, ov_discount=0, ov_gst=0,
 		alloc=0 WHERE type=".db_escape($type)." AND trans_no=".db_escape($type_no);
 
-	db_query($sql, 'could not void supp transactions for type='.$type.' and trans_no='.$type_no);
+	return dimension_financial_reference_group('supp_trans',$type,$type_no,function($row)use($sql){return db_query($sql,'could not void supplier transaction');});
 }
 
 //----------------------------------------------------------------------------------------
@@ -154,7 +156,7 @@ function void_supp_trans($type, $type_no) {
 function clear_supp_trans($type, $type_no) {
 	$sql = "DELETE FROM ".TB_PREF."supp_trans WHERE type=".db_escape($type)." AND trans_no=".db_escape($type_no);
 
-	db_query($sql, 'could not clear supp transactions for type='.$type.' and trans_no='.$type_no);
+	return dimension_financial_reference_group('supp_trans',$type,$type_no,function($row)use($sql){return db_query($sql,'could not clear supplier transaction');},true);
 }
 //----------------------------------------------------------------------------------------
 

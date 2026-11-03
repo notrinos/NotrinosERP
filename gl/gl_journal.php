@@ -273,6 +273,7 @@ if (isset($_POST['Process'])) {
 
 if (isset($_POST['Process'])) {
 	$cart = &$_SESSION['journal_items'];
+    try {
 	$new = $cart->order_id == 0;
 
 	$cart->reference = $_POST['ref'];
@@ -280,6 +281,7 @@ if (isset($_POST['Process'])) {
 	$cart->doc_date = $_POST['doc_date'];
 	$cart->event_date = $_POST['event_date'];
 	$cart->source_ref = $_POST['source_ref'];
+    $cart->reconciled_date = isset($_POST['reconciled']) && $_POST['reconciled']==1 ? $_POST['reconciled_date'] : null;
 	if (isset($_POST['memo_']))
 		$cart->memo_ = $_POST['memo_'];
 
@@ -323,12 +325,6 @@ if (isset($_POST['Process'])) {
 
 	$trans_no = write_journal_entries($cart);
 
-	// retain the reconciled status if desired by user
-	if (isset($_POST['reconciled']) && $_POST['reconciled'] == 1) {
-		$sql = "UPDATE ".TB_PREF."bank_trans SET reconciled=".db_escape($_POST['reconciled_date'])." WHERE type=" . ST_JOURNAL . " AND trans_no=".db_escape($trans_no);
-
-		db_query($sql, "Can't change reconciliation status");
-	}
 
 	$cart->clear_items();
 	new_doc_date($_POST['date_']);
@@ -337,6 +333,11 @@ if (isset($_POST['Process'])) {
 		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no);
 	else
 		meta_forward($_SERVER['PHP_SELF'], 'UpdatedID='.$trans_no);
+    }catch(DimensionFinancialReferenceWriteException $exception){
+        cancel_transaction();
+        display_error($exception->getMessage());
+    }
+
 }
 
 //-----------------------------------------------------------------------------------------------

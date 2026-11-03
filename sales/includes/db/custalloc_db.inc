@@ -45,14 +45,21 @@ function update_debtor_trans_allocation($trans_type, $trans_no, $person_id) {
 		WHERE trans.debtor_no=".db_escape($person_id)." AND ".($trans_type==ST_SALESORDER ?
 			   "trans.trans_type=".db_escape($trans_type)." AND order_no=".db_escape($trans_no)
 			:  "trans.type=".db_escape($trans_type)." AND trans_no=".db_escape($trans_no));
-	db_query($sql, 'The debtor transaction record could not be modified for the allocation against it');
+	if (!function_exists('sales_order_dimension_command')) require_once __DIR__.'/sales_order_dimension_db.inc';
+	$persist = function() use ($sql) { return db_query($sql, 'The debtor transaction allocation could not be updated'); };
+	if ($trans_type == ST_SALESORDER)
+		return sales_order_dimension_command($trans_no,$trans_type,'maintain',$persist);
+	return dimension_financial_reference_write('debtor_trans',array('type'=>$trans_type,'trans_no'=>$trans_no,'debtor_no'=>$person_id),array(),$persist);
 }
 
 function void_cust_allocations($type, $type_no, $date='') {
 	return clear_cust_alloctions($type, $type_no, null, $date);
 }
 
+/** Clear allocations atomically while retaining every native target classification. */
 function clear_cust_alloctions($type, $type_no, $person_id=null) {
+	if (!function_exists('sales_order_dimension_command')) require_once __DIR__.'/sales_order_dimension_db.inc';
+	return sales_order_dimension_allocation_clear($type,$type_no,$person_id,function() use ($type,$type_no,$person_id) {
 	$sql = "UPDATE  ".TB_PREF."cust_allocations ca
 				LEFT JOIN ".TB_PREF."debtor_trans paym ON ca.trans_type_from=paym.type AND ca.trans_no_from=paym.trans_no AND ca.person_id=paym.debtor_no
 				LEFT JOIN ".TB_PREF."debtor_trans dt ON ca.trans_type_to=dt.type AND ca.trans_no_to=dt.trans_no AND ca.person_id=dt.debtor_no
@@ -74,6 +81,9 @@ function clear_cust_alloctions($type, $type_no, $person_id=null) {
 		$sql .= " AND person_id=".db_escape($person_id);
 
 	db_query($sql, "could not void debtor transactions for type=$type and trans_no=$type_no");
+
+	return true;
+	});
 }
 
 function get_allocatable_from_cust_sql($customer_id, $settled) {

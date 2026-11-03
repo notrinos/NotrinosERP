@@ -34,6 +34,7 @@ class items_cart {
 	var $currency;
 	var $rate;
 	var $source_ref;
+	var $reconciled_date = null; // Existing journal bank reconciliation, owned by the posting transaction.
 	var $vat_category;
 
 	var $tax_info;  // tax info for the GL transaction

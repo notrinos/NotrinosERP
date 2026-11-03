@@ -880,8 +880,15 @@ function months_list_cells($label, $name, $selected_id=null, $submit_on_change=f
 
 //------------------------------------------------------------------------------------
 
-function dimensions_list($name, $selected_id=null, $no_option=false, $showname=' ', $submit_on_change=false, $showclosed=false, $showtype=1) {
+function dimensions_list($name, $selected_id=null, $no_option=false, $showname=' ', $submit_on_change=false, $showclosed=false, $showtype=1, $retained_id=0) {
 	$sql = "SELECT id, CONCAT(reference,'  ',name) as ref FROM ".TB_PREF."dimensions";
+	// A source owner may expose its persisted coordinate without replacing a
+	// closed/orphan value with the blank option. This grants no write authority.
+	$retained_id = is_numeric($retained_id) && (int)$retained_id > 0 ? (int)$retained_id : 0;
+	if ($retained_id) {
+		$sql = "SELECT id, CONCAT(reference,'  ',name) as ref FROM (SELECT id,reference,name,type_,closed FROM ".TB_PREF."dimensions"
+			." UNION ALL SELECT ".$retained_id.",'',".db_escape(_('Retained Dimension').' #'.$retained_id).",0,1 WHERE NOT EXISTS (SELECT 1 FROM ".TB_PREF."dimensions WHERE id=".$retained_id.")) retained_dimensions WHERE 1=1";
+	}
 
 	$options = array(
 		'order' => 'reference',
@@ -892,30 +899,30 @@ function dimensions_list($name, $selected_id=null, $no_option=false, $showname='
 	);
 
 	if (!$showclosed)
-		$options['where'][] = "closed=0";
+		$options['where'][] = "(closed=0".($retained_id ? ' OR id='.$retained_id : '').")";
 	if($showtype)
-		$options['where'][] = "type_=".db_escape($showtype);
+		$options['where'][] = "(type_=".db_escape($showtype).($retained_id ? ' OR id='.$retained_id : '').")";
 
 	return combo_input($name, $selected_id, $sql, 'id', 'ref', $options);
 }
 
-function dimensions_list_cells($label, $name, $selected_id=null, $no_option=false, $showname=null, $showclosed=false, $showtype=0, $submit_on_change=false) {
+function dimensions_list_cells($label, $name, $selected_id=null, $no_option=false, $showname=null, $showclosed=false, $showtype=0, $submit_on_change=false, $retained_id=0) {
 	filter_cell_open($label);
-	echo dimensions_list($name, $selected_id, $no_option, $showname, $submit_on_change, $showclosed, $showtype);
+	echo dimensions_list($name, $selected_id, $no_option, $showname, $submit_on_change, $showclosed, $showtype, $retained_id);
 	filter_cell_close();
 }
 
-function dimensions_list_row($label, $name, $selected_id=null, $no_option=false, $showname=null, $showclosed=false, $showtype=0, $submit_on_change=false) {
+function dimensions_list_row($label, $name, $selected_id=null, $no_option=false, $showname=null, $showclosed=false, $showtype=0, $submit_on_change=false, $retained_id=0) {
 	if (ui_current_table_mode() != 'table') {
 		echo "<div class='form-group'>";
 		echo "<label class='form-label'>".$label."</label>";
 		echo "<div class='form-control-wrap'>";
-		echo dimensions_list($name, $selected_id, $no_option, $showname, $submit_on_change, $showclosed, $showtype);
+		echo dimensions_list($name, $selected_id, $no_option, $showname, $submit_on_change, $showclosed, $showtype, $retained_id);
 		echo "</div></div>\n";
 		return;
 	}
 	echo "<tr><td class='label'>".$label."</td>";
-	dimensions_list_cells(null, $name, $selected_id, $no_option, $showname, $showclosed, $showtype, $submit_on_change);
+	dimensions_list_cells(null, $name, $selected_id, $no_option, $showname, $showclosed, $showtype, $submit_on_change, $retained_id);
 	echo "</tr>\n";
 }
 

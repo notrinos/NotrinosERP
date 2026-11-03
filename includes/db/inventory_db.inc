@@ -372,6 +372,8 @@ function handle_negative_inventory($stock_id, $quantity, $standard_cost, $date_)
 // $std_cost - in HOME currency
 // $price - in transaction currency
 
+require_once __DIR__.'/../../dimensions/includes/dimension_financial_reference_writer.inc';
+
 function add_stock_move($type, $stock_id, $trans_no, $location, $date_, $reference, $quantity, $std_cost, $price=0) {
 
 	$sql = "INSERT INTO ".TB_PREF."stock_moves (stock_id, trans_no, type, loc_code,
@@ -381,9 +383,9 @@ function add_stock_move($type, $stock_id, $trans_no, $location, $date_, $referen
 		.db_escape($reference).", "
 		.db_escape($quantity).", ".db_escape($std_cost)."," .db_escape($price).")";
 
-	db_query($sql, 'The stock movement record cannot be inserted');
-
-	return db_insert_id();
+    return dimension_financial_reference_write('stock_moves',null,array(),function($admitted)use($sql){
+        return db_query($sql,'The stock movement record cannot be inserted')?db_insert_id():false;
+    });
 }
 
 /**
@@ -448,17 +450,15 @@ function add_stock_move_extended($type, $stock_id, $trans_no, $location, $date_,
 	}
 
 	$sql = "INSERT INTO " . TB_PREF . "stock_moves ($columns) VALUES ($values)";
-	db_query($sql, 'The extended stock movement record cannot be inserted');
-
-	return db_insert_id();
+    return dimension_financial_reference_write('stock_moves',null,array(),function($admitted)use($sql){
+        return db_query($sql,'The extended stock movement record cannot be inserted')?db_insert_id():false;
+    });
 }
 
 function update_stock_move($type, $trans_no, $stock_id, $cost) {
-	$sql = "UPDATE ".TB_PREF."stock_moves SET standard_cost=".db_escape($cost)
-		." WHERE type=".db_escape($type)
-		."	AND trans_no=".db_escape($trans_no)
-		."	AND stock_id=".db_escape($stock_id);
-	db_query($sql, 'The stock movement standard_cost cannot be updated');
+    return dimension_financial_reference_group('stock_moves',$type,$trans_no,function($row)use($stock_id,$cost){
+        return db_query('UPDATE '.TB_PREF.'stock_moves SET standard_cost='.db_escape($cost).' WHERE trans_id='.(int)$row['trans_id'].' AND stock_id='.db_escape($stock_id),'The stock movement standard_cost cannot be updated');
+    });
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -515,7 +515,17 @@ function check_negative_stock_on_void($type, $type_no, $date) {
 
 //--------------------------------------------------------------------------------------------------
 
+/** Preserve WMS receipts and retained native metadata even through direct location-void callers. */
 function void_stock_move($type, $type_no) {
+	$guarded = (int)$type === ST_LOCTRANSFER;
+	try {
+	if ($guarded) {
+		require_once __DIR__.'/../../inventory/warehouse/includes/db/warehouse_transfer_stock_void_db.inc';
+		if (!begin_transaction()) return false;
+		if (!warehouse_transfer_stock_void_allowed($type_no)) { cancel_transaction(); return false; }
+	}
+
+    $result=dimension_financial_reference_group('stock_moves',$type,$type_no,function($row){return true;},true,function()use($type,$type_no){
 	$sql = "SELECT move.*, supplier.supplier_id
 		FROM ".TB_PREF."stock_moves move
 		LEFT JOIN ".TB_PREF."supp_trans credit ON credit.trans_no=move.trans_no AND credit.type=move.type
@@ -526,7 +536,7 @@ function void_stock_move($type, $type_no) {
 	$result = db_query($sql, 'Could not void stock moves');
 	while ($row = db_fetch($result)) {
 		//Skip cost averaging of service items and if it is a location move
-		if (is_inventory_item($row['stock_id']) && $type != ST_LOCTRANSFER) {
+		if ($type != ST_LOCTRANSFER && is_inventory_item($row['stock_id'])) {
 			// The cost has to be adjusted.
 			// Transaction rates are stored either as price or standard_cost depending on types
 			$types = array(ST_SUPPCREDIT, ST_SUPPRECEIVE);
@@ -541,7 +551,20 @@ function void_stock_move($type, $type_no) {
 	$sql = "DELETE FROM ".TB_PREF."stock_moves
 			WHERE type=".db_escape($type)
 			."	AND trans_no=".db_escape($type_no);
-	db_query($sql, 'The stock movement cannot be delated');
+    return db_query($sql,'The stock movement cannot be deleted')!==false;
+    });
+	if ($guarded) {
+		if (!$result || !commit_transaction()) { cancel_transaction(); return false; }
+		return true;
+	}
+    return $result;
+	} catch (Exception $exception) {
+		if ($guarded) { cancel_transaction(); return false; }
+		throw $exception;
+	} catch (Throwable $exception) {
+		if ($guarded) { cancel_transaction(); return false; }
+		throw $exception;
+	}
 }
 
 //--------------------------------------------------------------------------------------------------

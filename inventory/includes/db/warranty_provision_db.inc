@@ -32,6 +32,8 @@
  * @subpackage Inventory/WarrantyGL
  */
 
+require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+
 /**
  * Check if warranty provision posting is enabled and configured.
  *
@@ -141,27 +143,9 @@ function post_warranty_provision_accrual($trans_type, $trans_no, $date_, $stock_
 	if ($provision_amount <= 0)
 		return false;
 
-	// Post GL entries
-	// DR: Warranty Expense
-	add_gl_trans_std_cost($trans_type, $trans_no, $date_,
-		$config['expense_account'], $dimension, $dimension2,
-		_('Warranty provision accrual'),
-		$provision_amount,
-		PT_CUSTOMER, $customer_id);
-
-	// CR: Warranty Provision (liability)
-	add_gl_trans_std_cost($trans_type, $trans_no, $date_,
-		$config['provision_account'], $dimension, $dimension2,
-		_('Warranty provision accrual'),
-		-$provision_amount,
-		PT_CUSTOMER, $customer_id);
-
-	// Log the provision
-	add_warranty_provision_log($trans_type, $trans_no, $stock_id, $serial_id, $batch_id,
-		$customer_id, 'accrual', $provision_amount,
-		$warranty_end ? date2sql($warranty_end) : null, $date_);
-
-	return true;
+	return post_warranty_provision_effect($trans_type, $trans_no, $date_, $stock_id,
+        $customer_id, 'accrual', $provision_amount, $serial_id, $batch_id,
+        $warranty_end ? date2sql($warranty_end) : null, '', $dimension, $dimension2);
 }
 
 /**
@@ -184,32 +168,8 @@ function release_warranty_provision($trans_type, $trans_no, $date_, $stock_id,
 	$customer_id, $amount, $serial_id = null, $batch_id = null,
 	$notes = '', $dimension = 0, $dimension2 = 0)
 {
-	$config = get_warranty_provision_config();
-
-	if (!$config['enabled'] || $config['provision_account'] == '' || $config['expense_account'] == '')
-		return false;
-
-	if ($amount <= 0)
-		return false;
-
-	// DR: Warranty Provision (reduce liability)
-	add_gl_trans_std_cost($trans_type, $trans_no, $date_,
-		$config['provision_account'], $dimension, $dimension2,
-		_('Warranty provision release') . ($notes ? ': ' . $notes : ''),
-		$amount,
-		PT_CUSTOMER, $customer_id);
-
-	// CR: Warranty Expense (reduce expense)
-	add_gl_trans_std_cost($trans_type, $trans_no, $date_,
-		$config['expense_account'], $dimension, $dimension2,
-		_('Warranty provision release') . ($notes ? ': ' . $notes : ''),
-		-$amount,
-		PT_CUSTOMER, $customer_id);
-
-	add_warranty_provision_log($trans_type, $trans_no, $stock_id, $serial_id, $batch_id,
-		$customer_id, 'release', $amount, null, $date_, $notes);
-
-	return true;
+    return post_warranty_provision_effect($trans_type, $trans_no, $date_, $stock_id,
+        $customer_id, 'release', $amount, $serial_id, $batch_id, null, $notes, $dimension, $dimension2);
 }
 
 /**
@@ -226,30 +186,125 @@ function release_warranty_provision($trans_type, $trans_no, $date_, $stock_id,
  * @param string $warranty_end   SQL date (nullable)
  * @param string $tran_date      Display date
  * @param string $notes          Optional notes
- * @return int Inserted log id
+ * @param int $dimension As-posted first axis
+ * @param int $dimension2 As-posted second axis
+ * @param int|null $gl_trans_id Actual debit counter; null only for a retained legacy inverse
+ * @param int|null $source_accrual Original log id for history-only delivery reversal
+ * @return int|bool Inserted log id, true for an existing inverse, or false
  */
 function add_warranty_provision_log($trans_type, $trans_no, $stock_id, $serial_id,
-	$batch_id, $customer_id, $provision_type, $amount, $warranty_end, $tran_date, $notes = '')
+    $batch_id, $customer_id, $provision_type, $amount, $warranty_end, $tran_date, $notes = '',
+    $dimension = 0, $dimension2 = 0, $gl_trans_id = null, $source_accrual = null)
 {
-	$sql = "INSERT INTO " . TB_PREF . "warranty_provision_log (
-		trans_type, trans_no, stock_id, serial_id, batch_id, customer_id,
-		provision_type, amount, warranty_end, tran_date, notes, created_by
-	) VALUES ("
-		. (int)$trans_type . ","
-		. (int)$trans_no . ","
-		. db_escape($stock_id) . ","
-		. ($serial_id ? (int)$serial_id : 'NULL') . ","
-		. ($batch_id ? (int)$batch_id : 'NULL') . ","
-		. (int)$customer_id . ","
-		. db_escape($provision_type) . ","
-		. db_escape($amount) . ","
-		. ($warranty_end ? "'" . db_escape($warranty_end) . "'" : 'NULL') . ","
-		. "'" . date2sql($tran_date) . "',"
-		. db_escape($notes) . ","
-		. (int)$_SESSION['wa_current_user']->user
-		. ")";
-	db_query($sql, 'could not add warranty provision log');
-	return db_insert_id();
+    $coordinates = array('dimension_id'=>$dimension, 'dimension2_id'=>$dimension2);
+    if (!is_string($stock_id) || !is_string($notes)) return false;
+    $encoding = $_SESSION['language']->encoding === 'iso-8859-2' ? 'ISO-8859-1' : $_SESSION['language']->encoding;
+    $stock_id = html_specials_encode(html_entity_decode($stock_id, ENT_QUOTES, $encoding));
+    $notes = html_specials_encode(html_entity_decode($notes, ENT_QUOTES, $encoding));
+    return dimension_ordinary_master_write('warranty_provision_log', $source_accrual, $coordinates,
+        function($admitted) use ($trans_type, $trans_no, $stock_id, $serial_id, $batch_id,
+            $customer_id, $provision_type, $amount, $warranty_end, $tran_date, $notes, $gl_trans_id, $source_accrual) {
+            if (!in_array($provision_type, array('accrual','release'), true) || !is_numeric($amount)
+                || !is_finite((float)$amount) || $amount <= 0) return false;
+            $gl = null;
+            if ($gl_trans_id !== null && $gl_trans_id !== '') {
+                if (!dimension_writer_reference_id($gl_trans_id)) return false;
+                $rows = db_query('SELECT * FROM '.TB_PREF.'gl_trans WHERE counter='.(int)$gl_trans_id.' FOR UPDATE');
+                $gl = $rows ? db_fetch($rows) : false;
+                if (!$gl) return false;
+            } elseif ($source_accrual === null) return false;
+            if ($gl && ((int)$gl['type'] !== (int)$trans_type || (int)$gl['type_no'] !== (int)$trans_no
+                || $gl['tran_date'] !== date2sql($tran_date)
+                || (int)$gl['dimension_id'] !== $admitted['dimension_id']
+                || (int)$gl['dimension2_id'] !== $admitted['dimension2_id'])) return false;
+            if ($source_accrual !== null) {
+                // This is a history-only release of an already-zeroed delivery
+                // posting. Reuse the retained coordinates, even closed/orphaned.
+                $rows = db_query('SELECT * FROM '.TB_PREF.'warranty_provision_log WHERE id='.(int)$source_accrual.' FOR UPDATE');
+                $source = $rows ? db_fetch($rows) : false;
+                if (!$source || $source['provision_type'] !== 'accrual' || $provision_type !== 'release'
+                    || (int)$trans_type !== ST_CUSTDELIVERY || ($gl && (float)$gl['amount'] != 0)
+                    || (int)$source['trans_type'] !== (int)$trans_type || (int)$source['trans_no'] !== (int)$trans_no
+                    || (int)$source['gl_trans_id'] !== (int)$gl_trans_id || (float)$source['amount'] !== (float)$amount
+                    || $source['stock_id'] !== $stock_id || (int)$source['customer_id'] !== (int)$customer_id
+                    || (int)$source['dimension_id'] !== $admitted['dimension_id']
+                    || (int)$source['dimension2_id'] !== $admitted['dimension2_id']
+                    || $source['serial_id'] != $serial_id || $source['batch_id'] != $batch_id
+                    || $source['warranty_end'] !== $warranty_end || $source['tran_date'] !== date2sql($tran_date)
+                    || $notes !== 'Delivery GL void: accrual '.(int)$source_accrual) return false;
+                $rows = db_query('SELECT trans_no FROM '.TB_PREF.'debtor_trans WHERE type='.(int)$trans_type.' AND trans_no='.(int)$trans_no.' FOR UPDATE');
+                if (!$rows || !db_fetch($rows)) return false;
+                $rows = db_query('SELECT counter FROM '.TB_PREF.'gl_trans WHERE type='.(int)$trans_type.' AND type_no='.(int)$trans_no.' AND amount<>0 FOR UPDATE');
+                if (!$rows || db_fetch($rows)) return false;
+                // An older unlinked journal release cannot establish which
+                // delivery effect it reversed. Preserve it for reconciliation.
+                if (!$gl) {
+                    $rows = db_query('SELECT id FROM '.TB_PREF.'warranty_provision_log WHERE trans_type='.ST_JOURNAL.' AND trans_no='.(int)$trans_no
+                        ." AND provision_type='release' AND stock_id=".db_escape($stock_id).' AND customer_id='.(int)$customer_id.' FOR UPDATE');
+                    if (!$rows || db_fetch($rows)) return false;
+                }
+                $rows = db_query('SELECT id FROM '.TB_PREF.'warranty_provision_log WHERE trans_type='.(int)$trans_type
+                    .' AND trans_no='.(int)$trans_no.' AND provision_type=\'release\' AND notes='.db_escape($notes).' FOR UPDATE');
+                if (!$rows) return false;
+                if (db_fetch($rows)) return true; // Same original effect is released once.
+            } elseif ((float)$gl['amount'] !== (float)$amount) return false;
+            $rows = db_query('SELECT id FROM '.TB_PREF.'warranty_provision_log WHERE gl_trans_id='.(int)$gl_trans_id.' AND provision_type='.db_escape($provision_type).' FOR UPDATE');
+            if (!$rows || db_fetch($rows)) return false;
+            $sql = 'INSERT INTO '.TB_PREF.'warranty_provision_log (trans_type,trans_no,stock_id,serial_id,batch_id,customer_id,'
+                .'provision_type,amount,warranty_end,tran_date,notes,created_by,dimension_id,dimension2_id,gl_trans_id) VALUES ('
+                .(int)$trans_type.','.(int)$trans_no.','.db_escape($stock_id).','
+                .($serial_id ? (int)$serial_id : 'NULL').','.($batch_id ? (int)$batch_id : 'NULL').','.(int)$customer_id.','
+                .db_escape($provision_type).','.db_escape($amount).','.($warranty_end ? db_escape($warranty_end) : 'NULL').','
+                .db_escape(date2sql($tran_date)).','.db_escape($notes).','.(int)$_SESSION['wa_current_user']->user.','
+                .$admitted['dimension_id'].','.$admitted['dimension2_id'].','.($gl_trans_id ? (int)$gl_trans_id : 'NULL').')';
+            if (!db_query($sql)) return false;
+            $id = db_insert_id();
+            $rows = db_query('SELECT * FROM '.TB_PREF.'warranty_provision_log WHERE id='.(int)$id.' FOR UPDATE');
+            $after = $rows ? db_fetch($rows) : false;
+            if (!$after || (int)$after['dimension_id'] !== $admitted['dimension_id']
+                || (int)$after['dimension2_id'] !== $admitted['dimension2_id'] || (int)$after['gl_trans_id'] !== (int)$gl_trans_id
+                || (int)$after['trans_type'] !== (int)$trans_type || (int)$after['trans_no'] !== (int)$trans_no
+                || $after['stock_id'] !== $stock_id || $after['serial_id'] != $serial_id || $after['batch_id'] != $batch_id
+                || (int)$after['customer_id'] !== (int)$customer_id || $after['provision_type'] !== $provision_type
+                || (float)$after['amount'] !== (float)$amount || $after['warranty_end'] !== $warranty_end
+                || $after['tran_date'] !== date2sql($tran_date) || $after['notes'] !== $notes
+                || (int)$after['created_by'] !== (int)$_SESSION['wa_current_user']->user) return false;
+            return db_preserve_insert_id($id) ? $id : false;
+        });
+}
+
+/** Post the paired GL and its immutable reference log under the same master locks. */
+function post_warranty_provision_effect($type, $number, $date, $stock, $customer, $kind,
+    $amount, $serial, $batch, $end, $notes, $dimension, $dimension2)
+{
+    $config = get_warranty_provision_config();
+    if (!$config['enabled'] || !$config['expense_account'] || !$config['provision_account']
+        || $config['expense_account'] === $config['provision_account']
+        || !is_numeric($amount) || !is_finite((float)$amount) || $amount <= 0
+        || !is_date($date) || !is_date_in_fiscalyear($date)) return false;
+    $amount = round2($amount, user_price_dec());
+    if ($amount <= 0) return false;
+    return dimension_ordinary_master_write('warranty_provision_log', null,
+        array('dimension_id'=>$dimension,'dimension2_id'=>$dimension2),
+        function($admitted) use ($config,$type,$number,$date,$stock,$customer,$kind,$amount,$serial,$batch,$end,$notes) {
+            $debit = $kind === 'accrual' ? $config['expense_account'] : $config['provision_account'];
+            $credit = $kind === 'accrual' ? $config['provision_account'] : $config['expense_account'];
+            foreach (array($debit=>$amount, $credit=>-$amount) as $account=>$value) {
+                $rows = db_query('SELECT account_code FROM '.TB_PREF.'chart_master WHERE account_code='.db_escape($account).' AND inactive=0 FOR UPDATE');
+                if (!$rows || !db_fetch($rows)) return false;
+                if (add_gl_trans_std_cost($type,$number,$date,$account,$admitted['dimension_id'],$admitted['dimension2_id'],
+                    $kind === 'accrual' ? _('Warranty provision accrual') : _('Warranty provision release'),$value,PT_CUSTOMER,$customer,null) === false) return false;
+                $counter = db_insert_id();
+                $rows = db_query('SELECT * FROM '.TB_PREF.'gl_trans WHERE counter='.(int)$counter.' FOR UPDATE');
+                $gl = $rows ? db_fetch($rows) : false;
+                if (!$gl || (int)$gl['type'] !== (int)$type || (int)$gl['type_no'] !== (int)$number
+                    || $gl['account'] !== (string)$account || (float)$gl['amount'] !== (float)$value
+                    || (int)$gl['dimension_id'] !== $admitted['dimension_id'] || (int)$gl['dimension2_id'] !== $admitted['dimension2_id']) return false;
+                if ($value > 0) $debit_id = $counter;
+            }
+            return add_warranty_provision_log($type,$number,$stock,$serial,$batch,$customer,$kind,$amount,$end,$date,$notes,
+                $admitted['dimension_id'],$admitted['dimension2_id'],$debit_id) !== false;
+        });
 }
 
 /**
@@ -351,17 +406,32 @@ function process_delivery_warranty_provisions($delivery, $delivery_no, $date_)
 	$config = get_warranty_provision_config();
 	if (!$config['enabled'])
 		return 0;
+    if (!begin_transaction()) return false;
+    $rows = db_query('SELECT * FROM '.TB_PREF.'debtor_trans WHERE type='.ST_CUSTDELIVERY.' AND trans_no='.(int)$delivery_no.' FOR UPDATE');
+     $header = $rows ? db_fetch($rows) : false;
+    if (!$header) { cancel_transaction(); return false; }
+    $date_ = sql2date($header['tran_date']);
+    $rows = db_query('SELECT * FROM '.TB_PREF.'debtors_master WHERE debtor_no='.(int)$header['debtor_no'].' FOR UPDATE');
+    $customer = $rows ? db_fetch($rows) : false;
+    if (!$customer) { cancel_transaction(); return false; }
+    $rows = db_query('SELECT * FROM '.TB_PREF.'debtor_trans_details WHERE debtor_trans_type='.ST_CUSTDELIVERY.' AND debtor_trans_no='.(int)$delivery_no.' ORDER BY id FOR UPDATE');
+    if (!$rows) { cancel_transaction(); return false; }
+    $details = array(); while ($detail = db_fetch($rows)) $details[] = $detail;
+    $rows = db_query('SELECT w.id FROM '.TB_PREF.'warranty_provision_log w JOIN '.TB_PREF.'gl_trans g ON g.counter=w.gl_trans_id WHERE w.trans_type='.ST_CUSTDELIVERY.' AND w.trans_no='.(int)$delivery_no." AND w.provision_type='accrual' AND g.amount<>0 FOR UPDATE");
+    if (!$rows) { cancel_transaction(); return false; }
+    if (db_fetch($rows)) { commit_transaction(); return 0; }
 
 	$count = 0;
-	$customer_id = $delivery->customer_id;
+	$customer_id = $header['debtor_no'];
 
-	foreach ($delivery->line_items as $line_no => $delivery_line) {
+	foreach ($details as $detail) {
+        $delivery_line = (object)array('stock_id'=>$detail['stock_id'],'qty_dispatched'=>$detail['quantity'],'standard_cost'=>$detail['standard_cost']);
 		if ($delivery_line->qty_dispatched <= 0)
 			continue;
 
 		// Check if item has warranty
 		$sql = "SELECT warranty_days, track_by FROM " . TB_PREF . "stock_master
-			WHERE stock_id=" . db_escape($delivery_line->stock_id);
+			WHERE stock_id=" . db_escape($delivery_line->stock_id).' FOR UPDATE';
 		$result = db_query($sql, 'could not check item warranty');
 		$item = db_fetch($result);
 
@@ -372,13 +442,13 @@ function process_delivery_warranty_provisions($delivery, $delivery_no, $date_)
 		$warranty_end = add_days($date_, $item['warranty_days']);
 
 		// Get dimensions
-		$customer = debtors_master_entity::find($delivery->customer_id);
 		$stock_gl_code = get_stock_gl_code($delivery_line->stock_id);
-		$dim = ($delivery->dimension_id != $customer['dimension_id'] ? $delivery->dimension_id :
+		$dim = ($header['dimension_id'] != $customer['dimension_id'] ? $header['dimension_id'] :
 			($customer['dimension_id'] != 0 ? $customer['dimension_id'] : $stock_gl_code['dimension_id']));
-		$dim2 = ($delivery->dimension2_id != $customer['dimension2_id'] ? $delivery->dimension2_id :
+		$dim2 = ($header['dimension2_id'] != $customer['dimension2_id'] ? $header['dimension2_id'] :
 			($customer['dimension2_id'] != 0 ? $customer['dimension2_id'] : $stock_gl_code['dimension2_id']));
 
+        if (calculate_warranty_provision_amount($delivery_line->stock_id, $delivery_line->qty_dispatched, $delivery_line->standard_cost) <= 0) continue;
 		if (post_warranty_provision_accrual(
 			ST_CUSTDELIVERY, $delivery_no, $date_,
 			$delivery_line->stock_id, $delivery_line->qty_dispatched,
@@ -386,17 +456,18 @@ function process_delivery_warranty_provisions($delivery, $delivery_no, $date_)
 			null, null, $warranty_end, $dim, $dim2
 		)) {
 			$count++;
-		}
+		} else { cancel_transaction(); return false; }
 	}
 
+	if (!commit_transaction()) { cancel_transaction(); return false; }
 	return $count;
 }
 
 /**
  * Reverse warranty provision accruals when a delivery is voided.
  *
- * Posts offsetting GL entries (release) for all warranty provisions
- * that were accrued against the specified delivery transaction.
+ * Append release history after the native owner has zeroed delivery GL.
+ * Retain original accruals and their classification; never post another journal.
  *
  * @param int $trans_type Transaction type (ST_CUSTDELIVERY)
  * @param int $trans_no   Transaction number (delivery_no)
@@ -404,50 +475,32 @@ function process_delivery_warranty_provisions($delivery, $delivery_no, $date_)
  */
 function reverse_delivery_warranty_provisions($trans_type, $trans_no)
 {
-	$config = get_warranty_provision_config();
-	if (!$config['enabled'])
-		return 0;
-
-	// Find all accrual log entries for this delivery
-	$sql = "SELECT * FROM " . TB_PREF . "warranty_provision_log
-		WHERE trans_type = " . (int)$trans_type
-		. " AND trans_no = " . (int)$trans_no
-		. " AND provision_type = 'accrual'";
-	$result = db_query($sql, 'could not find warranty provisions for void');
-
-	$count = 0;
-	while ($entry = db_fetch($result)) {
-		if ($entry['amount'] <= 0)
-			continue;
-
-		$date_ = sql2date($entry['tran_date']);
-
-		// Post reverse GL entries: DR provision (reduce), CR expense (reduce)
-		add_gl_trans_std_cost(ST_JOURNAL, $trans_no, $date_,
-			$config['provision_account'],
-			isset($entry['dimension_id']) ? (int)$entry['dimension_id'] : 0,
-			isset($entry['dimension2_id']) ? (int)$entry['dimension2_id'] : 0,
-			_('Warranty provision reversal — delivery voided'),
-			$entry['amount'],
-			PT_CUSTOMER, $entry['customer_id']);
-
-		add_gl_trans_std_cost(ST_JOURNAL, $trans_no, $date_,
-			$config['expense_account'],
-			isset($entry['dimension_id']) ? (int)$entry['dimension_id'] : 0,
-			isset($entry['dimension2_id']) ? (int)$entry['dimension2_id'] : 0,
-			_('Warranty provision reversal — delivery voided'),
-			-$entry['amount'],
-			PT_CUSTOMER, $entry['customer_id']);
-
-		// Log the reversal
-		add_warranty_provision_log(ST_JOURNAL, $trans_no,
-			$entry['stock_id'], $entry['serial_id'], $entry['batch_id'],
-			$entry['customer_id'], 'release', $entry['amount'],
-			$entry['warranty_end'], $date_,
-			_('Automatic reversal: delivery voided'));
-
-		$count++;
-	}
-
-	return $count;
+    if ((int)$trans_type !== ST_CUSTDELIVERY || !begin_transaction()) return false;
+    $rows = db_query('SELECT trans_no FROM '.TB_PREF.'debtor_trans WHERE type='.(int)$trans_type.' AND trans_no='.(int)$trans_no.' FOR UPDATE');
+    if (!$rows || !db_fetch($rows)) { cancel_transaction(); return false; }
+    // The native delivery owns these GL effects. Its edit/void zeroes them
+    // before this call. Never manufacture a second ST_JOURNAL reversal.
+    $rows = db_query('SELECT counter FROM '.TB_PREF.'gl_trans WHERE type='.(int)$trans_type.' AND type_no='.(int)$trans_no.' AND amount<>0 FOR UPDATE');
+    if (!$rows || db_fetch($rows)) { cancel_transaction(); return false; }
+    $rows = db_query('SELECT * FROM '.TB_PREF.'warranty_provision_log WHERE trans_type='.(int)$trans_type.' AND trans_no='.(int)$trans_no." AND provision_type='accrual' ORDER BY id FOR UPDATE");
+    if (!$rows) { cancel_transaction(); return false; }
+    $entries = array();
+    while ($entry = db_fetch($rows)) $entries[] = $entry;
+    $count = 0;
+    foreach ($entries as $entry) {
+        $notes = 'Delivery GL void: accrual '.(int)$entry['id'];
+        $rows = db_query('SELECT id FROM '.TB_PREF.'warranty_provision_log WHERE trans_type='.(int)$trans_type.' AND trans_no='.(int)$trans_no." AND provision_type='release' AND notes=".db_escape($notes).' FOR UPDATE');
+        if (!$rows) { cancel_transaction(); return false; }
+        if (db_fetch($rows)) continue;
+        // A legacy log retains its original unknown coordinates/link. The
+        // current delivery owner proves that all its GL has been zeroed.
+        if (!add_warranty_provision_log($trans_type,$trans_no,$entry['stock_id'],
+            $entry['serial_id'],$entry['batch_id'],$entry['customer_id'],'release',$entry['amount'],$entry['warranty_end'],
+            sql2date($entry['tran_date']),$notes,$entry['dimension_id'],$entry['dimension2_id'],$entry['gl_trans_id'],$entry['id'])) {
+            cancel_transaction(); return false;
+        }
+        $count++;
+    }
+    if (!commit_transaction()) { cancel_transaction(); return false; }
+    return $count;
 }

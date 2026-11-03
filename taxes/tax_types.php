@@ -49,28 +49,28 @@ function can_process() {
 
 if ($Mode=='ADD_ITEM' && can_process()) {
 
-	tax_types_entity::create(array(
+	$saved=tax_types_entity::create(array(
 		'name'             => $_POST['name'],
 		'sales_gl_code'    => $_POST['sales_gl_code'],
 		'purchasing_gl_code' => $_POST['purchasing_gl_code'],
 		'rate'             => input_num('rate', 0)
 	));
-	display_notification(_('New tax type has been added'));
-	$Mode = 'RESET';
+	if($saved!==false){display_notification(_('New tax type has been added'));$Mode='RESET';}
+    else display_error(_('Cannot save this tax type because its retained classification could not be verified.'));
 }
 
 //-----------------------------------------------------------------------------------
 
 if ($Mode=='UPDATE_ITEM' && can_process()) {
 
-	tax_types_entity::modify($selected_id, array(
+	$saved=tax_types_entity::modify($selected_id, array(
 		'name'             => $_POST['name'],
 		'sales_gl_code'    => $_POST['sales_gl_code'],
 		'purchasing_gl_code' => $_POST['purchasing_gl_code'],
 		'rate'             => input_num('rate')
 	));
-	display_notification(_('Selected tax type has been updated'));
-	$Mode = 'RESET';
+	if($saved!==false){display_notification(_('Selected tax type has been updated'));$Mode='RESET';}
+    else display_error(_('Cannot update this tax type because its retained classification could not be verified.'));
 }
 
 //-----------------------------------------------------------------------------------
@@ -91,10 +91,9 @@ function can_delete($selected_id) {
 if ($Mode == 'Delete') {
 
 	if (can_delete($selected_id)) {
-		tax_types_entity::remove($selected_id);
-		display_notification(_('Selected tax type has been deleted'));
+		if(tax_types_entity::remove($selected_id)){display_notification(_('Selected tax type has been deleted'));$Mode='RESET';}
+        else display_error(_('Cannot delete this tax type because retained classification history must be preserved.'));
 	}
-	$Mode = 'RESET';
 }
 
 if ($Mode == 'RESET') {

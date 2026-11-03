@@ -104,7 +104,7 @@ function update_kit($selected_kit, $component_id) {
 		else
 			$msg =_('New component has been added to selected kit.');
 
-		item_codes_entity::create(array(
+		$saved=item_codes_entity::create(array(
 			'item_code' => $selected_kit,
 			'stock_id' => get_post('component'),
 			'description' => get_post('description'),
@@ -112,14 +112,15 @@ function update_kit($selected_kit, $component_id) {
 			'quantity' => input_num('quantity'),
 			'is_foreign' => 0
 		));
-		display_notification($msg);
+		if($saved)display_notification($msg);
 
 	}
 	else { // update component
 		$props = get_kit_props($selected_kit);
-		item_codes_entity::update_item_code($component_id, $selected_kit, get_post('component'), $props['description'], $props['category_id'], input_num('quantity'), 0);
-		display_notification(_('Component of selected kit has been updated.'));
+		$saved=item_codes_entity::update_item_code($component_id, $selected_kit, get_post('component'), $props['description'], $props['category_id'], input_num('quantity'), 0);
+		if($saved)display_notification(_('Component of selected kit has been updated.'));
 	}
+	if(!$saved){display_error(_('Cannot save this kit component because retained classification could not be verified.'));return 0;}
 	$Mode = 'RESET';
 	$Ajax->activate('_page_body');
 
@@ -129,8 +130,8 @@ function update_kit($selected_kit, $component_id) {
 //--------------------------------------------------------------------------------------------------
 
 if (get_post('update_name')) {
-	update_kit_props(get_post('item_code'), get_post('description'), get_post('category'));
-	display_notification(_('Kit common properties has been updated'));
+	if(update_kit_props(get_post('item_code'),get_post('description'),get_post('category')))display_notification(_('Kit common properties has been updated'));
+    else display_error(_('Cannot update this kit because retained classification could not be verified.'));
 	$Ajax->activate('_page_body');
 }
 
@@ -159,9 +160,8 @@ if ($Mode == 'Delete') {
 		display_error($msg);
 	}
 	else {
-		item_codes_entity::remove($selected_id);
-		display_notification(_('The component item has been deleted from this bom'));
-		$Mode = 'RESET';
+		if(item_codes_entity::remove($selected_id)){display_notification(_('The component item has been deleted from this bom'));$Mode='RESET';}
+        else display_error(_('Cannot delete this kit component because retained classification history must be preserved.'));
 	}
 }
 

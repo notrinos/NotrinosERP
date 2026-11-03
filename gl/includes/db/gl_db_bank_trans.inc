@@ -10,6 +10,8 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+
 function add_bank_trans($type, $trans_no, $bank_act, $ref, $date_, $amount, $person_type_id, $person_id, $currency='', $err_msg='', $rate=0) {
 
 	// convert $amount to the bank's currency
@@ -30,7 +32,8 @@ function add_bank_trans($type, $trans_no, $bank_act, $ref, $date_, $amount, $per
 	if (empty($err_msg))
 		$err_msg = 'The bank transaction could not be inserted';
 
-	db_query($sql, $err_msg);
+    dimension_financial_reference_write('bank_trans',null,array('dimension_id'=>0,'dimension2_id'=>0),
+        function($admitted) use ($sql) {return db_query($sql)?db_insert_id():false;});
 }
 
 function exists_bank_trans($type, $type_no) {
@@ -103,9 +106,9 @@ function void_bank_trans($type, $type_no, $nested=false) {
 	if (!$nested)
 		begin_transaction();
 
-	$sql = "UPDATE ".TB_PREF."bank_trans SET amount = 0 WHERE type=".db_escape($type)." AND trans_no=".db_escape($type_no);
-
-	db_query($sql, "could not void bank transactions for type=$type and trans_no=$type_no");
+    dimension_financial_reference_group('bank_trans',$type,$type_no,function($row) {
+        return db_query('UPDATE '.TB_PREF.'bank_trans SET amount=0 WHERE id='.(int)$row['id'])!==false;
+    });
 
 	void_gl_trans($type, $type_no, true);
 

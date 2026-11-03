@@ -38,16 +38,37 @@ function validate_void_stock($type, $type_no, $date) {
 		._('Quantity On Hand').' = '.number_format2($shortage['qoh'], get_qty_dec($shortage['stock_id']));
 }
 
+/** Keep ordinary location deletion, reference callback, audit and void publication atomic. */
 function void_transaction($type, $type_no, $date_, $memo_) {
 	global $Refs, $path_to_root;
+	$stock_transaction = (int)$type === ST_LOCTRANSFER;
+	try {
+	if ($stock_transaction) {
+		if (!isset($_SESSION['wa_current_user']) || !$_SESSION['wa_current_user']->can_access('SA_VOIDTRANSACTION'))
+			return _('You are not authorized to void this stock transfer.');
+		require_once($path_to_root.'/inventory/warehouse/includes/db/warehouse_transfer_stock_void_db.inc');
+		if (!begin_transaction()) return _('The stock transfer void could not start.');
+		if (!lock_warehouse_review_family(ST_WH_MATERIAL_REQUEST) || !lock_warehouse_review_family(ST_WH_TRANSFER_ORDER)) {
+			cancel_transaction(); return _('Warehouse movement custody is unavailable.');
+		}
+	}
+
 	$void_entry = get_voided_entry($type, $type_no);
 
-	if ($void_entry != null)
+	if ($void_entry != null) {
+		if ($stock_transaction) cancel_transaction();
 		return _('This transaction was already voided before.');
+	}
+	if ($stock_transaction && !warehouse_transfer_stock_void_allowed($type_no)) {
+		cancel_transaction();
+		return _('This stock transfer retains warehouse movement or classification history. Use a separately reviewed return transfer or the owner recovery process.');
+	}
 
 	$stock_error = validate_void_stock($type, $type_no, $date_);
-	if ($stock_error)
+	if ($stock_error) {
+		if ($stock_transaction) cancel_transaction();
 		return $stock_error;
+	}
 
 	switch ($type) {
 		case ST_PAYSLIP :
@@ -98,13 +119,19 @@ function void_transaction($type, $type_no, $date_, $memo_) {
 						return _('This delivery cannot be voided because it was already invoiced.');
 				}
 			}
-			post_void_customer_trans($type, $type_no);
+			if (post_void_customer_trans($type, $type_no) === false) {
+				cancel_transaction(); return _('The customer transaction could not be voided. Review its retained warranty provision history.');
+			}
 			break;
 
 		case ST_LOCTRANSFER : // it's a stock transfer
-			if (get_stock_transfer_items($type_no) == null)
-				return _('Selected transaction does not exists.');
-			void_stock_transfer($type_no);
+			if (get_stock_transfer_items($type_no) == null) {
+				cancel_transaction(); return _('Selected transaction does not exists.');
+			}
+			if (void_stock_transfer($type_no) === false) {
+				cancel_transaction();
+				return _('This stock transfer retains warehouse movement or classification history. Use a separately reviewed return transfer or the owner recovery process.');
+			}
 			break;
 
 		case ST_INVADJUST : // it's a stock adjustment
@@ -168,13 +195,17 @@ function void_transaction($type, $type_no, $date_, $memo_) {
 	add_audit_trail($type, $type_no, $date_, _('Voided.')."\n".$memo_);
 	$Refs->restore_last($type, $type_no);
 	add_voided_entry($type, $type_no, $date_, $memo_);
+	if ($stock_transaction && !commit_transaction()) { cancel_transaction(); return _('The stock transfer void did not complete.'); }
 	return false;
+	} catch (Exception $exception) { if ($stock_transaction) cancel_transaction(); throw $exception;
+	} catch (Throwable $exception) { if ($stock_transaction) cancel_transaction(); throw $exception; }
 }
 
 //--------------------------------------------------------------------------------------------------
 
 function get_voided_entry($type, $type_no) {
-	$sql = "SELECT * FROM ".TB_PREF."voided WHERE type=".db_escape($type)." AND id=".db_escape($type_no);
+	$sql = "SELECT * FROM ".TB_PREF."voided WHERE type=".db_escape($type)." AND id=".db_escape($type_no)
+		.((int)$type === ST_LOCTRANSFER && !empty($GLOBALS['transaction_level']) ? ' FOR UPDATE' : '');
 
 	$result = db_query($sql, 'could not query voided transaction table');
 

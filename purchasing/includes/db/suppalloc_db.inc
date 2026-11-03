@@ -10,6 +10,8 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+
 function add_supp_allocation($amount, $trans_type_from, $trans_no_from, $trans_type_to, $trans_no_to, $person_id, $date_) {
 	$sql = "INSERT INTO ".TB_PREF."supp_allocations (
 		amt, date_alloc,
@@ -52,7 +54,10 @@ function update_supp_trans_allocation($trans_type, $trans_no, $person_id) {
 			  "trans.order_no=".db_escape($trans_no)
 			: "trans.type=".db_escape($trans_type)." AND trans.trans_no=".db_escape($trans_no));
 
-	db_query($sql, 'The supp transaction record could not be modified for the allocation against it');
+	if($trans_type==ST_PURCHORDER)return db_query($sql,'The purchase order allocation could not be updated');
+    return dimension_financial_reference_write('supp_trans',array('type'=>$trans_type,'trans_no'=>$trans_no,'supplier_id'=>$person_id),array(),function($admitted)use($sql){
+        return db_query($sql,'The supplier transaction allocation could not be updated');
+    });
 }
 
 function void_supp_allocations($type, $type_no, $date='') {
@@ -71,7 +76,7 @@ function clear_supp_alloctions($type, $type_no, $person_id=null) {
 				OR (ca.trans_type_to=".db_escape($type)." AND ca.trans_no_to=".db_escape($type_no)."))";
 	if ($person_id)
 		$sql .= " AND ca.person_id=".db_escape($person_id);
-	db_query($sql, 'could not clear allocation');
+    $update_sql=$sql;
 
 	// remove any allocations for this transaction
 	$sql = "DELETE FROM ".TB_PREF."supp_allocations
@@ -80,7 +85,10 @@ function clear_supp_alloctions($type, $type_no, $person_id=null) {
 	if ($person_id)
 		$sql .= " AND person_id=".db_escape($person_id);
 
-	db_query($sql, 'could not void supp transactions for type='.$type.' and trans_no='.$type_no);
+    $delete_sql=$sql;
+    return supplier_dimension_allocation_clear($type,$type_no,$person_id,function()use($update_sql,$delete_sql){
+        return db_query($update_sql,'could not clear supplier allocation') && db_query($delete_sql,'could not remove cleared supplier allocation');
+    });
 }
 
 function get_allocatable_from_supp_sql($supplier_id, $settled) {
@@ -262,4 +270,31 @@ function get_sql_for_supplier_allocation_inquiry($date_after, $date_to, $filter=
 		$sql .= " AND (round(abs(ov_amount + ov_gst + ov_discount) - alloc,6) != 0) ";
 	
 	return $sql;
+}
+
+/** Lock the actual supplier targets and retained references before the native multi-owner clear. */
+function supplier_dimension_allocation_clear($type,$number,$person,$persist)
+{
+    $context=dimension_financial_reference_context();$type=dimension_writer_reference_id($type);$number=dimension_writer_reference_id($number);
+    if(!$context || $type===false || !$number || !is_callable($persist))dimension_financial_reference_failure();
+    try{
+        if(!begin_transaction())dimension_financial_reference_failure();
+        if(!db_query('SELECT custom_data FROM '.TB_PREF.'supp_trans LIMIT 0'))dimension_financial_reference_failure();
+        $where='((trans_type_from='.$type.' AND trans_no_from='.$number.') OR (trans_type_to='.$type.' AND trans_no_to='.$number.'))';
+        if($person)$where.=' AND person_id='.db_escape($person);
+        $rows=db_query('SELECT * FROM '.TB_PREF.'supp_allocations WHERE '.$where.' ORDER BY id FOR UPDATE');if(!$rows)dimension_financial_reference_failure();$targets=array();$candidates=array();
+        while($allocation=db_fetch_assoc($rows))foreach(array('from','to') as $side){
+            $kind=dimension_writer_reference_id($allocation['trans_type_'.$side]);$id=dimension_writer_reference_id($allocation['trans_no_'.$side]);if($kind===false || !$id)dimension_financial_reference_failure();
+            $candidates[$kind.'/'.$id.'/'.$allocation['person_id']]=array($kind,$id,$allocation['person_id']);
+        }
+        ksort($candidates,SORT_STRING);foreach($candidates as $coordinate=>$candidate){list($kind,$id,$supplier)=$candidate;
+            $target=db_query('SELECT type,trans_no FROM '.TB_PREF.'supp_trans WHERE type='.$kind.' AND trans_no='.$id.' AND supplier_id='.db_escape($supplier).' FOR UPDATE');if(!$target)dimension_financial_reference_failure();
+            if(db_fetch_assoc($target))$targets[$coordinate]=array('type'=>$kind,'trans_no'=>$id,'supplier_id'=>$supplier);
+        }
+        ksort($targets,SORT_STRING);$command=$persist;
+        foreach(array_reverse($targets) as $key){$previous=$command;$command=function()use($key,$previous){return dimension_financial_reference_write('supp_trans',$key,array(),function($admitted)use($previous){return call_user_func($previous);});};}
+        if(!call_user_func($command) || dimension_financial_reference_context()!==$context || !commit_transaction())dimension_financial_reference_failure();return true;
+    }catch(DimensionFinancialReferenceWriteException $exception){throw $exception;
+    }catch(Exception $exception){dimension_financial_reference_failure();
+    }catch(Throwable $exception){dimension_financial_reference_failure();}
 }

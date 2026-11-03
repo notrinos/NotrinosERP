@@ -49,34 +49,18 @@ class item_codes_entity extends Entity {
 	 * @return bool
 	 */
 	public static function update_item_code($id, $item_code, $stock_id, $description, $category, $qty, $foreign = 0) {
-		if ($id == -1) {
-			// Unknown PK — look up existing record by (item_code, stock_id)
-			$existing = (new static())->get_all(
-				"item_code = " . db_escape($item_code) .
-				" AND stock_id = " . db_escape($stock_id)
-			);
-			$row = db_fetch($existing);
-			if (!$row) {
-				// Not found — insert instead
-				return static::create(array(
-					'item_code' => $item_code,
-					'stock_id' => $stock_id,
-					'description' => $description,
-					'category_id' => $category,
-					'quantity' => $qty,
-					'is_foreign' => $foreign
-				));
-			}
-			$id = $row['id'];
-		}
-
-		return static::modify($id, array(
-			'item_code' => $item_code,
-			'stock_id' => $stock_id,
-			'description' => $description,
-			'category_id' => $category,
-			'quantity' => $qty,
-			'is_foreign' => $foreign
-		));
-	}
+        if(!begin_transaction())return false;
+        try{
+            $insert=false;
+            if($id===-1 || $id==='-1'){
+                $rows=db_query('SELECT id,custom_data FROM '.TB_PREF.'item_codes WHERE item_code='.db_escape($item_code).' AND stock_id='.db_escape($stock_id).' FOR UPDATE');
+                if(!$rows || db_num_rows($rows)>1){cancel_transaction();return false;}
+                $row=db_fetch_assoc($rows);if($row)$id=$row['id'];else $insert=true;
+            }
+            $data=array('item_code'=>$item_code,'stock_id'=>$stock_id,'description'=>$description,'category_id'=>$category,'quantity'=>$qty,'is_foreign'=>$foreign);
+            $saved=$insert?static::create($data):static::modify($id,$data);$insert_id=$insert && $saved?db_insert_id():0;
+            if($saved && commit_transaction())return !$insert || db_preserve_insert_id($insert_id)?$saved:false;
+            cancel_transaction();return false;
+        }catch(Exception $e){cancel_transaction();return false;}catch(Throwable $e){cancel_transaction();return false;}
+    }
 }

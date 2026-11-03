@@ -383,7 +383,7 @@ if (isset($_POST['addupdate'])) {
 		}
 
 		if (!$new_item) {
-			$saved = update_item($_POST['NewStockID'], $_POST['description'],
+			$saved = begin_transaction() && update_item($_POST['NewStockID'], $_POST['description'],
 				$_POST['long_description'], $_POST['category_id'], 
 				$_POST['tax_type_id'], get_post('units'),
 				get_post('fixed_asset') ? 'F' : get_post('mb_flag'), $_POST['sales_account'],
@@ -394,9 +394,11 @@ if (isset($_POST['addupdate'])) {
 				get_post('depreciation_method'), input_num('depreciation_rate'), input_num('depreciation_factor'), get_post('depreciation_start', null),
 				get_post('fa_class_id'), $tracking);
 
+			if($saved)$saved=update_record_status($_POST['NewStockID'],$_POST['inactive'],'stock_master','stock_id')
+                && update_record_status($_POST['NewStockID'],$_POST['inactive'],'item_codes','item_code');
+            if($saved)$saved=commit_transaction();
+            if(!$saved)cancel_transaction();
 			if ($saved) {
-				update_record_status($_POST['NewStockID'], $_POST['inactive'], 'stock_master', 'stock_id');
-				update_record_status($_POST['NewStockID'], $_POST['inactive'], 'item_codes', 'item_code');
 				set_focus('stock_id');
 				$Ajax->activate('stock_id'); // in case of status change
 				display_notification(_('Item has been updated.'));

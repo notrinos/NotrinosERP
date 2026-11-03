@@ -406,7 +406,7 @@ function copy_to_cart() {
 	// Phase 3: Sales Agreements — persist agreement_id on SO
 	if ($cart->trans_type == ST_SALESORDER) {
 		if (isset($_POST['agreement_id']))
-			$cart->agreement_id = (int)$_POST['agreement_id'];
+			$cart->agreement_id = $_POST['agreement_id'];
 	}
 	// Phase 4: Discount programs — persist coupon_code and applied_discounts
 	if (!empty(get_company_pref('use_discount_programs'))) {
@@ -621,8 +621,24 @@ if (isset($_POST['ProcessOrder']) && can_process()) {
 	$so_type = $_SESSION['Items']->so_type;
 	$trans_type = $_SESSION['Items']->trans_type;
 
+    // Ordinary new orders retain native pricing and use the current shared policy.
+    if(!$modified && $trans_type==ST_SALESORDER) {
+        $approval_result=submit_native_sales_order($_SESSION['Items']);
+        if(!$approval_result) {
+            display_error(_('The current company, order source or approval could not be verified. No order was saved. Reopen this document and review its source before retrying.'));
+            display_footer_exit();
+        }
+        if($approval_result['status']==='pending') {
+            display_notification_centered(_('Sales order submitted for approval.'));
+            hyperlink($path_to_root.'/admin/approval_view_draft.php?draft_id='.(int)$approval_result['draft_id'],_('Review Sales order draft'));
+            display_footer_exit();
+        }
+        new_doc_date($_SESSION['Items']->document_date);processing_end();
+        meta_forward($_SERVER['PHP_SELF'],'AddedID='.(int)$approval_result['trans_no']);
+    }
+
 	// --- Approval workflow check (new orders/deliveries only) ---
-	if (!$modified && ($trans_type == ST_SALESORDER || $trans_type == ST_CUSTDELIVERY)) {
+	if (!$modified && $trans_type == ST_CUSTDELIVERY) {
 		$draft_data = collect_sales_cart_data($_SESSION['Items']);
 		$draft_data['so_type'] = $so_type;
 		$amount = $_SESSION['Items']->get_items_total();
@@ -657,6 +673,9 @@ if (isset($_POST['ProcessOrder']) && can_process()) {
 			display_error(_('The reference number field has been increased. Please save the document again.'));
 		}
 		set_focus('ref');
+	}
+	elseif ($ret == -3) {
+		display_error(_('Financial or warranty provision validation failed. No document changes were saved. Review its accounts, Dimensions and retained provision history.'));
 	}
 	elseif ($ret == -2) {
 		display_error(_('Delivery tracking validation failed. Please correct serial/batch input and try again.'));
@@ -851,8 +870,12 @@ function create_cart($type, $trans_no) {
 
 //--------------------------------------------------------------------------------
 
-if (isset($_POST['CancelOrder']))
-	handle_cancel_order();
+if (isset($_POST['CancelOrder'])) {
+    try { handle_cancel_order(); }
+    catch (DimensionFinancialReferenceWriteException $exception) {
+        display_error(_('The order could not be cancelled because its retained classifications could not be preserved. No changes were saved.'));
+    }
+}
 
 $id = find_submit('Delete');
 if ($id!=-1)

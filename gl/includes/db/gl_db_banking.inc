@@ -315,6 +315,9 @@ function update_bank_transfer($trans_no, $from_account, $to_account, $date_, $am
 *	FIXME -revise code for update case
 */
 function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $date_, $person_type_id, $person_id, $person_detail_id,	$ref, $memo_, $use_transaction=true, $settled_amount=null) {
+    $original=clone $items;
+    foreach($original->gl_items as $index=>$line)$original->gl_items[$index]=clone $line;
+    try {
 	global $Refs, $SysPrefs;
 
 	// we can only handle type 1 (payment)and type 2 (deposit)
@@ -442,4 +445,11 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 		commit_transaction();
 
 	return array($trans_type, $trans_no);
+    }catch(DimensionFinancialReferenceWriteException $exception){
+        cancel_transaction();
+        foreach(get_object_vars($items) as $field=>$value)if(!array_key_exists($field,get_object_vars($original)))unset($items->$field);
+        foreach(get_object_vars($original) as $field=>$value)$items->$field=$value;
+        throw $exception;
+    }
+
 }

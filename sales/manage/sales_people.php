@@ -57,15 +57,17 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 			'provision2' => input_num('provision2'),
 		);
 		if ($selected_id != -1)
-			salesman_entity::modify($selected_id, $sdata);
+			$saved=salesman_entity::modify($selected_id, $sdata);
 		else
-			salesman_entity::create($sdata);
+			$saved=salesman_entity::create($sdata);
 
+		if($saved!==false){
 		if ($selected_id != -1) 
 			display_notification(_('Selected sales person data have been updated'));
 		else
 			display_notification(_('New sales person data have been added'));
 		$Mode = 'RESET';
+        }else display_error(_('Cannot save this sales person because its retained classification could not be verified.'));
 	}
 }
 if ($Mode == 'Delete') {
@@ -75,10 +77,9 @@ if ($Mode == 'Delete') {
 	if (key_in_foreign_table($selected_id, 'cust_branch', 'salesman'))
 		display_error(_('Cannot delete this sales-person because branches are set up referring to this sales-person - first alter the branches concerned.'));
 	else {
-		salesman_entity::remove($selected_id);
-		display_notification(_('Selected sales person data have been deleted'));
+		if(salesman_entity::remove($selected_id)){display_notification(_('Selected sales person data have been deleted'));$Mode='RESET';}
+        else display_error(_('Cannot delete this sales person because retained classification history must be preserved.'));
 	}
-	$Mode = 'RESET';
 }
 
 if ($Mode == 'RESET') {

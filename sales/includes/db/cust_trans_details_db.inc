@@ -11,6 +11,8 @@
 ***********************************************************************/
 //----------------------------------------------------------------------------------------
 
+require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+
 function get_customer_trans_details($debtor_trans_type, $debtor_trans_no) {
 	if (!is_array($debtor_trans_no))
 		$debtor_trans_no = array( 0=>$debtor_trans_no );
@@ -47,10 +49,9 @@ function void_customer_trans_details($type, $type_no) {
 		WHERE debtor_trans_no=".db_escape($type_no)."
 		AND debtor_trans_type=".db_escape($type);
 
-	db_query($sql, 'The debtor transaction details could not be voided');
-
-	// clear the stock move items
-	void_stock_move($type, $type_no);
+    return dimension_financial_reference_group('debtor_trans_details',$type,$type_no,function($row)use($sql){return db_query($sql,'The debtor transaction details could not be voided');},false,function()use($type,$type_no){
+        void_stock_move($type,$type_no);return true;
+    });
 }
 
 //----------------------------------------------------------------------------------------
@@ -76,5 +77,9 @@ function write_customer_trans_detail_item($debtor_trans_type, $debtor_trans_no, 
 			$quantity, $unit_price, $unit_tax, 
 			$discount_percent, $std_cost,".db_escape($src_id).")";
 
-	db_query($sql, 'The debtor transaction detail could not be written');
+	return dimension_financial_reference_write('debtor_trans_details',$line_id?$line_id:null,array(),
+        function($admitted)use($sql,$line_id,$debtor_trans_type,$debtor_trans_no){
+            if($line_id){$row=dimension_financial_reference_row('debtor_trans_details',$line_id);if(!$row || (int)$row['debtor_trans_type']!==(int)$debtor_trans_type || (int)$row['debtor_trans_no']!==(int)$debtor_trans_no)return false;}
+            return db_query($sql,'The debtor transaction detail could not be written')?($line_id?$line_id:db_insert_id()):false;
+        });
 }

@@ -364,6 +364,9 @@ if (isset($_POST['process_invoice']) && check_data()) {
 		display_error(_('The entered reference is already in use.'));
 		set_focus('ref');
 	}
+	elseif ($invoice_no === false || $invoice_no <= 0) {
+		display_error(_('Financial or delivery validation failed. No invoice changes were saved. Review financial classification, delivery tracking and warranty provision history.'));
+	}
 	else {
 		processing_end();
 

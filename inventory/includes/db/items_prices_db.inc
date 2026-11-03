@@ -9,12 +9,14 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__.'/../../../dimensions/includes/dimension_master_metadata_writer.inc';
+
 function add_item_price($stock_id, $sales_type_id, $curr_abrev, $price) {
 	$sql = "INSERT INTO ".TB_PREF."prices (stock_id, sales_type_id, curr_abrev, price) 
 		VALUES (".db_escape($stock_id).", ".db_escape($sales_type_id)
 		.", ".db_escape($curr_abrev).", ".db_escape($price).")";
 
-	db_query($sql, 'an item price could not be added');
+	return dimension_master_metadata_write('prices',null,array(),function($admitted)use($sql){return db_query($sql,'an item price could not be added');});
 }
 
 function update_item_price($price_id, $sales_type_id, $curr_abrev, $price) {
@@ -22,12 +24,12 @@ function update_item_price($price_id, $sales_type_id, $curr_abrev, $price) {
 		curr_abrev=".db_escape($curr_abrev).", 
 		price=".db_escape($price)." WHERE id=".db_escape($price_id);
 
-	db_query($sql, 'an item price could not be updated');
+	return dimension_master_metadata_write('prices',$price_id,array(),function($admitted)use($sql){return db_query($sql,'an item price could not be updated');});
 }
 
 function delete_item_price($price_id) {
 	$sql="DELETE FROM ".TB_PREF."prices WHERE id= ".db_escape($price_id);
-	db_query($sql, 'an item price could not be deleted');
+	return dimension_master_metadata_write('prices',$price_id,array(),function($admitted)use($sql){return db_query($sql,'an item price could not be deleted');},true);
 }
 
 function get_prices($stock_id) {

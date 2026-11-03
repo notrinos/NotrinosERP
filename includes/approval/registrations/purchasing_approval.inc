@@ -53,6 +53,8 @@ ApprovalWorkflow::registerTransactionType(ST_PURCHREQUISITION, array(
 	'edit_url'       => 'purchasing/purch_requisition_entry.php',
 ));
 
+require_once __DIR__.'/../../../purchasing/includes/db/purch_agreement_lifecycle_db.inc';
+
 ApprovalWorkflow::registerTransactionType(ST_PURCHAGREEMENT, array(
 	'label'          => _('Purchase Agreement'),
 	'application'    => 'AP',
@@ -62,6 +64,9 @@ ApprovalWorkflow::registerTransactionType(ST_PURCHAGREEMENT, array(
 	'amount_getter'  => 'get_purchase_agreement_draft_amount',
 	'draft_renderer' => 'render_purchase_agreement_draft',
 	'edit_url'       => 'purchasing/purch_agreement_entry.php',
+	'action_locker' => 'lock_purchase_agreement_core_action',
+	'action_validator' => 'validate_purchase_agreement_core_action',
+	'action_completion_validator' => 'verify_purchase_agreement_core_completion',
 ));
 
 ApprovalWorkflow::registerTransactionType(ST_PROCUREMENTPLAN, array(
@@ -401,13 +406,9 @@ function execute_approved_purchase_requisition($draft_data, $reserved_trans_no, 
 function execute_approved_purchase_agreement($draft_data, $reserved_trans_no, $draft_id)
 {
 	global $path_to_root;
-	include_once($path_to_root . '/purchasing/includes/db/purch_agreement_db.inc');
+	require_once $path_to_root.'/purchasing/includes/db/purch_agreement_db.inc';
+	return execute_purchase_agreement_core_action('approve',$draft_data,$draft_id);
 
-	$agreement_id = isset($draft_data['agreement_id']) ? (int)$draft_data['agreement_id'] : 0;
-	if ($agreement_id <= 0)
-		return false;
-
-	return confirm_agreement($agreement_id) ? $agreement_id : false;
 }
 
 /**
@@ -516,26 +517,9 @@ function cancel_purchase_requisition_draft($draft_data, $draft_id, $comments)
 function reject_purchase_agreement_draft($draft_data, $draft_id, $comments)
 {
 	global $path_to_root;
-	include_once($path_to_root . '/purchasing/includes/db/purch_agreement_db.inc');
+	require_once $path_to_root.'/purchasing/includes/db/purch_agreement_db.inc';
+	return execute_purchase_agreement_core_action('reject',$draft_data,$draft_id,$comments);
 
-	$agreement_id = isset($draft_data['agreement_id']) ? (int)$draft_data['agreement_id'] : 0;
-	if ($agreement_id <= 0)
-		return false;
-
-	$agreement = get_purch_agreement($agreement_id);
-	if (!$agreement)
-		return false;
-
-	$custom_data = decode_purch_agreement_custom_data($agreement['custom_data']);
-	$custom_data['approval_rejection_reason'] = $comments;
-	$custom_data['approval_rejected_draft_id'] = (int)$draft_id;
-
-	$sql = "UPDATE " . TB_PREF . "purch_agreements SET
-		custom_data = " . sql_purch_agreement_custom_data($custom_data) . "
-		WHERE id = " . (int)$agreement_id;
-	db_query($sql, 'could not record purchase agreement rejection metadata');
-
-	return true;
 }
 
 /**
@@ -549,26 +533,9 @@ function reject_purchase_agreement_draft($draft_data, $draft_id, $comments)
 function cancel_purchase_agreement_draft($draft_data, $draft_id, $comments)
 {
 	global $path_to_root;
-	include_once($path_to_root . '/purchasing/includes/db/purch_agreement_db.inc');
+	require_once $path_to_root.'/purchasing/includes/db/purch_agreement_db.inc';
+	return execute_purchase_agreement_core_action('cancel',$draft_data,$draft_id,$comments);
 
-	$agreement_id = isset($draft_data['agreement_id']) ? (int)$draft_data['agreement_id'] : 0;
-	if ($agreement_id <= 0)
-		return false;
-
-	$agreement = get_purch_agreement($agreement_id);
-	if (!$agreement)
-		return false;
-
-	$custom_data = decode_purch_agreement_custom_data($agreement['custom_data']);
-	$custom_data['approval_cancel_reason'] = $comments;
-	$custom_data['approval_cancelled_draft_id'] = (int)$draft_id;
-
-	$sql = "UPDATE " . TB_PREF . "purch_agreements SET
-		custom_data = " . sql_purch_agreement_custom_data($custom_data) . "
-		WHERE id = " . (int)$agreement_id;
-	db_query($sql, 'could not record purchase agreement cancellation metadata');
-
-	return true;
 }
 
 /**
@@ -903,15 +870,30 @@ function render_purchase_requisition_draft($draft_data)
  */
 function render_purchase_agreement_draft($draft_data)
 {
+	$classification = array(); $opaque = false;
+	foreach (array('dimension_id'=>1,'dimension2_id'=>2) as $field=>$axis)
+		if (!empty($draft_data[$field])) $classification[$axis.':'.(int)$draft_data[$field]] = sprintf(_('Dimension %d: #%d'),$axis,(int)$draft_data[$field]);
+	$payloads = array(isset($draft_data['custom_data']) ? $draft_data['custom_data'] : null);
+	foreach (isset($draft_data['line_items']) ? $draft_data['line_items'] : array() as $line)
+		$payloads[] = isset($line['custom_data']) ? $line['custom_data'] : null;
+	foreach ($payloads as $payload) {
+		$references = dimension_master_payload_references(is_array($payload) ? json_encode($payload) : $payload);
+		if ($references === false) { $opaque = true; continue; }
+		foreach ($references as $reference) $classification[$reference[1].':'.$reference[0]] = sprintf(_('Dimension %d: #%d'),$reference[1],$reference[0]);
+	}
 	$html = '<table class="tablestyle" width="100%">';
 	$html .= '<tr><th>' . _('Reference') . '</th><td>' . htmlspecialchars(isset($draft_data['reference']) ? $draft_data['reference'] : '') . '</td>';
-	$html .= '<th>' . _('Supplier') . '</th><td>' . htmlspecialchars(isset($draft_data['supplier_name']) ? $draft_data['supplier_name'] : '') . '</td></tr>';
+	$html .= '<th>' . _('Supplier') . '</th><td>' . htmlspecialchars(isset($draft_data['supplier_name']) ? $draft_data['supplier_name'] : (isset($draft_data['supplier_id']) ? '#'.$draft_data['supplier_id'] : '')) . '</td></tr>';
 	$html .= '<tr><th>' . _('Agreement Type') . '</th><td>' . htmlspecialchars(isset($draft_data['agreement_type']) ? $draft_data['agreement_type'] : '') . '</td>';
-	$html .= '<th>' . _('Buyer') . '</th><td>' . htmlspecialchars(isset($draft_data['buyer_name']) ? $draft_data['buyer_name'] : '') . '</td></tr>';
+	$html .= '<th>' . _('Buyer') . '</th><td>' . htmlspecialchars(isset($draft_data['buyer_name']) ? $draft_data['buyer_name'] : (isset($draft_data['buyer_id']) ? '#'.$draft_data['buyer_id'] : '')) . '</td></tr>';
 	$html .= '<tr><th>' . _('Start Date') . '</th><td>' . htmlspecialchars(isset($draft_data['date_start']) ? $draft_data['date_start'] : '') . '</td>';
 	$html .= '<th>' . _('End Date') . '</th><td>' . htmlspecialchars(isset($draft_data['date_end']) ? $draft_data['date_end'] : '') . '</td></tr>';
-	$html .= '<tr><th>' . _('Delivery Location') . '</th><td>' . htmlspecialchars(isset($draft_data['delivery_location_name']) ? $draft_data['delivery_location_name'] : '') . '</td>';
+	$html .= '<tr><th>' . _('Delivery Location') . '</th><td>' . htmlspecialchars(isset($draft_data['delivery_location_name']) ? $draft_data['delivery_location_name'] : (isset($draft_data['delivery_location']) ? $draft_data['delivery_location'] : '')) . '</td>';
 	$html .= '<th>' . _('Committed Total') . '</th><td><b>' . number_format(get_purchase_agreement_draft_amount($draft_data), 2) . '</b></td></tr>';
+	$html .= '<tr><th>'._('Classifications').'</th><td colspan="3">'.htmlspecialchars(implode(', ',$classification))
+		.($opaque ? ' '.htmlspecialchars(_('Additional retained classification requires owner review.')) : '').'</td></tr>';
+	if (!empty($draft_data['terms_and_conditions']))
+		$html .= '<tr><th>'._('Terms and Conditions').'</th><td colspan="3">'.htmlspecialchars($draft_data['terms_and_conditions']).'</td></tr>';
 
 	if (!empty($draft_data['notes']))
 		$html .= '<tr><th>' . _('Notes') . '</th><td colspan="3">' . htmlspecialchars($draft_data['notes']) . '</td></tr>';

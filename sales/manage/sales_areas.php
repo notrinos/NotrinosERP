@@ -32,16 +32,16 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 
 	if ($input_error != 1) {
 		if ($selected_id != -1) {
-			areas_entity::modify($selected_id, array('description' => $_POST['description']));
+			$saved=areas_entity::modify($selected_id, array('description' => $_POST['description']));
 			$note = _('Selected sales area has been updated');
 		} 
 		else {
-			areas_entity::create(array('description' => $_POST['description']));
+			$saved=areas_entity::create(array('description' => $_POST['description']));
 			$note = _('New sales area has been added');
 		}
 	
-		display_notification($note);    	
-		$Mode = 'RESET';
+		if($saved!==false){display_notification($note);$Mode='RESET';}
+        else display_error(_('Cannot save this area because its retained classification could not be verified.'));
 	}
 } 
 
@@ -56,11 +56,10 @@ if ($Mode == 'Delete') {
 		display_error(_('Cannot delete this area because customer branches have been created using this area.'));
 	} 
 	if ($cancel_delete == 0) {
-		areas_entity::remove($selected_id);
-		display_notification(_('Selected sales area has been deleted'));
+		if(areas_entity::remove($selected_id)){display_notification(_('Selected sales area has been deleted'));$Mode='RESET';}
+        else display_error(_('Cannot delete this area because retained classification history must be preserved.'));
 	}
-	$Mode = 'RESET';
-} 
+}
 
 if ($Mode == 'RESET') {
 	$selected_id = -1;

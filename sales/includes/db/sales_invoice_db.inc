@@ -98,10 +98,15 @@ function write_sales_invoice(&$invoice) {
 		$invoice->sales_type, $sales_order, $invoice->ship_via, 
 		$invoice->due_date, 0, 0, $invoice->dimension_id, 
 		$invoice->dimension2_id, $invoice->payment, $invoice->tax_included, $invoice->prep_amount); 
-	$invoice_custom_data_sql = get_discount_custom_data_sql_value(array(), $invoice);
-	db_query("UPDATE ".TB_PREF."debtor_trans SET custom_data = ".$invoice_custom_data_sql."
-		WHERE trans_no = ".db_escape($invoice_no)." AND type = ".db_escape(ST_SALESINVOICE),
-		'Cannot update invoice discount custom data');
+    $key=array('type'=>ST_SALESINVOICE,'trans_no'=>$invoice_no,'debtor_no'=>$invoice->customer_id);
+    $current=dimension_financial_reference_row('debtor_trans',$key);
+    if(!$current || dimension_master_payload_references($current['custom_data'])===false)
+        dimension_financial_reference_failure();
+    $metadata=json_encode(get_discount_custom_data_for_save($current['custom_data'],$invoice));
+    if(!is_string($metadata))dimension_financial_reference_failure();
+    dimension_financial_reference_write('debtor_trans',$key,array('custom_data'=>$metadata),function($admitted)use($key){
+        return db_query('UPDATE '.TB_PREF.'debtor_trans SET custom_data=\'' .db_escape_function($admitted['custom_data']).'\' WHERE '.dimension_financial_reference_predicate('debtor_trans',$key))!==false;
+    });
 
 	if ($trans_no == 0)
 		$invoice->trans_no = array($invoice_no=>0);
@@ -274,7 +279,7 @@ function void_sales_invoice($type, $type_no) {
 		if ($deliveries !== 0) {
 			if ($type == ST_SALESINVOICE && count($deliveries) == 1 && get_reference(ST_CUSTDELIVERY, $deliveries[0]) == 'auto') {
 				$trans = get_customer_trans($deliveries[0], ST_CUSTDELIVERY);
-				void_sales_delivery(ST_CUSTDELIVERY, $deliveries[0], false);
+				if (void_sales_delivery(ST_CUSTDELIVERY, $deliveries[0], false) === false) { cancel_transaction(); return false; }
 				$date_ = sql2date($trans['tran_date']);
 				add_audit_trail(ST_CUSTDELIVERY, $deliveries[0], $date_, _('Voided.'));
 				add_voided_entry(ST_CUSTDELIVERY, $deliveries[0], $date_, '');

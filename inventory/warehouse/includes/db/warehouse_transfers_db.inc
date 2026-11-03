@@ -526,11 +526,11 @@ function ship_transfer_order($transfer_id, $ship_date) {
     if (!begin_transaction()) return false;
     // This is a stock-posting command, not an approval-status reader. The
     // independent core receipt and complete source are locked in the same
-    // transaction as the move. Linked Material fulfillment stays denied until
-    // its distinct financial and stock ledger custody is implemented.
+    // transaction as the move. Linked demand additionally requires its exact
+    // valued origin; only actual destination receipts may satisfy that demand.
     require_once __DIR__.'/warehouse_transfer_terminal_db.inc';
-    $custody = transfer_fulfillment_origin_allowed($identity) ? transfer_approved_custody($identity) : false;
-    if (!$custody || !transfer_core_dependencies($custody['source'])) {
+    $custody = transfer_fulfillment_dispatch_custody($identity);
+    if (!$custody || !transfer_core_dependencies($custody['source'], 'dispatch')) {
         cancel_transaction(); return false;
     }
     $order = get_transfer_order($identity);
@@ -540,6 +540,9 @@ function ship_transfer_order($transfer_id, $ship_date) {
         cancel_transaction(); return false;
     }
     if ($sql_date < $order['request_date'] || !transfer_fulfillment_period_allowed($sql_date)) {
+        cancel_transaction(); return false;
+    }
+    if (isset($custody['material']) && !transfer_fulfillment_material_stock_allowed($custody['source'], $sql_date)) {
         cancel_transaction(); return false;
     }
     $movement_ids = array();
@@ -649,8 +652,12 @@ function ship_transfer_order($transfer_id, $ship_date) {
 
 	add_audit_trail(ST_LOCTRANSFER, $transfer_trans_no, $ship_date);
 
-	if (!transfer_fulfillment_period_allowed($sql_date)
+	if (!transfer_core_dependencies($custody['source'], 'receipt')
+        || !transfer_fulfillment_period_allowed($sql_date)
         || !transfer_fulfillment_record($identity, $custody, 'dispatch', $sql_date, $movement_ids)
+        || !transfer_fulfillment_period_allowed($sql_date)
+        || (isset($custody['material']) && !transfer_fulfillment_material_stock_allowed($custody['source'], $sql_date, true))
+        || !transfer_core_dependencies($custody['source'], 'receipt')
         || transfer_core_context() !== $context) { cancel_transaction(); return false; }
 	if (!commit_transaction()) { cancel_transaction(); return false; }
 	return true;
@@ -713,17 +720,15 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array(), $
     if (!$context || !$identity || !is_string($recv_date) || !is_date($recv_date) || !is_array($received)) return $result;
     try {
     if (!begin_transaction()) return $result;
-    if (!transfer_fulfillment_origin_allowed($identity)) {
-        cancel_transaction();
-        $result['message'] = _('Linked Material transfer fulfillment requires verified stock and ledger custody.');
-        return $result;
-    }
     $custody = transfer_fulfillment_custody($identity);
     if (!$custody || ($expected_source !== null && (!is_string($expected_source)
         || !hash_equals(transfer_core_source_fingerprint($custody['source']), $expected_source)))) {
         cancel_transaction();
         $result['message'] = _('Transfer receipt evidence or quantities have changed. Reload this order before receiving items.');
         return $result;
+    }
+    if (!transfer_fulfillment_reference_locks($custody['source'], isset($custody['material']) ? $custody['material'] : null)) {
+        cancel_transaction(); return $result;
     }
     // Serialize duplicate receipts and cancellation against the real current
     // header, not an earlier page read. All quantities are validated under the
@@ -740,6 +745,16 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array(), $
     if ($planned === false) {
         cancel_transaction();
         $result['message'] = _('Invalid receipt quantities or no items selected for receipt.');
+        return $result;
+    }
+    // Only this event's selected lines acquire new receipt authority. A serial
+    // received earlier may legitimately have moved again since a partial receipt.
+    $receipt_source = $custody['source']; $receipt_source['lines'] = array();
+    foreach ($locked_lines as $line)
+        if ($planned[(int)$line['line_id']] > 0) $receipt_source['lines'][] = $line;
+    if (!transfer_core_dependencies($receipt_source, 'receipt')) {
+        cancel_transaction();
+        $result['message'] = _('Transfer receipt item, location or tracking state is unavailable.');
         return $result;
     }
 
@@ -905,8 +920,11 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array(), $
     // Creating a dispatchable backorder here would issue the same goods twice.
     $backorder_id = null;
 
-	if (!transfer_fulfillment_period_allowed($sql_date)
+	if (!transfer_core_dependencies($receipt_source, 'received')
+        || !transfer_fulfillment_period_allowed($sql_date)
         || !transfer_fulfillment_record($identity, $custody, 'receipt', $sql_date, $movement_ids)
+        || !transfer_fulfillment_period_allowed($sql_date)
+        || !transfer_core_dependencies($receipt_source, 'received')
         || transfer_core_context() !== $context) { cancel_transaction(); return $result; }
 	if (!commit_transaction()) { cancel_transaction(); return $result; }
 

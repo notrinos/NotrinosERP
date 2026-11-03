@@ -102,6 +102,17 @@ function dimension_writer_chart_id($value)
     return preg_match('/^[^\x00-\x1f\x7f]{1,15}$/uD', $value) ? $value : false;
 }
 
+/** Normalize the native key, including the two string chart-hierarchy identifiers. */
+function dimension_writer_master_id($owner,$value)
+{
+    if($owner==='stock_master')return dimension_writer_stock_id($value);
+    if(in_array($owner,array('chart_master','chart_types','chart_class'),true)){
+        $id=dimension_writer_chart_id($value);$limit=$owner==='chart_types'?10:($owner==='chart_class'?3:15);
+        return $id!==false && preg_match('/^[^\x00-\x1f\x7f]{1,'.$limit.'}$/uD',$id)?$id:false;
+    }
+    return dimension_writer_reference_id($value);
+}
+
 /**
  * Fail closed on invalid owner/identity, lock or query failures. The caller's
  * original authorization checks are still required; this does not grant access.
@@ -113,11 +124,30 @@ function dimension_writer_chart_id($value)
 function dimension_ordinary_master_write($owner, $key, $next, $callback, $partial = false, $remove = false)
 {
     $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id', 'purch_requisition_lines'=>'id', 'wh_material_request_lines'=>'line_id', 'wh_transfer_order_lines'=>'line_id', 'wh_material_requests'=>'request_id', 'wh_transfer_orders'=>'transfer_id', 'purch_requisitions'=>'id', 'purch_rfq'=>'id', 'purch_rfq_items'=>'id', 'purch_rfq_vendors'=>'id', 'purch_rfq_vendor_lines'=>'id');
+    $sources['warranty_provision_log'] = 'id';
+    $sources['gl_trans'] = 'counter';
+    $sources['bank_trans'] = 'id';
+    $sources['supp_invoice_items'] = 'id';
+    $sources['debtor_trans'] = 'trans_no';
+    $sources['supp_trans'] = 'trans_no';
+    $sources['debtor_trans_details'] = 'id';
+    $sources['stock_moves'] = 'trans_id';
+    $sources['areas']='area_code';$sources['tax_types']='id';$sources['chart_types']='id';$sources['chart_class']='cid';
+    $sources['item_codes']='id';$sources['sales_pos']='id';$sources['sales_types']='id';$sources['salesman']='salesman_code';$sources['prices']='id';
+    $sources['sales_agreements'] = 'id';
+    $sources['sales_agreement_lines'] = 'id';
+    $sources['sales_orders'] = 'order_no';
+    $sources['sales_order_details'] = 'id';
+    $sources['purch_agreements'] = 'id';
+    $sources['purch_agreement_lines'] = 'id';
     if (!isset($sources[$owner]) || !is_callable($callback) || !is_array($next)) return false;
     $columns = $owner === 'stock_category' ? array('dflt_dim1'=>1, 'dflt_dim2'=>2) : array('dimension_id'=>1, 'dimension2_id'=>2);
     // Chart and bank accounts retain JSON but have no scalar Dimension slots.
     if ($owner === 'purch_requisition_lines' || $owner === 'wh_material_request_lines' || $owner === 'wh_transfer_order_lines' || $owner === 'wh_material_requests' || $owner === 'wh_transfer_orders' || $owner === 'chart_master' || $owner === 'bank_accounts' || $owner === 'purch_rfq_items' || $owner === 'purch_rfq_vendors' || $owner === 'purch_rfq_vendor_lines') $columns = array();
-    $string_key = $owner === 'stock_master' || $owner === 'chart_master';
+    if ($owner === 'purch_agreement_lines' || $owner === 'sales_agreement_lines') $columns = array();
+    if (in_array($owner,array('sales_orders','sales_order_details','supp_trans','debtor_trans_details','stock_moves','areas','tax_types','chart_types','chart_class','sales_pos','sales_types','salesman','prices','item_codes'),true)) $columns = array();
+    $composite = in_array($owner,array('debtor_trans','supp_trans','sales_orders'),true);
+    $string_key = in_array($owner,array('stock_master','chart_master','chart_types','chart_class'),true);
     $names = array_keys($columns);
     if (!$partial) foreach ($names as $name) if (!array_key_exists($name, $next)) return false;
     $new = array();
@@ -129,13 +159,26 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
         $next[$column] = $id;
     }
     $identity = null;
+    $type = null;
     if ($key !== null) {
-        $identity = $owner === 'stock_master' ? dimension_writer_stock_id($key) : dimension_writer_reference_id($key);
-        if ($owner === 'chart_master') $identity = dimension_writer_chart_id($key);
+        if ($composite) {
+            $type_field = $owner === 'sales_orders' ? 'trans_type' : 'type';
+            $number_field = $sources[$owner];
+            if (!is_array($key) || !isset($key[$type_field],$key[$number_field]) || count($key)!==(in_array($owner,array('supp_trans','debtor_trans'),true)?3:2)
+                || ($type=dimension_writer_reference_id($key[$type_field]))===false) return false;
+            if($owner==='debtor_trans' && (!isset($key['debtor_no']) || !($debtor=dimension_writer_reference_id($key['debtor_no']))))return false;
+            if($owner==='supp_trans' && (!isset($key['supplier_id']) || !($supplier=dimension_writer_reference_id($key['supplier_id']))))return false;
+            $key=$key[$number_field];
+        }
+        $identity = dimension_writer_master_id($owner,$key);
         if ($identity === false || $identity === 0) return false;
     }
     try {
         if (!function_exists('begin_transaction') || !begin_transaction()) return false;
+        if ($identity === null && in_array($owner, array('purch_agreements','purch_agreement_lines','sales_agreements','sales_agreement_lines','sales_orders','sales_order_details','supp_trans','debtor_trans_details','stock_moves','areas','tax_types','chart_types','chart_class','sales_pos','sales_types','salesman','prices','item_codes'), true)
+            && !db_query('SELECT custom_data FROM '.TB_PREF.$owner.' LIMIT 0')) {
+            cancel_transaction(); return false;
+        }
         // An omitted payload must not certify a bank owner whose retained column
         // is unavailable. The transactional read also holds its metadata lock.
         if ($identity === null && in_array($owner, array('purch_requisition_lines', 'wh_material_request_lines', 'wh_transfer_order_lines', 'wh_material_requests', 'wh_transfer_orders', 'bank_accounts', 'budget_trans', 'purch_requisitions', 'purch_rfq', 'purch_rfq_items', 'purch_rfq_vendors', 'purch_rfq_vendor_lines'), true)
@@ -145,12 +188,13 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
         $old = array_fill_keys($names, 0);
         $old_payload = null;
         if ($identity !== null) {
-            // Quick-entry lines have no retained payload column in either
-            // canonical schema. Never infer absence for another owner.
-            $payload_column = $owner === 'quick_entry_lines' ? 'NULL AS custom_data' : 'custom_data';
+            // These two scalar owners have no retained payload column in
+            // either canonical schema. Never infer absence for another owner.
+            $payload_column = in_array($owner, array('quick_entry_lines','warranty_provision_log'), true) ? 'NULL AS custom_data' : 'custom_data';
             if ($string_key) $payload_column .= ', '.$sources[$owner].' AS owner_identity';
             $rows = db_query('SELECT '.(count($names) ? implode(', ', $names).', ' : '').$payload_column.' FROM '.TB_PREF.$owner
-                .' WHERE '.$sources[$owner].'='.($string_key ? db_escape($identity) : $identity).' FOR UPDATE');
+                .' WHERE '.$sources[$owner].'='.($string_key ? db_escape($identity) : $identity)
+                .($composite ? ' AND '.($owner==='sales_orders'?'trans_type':'type').'='.$type : '').($owner==='supp_trans'?' AND supplier_id='.$supplier:($owner==='debtor_trans'?' AND debtor_no='.$debtor:'')).' FOR UPDATE');
             $found = $rows ? db_fetch($rows) : false;
             if (!is_array($found)) { cancel_transaction(); return false; }
             // A case-insensitive SQL key must not rename a historical string ID.
@@ -199,9 +243,9 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
         }
         $result = call_user_func($callback, $next);
         if (!$result) { cancel_transaction(); return false; }
-        $insert_id = $identity === null ? db_insert_id() : 0;
+        $insert_id = $identity === null && !$composite ? db_insert_id() : 0;
         if (!commit_transaction()) { cancel_transaction(); return false; }
-        if ($identity === null && !$string_key && !db_preserve_insert_id($insert_id)) return false;
+        if ($identity === null && !$string_key && !$composite && !db_preserve_insert_id($insert_id)) return false;
         return $result;
     } catch (Exception $exception) {
         cancel_transaction();

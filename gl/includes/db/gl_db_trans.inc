@@ -11,6 +11,7 @@
 ***********************************************************************/
 
 include_once($path_to_root . '/taxes/db/tax_types_entity.inc');
+require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
 
 /*
 *	Base function for adding a GL transaction
@@ -30,10 +31,9 @@ function add_gl_trans($type, $trans_id, $date_, $account, $dimension, $dimension
 	}		
 	else
 		$amount_in_home_currency = round2($amount, user_price_dec());
-	if ($dimension == null || $dimension < 0)
-		$dimension = 0;
-	if ($dimension2 == null || $dimension2 < 0)
-		$dimension2 = 0;
+    $dimension = dimension_writer_reference_id($dimension);
+    $dimension2 = dimension_writer_reference_id($dimension2);
+    if ($dimension === false || $dimension2 === false) dimension_financial_reference_failure();
 	if (isset($SysPrefs->use_audit_trail) && $SysPrefs->use_audit_trail) {
 		if ($memo_ == '' || $memo_ == null)
 			$memo_ = $_SESSION['wa_current_user']->username;
@@ -60,10 +60,14 @@ function add_gl_trans($type, $trans_id, $date_, $account, $dimension, $dimension
 
 	$sql .= ") ";
 
-	if ($err_msg == '')
+	// Explicit null leaves rollback/error handling with the owning command.
+	if ($err_msg === '')
 		$err_msg = 'The GL transaction could not be inserted';
 
-	db_query($sql, $err_msg);
+    dimension_financial_reference_write('gl_trans',null,array('dimension_id'=>$dimension,'dimension2_id'=>$dimension2),
+        function($admitted) use ($sql) {
+            return db_query($sql) ? db_insert_id() : false;
+        });
 	return $amount_in_home_currency;
 }
 
@@ -500,31 +504,21 @@ function exists_gl_trans($type, $trans_id) {
 //--------------------------------------------------------------------------------------------------
 
 function void_gl_trans($type, $trans_id, $nested=false) {
-	if (!$nested)
-		begin_transaction();
-
-	$sql = "UPDATE ".TB_PREF."gl_trans SET amount=0 WHERE type=".db_escape($type)
-	." AND type_no=".db_escape($trans_id);
-
-	db_query($sql, "could not void gl transactions for type=$type and trans_no=$trans_id");
-
-	if (!$nested)
-		commit_transaction();
+    return dimension_financial_reference_group('gl_trans',$type,$trans_id,function($row) {
+        return db_query('UPDATE '.TB_PREF.'gl_trans SET amount=0 WHERE counter='.(int)$row['counter']) !== false;
+    });
 }
 
 //----------------------------------------------------------------------------------------
 
 function clear_gl_trans($type, $trans_id, $nested=false) {
-	if (!$nested)
-		begin_transaction();
-
-	$sql = "DELETE FROM ".TB_PREF."gl_trans WHERE type=".db_escape($type)
-	." AND type_no=".db_escape($trans_id);
-
-	db_query($sql, "could not clear gl transactions for type=$type and trans_no=$trans_id");
-
-	if (!$nested)
-		commit_transaction();
+    return dimension_financial_reference_group('gl_trans',$type,$trans_id,function($row) {
+        foreach (array('warranty_provision_log'=>'gl_trans_id','hrm_pay_gl_001_gl_posting_lines'=>'gl_counter') as $owner=>$column) {
+            $rows=db_query('SELECT '.$column.' FROM '.TB_PREF.$owner.' WHERE '.$column.'='.(int)$row['counter'].' FOR UPDATE');
+            if (!$rows || db_fetch_row($rows)) return false;
+        }
+        return db_query('DELETE FROM '.TB_PREF.'gl_trans WHERE counter='.(int)$row['counter']) !== false;
+    },true);
 }
 
 function get_sql_for_journal_inquiry($filter, $from, $to, $ref='', $memo='', $alsoclosed=false, $login_id=null) {

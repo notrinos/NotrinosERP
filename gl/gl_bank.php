@@ -258,6 +258,7 @@ function check_trans() {
 }
 
 if (isset($_POST['Process']) && !check_trans()) {
+    try {
 
 	$_SESSION['pay_items'] = &$_SESSION['pay_items'];
 	$new = $_SESSION['pay_items']->order_id == 0;
@@ -311,6 +312,11 @@ if (isset($_POST['Process']) && !check_trans()) {
 		meta_forward($_SERVER['PHP_SELF'], $trans_type==ST_BANKPAYMENT ? 'AddedID='.$trans_no : 'AddedDep='.$trans_no);
 	else
 		meta_forward($_SERVER['PHP_SELF'], $trans_type==ST_BANKPAYMENT ? 'UpdatedID='.$trans_no : 'UpdatedDep='.$trans_no);
+    }catch(DimensionFinancialReferenceWriteException $exception){
+        cancel_transaction();
+        display_error($exception->getMessage());
+    }
+
 }
 
 //-----------------------------------------------------------------------------------------------

@@ -10,6 +10,8 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+
 function clear_dflt_curr_account($curr_code) {
 	$sql = "UPDATE ".TB_PREF."bank_accounts SET dflt_curr_act = 0 WHERE bank_curr_code = ".db_escape($curr_code);
 	return db_query($sql);
@@ -246,16 +248,17 @@ function get_sql_for_bank_account_reconcile($bank_account, $date) {
 }
 
 function update_reconciled_values($reconcile_id, $reconcile_value, $reconcile_date, $end_balance, $bank_account) {
-	$sql = "UPDATE ".TB_PREF."bank_trans SET reconciled=$reconcile_value WHERE id=".db_escape($reconcile_id);
-
-	db_query($sql, "Can't change reconciliation status");
-	// save last reconcilation status (date, end balance)
-	$sql2 = "UPDATE ".TB_PREF."bank_accounts SET last_reconciled_date='"
-		.date2sql($reconcile_date)."',
-		ending_reconcile_balance=$end_balance
-		WHERE id=".db_escape($bank_account);
-
-	db_query($sql2, 'Error updating reconciliation information');
+    if(!begin_transaction())dimension_financial_reference_failure();
+    $result=dimension_ordinary_master_write('bank_accounts',$bank_account,array(),function($admitted)use($reconcile_id,$reconcile_value,$reconcile_date,$end_balance,$bank_account){
+        dimension_financial_reference_write('bank_trans',$reconcile_id,array(),function($admitted)use($reconcile_id,$reconcile_value,$bank_account){
+            $row=dimension_financial_reference_row('bank_trans',$reconcile_id);
+            if(!$row || (int)$row['bank_act']!==(int)$bank_account)return false;
+            return db_query('UPDATE '.TB_PREF.'bank_trans SET reconciled='.$reconcile_value.' WHERE id='.(int)$reconcile_id)!==false;
+        });
+        return db_query('UPDATE '.TB_PREF.'bank_accounts SET last_reconciled_date=\''.date2sql($reconcile_date).'\',ending_reconcile_balance='.db_escape($end_balance).' WHERE id='.(int)$bank_account)!==false;
+    },true);
+    if(!$result || !commit_transaction())dimension_financial_reference_failure();
+    return true;
 }
 
 //

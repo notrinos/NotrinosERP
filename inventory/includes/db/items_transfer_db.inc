@@ -275,9 +275,19 @@ function get_stock_transfer_items($trans_no) {
 	return $result;
 }
 
+/** Void an ordinary transfer atomically; retained WMS receipts use reviewed return events. */
 function void_stock_transfer($type_no) {
-	hook_db_prevoid(ST_LOCTRANSFER, $type_no);
-	void_stock_move(ST_LOCTRANSFER, $type_no);
+	require_once __DIR__.'/../../warehouse/includes/db/warehouse_transfer_stock_void_db.inc';
+	try {
+		if (!begin_transaction()) return false;
+		if (!warehouse_transfer_stock_void_allowed($type_no)) { cancel_transaction(); return false; }
+		hook_db_prevoid(ST_LOCTRANSFER, $type_no);
+		if (void_stock_move(ST_LOCTRANSFER, $type_no) === false || !commit_transaction()) {
+			cancel_transaction(); return false;
+		}
+		return true;
+	} catch (Exception $exception) { cancel_transaction(); return false;
+	} catch (Throwable $exception) { cancel_transaction(); return false; }
 }
 
 /**
