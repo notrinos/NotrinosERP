@@ -59,7 +59,7 @@ class item_codes_entity extends Entity {
             }
             $data=array('item_code'=>$item_code,'stock_id'=>$stock_id,'description'=>$description,'category_id'=>$category,'quantity'=>$qty,'is_foreign'=>$foreign);
             $saved=$insert?static::create($data):static::modify($id,$data);$insert_id=$insert && $saved?db_insert_id():0;
-            if($saved && commit_transaction())return !$insert || db_preserve_insert_id($insert_id)?$saved:false;
+            if($saved && commit_transaction())return (!$insert || db_preserve_insert_id($insert_id))?$saved:false;
             cancel_transaction();return false;
         }catch(Exception $e){cancel_transaction();return false;}catch(Throwable $e){cancel_transaction();return false;}
     }

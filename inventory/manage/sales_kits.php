@@ -130,7 +130,7 @@ function update_kit($selected_kit, $component_id) {
 //--------------------------------------------------------------------------------------------------
 
 if (get_post('update_name')) {
-	if(update_kit_props(get_post('item_code'),get_post('description'),get_post('category')))display_notification(_('Kit common properties has been updated'));
+	if($kit_properties_saved=update_kit_props(get_post('item_code'),get_post('description'),get_post('category')))display_notification(_('Kit common properties has been updated'));
     else display_error(_('Cannot update this kit because retained classification could not be verified.'));
 	$Ajax->activate('_page_body');
 }
@@ -206,8 +206,9 @@ if (get_post('item_code') == '') { // New sales kit entry
 	text_row(_('Alias/kit code:'), 'kit_code', null, 20, 20);
 }
 else { // Kit selected so display bom or edit component
-	$_POST['description'] = $props['description'];
-	$_POST['category'] = $props['category_id'];
+	if(!get_post('update_name') || $kit_properties_saved){
+        $_POST['description']=$props['description'];$_POST['category']=$props['category_id'];
+    }
 	start_table(TABLESTYLE2);
 	text_row(_('Description:'), 'description', null, 50, 200);
 	stock_categories_list_row(_('Category:'), 'category', null);

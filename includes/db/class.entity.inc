@@ -764,6 +764,10 @@ class Entity extends record_set {
 		if ($owner === 'chart_master' || $owner === 'bank_accounts') $defaults = array();
 		if ($operation === 'insert') $next += $defaults;
 		if ($operation === 'delete') $next = $defaults;
+        if($owner==='stock_master'){
+            require_once __DIR__.'/../../inventory/includes/db/item_dimension_maintenance_db.inc';
+            return item_dimension_stock_entity_write($operation,$key,$next,function($admitted)use($operation,$key,$data){return $this->ordinary_dimension_persist($operation,$key,$admitted+$data);},isset($data[$primary])?$data[$primary]:null);
+        }
 		return dimension_ordinary_master_write($owner, $key, $next,
 			function($admitted) use ($operation, $key, $data) {
 				// Preserve existing filtering/validation and explicit insert identities.
