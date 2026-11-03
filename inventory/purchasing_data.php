@@ -58,23 +58,25 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	}
 	if ($input_error == 0) {
 		if ($Mode == 'ADD_ITEM') {
-			add_item_purchasing_data($_POST['supplier_id'], $_POST['stock_id'], input_num('price',0), $_POST['suppliers_uom'], input_num('conversion_factor'), $_POST['supplier_description']);
-			display_notification(_('This supplier purchasing data has been added.'));
+			$saved = add_item_purchasing_data($_POST['supplier_id'], $_POST['stock_id'], input_num('price',0), $_POST['suppliers_uom'], input_num('conversion_factor'), $_POST['supplier_description']);
+			if ($saved) display_notification(_('This supplier purchasing data has been added.'));
 		} 
 		else {
-			update_item_purchasing_data($selected_id, $_POST['stock_id'], input_num('price',0), $_POST['suppliers_uom'], input_num('conversion_factor'), $_POST['supplier_description']);
-			display_notification(_('Supplier purchasing data has been updated.'));
+			$saved = update_item_purchasing_data($selected_id, $_POST['stock_id'], input_num('price',0), $_POST['suppliers_uom'], input_num('conversion_factor'), $_POST['supplier_description']);
+			if ($saved) display_notification(_('Supplier purchasing data has been updated.'));
 		}
-		$Mode = 'RESET';
+		if ($saved) $Mode = 'RESET';
+		else display_error(_('The supplier purchasing data could not be saved. No changes were saved.'));
 	}
 }
 
 //--------------------------------------------------------------------------------------------------
 
 if ($Mode == 'Delete') {
-	delete_item_purchasing_data($selected_id, $_POST['stock_id']);
-	display_notification(_('The purchasing data item has been successfully deleted.'));
-	$Mode = 'RESET';
+	if (delete_item_purchasing_data($selected_id, $_POST['stock_id'])) {
+		display_notification(_('The purchasing data item has been successfully deleted.'));
+		$Mode = 'RESET';
+	} else display_error(_('The supplier purchasing data could not be deleted. No changes were saved.'));
 }
 
 if ($Mode == 'RESET')

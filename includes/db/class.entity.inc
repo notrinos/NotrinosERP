@@ -639,6 +639,27 @@ class Entity extends record_set {
 	 * boundary. Unrelated models retain their existing persistence behavior.
 	 */
 	protected function ordinary_dimension_write($operation, $key, $data) {
+		if (preg_match('/^\s*`?(?:bom|purch_data)\b/i',$this->name)) {
+			if (!in_array($this->name,array('bom','purch_data'),true) || !is_array($data) || !is_array($this->key)
+				|| ($this->subset!==null && $this->subset!==false && $this->subset!=='')) return false;
+			require_once __DIR__.'/../../dimensions/includes/dimension_composite_metadata_writer.inc';
+			$columns=dimension_composite_metadata_columns($this->name);$declared=$this->key;sort($columns);sort($declared);
+			if ($columns!==$declared) return false;
+			$identity=dimension_composite_metadata_key($this->name,$operation==='insert'?$data:$key);
+			if ($identity===false) return false;
+			foreach ($data as $field=>$value) {
+				$canonical=strtolower((string)$field);
+				if ($field!==$canonical && in_array($canonical,array_merge($columns,array('id','custom_data')),true) && in_array($field,$this->fields)) return false;
+				if ($operation!=='insert' && in_array($field,$columns,true) && in_array($field,$this->fields)) {
+					$proposed=dimension_composite_metadata_key($this->name,array($field=>$value)+$identity);
+					if ($proposed!==$identity) return false;
+				}
+			}
+			$next=array_intersect_key($data,array_flip($this->fields));
+			if ($operation==='insert') $next=$identity+$next;
+			return dimension_composite_metadata_write($this->name,$operation==='insert'?null:$identity,$next,
+				function($admitted)use($operation,$identity,$data){return $this->ordinary_dimension_persist($operation,$identity,$admitted+$data);},$operation==='delete');
+		}
 		// Financial ledgers and provision logs require their native transaction writers, including imports.
 		if (preg_match('/^\s*`?(?:warranty_provision_log|gl_trans|bank_trans|debtor_trans|debtor_trans_details|supp_trans|supp_invoice_items|stock_moves|sales_orders|sales_order_details)\b/i', $this->name)) return false;
 		$keys = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id', 'purch_rfq'=>'id', 'purch_rfq_items'=>'id', 'purch_rfq_vendors'=>'id', 'purch_rfq_vendor_lines'=>'id');
@@ -903,7 +924,7 @@ class Entity extends record_set {
 				$fields["`$fld`"] = $value === null ? 'NULL' : "'".db_escape_function($value)."'";
 				continue;
 			}
-			if (in_array($fld, $this->fields) || (is_array($this->key) ? in_array($this->key) : $fld==$this->key))
+			if (in_array($fld, $this->fields) || (is_array($this->key) ? in_array($fld, $this->key, true) : $fld==$this->key))
 				$fields["`$fld`"] = $fld === 'custom_data'
 					? db_escape_json($value, $value === null) : db_escape($value, $value === null);
 		}

@@ -140,6 +140,8 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
     $sources['sales_order_details'] = 'id';
     $sources['purch_agreements'] = 'id';
     $sources['purch_agreement_lines'] = 'id';
+    $compound = in_array($owner,array('bom','purch_data'),true);
+    if ($compound) $sources[$owner] = 'custom_data';
     if (!isset($sources[$owner]) || !is_callable($callback) || !is_array($next)) return false;
     $columns = $owner === 'stock_category' ? array('dflt_dim1'=>1, 'dflt_dim2'=>2) : array('dimension_id'=>1, 'dimension2_id'=>2);
     // Chart and bank accounts retain JSON but have no scalar Dimension slots.
@@ -147,6 +149,7 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
     if ($owner === 'purch_agreement_lines' || $owner === 'sales_agreement_lines') $columns = array();
     if (in_array($owner,array('sales_orders','sales_order_details','supp_trans','debtor_trans_details','stock_moves','areas','tax_types','chart_types','chart_class','sales_pos','sales_types','salesman','prices','item_codes'),true)) $columns = array();
     $composite = in_array($owner,array('debtor_trans','supp_trans','sales_orders'),true);
+    if ($compound) $columns = array();
     $string_key = in_array($owner,array('stock_master','chart_master','chart_types','chart_class'),true);
     $names = array_keys($columns);
     if (!$partial) foreach ($names as $name) if (!array_key_exists($name, $next)) return false;
@@ -161,7 +164,10 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
     $identity = null;
     $type = null;
     if ($key !== null) {
-        if ($composite) {
+        if ($compound) {
+            $identity = dimension_composite_metadata_key($owner,$key);
+            if ($identity === false) return false;
+        } elseif ($composite) {
             $type_field = $owner === 'sales_orders' ? 'trans_type' : 'type';
             $number_field = $sources[$owner];
             if (!is_array($key) || !isset($key[$type_field],$key[$number_field]) || count($key)!==(in_array($owner,array('supp_trans','debtor_trans'),true)?3:2)
@@ -170,11 +176,14 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
             if($owner==='supp_trans' && (!isset($key['supplier_id']) || !($supplier=dimension_writer_reference_id($key['supplier_id']))))return false;
             $key=$key[$number_field];
         }
-        $identity = dimension_writer_master_id($owner,$key);
-        if ($identity === false || $identity === 0) return false;
+        if (!$compound) {
+            $identity = dimension_writer_master_id($owner,$key);
+            if ($identity === false || $identity === 0) return false;
+        }
     }
     try {
         if (!function_exists('begin_transaction') || !begin_transaction()) return false;
+        if ($compound && !db_query('SELECT custom_data FROM '.TB_PREF.$owner.' LIMIT 0')) { cancel_transaction(); return false; }
         if ($identity === null && in_array($owner, array('purch_agreements','purch_agreement_lines','sales_agreements','sales_agreement_lines','sales_orders','sales_order_details','supp_trans','debtor_trans_details','stock_moves','areas','tax_types','chart_types','chart_class','sales_pos','sales_types','salesman','prices','item_codes'), true)
             && !db_query('SELECT custom_data FROM '.TB_PREF.$owner.' LIMIT 0')) {
             cancel_transaction(); return false;
@@ -193,7 +202,7 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
             $payload_column = in_array($owner, array('quick_entry_lines','warranty_provision_log'), true) ? 'NULL AS custom_data' : 'custom_data';
             if ($string_key) $payload_column .= ', '.$sources[$owner].' AS owner_identity';
             $rows = db_query('SELECT '.(count($names) ? implode(', ', $names).', ' : '').$payload_column.' FROM '.TB_PREF.$owner
-                .' WHERE '.$sources[$owner].'='.($string_key ? db_escape($identity) : $identity)
+                .' WHERE '.($compound ? dimension_composite_metadata_predicate($owner,$identity) : $sources[$owner].'='.($string_key ? db_escape($identity) : $identity))
                 .($composite ? ' AND '.($owner==='sales_orders'?'trans_type':'type').'='.$type : '').($owner==='supp_trans'?' AND supplier_id='.$supplier:($owner==='debtor_trans'?' AND debtor_no='.$debtor:'')).' FOR UPDATE');
             $found = $rows ? db_fetch($rows) : false;
             if (!is_array($found)) { cancel_transaction(); return false; }
@@ -243,9 +252,9 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
         }
         $result = call_user_func($callback, $next);
         if (!$result) { cancel_transaction(); return false; }
-        $insert_id = $identity === null && !$composite ? db_insert_id() : 0;
+        $insert_id = $identity === null && !$composite && !$compound ? db_insert_id() : 0;
         if (!commit_transaction()) { cancel_transaction(); return false; }
-        if ($identity === null && !$string_key && !$composite && !db_preserve_insert_id($insert_id)) return false;
+        if ($identity === null && !$string_key && !$composite && !$compound && !db_preserve_insert_id($insert_id)) return false;
         return $result;
     } catch (Exception $exception) {
         cancel_transaction();

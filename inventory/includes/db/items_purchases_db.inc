@@ -10,6 +10,8 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+require_once __DIR__.'/../../../dimensions/includes/dimension_composite_metadata_writer.inc';
+
 function add_item_purchasing_data($supplier_id, $stock_id, $price, $suppliers_uom, $conversion_factor, $supplier_description) {
 	$supp_desc = db_escape($supplier_description);
 	if (strlen($supp_desc) > 50) // to be fixed and removed in 2.5
@@ -21,7 +23,7 @@ function add_item_purchasing_data($supplier_id, $stock_id, $price, $suppliers_uo
 		.$conversion_factor . ", "
 		.$supp_desc . ")";
 
-	db_query($sql, 'The supplier purchasing details could not be added');
+	return dimension_composite_metadata_write('purch_data',null,array(),function($admitted)use($sql){return db_query($sql, 'The supplier purchasing details could not be added');},false,array('supplier_id'=>$supplier_id,'stock_id'=>$stock_id));
 }
 
 function update_item_purchasing_data($selected_id, $stock_id, $price, $suppliers_uom, $conversion_factor, $supplier_description) {
@@ -34,13 +36,13 @@ function update_item_purchasing_data($selected_id, $stock_id, $price, $suppliers
 		supplier_description=" . $supp_desc . "
 		WHERE stock_id=".db_escape($stock_id) . " AND
 		supplier_id=".db_escape($selected_id);
-	db_query($sql, 'The supplier purchasing details could not be updated');
+	return dimension_composite_metadata_write('purch_data',array('supplier_id'=>$selected_id,'stock_id'=>$stock_id),array(),function($admitted)use($sql){return db_query($sql, 'The supplier purchasing details could not be updated');},false,array('supplier_id'=>$selected_id,'stock_id'=>$stock_id));
 }
 
 function delete_item_purchasing_data($selected_id, $stock_id) {
 	$sql = "DELETE FROM ".TB_PREF."purch_data WHERE supplier_id=".db_escape($selected_id)."
 		AND stock_id=".db_escape($stock_id);
-	db_query($sql,'could not delete purchasing data');
+	return dimension_composite_metadata_write('purch_data',array('supplier_id'=>$selected_id,'stock_id'=>$stock_id),array(),function($admitted)use($sql){return db_query($sql, 'could not delete purchasing data');},true,array('supplier_id'=>$selected_id,'stock_id'=>$stock_id));
 }
 
 function get_items_purchasing_data($stock_id) {

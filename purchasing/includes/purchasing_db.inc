@@ -134,7 +134,13 @@ function get_purchase_data($supplier_id, $stock_id) {
 }
 
 function add_or_update_purchase_data($supplier_id, $stock_id, $price, $description='', $uom='') {
-	$data = get_purchase_data($supplier_id, $stock_id);
+	require_once __DIR__.'/../../dimensions/includes/dimension_composite_metadata_writer.inc';
+	if (!begin_transaction()) dimension_financial_reference_failure();
+	try {
+	$key=array('supplier_id'=>$supplier_id,'stock_id'=>$stock_id);
+	$rows=dimension_composite_metadata_rows('purch_data',$key);
+	if (!$rows || db_num_rows($rows)>1) dimension_financial_reference_failure();
+	$data=db_num_rows($rows)?db_fetch_assoc($rows):false;
 
 	$description = substr($description, 0, 50); // FIXME: temporary constraint to avoid db errors on long descriptions, see [0005170]
 	if ($data === false) {
@@ -142,10 +148,9 @@ function add_or_update_purchase_data($supplier_id, $stock_id, $price, $descripti
 			conversion_factor, supplier_description) VALUES (".db_escape($supplier_id)
 			.", ".db_escape($stock_id).", ".db_escape($price).", "
 			.db_escape($uom).", 1, ".db_escape($description).")";
-		db_query($sql, 'The supplier purchasing details could not be added');
-		if (function_exists('sync_purchase_data_to_vendor_pricelist'))
-			sync_purchase_data_to_vendor_pricelist($supplier_id, $stock_id);
-		return;
+		if (!dimension_composite_metadata_write('purch_data',null,array(),function($admitted)use($sql,$supplier_id,$stock_id){if(!db_query($sql, 'The supplier purchasing details could not be added'))return false;return !function_exists('sync_purchase_data_to_vendor_pricelist') || sync_purchase_data_to_vendor_pricelist($supplier_id,$stock_id);},false,$key)) dimension_financial_reference_failure();
+		if (!commit_transaction()) dimension_financial_reference_failure();
+		return true;
 	}	
 	//$price = round($price * $data['conversion_factor'], user_price_dec());
 	$sql = "UPDATE ".TB_PREF."purch_data SET price=".db_escape($price);
@@ -154,10 +159,10 @@ function add_or_update_purchase_data($supplier_id, $stock_id, $price, $descripti
 	if ($description != '')
 		$sql .= ",supplier_description=".db_escape($description);
 	$sql .= " WHERE stock_id=".db_escape($stock_id)." AND supplier_id=".db_escape($supplier_id);
-	db_query($sql, 'The supplier purchasing details could not be updated');
-	if (function_exists('sync_purchase_data_to_vendor_pricelist'))
-		sync_purchase_data_to_vendor_pricelist($supplier_id, $stock_id);
+	if (!dimension_composite_metadata_write('purch_data',$key,array(),function($admitted)use($sql,$supplier_id,$stock_id){if(!db_query($sql, 'The supplier purchasing details could not be updated'))return false;return !function_exists('sync_purchase_data_to_vendor_pricelist') || sync_purchase_data_to_vendor_pricelist($supplier_id,$stock_id);})) dimension_financial_reference_failure();
+	if (!commit_transaction()) dimension_financial_reference_failure();
 	return true;
+	} catch (Exception $e) {cancel_transaction();throw $e;} catch (Throwable $e) {cancel_transaction();throw $e;}
 }
 
 function get_po_prepayments($supp_trans) {

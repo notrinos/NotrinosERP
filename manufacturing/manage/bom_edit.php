@@ -75,21 +75,26 @@ function display_bom_items($selected_parent) {
 	div_end();
 }
 
+/** Copy the complete native BOM atomically; a refused component never publishes a partial copy. */
 function copy_bom_items($stock_id, $new_stock_id) {
-	$result = get_bom($stock_id);
-
-	while ($myrow = db_fetch($result)) {
-		$_POST['component'] = $myrow['component'];
-		$_POST['loc_code'] = $myrow['loc_code'];
-		$_POST['workcentre_added'] = $myrow['workcentre_added'];
-		$_POST['quantity'] = $myrow['quantity'];
-		on_submit($new_stock_id, -1);
-	}
+    try {
+        if (!begin_transaction()) return false;
+        $result=get_bom($stock_id);if (!$result) {cancel_transaction();return false;}
+        while ($row=db_fetch($result)) {
+            if (!is_numeric($row['quantity']) || $row['quantity'] < 0
+                || check_for_recursive_bom($new_stock_id,$row['component'])
+                || is_component_already_on_bom($row['component'],$row['workcentre_added'],$row['loc_code'],$new_stock_id)
+                || !add_bom($new_stock_id,$row['component'],$row['workcentre_added'],$row['loc_code'],$row['quantity'])) {cancel_transaction();return false;}
+        }
+        if (!commit_transaction()) {cancel_transaction();return false;}
+        return true;
+    } catch (Exception $e) {cancel_transaction();return false;} catch (Throwable $e) {cancel_transaction();return false;}
 }
  
 //--------------------------------------------------------------------------------------------------
 
 function on_submit($selected_parent, $selected_component=-1) {
+	global $Mode;
 	if (!check_num('quantity', 0)) {
 		display_error(_('The quantity entered must be numeric and greater than zero.'));
 		set_focus('quantity');
@@ -97,7 +102,7 @@ function on_submit($selected_parent, $selected_component=-1) {
 	}
 
 	if ($selected_component != -1) {
-		update_bom($selected_parent, $selected_component, $_POST['workcentre_added'], $_POST['loc_code'], input_num('quantity'));
+		if (!update_bom($selected_parent, $selected_component, $_POST['workcentre_added'], $_POST['loc_code'], input_num('quantity'))) {display_error(_('The BOM component could not be saved. No changes were saved.'));return false;}
 		display_notification(_('Selected component has been updated'));
 		$Mode = 'RESET';
 	}
@@ -111,7 +116,7 @@ function on_submit($selected_parent, $selected_component=-1) {
 
 			// Now check to see that the component is not already on the bom
 			if (!is_component_already_on_bom($_POST['component'], $_POST['workcentre_added'], $_POST['loc_code'], $selected_parent)) {
-				add_bom($selected_parent, $_POST['component'], $_POST['workcentre_added'], $_POST['loc_code'], input_num('quantity'));
+				if (!add_bom($selected_parent, $_POST['component'], $_POST['workcentre_added'], $_POST['loc_code'], input_num('quantity'))) {display_error(_('The BOM component could not be saved. No changes were saved.'));return false;}
 				display_notification(_('A new component part has been added to the bill of material for this item.'));
 				$Mode = 'RESET';
 			}
@@ -127,9 +132,10 @@ function on_submit($selected_parent, $selected_component=-1) {
 //--------------------------------------------------------------------------------------------------
 
 if ($Mode == 'Delete') {
-	delete_bom($selected_id);
-	display_notification(_('The component item has been deleted from this bom'));
-	$Mode = 'RESET';
+	if (delete_bom($selected_id,get_post('stock_id'))) {
+		display_notification(_('The component item has been deleted from this bom'));
+		$Mode = 'RESET';
+	} else display_error(_('The BOM component could not be deleted. No changes were saved.'));
 }
 if ($Mode == 'RESET') {
 	$selected_id = -1;
@@ -139,14 +145,13 @@ if ($Mode == 'RESET') {
 //--------------------------------------------------------------------------------------------------
 
 if (list_updated('new_stock_id')) {
-	copy_bom_items($_POST['stock_id'], $_POST['new_stock_id']);
+	if (copy_bom_items($_POST['stock_id'], $_POST['new_stock_id'])) {
 	$item = stock_master_entity::find($_POST['new_stock_id']);
 	$_POST['stock_id'] = $_POST['new_stock_id'];
 	$Ajax->activate('_page_body');
 	display_notification(_('BOM copied to ').$item['description']);
+	} else display_error(_('The BOM could not be copied. No changes were saved.'));
 }
-
-start_form();
 
 start_form();
 start_table(TABLESTYLE_NOBORDER);

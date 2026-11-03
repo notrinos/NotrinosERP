@@ -327,30 +327,49 @@ function get_inventory_availability_maps($category, $location, $item_like='') {
 
 //--------------------------------------------------------------------------------------
 
+require_once __DIR__.'/../../dimensions/includes/dimension_composite_metadata_writer.inc';
+
+/** Resolve a legacy UI id to one canonical row; indexed id is not unique. */
+function bom_dimension_row_by_id($id,$parent=null) {
+    $id=dimension_writer_reference_id($id);if (!$id) return false;
+    $rows=db_query('SELECT * FROM '.TB_PREF.'bom WHERE id='.$id.($parent===null?'':' AND parent='.db_escape($parent)).' FOR UPDATE');
+    return $rows && db_num_rows($rows)===1?db_fetch_assoc($rows):false;
+}
+
+/** Create one unused native component under its full primary key. */
 function add_bom($selected_parent, $component, $workcentre_added, $loc_code, $quantity) {
-	$sql = "INSERT INTO ".TB_PREF."bom (parent, component, workcentre_added, loc_code, quantity)
-		VALUES (".db_escape($selected_parent).", ".db_escape($component) . ","
-		.db_escape($workcentre_added) . ", ".db_escape($loc_code) . ", "
-		. $quantity . ")";
-
-	db_query($sql,"check failed");
+    $key=array('parent'=>$selected_parent,'component'=>$component,'workcentre_added'=>$workcentre_added,'loc_code'=>$loc_code);
+    $sql="INSERT INTO ".TB_PREF."bom (parent,component,workcentre_added,loc_code,quantity) VALUES (".db_escape($selected_parent).",".db_escape($component).",".db_escape($workcentre_added).",".db_escape($loc_code).",".db_escape($quantity).")";
+    return dimension_composite_metadata_write('bom',null,array(),function($admitted)use($sql){return db_query($sql,'Could not add BOM');},false,$key);
 }
 
-//--------------------------------------------------------------------------------------
-
+/** Relocate only the selected canonical component while retaining its history. */
 function update_bom($selected_parent, $selected_component, $workcentre_added, $loc_code, $quantity) {
-	$sql = "UPDATE ".TB_PREF."bom SET workcentre_added=".db_escape($workcentre_added).",loc_code=".db_escape($loc_code) . ",
-		quantity= ".$quantity."
-		WHERE parent=".db_escape($selected_parent) . "
-		AND id=".db_escape($selected_component);
-	check_db_error('Could not update this bom component', $sql);
-
-	db_query($sql,'could not update bom');
+    try {
+        if (!begin_transaction()) return false;
+        $before=bom_dimension_row_by_id($selected_component,$selected_parent);
+        if (!$before) {cancel_transaction();return false;}
+        $key=dimension_composite_metadata_key('bom',$before);
+        $final=array('workcentre_added'=>$workcentre_added,'loc_code'=>$loc_code)+$key;
+        $sql="UPDATE ".TB_PREF."bom SET workcentre_added=".db_escape($workcentre_added).",loc_code=".db_escape($loc_code).",quantity=".db_escape($quantity)." WHERE ".dimension_composite_metadata_predicate('bom',$key);
+        $result=dimension_composite_metadata_write('bom',$key,array(),function($admitted)use($sql){return db_query($sql,'Could not update BOM');},false,$final);
+        if (!$result || !commit_transaction()) {cancel_transaction();return false;}
+        return $result;
+    } catch (Exception $e) {cancel_transaction();return false;} catch (Throwable $e) {cancel_transaction();return false;}
 }
-	
-function delete_bom($selected_id) {
-	$sql = "DELETE FROM ".TB_PREF."bom WHERE id=".db_escape($selected_id);
-	db_query($sql,'Could not delete this bom components');
+
+/** Refuse ambiguous legacy ids and retained metadata before native component removal. */
+function delete_bom($selected_id,$parent=null) {
+    try {
+        if (!begin_transaction()) return false;
+        $before=bom_dimension_row_by_id($selected_id,$parent);
+        if (!$before) {cancel_transaction();return false;}
+        $key=dimension_composite_metadata_key('bom',$before);
+        $sql='DELETE FROM '.TB_PREF.'bom WHERE '.dimension_composite_metadata_predicate('bom',$key);
+        $result=dimension_composite_metadata_write('bom',$key,array(),function($admitted)use($sql){return db_query($sql,'Could not delete BOM');},true);
+        if (!$result || !commit_transaction()) {cancel_transaction();return false;}
+        return $result;
+    } catch (Exception $e) {cancel_transaction();return false;} catch (Throwable $e) {cancel_transaction();return false;}
 }
 
 function get_bom($item) {
