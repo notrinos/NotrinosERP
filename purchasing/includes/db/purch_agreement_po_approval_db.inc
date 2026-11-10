@@ -351,8 +351,10 @@ function write_agreement_purchase_order($snapshot, $approval_draft_id = 0) {
 		agreement_id = " . (int)$agreement_id . ",
 		rfq_id = " . (int)$agreement['rfq_id'] . "
 		WHERE order_no = " . (int)$po_number;
-	if (!db_query($sql, 'could not link purchase order to agreement'))
-		throw new RuntimeException('Purchase order source linkage failed.');
+	// Source linkage is native state; the fresh PO header keeps its exact metadata.
+	purchase_document_dimension_guard(array('purch_orders'=>array($po_number)), function() use ($sql) {
+		return db_query($sql, 'could not link purchase order to agreement');
+	});
 
 	update_agreement_fulfillment($agreement_id);
 

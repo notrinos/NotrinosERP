@@ -1402,6 +1402,17 @@ function update_bin_stock($wh_loc_id, $stock_id, $qty, $batch_id = null,
  * @param string $date_    Transaction date (display format)
  * @param string $location Location code (0_locations.loc_code)
  */
+/**
+ * Apply one native receipt-line tracking update while retaining its exact metadata.
+ * Tracking columns are native state; a failed update or metadata change restores the receipt.
+ */
+function grn_item_tracking_dimension_update($grn_item_id, $sql, $message) {
+	require_once dirname(dirname(dirname(__DIR__))).'/purchasing/includes/db/purchase_document_dimension_db.inc';
+	return purchase_document_dimension_guard(array('grn_items'=>array($grn_item_id)), function() use ($sql, $message) {
+		return db_query($sql, $message);
+	});
+}
+
 function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 	// Load required DB functions
 	$root = dirname(dirname(dirname(__FILE__))); // → inventory/
@@ -1566,7 +1577,7 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 				$json = json_encode($serial_nos);
 				$sql = "UPDATE " . TB_PREF . "grn_items SET serial_numbers_json="
 					. db_escape_json($json) . " WHERE id=" . (int)$grn_item_id;
-				db_query($sql, 'could not update grn_items serial JSON');
+				grn_item_tracking_dimension_update($grn_item_id, $sql, 'could not update grn_items serial JSON');
 			}
 		}
 
@@ -1595,7 +1606,7 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 					$sql = "UPDATE " . TB_PREF . "grn_items SET "
 						. implode(', ', $sets)
 						. " WHERE id=" . (int)$grn_item_id;
-					db_query($sql, 'could not update grn_items batch info');
+					grn_item_tracking_dimension_update($grn_item_id, $sql, 'could not update grn_items batch info');
 				}
 		}
 
@@ -1624,7 +1635,7 @@ function process_grn_tracking_and_wms($po, $grn_no, $date_, $location) {
 		if ($qc_required && $grn_item_id) {
 			$sql = "UPDATE " . TB_PREF . "grn_items SET inspection_status='pending'"
 				. " WHERE id=" . (int)$grn_item_id;
-			db_query($sql, 'could not set inspection status');
+			grn_item_tracking_dimension_update($grn_item_id, $sql, 'could not set inspection status');
 		}
 
 		// Collect for WMS operations

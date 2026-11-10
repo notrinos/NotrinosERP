@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__.'/purchase_document_dimension_db.inc';
 
 // probably this function should be optimized
 // passing transaction cart as argument. This would
@@ -297,26 +298,30 @@ function add_grn_batch($po_number, $supplier_id, $reference, $location, $date_, 
 			VALUES (".db_escape($po_number).", ".db_escape($date).", "
 			.db_escape($supplier_id).", ".db_escape($reference).", ".db_escape($location).", ".db_escape($rate).")";
 
-	db_query($sql, 'A grn batch record could not be inserted.');
-
-	return db_insert_id();
+	return purchase_document_dimension_write('grn_batch',null,function()use($sql){return db_query($sql, 'A grn batch record could not be inserted.')?db_insert_id():false;});
 }
 
 function add_grn_detail_item($grn_batch_id, $po_detail_item, $item_code, $description, $standard_unit_cost, $quantity_received, $price, $quantity) {
+	if(!begin_transaction())dimension_financial_reference_failure();
+	try {
+	$dimension_before=purchase_document_dimension_snapshot(array('purch_order_details'=>array($po_detail_item),'grn_batch'=>array($grn_batch_id)));
 	$sql = "UPDATE ".TB_PREF."purch_order_details
 		SET quantity_received = quantity_received + ".db_escape($quantity_received).",
 		std_cost_unit=".db_escape($standard_unit_cost).",
 		quantity_ordered=".db_escape($quantity).",
 		act_price=".db_escape($price)."
 		WHERE po_detail_item = ".db_escape($po_detail_item);
-	db_query($sql, 'a purchase order details record could not be updated. This receipt of goods has not been processed ');
+	purchase_document_dimension_write('purch_order_details',$po_detail_item,function()use($sql){return db_query($sql, 'a purchase order details record could not be updated. This receipt of goods has not been processed ');});
 
 	$sql = "INSERT INTO ".TB_PREF."grn_items (grn_batch_id, po_detail_item, item_code, description, qty_recd)
 		VALUES (".db_escape($grn_batch_id).", ".db_escape($po_detail_item).", ".db_escape($item_code).", ".db_escape($description).", ".db_escape($quantity_received).")";
 
-	db_query($sql, 'A GRN detail item could not be inserted.');
-
-	return db_insert_id();
+	$grn_item_id=purchase_document_dimension_write('grn_items',null,function()use($sql){return db_query($sql, 'A GRN detail item could not be inserted.')?db_insert_id():false;});
+	purchase_document_dimension_verify($dimension_before,array('grn_items'=>array($grn_item_id)));
+	if(!commit_transaction())dimension_financial_reference_failure();
+	if(!db_preserve_insert_id($grn_item_id))dimension_financial_reference_failure();
+	return $grn_item_id;
+	}catch(Exception $e){cancel_transaction();throw $e;}catch(Throwable $e){cancel_transaction();throw $e;}
 }
 
 function get_grn_batch_from_item($item) {
@@ -344,6 +349,8 @@ function set_grn_item_credited(&$entered_grn, $supplier, $transno, $date, $taxfr
 
 	$result = db_query($sql, 'Could not retreive GRNS');
 	$myrow = db_fetch($result);
+	if (!$myrow)
+		dimension_financial_reference_failure();
 
 	$sql = "UPDATE ".TB_PREF."purch_order_details
 		SET quantity_received = quantity_received + "
@@ -354,13 +361,17 @@ function set_grn_item_credited(&$entered_grn, $supplier, $transno, $date, $taxfr
 		std_cost_unit=".db_escape($mcost).",
 		act_price=".db_escape($taxfree_line)."
 		WHERE po_detail_item = ".$myrow["po_detail_item"];
-	db_query($sql, 'a purchase order details record could not be updated. This receipt of goods has not been processed ');
-
 	//$sql = "UPDATE ".TB_PREF."grn_items SET qty_recd=0, quantity_inv=0 WHERE id=$entered_grn->id";
-	$sql = "UPDATE ".TB_PREF."grn_items SET qty_recd=qty_recd+".db_escape($entered_grn->this_quantity_inv)
+	$grn_sql = "UPDATE ".TB_PREF."grn_items SET qty_recd=qty_recd+".db_escape($entered_grn->this_quantity_inv)
 	.",quantity_inv=quantity_inv+".db_escape($entered_grn->this_quantity_inv)
 	." WHERE id=".db_escape($entered_grn->id);
-	db_query($sql);
+	// Credit quantities are native state; retained PO-line/receipt metadata must survive both updates.
+	purchase_document_dimension_guard(array('purch_order_details'=>array($myrow['po_detail_item']),
+		'grn_batch'=>array($myrow['grn_batch_id']),'grn_items'=>array($entered_grn->id)),
+		function() use ($sql, $grn_sql) {
+			return db_query($sql, 'a purchase order details record could not be updated. This receipt of goods has not been processed ')
+				&& db_query($grn_sql, 'A GRN detail item could not be credited.');
+		});
 
 	// --- Advanced Inventory: serial/batch tracking for supplier credit ---
 	$extended = array();
@@ -548,7 +559,11 @@ function void_grn($grn_batch) {
 	if (exists_grn_on_invoices($grn_batch))
 		return false;
 
-	begin_transaction();
+	if (!begin_transaction())
+		dimension_financial_reference_failure();
+	try {
+	// Void keeps every retained PO/GRN payload; hooks and quantity SQL cannot erase it.
+	$dimension_before = purchase_document_dimension_snapshot(purchase_grn_batch_dimension_identities($grn_batch));
 	hook_db_prevoid(ST_SUPPRECEIVE, $grn_batch);
 
 	void_bank_trans(ST_SUPPRECEIVE, $grn_batch, true);
@@ -564,19 +579,24 @@ function void_grn($grn_batch) {
 				SET quantity_received = quantity_received - " . $myrow["qty_recd"] . "
 				WHERE po_detail_item = " . $myrow["po_detail_item"];
 
-			db_query($sql, 'a purchase order details record could not be voided.');
+			if (!db_query($sql, 'a purchase order details record could not be voided.'))
+				dimension_financial_reference_failure();
 		}
 	}
 
 	// clear the quantities in the grn items
 	$sql = "UPDATE ".TB_PREF."grn_items SET qty_recd=0, quantity_inv=0 WHERE grn_batch_id=".db_escape($grn_batch);
 
-	db_query($sql, 'A grn detail item could not be voided.');
+	if (!db_query($sql, 'A grn detail item could not be voided.'))
+		dimension_financial_reference_failure();
 
 	// clear the stock move items
 	void_stock_move(ST_SUPPRECEIVE, $grn_batch);
 
-	commit_transaction();
+	purchase_document_dimension_verify($dimension_before);
+	if (!commit_transaction())
+		dimension_financial_reference_failure();
 
 	return true;
+	} catch (Exception $e) { cancel_transaction(); throw $e; } catch (Throwable $e) { cancel_transaction(); throw $e; }
 }

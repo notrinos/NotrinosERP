@@ -3,7 +3,7 @@
 require_once __DIR__.'/dimension_financial_reference_writer.inc';
 
 /** Only these native key/metadata contracts are admitted here; no caller-selected schema. */
-function dimension_master_metadata_sources(){return array('areas'=>'area_code','tax_types'=>'id','chart_types'=>'id','chart_class'=>'cid','chart_master'=>'account_code','sales_pos'=>'id','sales_types'=>'id','salesman'=>'salesman_code','prices'=>'id','item_codes'=>'id','vendor_pricelists'=>'id');}
+function dimension_master_metadata_sources(){return array('areas'=>'area_code','tax_types'=>'id','chart_types'=>'id','chart_class'=>'cid','chart_master'=>'account_code','sales_pos'=>'id','sales_types'=>'id','salesman'=>'salesman_code','prices'=>'id','item_codes'=>'id','vendor_pricelists'=>'id','purch_orders'=>'order_no','purch_order_details'=>'po_detail_item','grn_batch'=>'id','grn_items'=>'id');}
 
 /** Read one exact current native key without case-folding or numeric truncation. */
 function dimension_master_metadata_row($owner,$id)

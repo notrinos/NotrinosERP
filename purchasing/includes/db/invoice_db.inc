@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__.'/purchase_document_dimension_db.inc';
 include_once($path_to_root.'/purchasing/includes/db/invoice_items_db.inc');
 include_once($path_to_root.'/admin/db/attachments_db.inc');
 
@@ -104,12 +105,15 @@ function update_supp_received_items_for_invoice($id, $po_detail_item, $qty_invoi
 		$sql .= " , act_price = ".db_escape($chg_price);
 
 	$sql .= " WHERE po_detail_item = ".db_escape($po_detail_item);
-	db_query($sql, 'The quantity invoiced of the purchase order line could not be updated');
-
-	$sql = "UPDATE ".TB_PREF."grn_items
+	$grn_sql = "UPDATE ".TB_PREF."grn_items
 		SET quantity_inv = quantity_inv + ".db_escape($qty_invoiced)."
 		WHERE id = ".db_escape($id);
-	db_query($sql, 'The quantity invoiced off the items received record could not be updated');
+	// Invoice quantities are native state; retained PO-line/receipt metadata must survive both updates.
+	purchase_document_dimension_guard(array('purch_order_details'=>array($po_detail_item), 'grn_items'=>array($id)),
+		function() use ($sql, $grn_sql) {
+			return db_query($sql, 'The quantity invoiced of the purchase order line could not be updated')
+				&& db_query($grn_sql, 'The quantity invoiced off the items received record could not be updated');
+		});
 	return array($ret, $date, $unit_price);
 }
 
@@ -590,9 +594,12 @@ function void_supp_invoice($type, $type_no) {
 					if ($match !== false)
 						$sql .= "act_price=".$match['unit_price'].", ";
 					$sql .= "quantity_received = quantity_received + ".-$details_row['quantity']." WHERE po_detail_item = ".$details_row['po_detail_item_id'];
-					db_query($sql, 'a purchase order details record could not be updated. This receipt of goods has not been processed ');
-					$sql = "UPDATE ".TB_PREF."grn_items SET qty_recd=qty_recd+".-$details_row['quantity']." WHERE id=".$details_row['grn_item_id'];
-					db_query($sql, 'a grn item record could not be updated');
+					$grn_sql = "UPDATE ".TB_PREF."grn_items SET qty_recd=qty_recd+".-$details_row['quantity']." WHERE id=".$details_row['grn_item_id'];
+					purchase_document_dimension_guard(array('purch_order_details'=>array($details_row['po_detail_item_id']), 'grn_items'=>array($details_row['grn_item_id'])),
+						function() use ($sql, $grn_sql) {
+							return db_query($sql, 'a purchase order details record could not be updated. This receipt of goods has not been processed ')
+								&& db_query($grn_sql, 'a grn item record could not be updated');
+						});
 				}
 				else {
 					$diff = get_diff_in_home_currency($grn['supplier_id'], $old_date, sql2date($trans['tran_date']), $old[2], $details_row['FullUnitPrice']);
@@ -663,11 +670,17 @@ function remove_not_invoice_item($id) {
 
 	$supp = suppliers_entity::find($grn['supplier_id']);
 
+	if (!$myrow)
+		dimension_financial_reference_failure();
 	$sql = "UPDATE ".TB_PREF."purch_order_details SET quantity_received = qty_invoiced, quantity_ordered = qty_invoiced WHERE po_detail_item = ".$myrow["po_detail_item"];
-	db_query($sql, 'The quantity invoiced of the purchase order line could not be updated');
-
-	$sql = "UPDATE ".TB_PREF."grn_items SET qty_recd = quantity_inv WHERE id = ".$myrow["id"];
-	db_query($sql, 'The quantity invoiced off the items received record could not be updated');
+	$grn_sql = "UPDATE ".TB_PREF."grn_items SET qty_recd = quantity_inv WHERE id = ".$myrow["id"];
+	// Removing the uninvoiced remainder keeps retained PO-line/receipt metadata exactly.
+	purchase_document_dimension_guard(array('purch_order_details'=>array($myrow['po_detail_item']),
+		'grn_batch'=>array($myrow['grn_batch_id']), 'grn_items'=>array($myrow['id'])),
+		function() use ($sql, $grn_sql) {
+			return db_query($sql, 'The quantity invoiced of the purchase order line could not be updated')
+				&& db_query($grn_sql, 'The quantity invoiced off the items received record could not be updated');
+		});
 
 	update_average_material_cost($grn['supplier_id'], $myrow['item_code'], $myrow['unit_price'], -$myrow['QtyOstdg'], Today());
 

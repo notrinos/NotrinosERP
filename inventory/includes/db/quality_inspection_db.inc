@@ -892,7 +892,11 @@ function complete_quality_inspection($inspection_id, $result = '', $accepted_qty
 		$sql = "UPDATE " . TB_PREF . "grn_items SET inspection_status=" . db_escape($grn_status)
 			. " WHERE grn_batch_id=" . (int)$insp['trans_no']
 			. " AND item_code=" . db_escape($insp['stock_id']);
-		db_query($sql, 'could not update grn inspection status');
+		require_once dirname(dirname(dirname(__DIR__))).'/purchasing/includes/db/purchase_document_dimension_db.inc';
+		// Every receipt line selected by the native batch/item predicate keeps its retained metadata.
+		purchase_grn_item_dimension_group($insp['trans_no'], (string)$insp['stock_id'], function() use ($sql) {
+			return db_query($sql, 'could not update grn inspection status');
+		});
 	}
 
 	$qc_reference = sprintf(_('QC inspection #%d'), $inspection_id);

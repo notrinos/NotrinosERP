@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__.'/purchase_document_dimension_db.inc';
 include_once($path_to_root . '/purchasing/includes/db/purch_orders_entity.inc');
 
 /** Load native supplier defaults; an owning source conversion can request a current locking read. */
@@ -144,6 +145,8 @@ function delete_po($po) {
 		}
 		if (!purchase_order_cancellation_is_unused($po, $header))
 			return reject_purchase_order_update();
+		// Retained metadata is checked before hooks and must be proven unused at deletion.
+		$dimension_before = purchase_order_dimension_snapshot($po);
 		hook_db_prevoid(ST_PURCHORDER, $po);
 		$current = db_fetch(db_query("SELECT * FROM ".TB_PREF."purch_orders WHERE order_no="
 			.db_escape($po)." FOR UPDATE", 'Could not recheck purchase order cancellation'));
@@ -155,6 +158,7 @@ function delete_po($po) {
 			|| !db_query("DELETE FROM ".TB_PREF."purch_orders WHERE order_no=".db_escape($po),
 			'The order header could not be deleted'))
 			return reject_purchase_order_update();
+		purchase_order_dimension_verify($dimension_before, array(), array_keys($dimension_before['rows']['purch_order_details']), true);
 		add_audit_trail(ST_PURCHORDER, $po, Today(), _('Cancelled.'));
 		if (!commit_transaction()) {
 			cancel_transaction();
@@ -203,6 +207,9 @@ function add_po(&$po_obj, $approval_draft_id = 0, $preserve_approved_intent = fa
 		$approved_intent = $preserve_approved_intent ? purchase_order_creation_cart_state($working_order) : null;
 		$approved_total = $preserve_approved_intent && isset($working_order->approval_gross_amount)
 			? $working_order->approval_gross_amount : null;
+		// Fresh header/lines must publish only the canonical empty metadata default.
+		$dimension_before = purchase_document_dimension_snapshot(array('purch_orders'=>array(), 'purch_order_details'=>array()));
+		$created_line_ids = array();
 		hook_db_prewrite($working_order, ST_PURCHORDER);
 		if (!purchase_order_creation_authorized($working_order)
 			|| purchase_order_creation_context($working_order) !== $creation_context
@@ -276,12 +283,15 @@ function add_po(&$po_obj, $approval_draft_id = 0, $preserve_approved_intent = fa
 			if (!db_query($sql, 'One of the purchase order detail records could not be inserted'))
 				throw new RuntimeException('Purchase order line failed.');
 			$working_order->line_items[$line_no]->po_detail_rec = db_insert_id();
+			$created_line_ids[] = $working_order->line_items[$line_no]->po_detail_rec;
 		}
 
 		$Refs->save(ST_PURCHORDER, $working_order->order_no, $working_order->reference);
 
 		add_audit_trail(ST_PURCHORDER, $working_order->order_no, $working_order->orig_order_date);
 		$created_order_no = $working_order->order_no;
+		// Native SQL publishes only the default; later extension metadata belongs to its postwrite owner.
+		purchase_document_dimension_verify($dimension_before, array('purch_orders'=>array($created_order_no), 'purch_order_details'=>$created_line_ids));
 		$created_cart = purchase_order_creation_cart_state($working_order);
 		$created_state = purchase_order_creation_native_state($created_order_no);
 		hook_db_postwrite($working_order, ST_PURCHORDER);
@@ -444,6 +454,9 @@ function update_po(&$po_obj) {
 			if (!$audit || $audit['user'] != $_SESSION['wa_current_user']->user)
 				return reject_purchase_order_update();
 		}
+		// Header/kept-line metadata survives edits; only proven-empty removed lines may disappear.
+		$dimension_before = purchase_order_dimension_snapshot($order_no);
+		$created_line_ids = array();
 		hook_db_prewrite($po_obj, ST_PURCHORDER);
 		if (!$po_obj->is_current_company() || !$_SESSION['wa_current_user']->can_access('SA_PURCHASEORDER')
 			|| (string)$po_obj->order_no !== (string)$order_no || $po_obj->supplier_id != $supplier_id
@@ -500,12 +513,14 @@ function update_po(&$po_obj) {
 			tax_included=".db_escape($po_obj->tax_included)."
 		WHERE order_no = ".db_escape($po_obj->order_no);
 
-		db_query($sql, 'The purchase order could not be updated');
+		if (!db_query($sql, 'The purchase order could not be updated'))
+			return reject_purchase_order_update();
 
 		foreach ($removed as $id => $row) {
 			$sql = "DELETE FROM ".TB_PREF."purch_order_details WHERE order_no=".db_escape($po_obj->order_no)
 				." AND po_detail_item=".db_escape($id);
-			db_query($sql, 'Could not remove unused purchase order line');
+			if (!db_query($sql, 'Could not remove unused purchase order line'))
+				return reject_purchase_order_update();
 		}
 		$saved_lines = array();
 
@@ -531,7 +546,10 @@ function update_po(&$po_obj) {
 				$sql = "INSERT INTO ".TB_PREF."purch_order_details SET ".$values
 					.", order_no=".db_escape($po_obj->order_no).", item_code=".db_escape($po_line->stock_id);
 			}
-			db_query($sql, 'One of the purchase order detail records could not be updated');
+			if (!db_query($sql, 'One of the purchase order detail records could not be updated'))
+				return reject_purchase_order_update();
+			if (!$id)
+				$created_line_ids[] = (int)db_insert_id();
 			$saved_lines[] = array($po_line, $id ? $id : (int)db_insert_id(),
 				$id ? $existing[$id]['quantity_received'] : 0, $id ? $existing[$id]['qty_invoiced'] : 0);
 		}
@@ -539,6 +557,8 @@ function update_po(&$po_obj) {
 		reallocate_payments($po_obj->order_no, ST_PURCHORDER, $po_obj->orig_order_date, $po_obj->get_trans_total(), $po_obj->prepayments, $po_obj->supplier_id);
 
 		add_audit_trail($po_obj->trans_type, $po_obj->order_no, Today(), _('Updated.'));
+		// Native edit SQL must retain metadata; later extension metadata belongs to its postwrite owner.
+		purchase_order_dimension_verify($dimension_before, $created_line_ids, array_keys($removed));
 		hook_db_postwrite($po_obj, ST_PURCHORDER);
 		if (!commit_transaction())
 			return false;

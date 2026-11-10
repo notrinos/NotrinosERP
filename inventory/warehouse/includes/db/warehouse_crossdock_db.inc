@@ -309,7 +309,11 @@ function link_po_line_to_crossdock_so($po_detail_id, $so_no, $so_line_id)
 		SET cross_dock_so_no = " . (int)$so_no . ",
 			cross_dock_so_line = " . (int)$so_line_id . "
 		WHERE po_detail_item = " . (int)$po_detail_id;
-	db_query($sql, 'could not link PO line to cross-dock SO');
+	require_once dirname(dirname(dirname(dirname(__DIR__)))).'/purchasing/includes/db/purchase_document_dimension_db.inc';
+	// Cross-dock linkage is native state; the PO line's retained metadata must survive.
+	purchase_document_dimension_guard(array('purch_order_details'=>array($po_detail_id)), function() use ($sql) {
+		return db_query($sql, 'could not link PO line to cross-dock SO');
+	});
 }
 
 // =====================================================================
@@ -499,7 +503,11 @@ function mark_po_as_drop_ship($po_no, $so_no)
 		SET drop_ship = 1,
 			drop_ship_so_no = " . (int)$so_no . "
 		WHERE order_no = " . (int)$po_no;
-	db_query($sql, 'could not mark PO as drop-ship');
+	require_once dirname(dirname(dirname(dirname(__DIR__)))).'/purchasing/includes/db/purchase_document_dimension_db.inc';
+	// Drop-ship marking is native state; the PO header's retained metadata must survive.
+	purchase_document_dimension_guard(array('purch_orders'=>array($po_no)), function() use ($sql) {
+		return db_query($sql, 'could not mark PO as drop-ship');
+	});
 }
 
 /**
