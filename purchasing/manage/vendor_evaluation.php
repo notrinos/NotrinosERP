@@ -315,6 +315,11 @@ if ((isset($_POST['save_evaluation']) || isset($_POST['submit_evaluation'])) && 
 			trim(get_post('notes')),
 			'draft'
 		);
+		if (!$selected_id) {
+			display_error(_('The evaluation could not be created.'));
+			$selected_id = 0;
+			$can_process = false;
+		}
 	}
 
 	if ($can_process) {

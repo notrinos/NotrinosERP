@@ -13,6 +13,7 @@
 include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/hooks.inc');
 include_once($path_to_root . '/purchasing/includes/db/suppliers_db.inc');
+require_once __DIR__ . '/vendor_evaluation_dimension_db.inc';
 
 /**
  * Get supported vendor tier labels.
@@ -502,6 +503,9 @@ function add_vendor_evaluation($supplier_id, $period_from, $period_to, $evaluato
 		'custom_data' => $custom_data,
 	);
 	hook_invoke_all('vendor_evaluation_before_save', $hook_data);
+	$encoded_metadata = encode_vendor_evaluation_custom_data($hook_data['custom_data']);
+	if ($encoded_metadata === null && $hook_data['custom_data'] !== null && $hook_data['custom_data'] !== '' && $hook_data['custom_data'] !== array())
+		return false;
 
 	$sql = "INSERT INTO " . TB_PREF . "vendor_evaluations
 		(supplier_id, evaluation_date, evaluator_id, period_from, period_to, status, recommendation, action_plan, notes, custom_data)
@@ -515,10 +519,12 @@ function add_vendor_evaluation($supplier_id, $period_from, $period_to, $evaluato
 			" . db_escape($hook_data['recommendation']) . ",
 			" . db_escape($hook_data['action_plan']) . ",
 			" . db_escape($hook_data['notes']) . ",
-			" . sql_vendor_evaluation_custom_data($hook_data['custom_data']) . ")";
+			" . sql_vendor_evaluation_custom_data($encoded_metadata) . ")";
 
-	db_query($sql, 'could not add vendor evaluation');
-	return db_insert_id();
+	// New references must be open on their axis; the stored bytes must equal the admitted payload.
+	return vendor_evaluation_dimension_write('vendor_evaluations', null, array('custom_data' => $encoded_metadata), function() use ($sql) {
+		return db_query($sql, 'could not add vendor evaluation') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -539,6 +545,8 @@ function add_vendor_evaluation($supplier_id, $period_from, $period_to, $evaluato
  */
 function update_vendor_evaluation($evaluation_id, $supplier_id, $period_from, $period_to, $evaluator_id, $evaluation_date, $recommendation = 'maintain', $action_plan = '', $notes = '', $status = 'draft', $custom_data = null)
 {
+	// Callers that omit custom_data (the native form) keep the stored metadata byte-exactly.
+	$has_custom_data = func_num_args() >= 11;
 	$existing = get_editable_vendor_evaluation($evaluation_id);
 	if (!$existing)
 		return false;
@@ -557,6 +565,11 @@ function update_vendor_evaluation($evaluation_id, $supplier_id, $period_from, $p
 		'custom_data' => $custom_data,
 	);
 	hook_invoke_all('vendor_evaluation_before_save', $hook_data);
+	// A save hook may supply metadata even when the caller omitted it.
+	$has_custom_data = $has_custom_data || $hook_data['custom_data'] !== null;
+	$encoded_metadata = $has_custom_data ? encode_vendor_evaluation_custom_data($hook_data['custom_data']) : null;
+	if ($has_custom_data && $encoded_metadata === null && $hook_data['custom_data'] !== null && $hook_data['custom_data'] !== '' && $hook_data['custom_data'] !== array())
+		return false;
 
 	$sql = "UPDATE " . TB_PREF . "vendor_evaluations SET
 		supplier_id = " . (int)$hook_data['supplier_id'] . ",
@@ -567,12 +580,42 @@ function update_vendor_evaluation($evaluation_id, $supplier_id, $period_from, $p
 		status = " . db_escape($hook_data['status']) . ",
 		recommendation = " . db_escape($hook_data['recommendation']) . ",
 		action_plan = " . db_escape($hook_data['action_plan']) . ",
-		notes = " . db_escape($hook_data['notes']) . ",
-		custom_data = " . sql_vendor_evaluation_custom_data($hook_data['custom_data']) . "
+		notes = " . db_escape($hook_data['notes'])
+		. ($has_custom_data ? ",
+		custom_data = " . sql_vendor_evaluation_custom_data($encoded_metadata) : "") . "
 		WHERE id = " . (int)$evaluation_id;
 
-	db_query($sql, 'could not update vendor evaluation');
-	calculate_evaluation_totals($evaluation_id);
+	if (!begin_transaction())
+		return false;
+	try {
+		// Re-check editability on the locked row so a concurrent approval cannot be overwritten.
+		$saved = vendor_evaluation_dimension_write('vendor_evaluations', $evaluation_id,
+			$has_custom_data ? array('custom_data' => $encoded_metadata) : array(),
+			function() use ($sql, $evaluation_id) {
+				$status = vendor_evaluation_locked_status($evaluation_id);
+				if ($status === false || $status === 'approved')
+					return false;
+				return db_query($sql, 'could not update vendor evaluation') ? true : false;
+			});
+		if (!$saved) {
+			cancel_transaction();
+			return false;
+		}
+		calculate_evaluation_totals($evaluation_id);
+		if (!commit_transaction()) {
+			cancel_transaction();
+			return false;
+		}
+	} catch (DimensionFinancialReferenceWriteException $e) {
+		cancel_transaction();
+		return false;
+	} catch (Exception $e) {
+		cancel_transaction();
+		throw $e;
+	} catch (Throwable $e) {
+		cancel_transaction();
+		throw $e;
+	}
 
 	return true;
 }
@@ -590,9 +633,14 @@ function delete_vendor_evaluation($evaluation_id)
 		return false;
 
 	$sql = "DELETE FROM " . TB_PREF . "vendor_evaluations WHERE id = " . (int)$evaluation_id;
-	db_query($sql, 'could not delete vendor evaluation');
 
-	return true;
+	// Removal is refused while the row retains any Dimension reference (including closed/orphan).
+	return vendor_evaluation_dimension_write('vendor_evaluations', $evaluation_id, array(), function() use ($sql, $evaluation_id) {
+		$status = vendor_evaluation_locked_status($evaluation_id);
+		if ($status === false || $status === 'approved')
+			return false;
+		return db_query($sql, 'could not delete vendor evaluation') ? true : false;
+	}, true) ? true : false;
 }
 
 /**
@@ -684,17 +732,44 @@ function get_evaluation_scores($evaluation_id)
  */
 function update_vendor_evaluation_category_snapshot($evaluation_id, $category_scores)
 {
-	$evaluation = get_vendor_evaluation($evaluation_id);
-	if (!$evaluation)
-		return;
+	if (!begin_transaction())
+		dimension_financial_reference_failure();
+	try {
+		// Build the snapshot from the locked current row, not an earlier unlocked read.
+		$rows = db_query('SELECT custom_data FROM ' . TB_PREF . 'vendor_evaluations WHERE id = ' . (int)$evaluation_id . ' FOR UPDATE');
+		if (!$rows)
+			dimension_financial_reference_failure();
+		$evaluation = db_fetch_assoc($rows);
+		if (!$evaluation) {
+			if (!commit_transaction())
+				dimension_financial_reference_failure();
+			return;
+		}
 
-	$custom_data = decode_vendor_evaluation_custom_data($evaluation['custom_data']);
-	$custom_data['category_scores'] = $category_scores;
+		$custom_data = decode_vendor_evaluation_custom_data($evaluation['custom_data']);
+		$custom_data['category_scores'] = $category_scores;
+		$encoded_metadata = encode_vendor_evaluation_custom_data($custom_data);
+		if ($encoded_metadata === null)
+			dimension_financial_reference_failure();
 
-	$sql = "UPDATE " . TB_PREF . "vendor_evaluations SET
-		custom_data = " . sql_vendor_evaluation_custom_data($custom_data) . "
-		WHERE id = " . (int)$evaluation_id;
-	db_query($sql, 'could not update vendor evaluation category snapshot');
+		// Retained references must stay at their paths; opaque/legacy-envelope bytes cannot be rewritten.
+		if ($encoded_metadata !== $evaluation['custom_data']) {
+			$sql = "UPDATE " . TB_PREF . "vendor_evaluations SET
+				custom_data = " . sql_vendor_evaluation_custom_data($encoded_metadata) . "
+				WHERE id = " . (int)$evaluation_id;
+			vendor_evaluation_dimension_guard('vendor_evaluations', $evaluation_id, array('custom_data' => $encoded_metadata), function() use ($sql) {
+				return db_query($sql, 'could not update vendor evaluation category snapshot') ? true : false;
+			});
+		}
+		if (!commit_transaction())
+			dimension_financial_reference_failure();
+	} catch (Exception $e) {
+		cancel_transaction();
+		throw $e;
+	} catch (Throwable $e) {
+		cancel_transaction();
+		throw $e;
+	}
 }
 
 /**
@@ -743,9 +818,24 @@ function calculate_evaluation_totals($evaluation_id)
 		price_score = " . db_escape($category_scores['price']) . ",
 		service_score = " . db_escape($category_scores['service']) . "
 		WHERE id = " . (int)$evaluation_id;
-	db_query($sql, 'could not update vendor evaluation totals');
 
-	update_vendor_evaluation_category_snapshot($evaluation_id, $category_scores);
+	// Score columns and the category snapshot commit together; retained metadata must survive both.
+	if (!begin_transaction())
+		dimension_financial_reference_failure();
+	try {
+		vendor_evaluation_dimension_guard('vendor_evaluations', $evaluation_id, array(), function() use ($sql) {
+			return db_query($sql, 'could not update vendor evaluation totals') ? true : false;
+		});
+		update_vendor_evaluation_category_snapshot($evaluation_id, $category_scores);
+		if (!commit_transaction())
+			dimension_financial_reference_failure();
+	} catch (Exception $e) {
+		cancel_transaction();
+		throw $e;
+	} catch (Throwable $e) {
+		cancel_transaction();
+		throw $e;
+	}
 
 	return array(
 		'overall_score' => $overall_score,
@@ -765,10 +855,32 @@ function submit_evaluation($evaluation_id)
 	if (!$existing)
 		return false;
 
-	calculate_evaluation_totals($evaluation_id);
 	$sql = "UPDATE " . TB_PREF . "vendor_evaluations SET status = 'submitted'
 		WHERE id = " . (int)$evaluation_id;
-	db_query($sql, 'could not submit vendor evaluation');
+	if (!begin_transaction())
+		return false;
+	try {
+		calculate_evaluation_totals($evaluation_id);
+		$saved = vendor_evaluation_dimension_write('vendor_evaluations', $evaluation_id, array(), function() use ($sql, $evaluation_id) {
+			$status = vendor_evaluation_locked_status($evaluation_id);
+			if ($status === false || $status === 'approved')
+				return false;
+			return db_query($sql, 'could not submit vendor evaluation') ? true : false;
+		});
+		if (!$saved || !commit_transaction()) {
+			cancel_transaction();
+			return false;
+		}
+	} catch (DimensionFinancialReferenceWriteException $e) {
+		cancel_transaction();
+		return false;
+	} catch (Exception $e) {
+		cancel_transaction();
+		throw $e;
+	} catch (Throwable $e) {
+		cancel_transaction();
+		throw $e;
+	}
 
 	return true;
 }
@@ -784,9 +896,15 @@ function reopen_vendor_evaluation($evaluation_id)
 	$sql = "UPDATE " . TB_PREF . "vendor_evaluations SET status = 'draft'
 		WHERE id = " . (int)$evaluation_id . "
 		AND status IN ('submitted', 'draft')";
-	db_query($sql, 'could not reopen vendor evaluation');
+	$affected = 0;
+	$saved = vendor_evaluation_dimension_write('vendor_evaluations', $evaluation_id, array(), function() use ($sql, &$affected) {
+		if (!db_query($sql, 'could not reopen vendor evaluation'))
+			return false;
+		$affected = db_num_affected_rows();
+		return true;
+	});
 
-	return db_num_affected_rows() > 0;
+	return $saved && $affected > 0;
 }
 
 /**
@@ -1108,6 +1226,9 @@ function log_vendor_event($supplier_id, $event_type, $event_date, $reference_typ
 {
 	$event_date = normalize_vendor_evaluation_sql_date($event_date, date2sql(Today()));
 	$recorded_by = isset($_SESSION['wa_current_user']) ? (int)$_SESSION['wa_current_user']->user : 0;
+	$encoded_metadata = encode_vendor_evaluation_custom_data($custom_data);
+	if ($encoded_metadata === null && $custom_data !== null && $custom_data !== '' && $custom_data !== array())
+		dimension_financial_reference_failure();
 
 	$sql = "INSERT INTO " . TB_PREF . "vendor_performance_log
 		(supplier_id, event_type, event_date, reference_type, reference_no, details, impact_score, recorded_by, custom_data)
@@ -1120,10 +1241,12 @@ function log_vendor_event($supplier_id, $event_type, $event_date, $reference_typ
 			" . db_escape($details) . ",
 			" . db_escape($impact_score) . ",
 			" . (int)$recorded_by . ",
-			" . sql_vendor_evaluation_custom_data($custom_data) . ")";
+			" . sql_vendor_evaluation_custom_data($encoded_metadata) . ")";
 
-	db_query($sql, 'could not insert vendor performance log');
-	$event_id = db_insert_id();
+	// GRN callers ignore the result, so a refused log entry unwinds the whole receipt.
+	$event_id = vendor_evaluation_dimension_guard('vendor_performance_log', null, array('custom_data' => $encoded_metadata), function() use ($sql) {
+		return db_query($sql, 'could not insert vendor performance log') ? db_insert_id() : false;
+	});
 
 	$event_data = array(
 		'id' => $event_id,
@@ -1345,7 +1468,7 @@ function update_supplier_vendor_metrics($supplier_id, $metrics, $score_overrides
 	}
 
 	$sql = "UPDATE " . TB_PREF . "suppliers SET\n\t\t" . implode(",\n\t\t", $updates) . "\n\t\tWHERE supplier_id = " . (int)$supplier_id;
-	db_query($sql, 'could not update supplier vendor metrics');
+	vendor_supplier_metrics_dimension_guard($supplier_id, $sql);
 
 	return true;
 }
@@ -1359,6 +1482,39 @@ function update_supplier_vendor_metrics($supplier_id, $metrics, $score_overrides
  */
 function approve_evaluation($evaluation_id, $approved_by)
 {
+	// Status, totals and supplier metrics commit together or not at all.
+	if (!begin_transaction())
+		return false;
+	try {
+		$approved = approve_vendor_evaluation_native($evaluation_id, $approved_by);
+		if (!$approved || !commit_transaction()) {
+			cancel_transaction();
+			return false;
+		}
+	} catch (DimensionFinancialReferenceWriteException $e) {
+		cancel_transaction();
+		return false;
+	} catch (Exception $e) {
+		cancel_transaction();
+		throw $e;
+	} catch (Throwable $e) {
+		cancel_transaction();
+		throw $e;
+	}
+
+	return true;
+}
+
+/**
+ * Native approval body of approve_evaluation(), run inside its transaction.
+ *
+ * @param int $evaluation_id
+ * @param int $approved_by
+ * @return bool
+ * @throws DimensionFinancialReferenceWriteException when retained metadata cannot be preserved
+ */
+function approve_vendor_evaluation_native($evaluation_id, $approved_by)
+{
 	$evaluation = get_vendor_evaluation($evaluation_id);
 	if (!$evaluation)
 		return false;
@@ -1371,7 +1527,10 @@ function approve_evaluation($evaluation_id, $approved_by)
 
 	$sql = "UPDATE " . TB_PREF . "vendor_evaluations SET status = 'approved'
 		WHERE id = " . (int)$evaluation_id;
-	db_query($sql, 'could not approve vendor evaluation');
+	// Approval keeps retained metadata exactly; a refusal unwinds the approval executor's transaction.
+	vendor_evaluation_dimension_guard('vendor_evaluations', $evaluation_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not approve vendor evaluation') ? true : false;
+	});
 
 	$new_tier = get_vendor_tier_for_score($totals['overall_score']);
 	$old_tier = $evaluation['vendor_tier'];

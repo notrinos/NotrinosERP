@@ -661,7 +661,7 @@ class Entity extends record_set {
 				function($admitted)use($operation,$identity,$data){return $this->ordinary_dimension_persist($operation,$identity,$admitted+$data);},$operation==='delete');
 		}
 		// Financial ledgers and provision logs require their native transaction writers, including imports.
-		if (preg_match('/^\s*`?(?:warranty_provision_log|gl_trans|bank_trans|debtor_trans|debtor_trans_details|supp_trans|supp_invoice_items|stock_moves|sales_orders|sales_order_details|purch_orders|purch_order_details|grn_batch|grn_items)\b/i', $this->name)) return false;
+		if (preg_match('/^\s*`?(?:warranty_provision_log|gl_trans|bank_trans|debtor_trans|debtor_trans_details|supp_trans|supp_invoice_items|stock_moves|sales_orders|sales_order_details|purch_orders|purch_order_details|grn_batch|grn_items|vendor_evaluations|vendor_performance_log)\b/i', $this->name)) return false;
 		$keys = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id', 'purch_rfq'=>'id', 'purch_rfq_items'=>'id', 'purch_rfq_vendors'=>'id', 'purch_rfq_vendor_lines'=>'id');
 		$keys['areas']='area_code';$keys['tax_types']='id';$keys['chart_types']='id';$keys['chart_class']='cid';
 		$keys['vendor_pricelists']='id';$keys['item_codes']='id';$keys['sales_pos']='id';$keys['sales_types']='id';$keys['salesman']='salesman_code';$keys['prices']='id';
