@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/quality_dimension_db.inc';
 
 /**
  * Warranty Claims & Recall Campaigns Database Layer.
@@ -172,8 +173,9 @@ function add_warranty_claim($reference, $stock_id, $customer_id, $claim_date,
 		. (int)$_SESSION['wa_current_user']->user . ","
 		. "NOW()"
 		. ")";
-	db_query($sql, 'could not add warranty claim');
-	return db_insert_id();
+		return quality_dimension_write('warranty_claims', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'could not add warranty claim') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -209,7 +211,9 @@ function update_warranty_claim($id, $stock_id, $customer_id, $claim_date,
 		. "assigned_to=" . ($assigned_to ? (int)$assigned_to : 'NULL') . ","
 		. "notes=" . db_escape($notes)
 		. " WHERE id=" . (int)$id;
-	db_query($sql, 'could not update warranty claim');
+		return quality_dimension_write('warranty_claims', (int)$id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update warranty claim') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -240,7 +244,9 @@ function update_warranty_claim_status($id, $new_status, $resolution_description 
 
 	$sql = "UPDATE " . TB_PREF . "warranty_claims SET "
 		. implode(',', $sets) . " WHERE id=" . (int)$id;
-	db_query($sql, 'could not update warranty claim status');
+		return quality_dimension_write('warranty_claims', (int)$id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update warranty claim status') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -386,12 +392,10 @@ function can_delete_warranty_claim($id)
  */
 function delete_warranty_claim($id)
 {
-	begin_transaction();
-	$sql = "DELETE FROM " . TB_PREF . "warranty_claim_parts WHERE claim_id=" . (int)$id;
-	db_query($sql, 'could not delete warranty claim parts');
-	$sql = "DELETE FROM " . TB_PREF . "warranty_claims WHERE id=" . (int)$id;
-	db_query($sql, 'could not delete warranty claim');
-	commit_transaction();
+		// Refused (and the parts removal rolled back) while the claim retains a Dimension reference.
+	return quality_dimension_remove_with_children('warranty_claims', $id,
+		"DELETE FROM " . TB_PREF . "warranty_claim_parts WHERE claim_id=" . (int)$id,
+		"DELETE FROM " . TB_PREF . "warranty_claims WHERE id=" . (int)$id);
 }
 
 /**
@@ -526,7 +530,9 @@ function recalculate_warranty_claim_cost($claim_id)
 	$cost = get_warranty_claim_parts_cost($claim_id);
 	$sql = "UPDATE " . TB_PREF . "warranty_claims SET repair_cost=" . db_escape($cost)
 		. " WHERE id=" . (int)$claim_id;
-	db_query($sql, 'could not update warranty claim cost');
+		return quality_dimension_write('warranty_claims', (int)$claim_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update warranty claim cost') ? true : false;
+	}) ? true : false;
 }
 
 // =====================================================================
@@ -918,8 +924,9 @@ function add_recall_campaign($reference, $title, $description, $stock_id,
 		. (int)$_SESSION['wa_current_user']->user . ","
 		. "NOW()"
 		. ")";
-	db_query($sql, 'could not add recall campaign');
-	return db_insert_id();
+		return quality_dimension_write('recall_campaigns', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'could not add recall campaign') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -965,7 +972,9 @@ function update_recall_campaign($id, $title, $description, $stock_id,
 		. "resolution=" . db_escape($resolution) . ","
 		. "notes=" . db_escape($notes)
 		. " WHERE id=" . (int)$id;
-	db_query($sql, 'could not update recall campaign');
+		return quality_dimension_write('recall_campaigns', (int)$id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update recall campaign') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -982,7 +991,11 @@ function update_recall_campaign_status($id, $status)
 
 	$sql = "UPDATE " . TB_PREF . "recall_campaigns SET status=" . db_escape($status)
 		. " WHERE id=" . (int)$id;
-	db_query($sql, 'could not update recall campaign status');
+		// Callers treat anything but true as the refusal message to display.
+	if (!quality_dimension_write('recall_campaigns', (int)$id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update recall campaign status') ? true : false;
+	}))
+		return _('The recall campaign status could not be changed: its retained Dimension metadata could not be certified.');
 	return true;
 }
 
@@ -1072,12 +1085,10 @@ function can_delete_recall_campaign($id)
  */
 function delete_recall_campaign($id)
 {
-	begin_transaction();
-	$sql = "DELETE FROM " . TB_PREF . "recall_items WHERE recall_id=" . (int)$id;
-	db_query($sql, 'could not delete recall items');
-	$sql = "DELETE FROM " . TB_PREF . "recall_campaigns WHERE id=" . (int)$id;
-	db_query($sql, 'could not delete recall campaign');
-	commit_transaction();
+		// Refused (and the items removal rolled back) while the campaign retains a Dimension reference.
+	return quality_dimension_remove_with_children('recall_campaigns', $id,
+		"DELETE FROM " . TB_PREF . "recall_items WHERE recall_id=" . (int)$id,
+		"DELETE FROM " . TB_PREF . "recall_campaigns WHERE id=" . (int)$id);
 }
 
 /**
@@ -1367,7 +1378,10 @@ function execute_recall_campaign($campaign_id)
 	$sql = "UPDATE " . TB_PREF . "recall_campaigns SET total_affected_units="
 		. "(SELECT COUNT(*) FROM " . TB_PREF . "recall_items WHERE recall_id=" . (int)$campaign_id . ")"
 		. " WHERE id=" . (int)$campaign_id;
-	db_query($sql, 'could not update recall totals');
+		quality_dimension_guard('recall_campaigns', (int)$campaign_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update recall totals') ? true : false;
+	});
+
 
 	// Transition to active/in_progress
 	update_recall_campaign_status($campaign_id, 'in_progress');
@@ -1391,7 +1405,10 @@ function update_recall_campaign_totals($campaign_id)
 		total_recovered_units = (SELECT COUNT(*) FROM " . TB_PREF . "recall_items
 			WHERE recall_id=" . (int)$campaign_id . " AND status IN " . $resolved_statuses . ")
 		WHERE id=" . (int)$campaign_id;
-	db_query($sql, 'could not update recall campaign totals');
+		// Item flows ignore the result: a refusal throws so the item change unwinds with it.
+	quality_dimension_guard('recall_campaigns', (int)$campaign_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update recall campaign totals') ? true : false;
+	});
 }
 
 // =====================================================================

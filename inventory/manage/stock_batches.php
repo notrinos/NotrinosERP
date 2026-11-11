@@ -93,7 +93,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 		if ($selected_id != -1) {
 			$old_batch = get_stock_batch($selected_id);
 
-			update_stock_batch(
+						$batch_saved = update_stock_batch(
 				$selected_id,
 				get_post('batch_no'),
 				get_post('status'),
@@ -112,8 +112,8 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				get_post('notes')
 			);
 
-			// Log status change if changed
-			if ($old_batch && $old_batch['status'] !== get_post('status')) {
+						// Log status change if changed
+			if ($batch_saved && $old_batch && $old_batch['status'] !== get_post('status')) {
 				add_batch_movement(
 					$selected_id, 0, 0,
 					'', null, 0,
@@ -123,8 +123,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				);
 			}
 
-			display_notification(_('Batch has been updated.'));
+						if ($batch_saved)
+				display_notification(_('Batch has been updated.'));
+			else
+				display_error(_('The batch could not be updated.'));
 		} else {
+						try {
 			$new_id = add_stock_batch(
 				get_post('batch_no'),
 				get_post('stock_id_edit'),
@@ -141,12 +145,15 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				get_post('initial_qty', 0),
 				get_post('country_of_origin'),
 				get_post('certification'),
-				get_post('notes')
+								get_post('notes')
 			);
+			} catch (DimensionFinancialReferenceWriteException $e) {
+				$new_id = false;
+			}
 
 			// Log initial creation movement with initial_qty if > 0
 			$init_qty = (float)get_post('initial_qty', 0);
-			if ($init_qty > 0) {
+			if ($new_id && $init_qty > 0) {
 				$init_loc = get_post('init_location', '');
 				add_batch_movement(
 					$new_id, 0, 0,
@@ -155,7 +162,10 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				);
 			}
 
-			display_notification(_('New batch has been added.'));
+						if ($new_id)
+				display_notification(_('New batch has been added.'));
+			else
+				display_error(_('The batch could not be added.'));
 		}
 		$Mode = 'RESET';
 	}
@@ -167,8 +177,10 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 if ($Mode == 'Delete') {
 	$can = can_delete_stock_batch($selected_id);
 	if ($can === true) {
-		delete_stock_batch($selected_id);
-		display_notification(_('Selected batch has been deleted.'));
+				if (delete_stock_batch($selected_id))
+			display_notification(_('Selected batch has been deleted.'));
+		else
+			display_error(_('The batch cannot be deleted while it retains a Dimension reference.'));
 	} else {
 		display_error($can);
 	}
@@ -302,11 +314,15 @@ if (isset($_POST['do_split']) && $_POST['do_split'] != '') {
 // Handle AUTO-EXPIRE
 //----------------------------------------------------------------------
 if (isset($_POST['auto_expire']) && $_POST['auto_expire'] != '') {
-	$expired_count = auto_expire_batches();
-	if ($expired_count > 0)
-		display_notification(sprintf(_('%d batches have been marked as expired.'), $expired_count));
-	else
-		display_note(_('No active batches found with past expiry dates.'));
+		try {
+		$expired_count = auto_expire_batches();
+		if ($expired_count > 0)
+			display_notification(sprintf(_('%d batches have been marked as expired.'), $expired_count));
+		else
+			display_note(_('No active batches found with past expiry dates.'));
+	} catch (DimensionFinancialReferenceWriteException $e) {
+		display_error(_('The expiry sweep was refused: a batch retained Dimension metadata could not be certified.'));
+	}
 	$Ajax->activate('batch_list');
 }
 

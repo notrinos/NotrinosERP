@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/../../../inventory/warehouse/includes/db/warehouse_config_dimension_db.inc';
 
 include_once($path_to_root . '/inventory/warehouse/includes/replenishment_engine.inc');
 include_once($path_to_root . '/inventory/warehouse/includes/db/warehouse_replenishment_db.inc');
@@ -109,8 +110,9 @@ function set_preferred_supplier_for_rule($rule_id, $supplier_id, $auto_create_rf
 
 	$sql = "UPDATE " . TB_PREF . "wh_replenishment_rules SET\n\t\tpreferred_supplier_id = " . db_escape((int)$supplier_id) . ",\n\t\tpreferred_supplier = " . db_escape((int)$supplier_id) . ",\n\t\tauto_create_rfq = " . db_escape((int)$auto_create_rfq) . ",\n\t\tauto_create_po = " . db_escape((int)$auto_create_po) . ",\n\t\tlead_time_days = " . db_escape((int)$lead_time_days) . "\n\tWHERE rule_id = " . (int)$rule_id;
 
-	db_query($sql, 'could not update purchasing reorder rule overlay');
-	return true;
+		return warehouse_config_dimension_write('wh_replenishment_rules', (int)$rule_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update purchasing reorder rule overlay') ? true : false;
+	}) ? true : false;
 }
 
 /**

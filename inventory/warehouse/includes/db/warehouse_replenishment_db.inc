@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/warehouse_config_dimension_db.inc';
 
 /**
  * Database functions for warehouse replenishment rules.
@@ -147,8 +148,10 @@ function add_replenishment_rule($rule_name, $rule_type, $stock_id = null,
 		. "1"
 		. ")";
 
-	db_query($sql, 'could not add replenishment rule');
-	return db_insert_id();
+		// The native birth writes no metadata: the stored default must stay NULL.
+	return warehouse_config_dimension_write('wh_replenishment_rules', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'could not add replenishment rule') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -198,7 +201,9 @@ function update_replenishment_rule($rule_id, $rule_name, $rule_type,
 		. "active=" . (int)$active
 		. " WHERE rule_id=" . (int)$rule_id;
 
-	db_query($sql, 'could not update replenishment rule');
+		return warehouse_config_dimension_write('wh_replenishment_rules', (int)$rule_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update replenishment rule') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -276,7 +281,10 @@ function get_replenishment_rules($rule_type = null, $warehouse_loc_code = null,
  */
 function delete_replenishment_rule($rule_id) {
 	$sql = "DELETE FROM " . TB_PREF . "wh_replenishment_rules WHERE rule_id=" . (int)$rule_id;
-	db_query($sql, 'could not delete replenishment rule');
+		// Refused while the rule retains a Dimension reference (closed/orphan included).
+	return warehouse_config_dimension_write('wh_replenishment_rules', (int)$rule_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not delete replenishment rule') ? true : false;
+	}, true) ? true : false;
 }
 
 /**
@@ -299,7 +307,9 @@ function can_delete_replenishment_rule($rule_id) {
 function toggle_replenishment_rule_active($rule_id, $active) {
 	$sql = "UPDATE " . TB_PREF . "wh_replenishment_rules SET active=" . (int)$active
 		. " WHERE rule_id=" . (int)$rule_id;
-	db_query($sql, 'could not toggle replenishment rule active');
+		return warehouse_config_dimension_write('wh_replenishment_rules', (int)$rule_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not toggle replenishment rule active') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -311,7 +321,9 @@ function toggle_replenishment_rule_active($rule_id, $active) {
 function toggle_replenishment_rule_auto_execute($rule_id, $auto_execute) {
 	$sql = "UPDATE " . TB_PREF . "wh_replenishment_rules SET auto_execute=" . (int)$auto_execute
 		. " WHERE rule_id=" . (int)$rule_id;
-	db_query($sql, 'could not toggle replenishment auto-execute');
+		return warehouse_config_dimension_write('wh_replenishment_rules', (int)$rule_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not toggle replenishment auto-execute') ? true : false;
+	}) ? true : false;
 }
 
 /**

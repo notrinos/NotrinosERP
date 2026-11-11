@@ -49,8 +49,10 @@ if ($Mode == 'Delete') {
 	if ($can !== true) {
 		display_error($can);
 	} else {
-		delete_warranty_claim($selected_id);
-		display_notification(_('Warranty claim has been deleted.'));
+				if (delete_warranty_claim($selected_id))
+			display_notification(_('Warranty claim has been deleted.'));
+		else
+			display_error(_('The warranty claim cannot be deleted while it retains a Dimension reference.'));
 	}
 	$Mode = 'RESET';
 }
@@ -67,8 +69,11 @@ if (get_post('change_status')) {
 
 	$valid_statuses = array_keys(get_warranty_claim_statuses());
 	if (in_array($new_status, $valid_statuses)) {
-		update_warranty_claim_status($claim_id, $new_status,
-			$resolution_desc, $resolution_date, $repair_cost);
+		if (!update_warranty_claim_status($claim_id, $new_status,
+			$resolution_desc, $resolution_date, $repair_cost)) {
+			display_error(_('The warranty claim status could not be changed: its retained Dimension metadata could not be certified.'));
+			$new_status = null;
+		}
 
 		// If resolved/replaced/closed, update serial status
 		$claim = get_warranty_claim($claim_id);
@@ -85,8 +90,9 @@ if (get_post('change_status')) {
 			}
 		}
 
-		display_notification(sprintf(_('Warranty claim status changed to %s.'),
-			get_warranty_claim_status_label($new_status)));
+		if ($new_status !== null)
+			display_notification(sprintf(_('Warranty claim status changed to %s.'),
+				get_warranty_claim_status_label($new_status)));
 	}
 	$Ajax->activate('_page_body');
 }
@@ -174,7 +180,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 
 		if ($Mode == 'ADD_ITEM') {
 			$reference = get_next_warranty_claim_reference();
-			$id = add_warranty_claim(
+						$id = add_warranty_claim(
 				$reference,
 				get_post('stock_id'),
 				(int)get_post('customer_id'),
@@ -186,11 +192,14 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				check_value('warranty_valid'),
 				check_value('is_chargeable'),
 				$assigned_to,
-				get_post('notes')
+								get_post('notes')
 			);
-			display_notification(sprintf(_('Warranty claim %s has been created.'), $reference));
+			if ($id)
+				display_notification(sprintf(_('Warranty claim %s has been created.'), $reference));
+			else
+				display_error(_('The warranty claim could not be created.'));
 		} else {
-			update_warranty_claim(
+						$claim_saved = update_warranty_claim(
 				$selected_id,
 				get_post('stock_id'),
 				(int)get_post('customer_id'),
@@ -202,9 +211,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				check_value('warranty_valid'),
 				check_value('is_chargeable'),
 				$assigned_to,
-				get_post('notes')
+								get_post('notes')
 			);
-			display_notification(_('Warranty claim has been updated.'));
+			if ($claim_saved)
+				display_notification(_('Warranty claim has been updated.'));
+			else
+				display_error(_('The warranty claim could not be updated.'));
 		}
 		$Mode = 'RESET';
 	}
@@ -528,6 +540,8 @@ users_list_row(_('Assigned To:'), 'assigned_to', get_post('assigned_to'), true, 
 textarea_row(_('Notes:'), 'notes', get_post('notes'), 50, 3);
 
 end_outer_table(1);
+
+hidden('selected_id', $selected_id);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
 

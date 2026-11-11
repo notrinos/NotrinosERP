@@ -118,7 +118,7 @@ if ($Mode == 'ADD_ITEM' && can_process_discount_program()) {
 		'stackable'             => check_value('stackable') ? 1 : 0,
 		'priority'              => (int)get_post('priority', 10),
 	);
-	add_discount_program(
+	$added = add_discount_program(
 		trim(get_post('prog_name')),
 		get_post('program_type', 'automatic'),
 		get_post('date_start', ''),
@@ -129,7 +129,10 @@ if ($Mode == 'ADD_ITEM' && can_process_discount_program()) {
 		input_num('reward_value'),
 		$options
 	);
-	display_notification(_('New discount program has been added.'));
+	if ($added)
+		display_notification(_('New discount program has been added.'));
+	else
+		display_error(_('The discount program could not be added.'));
 	$Mode = 'RESET';
 }
 
@@ -153,14 +156,16 @@ if ($Mode == 'UPDATE_ITEM' && can_process_discount_program()) {
 		'stackable'             => check_value('stackable') ? 1 : 0,
 		'priority'              => (int)get_post('priority', 10),
 	);
-	update_discount_program($selected_id, $update_data);
-	display_notification(_('Discount program has been updated.'));
+	if (update_discount_program($selected_id, $update_data))
+		display_notification(_('Discount program has been updated.'));
+	else
+		display_error(_('The discount program could not be updated.'));
 	$Mode = 'RESET';
 }
 
 if ($Mode == 'Delete') {
 	if (!delete_discount_program($selected_id))
-		display_error(_('Only draft programs can be deleted. Use Cancel status to disable active programs.'));
+		display_error(_('Only draft programs without a retained Dimension reference can be deleted. Use Cancel status to disable active programs.'));
 	else
 		display_notification(_('Discount program and its coupons have been deleted.'));
 	$Mode = 'RESET';
@@ -168,14 +173,18 @@ if ($Mode == 'Delete') {
 
 // Activate / cancel program status changes
 if (isset($_POST['ActivateProgram']) && $selected_id > 0) {
-	update_discount_program($selected_id, array('status' => 'active'));
-	display_notification(_('Discount program has been activated.'));
+	if (update_discount_program($selected_id, array('status' => 'active')))
+		display_notification(_('Discount program has been activated.'));
+	else
+		display_error(_('The discount program could not be activated.'));
 	$Mode = 'RESET';
 }
 
 if (isset($_POST['CancelProgram']) && $selected_id > 0) {
-	update_discount_program($selected_id, array('status' => 'cancelled'));
-	display_notification(_('Discount program has been cancelled.'));
+	if (update_discount_program($selected_id, array('status' => 'cancelled')))
+		display_notification(_('Discount program has been cancelled.'));
+	else
+		display_error(_('The discount program could not be cancelled.'));
 	$Mode = 'RESET';
 }
 

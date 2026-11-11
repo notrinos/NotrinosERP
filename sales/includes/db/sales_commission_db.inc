@@ -19,6 +19,8 @@
     created on invoice post / reversed on credit note.
 */
 
+require_once __DIR__ . '/sales_dimension_custody_db.inc';
+
 // -------------------------------------------------------------------------
 // Commission Plans
 // -------------------------------------------------------------------------
@@ -44,8 +46,10 @@ function add_commission_plan($name, $plan_type, $calculation_base, $period_type,
                 ".db_escape($period_type).", ".db_escape($status).",
                 ".($date_start ? db_escape($date_start) : 'NULL').",
                 ".($date_end   ? db_escape($date_end)   : 'NULL').")";
-    db_query($sql, 'Cannot add commission plan');
-    return db_insert_id();
+    // The native birth writes no metadata: the stored default must stay NULL.
+    return sales_dimension_custody_write('sales_commission_plans', null, array('custom_data' => null), function() use ($sql) {
+        return db_query($sql, 'Cannot add commission plan') ? db_insert_id() : false;
+    });
 }
 
 /**
@@ -74,7 +78,9 @@ function update_commission_plan($id, $name, $plan_type, $calculation_base, $peri
                 date_end = ".($date_end   ? db_escape($date_end)   : 'NULL').",
                 inactive = ".db_escape((int)$inactive)."
             WHERE id = ".db_escape((int)$id);
-    db_query($sql, 'Cannot update commission plan');
+    return sales_dimension_custody_write('sales_commission_plans', $id, array(), function() use ($sql) {
+        return db_query($sql, 'Cannot update commission plan') ? true : false;
+    }) ? true : false;
 }
 
 /**
@@ -118,10 +124,17 @@ function delete_commission_plan($id)
         'Cannot check commission plan usage');
     if (db_num_rows($check) > 0)
         return false;
-    db_query("DELETE FROM ".TB_PREF."sales_commission_tiers WHERE plan_id = ".$id, 'Cannot delete tiers');
-    db_query("DELETE FROM ".TB_PREF."sales_commission_assignments WHERE plan_id = ".$id, 'Cannot delete assignments');
-    db_query("DELETE FROM ".TB_PREF."sales_commission_plans WHERE id = ".$id, 'Cannot delete plan');
-    return true;
+    // Refused while the plan retains a Dimension reference (closed/orphan included); the
+    // usage check is repeated on the locked plan so a concurrent entry cannot be orphaned.
+    return (bool)sales_dimension_custody_write('sales_commission_plans', $id, array(), function() use ($id) {
+        $used = db_query("SELECT id FROM ".TB_PREF."sales_commission_entries WHERE plan_id = ".$id." LIMIT 1 FOR UPDATE",
+            'Cannot check commission plan usage');
+        if (!$used || db_num_rows($used) > 0)
+            return false;
+        return db_query("DELETE FROM ".TB_PREF."sales_commission_tiers WHERE plan_id = ".$id, 'Cannot delete tiers')
+            && db_query("DELETE FROM ".TB_PREF."sales_commission_assignments WHERE plan_id = ".$id, 'Cannot delete assignments')
+            && db_query("DELETE FROM ".TB_PREF."sales_commission_plans WHERE id = ".$id, 'Cannot delete plan');
+    }, true);
 }
 
 // -------------------------------------------------------------------------
@@ -367,11 +380,22 @@ function calculate_commission($salesman_id, $trans_type, $trans_no, $debtor_no, 
     hook_invoke_all('sales_commission_calculate', $commission_amount, $context);
 
     // Remove any existing entry for this transaction/salesman (idempotent on re-post)
-    db_query("DELETE FROM ".TB_PREF."sales_commission_entries
+    // Each superseded entry is removed individually under the writer fence, so an entry
+    // that retains a Dimension reference is never erased; a refusal unwinds the caller.
+    $stale = db_query("SELECT id FROM ".TB_PREF."sales_commission_entries
               WHERE trans_type = ".db_escape($trans_type)."
                 AND trans_no = ".db_escape((int)$trans_no)."
-                AND salesman_id = ".db_escape((int)$salesman_id),
-        'Cannot remove old commission entry');
+                AND salesman_id = ".db_escape((int)$salesman_id)." ORDER BY id",
+        'Cannot read old commission entries');
+    $stale_ids = array();
+    while ($stale && ($stale_row = db_fetch_assoc($stale)))
+        $stale_ids[] = (int)$stale_row['id'];
+    foreach ($stale_ids as $stale_id) {
+        $stale_sql = "DELETE FROM ".TB_PREF."sales_commission_entries WHERE id = ".$stale_id;
+        sales_dimension_custody_write('sales_commission_entries', $stale_id, array(), function() use ($stale_sql) {
+            return db_query($stale_sql, 'Cannot remove old commission entry') ? true : false;
+        }, true) or dimension_financial_reference_failure();
+    }
 
     $sql = "INSERT INTO ".TB_PREF."sales_commission_entries
                 (salesman_id, plan_id, trans_type, trans_no, debtor_no, trans_date,
@@ -381,7 +405,9 @@ function calculate_commission($salesman_id, $trans_type, $trans_no, $debtor_no, 
                 ".db_escape((int)$debtor_no).", ".db_escape($date).",
                 ".db_escape($base_amount).", ".db_escape($commission_rate).",
                 ".db_escape($commission_amount).", 'calculated')";
-    db_query($sql, 'Cannot save commission entry');
+    sales_dimension_custody_write('sales_commission_entries', null, array('custom_data' => null), function() use ($sql) {
+        return db_query($sql, 'Cannot save commission entry') ? db_insert_id() : false;
+    }) or dimension_financial_reference_failure();
 
     return $commission_amount;
 }
@@ -586,8 +612,7 @@ function approve_sales_commission_entry_from_core($entry_id, $approved_by)
         WHERE id = " . db_escape((int)$entry_id) . "
             AND status = 'calculated'";
 
-    db_query($sql, 'Cannot approve sales commission entry from core approval');
-    return db_num_affected_rows() > 0;
+    return sales_dimension_status_write('sales_commission_entries', (int)$entry_id, $sql, 'Cannot approve sales commission entry from core approval');
 }
 
 /**
@@ -721,12 +746,14 @@ function approve_commissions($entry_ids, $approved_by)
 {
     if (empty($entry_ids))
         return;
-    $ids = implode(',', array_map('intval', $entry_ids));
-    db_query("UPDATE ".TB_PREF."sales_commission_entries
+    if (!sales_dimension_status_bulk('sales_commission_entries', $entry_ids, function($id) {
+        return "UPDATE ".TB_PREF."sales_commission_entries
               SET status = 'approved'
-              WHERE id IN (".$ids.") AND status = 'calculated'",
-        'Cannot approve commissions');
+              WHERE id = ".(int)$id." AND status = 'calculated'";
+    }, 'Cannot approve commissions'))
+        return false;
     hook_invoke_all('sales_commission_approved', $entry_ids);
+    return true;
 }
 
 /**
@@ -740,12 +767,14 @@ function mark_commissions_paid($entry_ids, $payment_ref, $payment_date)
 {
     if (empty($entry_ids))
         return;
-    $ids = implode(',', array_map('intval', $entry_ids));
-    db_query("UPDATE ".TB_PREF."sales_commission_entries
+    if (!sales_dimension_status_bulk('sales_commission_entries', $entry_ids, function($id) use ($payment_ref, $payment_date) {
+        return "UPDATE ".TB_PREF."sales_commission_entries
               SET status = 'paid',
                   payment_reference = ".db_escape($payment_ref).",
                   payment_date = ".db_escape($payment_date)."
-              WHERE id IN (".$ids.") AND status = 'approved'",
-        'Cannot mark commissions paid');
+              WHERE id = ".(int)$id." AND status = 'approved'";
+    }, 'Cannot mark commissions paid'))
+        return false;
     hook_invoke_all('sales_commission_paid', $entry_ids, $payment_ref);
+    return true;
 }

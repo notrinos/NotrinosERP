@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/warehouse_config_dimension_db.inc';
 
 /**
  * Consignment & VMI (Vendor-Managed Inventory) Database Functions.
@@ -106,9 +107,11 @@ function consignment_status_badge($status)
  */
 function receive_consignment_stock($stock_id, $supplier_id, $qty, $unit_cost, $date_, $loc_code, $wh_loc_id = null, $batch_id = null, $memo = '')
 {
-	begin_transaction();
+		if (!begin_transaction())
+		return false;
 
 	$date_sql = date2sql($date_);
+
 
 	$sql = "INSERT INTO " . TB_PREF . "wh_consignment_stock
 		(stock_id, supplier_id, wh_loc_id, qty_on_hand, qty_consumed, unit_cost,
@@ -126,8 +129,14 @@ function receive_consignment_stock($stock_id, $supplier_id, $qty, $unit_cost, $d
 		. db_escape($memo) . ", "
 		. db_escape($loc_code) . ")";
 
-	db_query($sql, 'Could not insert consignment stock record');
-	$consignment_id = db_insert_id();
+		// The native birth writes no metadata (NULL). A refusal has already rolled the transaction back.
+	$consignment_id = warehouse_config_dimension_write('wh_consignment_stock', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'Could not insert consignment stock record') ? db_insert_id() : false;
+	});
+	if (!$consignment_id) {
+		cancel_transaction();
+		return false;
+	}
 
 	// Log a consignment receipt movement
 	add_consignment_movement($consignment_id, 'receive', $qty, $date_,
@@ -277,7 +286,13 @@ function consume_consignment_stock($consignment_id, $qty, $date_, $memo = '')
 		SET qty_on_hand = qty_on_hand - " . db_escape($qty) . ",
 			qty_consumed = qty_consumed + " . db_escape($qty) . "
 		WHERE id = " . db_escape($consignment_id);
-	db_query($sql, 'Could not update consignment stock on consume');
+		if (!warehouse_config_dimension_write('wh_consignment_stock', (int)$consignment_id, array(), function() use ($sql) {
+		return db_query($sql, 'Could not update consignment stock on consume') ? true : false;
+	})) {
+		cancel_transaction();
+		return false;
+	}
+
 
 	// Check if fully consumed
 	$updated = get_consignment_record($consignment_id);
@@ -285,7 +300,12 @@ function consume_consignment_stock($consignment_id, $qty, $date_, $memo = '')
 		$sql = "UPDATE " . TB_PREF . "wh_consignment_stock
 			SET status = 'consumed'
 			WHERE id = " . db_escape($consignment_id);
-		db_query($sql, 'Could not update consignment status');
+				if (!warehouse_config_dimension_write('wh_consignment_stock', (int)$consignment_id, array(), function() use ($sql) {
+			return db_query($sql, 'Could not update consignment status') ? true : false;
+		})) {
+			cancel_transaction();
+			return false;
+		}
 	}
 
 	// 2. Create stock move — positive qty = stock in (now owned)
@@ -392,7 +412,13 @@ function return_consignment_stock($consignment_id, $qty, $date_, $memo = '')
 	$sql = "UPDATE " . TB_PREF . "wh_consignment_stock
 		SET qty_on_hand = qty_on_hand - " . db_escape($qty) . "
 		WHERE id = " . db_escape($consignment_id);
-	db_query($sql, 'Could not update consignment stock on return');
+		if (!warehouse_config_dimension_write('wh_consignment_stock', (int)$consignment_id, array(), function() use ($sql) {
+		return db_query($sql, 'Could not update consignment stock on return') ? true : false;
+	})) {
+		cancel_transaction();
+		return false;
+	}
+
 
 	// Check if fully returned
 	$updated = get_consignment_record($consignment_id);
@@ -400,7 +426,12 @@ function return_consignment_stock($consignment_id, $qty, $date_, $memo = '')
 		$sql = "UPDATE " . TB_PREF . "wh_consignment_stock
 			SET status = 'returned'
 			WHERE id = " . db_escape($consignment_id);
-		db_query($sql, 'Could not update consignment status');
+				if (!warehouse_config_dimension_write('wh_consignment_stock', (int)$consignment_id, array(), function() use ($sql) {
+			return db_query($sql, 'Could not update consignment status') ? true : false;
+		})) {
+			cancel_transaction();
+			return false;
+		}
 	}
 
 	// Log movement

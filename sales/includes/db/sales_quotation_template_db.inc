@@ -25,6 +25,8 @@
  * @subpackage Sales
  */
 
+require_once __DIR__ . '/sales_dimension_custody_db.inc';
+
 // ============================================================================
 // QUOTATION TEMPLATE CRUD
 // ============================================================================
@@ -60,8 +62,10 @@ function add_quotation_template($name, $description = '', $validity_days = 30,
 			db_escape((int)$default_ship_via) . ", " .
 			"0)";
 
-	db_query($sql, "Could not add quotation template");
-	return db_insert_id();
+	// The native birth writes no metadata: the stored default must stay NULL.
+	return sales_dimension_custody_write('sales_quotation_templates', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, "Could not add quotation template") ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -95,7 +99,9 @@ function update_quotation_template($id, $name, $description = '', $validity_days
 		inactive = " . db_escape((int)$inactive) . "
 		WHERE id = " . db_escape((int)$id);
 
-	return db_query($sql, "Could not update quotation template");
+	return sales_dimension_custody_write('sales_quotation_templates', $id, array(), function() use ($sql) {
+		return db_query($sql, "Could not update quotation template") ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -106,13 +112,8 @@ function update_quotation_template($id, $name, $description = '', $validity_days
  */
 function delete_quotation_template($id)
 {
-	begin_transaction();
-	db_query("DELETE FROM " . TB_PREF . "sales_quotation_template_lines WHERE template_id = " . db_escape((int)$id),
-		"Could not delete quotation template lines");
-	$ret = db_query("DELETE FROM " . TB_PREF . "sales_quotation_templates WHERE id = " . db_escape((int)$id),
-		"Could not delete quotation template");
-	commit_transaction();
-	return $ret;
+	// Refused while the header or any line retains a Dimension reference (closed/orphan included).
+	return sales_quotation_template_dimension_remove($id);
 }
 
 /**
@@ -176,8 +177,13 @@ function add_quotation_template_line($template_id, $line_type = 'product', $stoc
 			db_escape((int)$is_optional) . ", " .
 			db_escape((int)$sort_order) . ")";
 
-	db_query($sql, "Could not add template line");
-	return db_insert_id();
+	return sales_dimension_custody_write('sales_quotation_template_lines', null, array('custom_data' => null), function() use ($sql, $template_id) {
+		// The parent is held for the birth; a line cannot be born under an absent template.
+		$rows = db_query('SELECT id FROM ' . TB_PREF . 'sales_quotation_templates WHERE id=' . (int)$template_id . ' FOR UPDATE');
+		if (!$rows || db_num_rows($rows) !== 1)
+			return false;
+		return db_query($sql, "Could not add template line") ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -206,7 +212,9 @@ function update_quotation_template_line($id, $line_type, $stock_id, $description
 		sort_order = " . db_escape((int)$sort_order) . "
 		WHERE id = " . db_escape((int)$id);
 
-	return db_query($sql, "Could not update template line");
+	return sales_dimension_custody_write('sales_quotation_template_lines', $id, array(), function() use ($sql) {
+		return db_query($sql, "Could not update template line") ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -217,8 +225,10 @@ function update_quotation_template_line($id, $line_type, $stock_id, $description
  */
 function delete_quotation_template_line($id)
 {
-	return db_query("DELETE FROM " . TB_PREF . "sales_quotation_template_lines WHERE id = " . db_escape((int)$id),
-		"Could not delete template line");
+	$sql = "DELETE FROM " . TB_PREF . "sales_quotation_template_lines WHERE id = " . db_escape((int)$id);
+	return sales_dimension_custody_write('sales_quotation_template_lines', $id, array(), function() use ($sql) {
+		return db_query($sql, "Could not delete template line") ? true : false;
+	}, true) ? true : false;
 }
 
 /**

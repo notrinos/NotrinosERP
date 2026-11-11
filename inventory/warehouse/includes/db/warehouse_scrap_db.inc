@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/warehouse_config_dimension_db.inc';
 
 /**
  * Warehouse Scrap — CRUD, stock move creation, GL posting, serial/batch status updates.
@@ -93,9 +94,11 @@ function add_scrap_entry($stock_id, $qty, $loc_code, $date_, $reason_code, $reas
 
 	global $Refs, $path_to_root;
 
-	if ($qty <= 0) return false;
+		if ($qty <= 0) return false;
 
-	begin_transaction();
+	if (!begin_transaction())
+		return false;
+
 
 	// Get item cost
 	$item_cost = get_unit_cost($stock_id);
@@ -165,8 +168,16 @@ function add_scrap_entry($stock_id, $qty, $loc_code, $date_, $reason_code, $reas
 		. ($memo ? db_escape($memo) : 'NULL') . ", "
 		. ($approved_by ? (int)$approved_by : 'NULL')
 		. ")";
-	db_query($sql, 'Could not insert scrap record');
-	$scrap_id = db_insert_id();
+		// The native birth writes no metadata (NULL). A refusal has already rolled back the whole
+	// transaction (stock move, GL and references included), so the entry stops here.
+	$scrap_id = warehouse_config_dimension_write('wh_scrap', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'Could not insert scrap record') ? db_insert_id() : false;
+	});
+	if (!$scrap_id) {
+		cancel_transaction();
+		return false;
+	}
+
 
 	// Update bin stock (remove from source bin)
 	if ($from_bin_id) {
@@ -516,8 +527,9 @@ function approve_scrap_entry($scrap_id) {
 
 	$sql = "UPDATE " . TB_PREF . "wh_scrap SET approved_by = " . (int)$user_id
 		. " WHERE scrap_id = " . (int)$scrap_id;
-	db_query($sql, 'Could not approve scrap entry');
-	return true;
+		return warehouse_config_dimension_write('wh_scrap', (int)$scrap_id, array(), function() use ($sql) {
+		return db_query($sql, 'Could not approve scrap entry') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -553,6 +565,8 @@ function get_scrap_pending_approval() {
  */
 function delete_scrap_entry($scrap_id) {
 	$sql = "DELETE FROM " . TB_PREF . "wh_scrap WHERE scrap_id = " . (int)$scrap_id;
-	db_query($sql, 'Could not delete scrap entry');
-	return true;
+		// Refused while the record retains a Dimension reference (closed/orphan included).
+	return warehouse_config_dimension_write('wh_scrap', (int)$scrap_id, array(), function() use ($sql) {
+		return db_query($sql, 'Could not delete scrap entry') ? true : false;
+	}, true) ? true : false;
 }

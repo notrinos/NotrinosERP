@@ -9,6 +9,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/warehouse_config_dimension_db.inc';
 
 /**
  * Warehouse Counting DB Layer — Cycle Count Plans, Count Sessions, Count Lines
@@ -146,8 +147,9 @@ function add_cycle_count_plan($plan_name, $count_method, $warehouse_loc_code = n
         . ($abc_class ? db_escape($abc_class) : "NULL") . ", "
         . "'" . $next_date . "', 1)";
 
-    db_query($sql, 'could not add cycle count plan');
-    return db_insert_id();
+        return warehouse_config_dimension_write('wh_cycle_count_plans', null, array('custom_data' => null), function() use ($sql) {
+        return db_query($sql, 'could not add cycle count plan') ? db_insert_id() : false;
+    });
 }
 
 /**
@@ -173,7 +175,9 @@ function update_cycle_count_plan($plan_id, $plan_name, $count_method, $warehouse
         . "active = " . db_escape(intval($active))
         . " WHERE plan_id = " . db_escape(intval($plan_id));
 
-    db_query($sql, 'could not update cycle count plan');
+        return warehouse_config_dimension_write('wh_cycle_count_plans', intval($plan_id), array(), function() use ($sql) {
+        return db_query($sql, 'could not update cycle count plan') ? true : false;
+    }) ? true : false;
 }
 
 /**
@@ -239,7 +243,13 @@ function can_delete_cycle_count_plan($plan_id) {
 function delete_cycle_count_plan($plan_id) {
     $sql = "DELETE FROM " . TB_PREF . "wh_cycle_count_plans
         WHERE plan_id = " . db_escape(intval($plan_id));
-    db_query($sql, 'could not delete cycle count plan');
+        // The no-sessions rule is repeated on the locked plan; retained Dimension history refuses removal.
+    return warehouse_config_dimension_write('wh_cycle_count_plans', intval($plan_id), array(), function() use ($sql, $plan_id) {
+        $used = db_query("SELECT count_id FROM " . TB_PREF . "wh_cycle_counts WHERE plan_id = " . db_escape(intval($plan_id)) . " LIMIT 1 FOR UPDATE", 'could not check plan usage');
+        if (!$used || db_num_rows($used) > 0)
+            return false;
+        return db_query($sql, 'could not delete cycle count plan') ? true : false;
+    }, true) ? true : false;
 }
 
 //----------------------------------------------------------------------
@@ -267,8 +277,10 @@ function add_cycle_count($count_date, $warehouse_loc_code, $plan_id = null, $mem
         . ($plan_id ? db_escape(intval($plan_id)) : "NULL") . ", "
         . db_escape($memo) . ")";
 
-    db_query($sql, 'could not add cycle count');
-    return db_insert_id();
+        // The native birth writes no metadata: the stored default must stay NULL.
+    return warehouse_config_dimension_write('wh_cycle_counts', null, array('custom_data' => null), function() use ($sql) {
+        return db_query($sql, 'could not add cycle count') ? db_insert_id() : false;
+    });
 }
 
 /**
@@ -288,7 +300,9 @@ function update_cycle_count($count_id, $count_date, $warehouse_loc_code, $plan_i
         . "memo = " . db_escape($memo)
         . " WHERE count_id = " . db_escape(intval($count_id));
 
-    db_query($sql, 'could not update cycle count');
+        return warehouse_config_dimension_write('wh_cycle_counts', intval($count_id), array(), function() use ($sql) {
+        return db_query($sql, 'could not update cycle count') ? true : false;
+    }) ? true : false;
 }
 
 /**
@@ -404,7 +418,10 @@ function can_delete_cycle_count($count_id) {
 function delete_cycle_count($count_id) {
     $sql = "DELETE FROM " . TB_PREF . "wh_cycle_counts
         WHERE count_id = " . db_escape(intval($count_id));
-    db_query($sql, 'could not delete cycle count');
+        // Refused while the count retains a Dimension reference (closed/orphan included).
+    return warehouse_config_dimension_write('wh_cycle_counts', intval($count_id), array(), function() use ($sql) {
+        return db_query($sql, 'could not delete cycle count') ? true : false;
+    }, true) ? true : false;
 }
 
 //----------------------------------------------------------------------
@@ -596,8 +613,9 @@ function start_cycle_count($count_id) {
         . "status = 'in_progress', "
         . "counted_by = " . db_escape($_SESSION['wa_current_user']->user)
         . " WHERE count_id = " . db_escape(intval($count_id));
-    db_query($sql, 'could not start cycle count');
-    return true;
+        return warehouse_config_dimension_write('wh_cycle_counts', intval($count_id), array(), function() use ($sql) {
+        return db_query($sql, 'could not start cycle count') ? true : false;
+    }) ? true : false;
 }
 
 /**
@@ -619,8 +637,9 @@ function submit_cycle_count_for_review($count_id) {
 
     $sql = "UPDATE " . TB_PREF . "wh_cycle_counts SET status = 'review'
         WHERE count_id = " . db_escape(intval($count_id));
-    db_query($sql, 'could not submit cycle count for review');
-    return true;
+        return warehouse_config_dimension_write('wh_cycle_counts', intval($count_id), array(), function() use ($sql) {
+        return db_query($sql, 'could not submit cycle count for review') ? true : false;
+    }) ? true : false;
 }
 
 /**
@@ -735,8 +754,7 @@ function submit_cycle_count_for_core_approval($count_id)
         . "status = 'submitted'"
         . " WHERE count_id = " . db_escape((int)$count_id)
         . " AND status = 'review'";
-    db_query($sql, 'could not mark cycle count as submitted');
-    if (db_num_affected_rows() <= 0)
+        if (!warehouse_config_dimension_status_write('wh_cycle_counts', (int)$count_id, $sql, 'could not mark cycle count as submitted'))
         return false;
 
     $reloaded = get_cycle_count($count_id);
@@ -762,7 +780,7 @@ function submit_cycle_count_for_core_approval($count_id)
             . "status = 'review'"
             . " WHERE count_id = " . db_escape((int)$count_id)
             . " AND status = 'submitted'";
-        db_query($rollback_sql, 'could not rollback cycle count review status after approval execution failure');
+                warehouse_config_dimension_status_write('wh_cycle_counts', (int)$count_id, $rollback_sql, 'could not rollback cycle count review status after approval execution failure');
     }
 
     return $result;
@@ -782,8 +800,7 @@ function approve_cycle_count($count_id) {
         . "status = 'approved', "
         . "approved_by = " . db_escape($_SESSION['wa_current_user']->user)
         . " WHERE count_id = " . db_escape(intval($count_id));
-    db_query($sql, 'could not approve cycle count');
-    return db_num_affected_rows() > 0;
+        return warehouse_config_dimension_status_write('wh_cycle_counts', intval($count_id), $sql, 'could not approve cycle count');
 }
 
 /**
@@ -802,9 +819,7 @@ function reject_cycle_count($count_id)
         . "status = 'review'"
         . " WHERE count_id = " . db_escape((int)$count_id)
         . " AND status = 'submitted'";
-    db_query($sql, 'could not reject cycle count');
-
-    return db_num_affected_rows() > 0;
+        return warehouse_config_dimension_status_write('wh_cycle_counts', (int)$count_id, $sql, 'could not reject cycle count');
 }
 
 /**
@@ -817,16 +832,26 @@ function recount_cycle_count($count_id) {
     $count = get_cycle_count($count_id);
     if (!$count || !in_array($count['status'], array('review', 'submitted', 'approved'))) return false;
 
+        // The line reset and the count status change are one unit.
+    if (!begin_transaction())
+        return false;
+
     // Clear counted quantities so counter must re-enter
     $sql = "UPDATE " . TB_PREF . "wh_cycle_count_lines SET
         counted_qty = NULL, variance_qty = NULL
         WHERE count_id = " . db_escape(intval($count_id));
     db_query($sql, 'could not reset count lines');
 
+
     $sql = "UPDATE " . TB_PREF . "wh_cycle_counts SET "
         . "status = 'in_progress', approved_by = NULL"
         . " WHERE count_id = " . db_escape(intval($count_id));
-    db_query($sql, 'could not recount cycle count');
+        if (!warehouse_config_dimension_write('wh_cycle_counts', intval($count_id), array(), function() use ($sql) {
+        return db_query($sql, 'could not recount cycle count') ? true : false;
+    }) || !commit_transaction()) {
+        cancel_transaction();
+        return false;
+    }
     return true;
 }
 
@@ -841,8 +866,7 @@ function cancel_cycle_count($count_id) {
     if (!$count || in_array($count['status'], array('posted', 'submitted'))) return false;
 
     // Simply delete the count (cascade deletes lines via FK)
-    delete_cycle_count($count_id);
-    return true;
+        return delete_cycle_count($count_id);
 }
 
 /**
@@ -861,9 +885,7 @@ function cancel_cycle_count_submission($count_id)
         . "status = 'review'"
         . " WHERE count_id = " . db_escape((int)$count_id)
         . " AND status = 'submitted'";
-    db_query($sql, 'could not cancel submitted cycle count');
-
-    return db_num_affected_rows() > 0;
+        return warehouse_config_dimension_status_write('wh_cycle_counts', (int)$count_id, $sql, 'could not cancel submitted cycle count');
 }
 
 /**
@@ -902,11 +924,23 @@ function post_cycle_count_adjustments($count_id) {
             status = 'posted',
             posted_date = NOW()
             WHERE count_id = " . db_escape(intval($count_id));
-        db_query($sql, 'could not mark count as posted');
+                if (!begin_transaction())
+            return false;
+        if (!warehouse_config_dimension_write('wh_cycle_counts', intval($count_id), array(), function() use ($sql) {
+            return db_query($sql, 'could not mark count as posted') ? true : false;
+        })) {
+            cancel_transaction();
+            return false;
+        }
 
         // Update plan dates if plan-linked
         if ($count['plan_id'])
             update_plan_count_dates($count['plan_id']);
+
+        if (!commit_transaction()) {
+            cancel_transaction();
+            return false;
+        }
 
         return 0;
     }
@@ -975,7 +1009,7 @@ function post_cycle_count_adjustments($count_id) {
         else
             $update_bin_sql .= " AND (serial_id IS NULL OR serial_id = 0)";
 
-        db_query($update_bin_sql, 'could not update bin stock');
+                warehouse_config_dimension_update_statement('wh_bin_stock', $update_bin_sql, 'could not update bin stock');
 
         // If variance is positive and no bin_stock row exists, insert one
         if ($variance > 0) {
@@ -1002,7 +1036,9 @@ function post_cycle_count_adjustments($count_id) {
                     . db_escape($variance) . ", "
                     . ($line['batch_id'] ? db_escape(intval($line['batch_id'])) : "NULL") . ", "
                     . ($line['serial_id'] ? db_escape(intval($line['serial_id'])) : "NULL") . ")";
-                db_query($ins_sql, 'could not insert bin stock');
+                                warehouse_config_dimension_guard('wh_bin_stock', null, array('custom_data' => null), function() use ($ins_sql) {
+                    return db_query($ins_sql, 'could not insert bin stock') ? true : false;
+                });
             }
         }
 
@@ -1023,7 +1059,13 @@ function post_cycle_count_adjustments($count_id) {
         status = 'posted',
         posted_date = NOW()
         WHERE count_id = " . db_escape(intval($count_id));
-    db_query($sql, 'could not mark count as posted');
+        // A refusal has already rolled the whole posting back (stock moves, GL and adjustments included).
+    if (!warehouse_config_dimension_write('wh_cycle_counts', intval($count_id), array(), function() use ($sql) {
+        return db_query($sql, 'could not mark count as posted') ? true : false;
+    })) {
+        cancel_transaction();
+        return false;
+    }
 
     // Update plan dates if plan-linked
     if ($count['plan_id'])
@@ -1050,7 +1092,10 @@ function update_plan_count_dates($plan_id) {
         last_count_date = '" . $today . "',
         next_count_date = '" . $next . "'
         WHERE plan_id = " . db_escape(intval($plan_id));
-    db_query($sql, 'could not update plan count dates');
+        // Called from count posting: a refusal throws so the posting unwinds as a whole.
+    warehouse_config_dimension_write('wh_cycle_count_plans', intval($plan_id), array(), function() use ($sql) {
+        return db_query($sql, 'could not update plan count dates') ? true : false;
+    }) or dimension_financial_reference_failure();
 }
 
 //----------------------------------------------------------------------
@@ -1087,7 +1132,9 @@ function auto_generate_due_counts($blind = false) {
         foreach ($warehouses as $wh_code) {
             $count_date = Today();
             $count_id = add_cycle_count($count_date, $wh_code, $plan['plan_id'],
-                sprintf(_("Auto-generated from plan: %s"), $plan['plan_name']));
+                                sprintf(_("Auto-generated from plan: %s"), $plan['plan_name']));
+            if (!$count_id)
+                continue;
             generate_count_lines($count_id, $plan['plan_id'], $blind);
             $count++;
         }

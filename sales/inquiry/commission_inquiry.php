@@ -72,8 +72,10 @@ if (isset($_POST['action_paid']) && !empty($_POST['chk'])) {
     if (!$payment_ref) {
         display_error(_('Please enter a payment reference before marking as paid.'));
     } else {
-        mark_commissions_paid($ids, $payment_ref, $payment_date);
-        display_notification(sprintf(_('%d commission entries marked as paid.'), count($ids)));
+        if (mark_commissions_paid($ids, $payment_ref, $payment_date) !== false)
+            display_notification(sprintf(_('%d commission entries marked as paid.'), count($ids)));
+        else
+            display_error(_('The commission entries could not be marked as paid.'));
     }
 }
 

@@ -174,8 +174,10 @@ if (isset($_POST['toggle_profile']) && isset($_POST['sel_profile'])) {
 // =====================================================================
 if (isset($_POST['verify_dscsa']) && isset($_POST['dscsa_id'])) {
 	$status = get_post('verify_status', 'verified');
-	update_dscsa_verification((int)$_POST['dscsa_id'], $status);
-	display_notification(_('DSCSA verification status updated.'));
+		if (update_dscsa_verification((int)$_POST['dscsa_id'], $status))
+		display_notification(_('DSCSA verification status updated.'));
+	else
+		display_error(_('The DSCSA verification status could not be updated.'));
 	$active_tab = 'dscsa';
 }
 
@@ -194,14 +196,18 @@ if (isset($_POST['report_suspect'])) {
 	if ($input_error == 0) {
 		$serial_id = get_post('suspect_serial_id') ? (int)get_post('suspect_serial_id') : null;
 		$batch_id = get_post('suspect_batch_id') ? (int)get_post('suspect_batch_id') : null;
-		report_dscsa_suspect_product(
-			$serial_id, $batch_id,
-			get_post('suspect_stock_id'),
-			get_post('suspect_reason'),
-			get_post('suspect_action', 'quarantine'),
-			check_value('suspect_quarantine')
-		);
-		display_notification(_('Suspect product has been reported and quarantined.'));
+				try {
+			report_dscsa_suspect_product(
+				$serial_id, $batch_id,
+				get_post('suspect_stock_id'),
+				get_post('suspect_reason'),
+				get_post('suspect_action', 'quarantine'),
+				check_value('suspect_quarantine')
+			);
+			display_notification(_('Suspect product has been reported and quarantined.'));
+		} catch (DimensionFinancialReferenceWriteException $e) {
+			display_error(_('The suspect product report could not be saved: its retained Dimension metadata could not be certified.'));
+		}
 	}
 	$active_tab = 'dscsa';
 }
@@ -236,14 +242,21 @@ if (isset($_POST['add_fsma_event'])) {
 			'notes'                => get_post('fsma_notes'),
 		);
 
-		add_fsma_tracking_event(
-			get_post('fsma_event_type'),
-			get_post('fsma_stock_id'),
-			get_post('fsma_batch_id') ? (int)get_post('fsma_batch_id') : null,
-			get_post('fsma_lot_code'),
-			$kde_data
-		);
-		display_notification(_('FSMA 204 tracking event has been recorded.'));
+				try {
+			$fsma_id = add_fsma_tracking_event(
+				get_post('fsma_event_type'),
+				get_post('fsma_stock_id'),
+				get_post('fsma_batch_id') ? (int)get_post('fsma_batch_id') : null,
+				get_post('fsma_lot_code'),
+				$kde_data
+			);
+		} catch (DimensionFinancialReferenceWriteException $e) {
+			$fsma_id = false;
+		}
+		if ($fsma_id)
+			display_notification(_('FSMA 204 tracking event has been recorded.'));
+		else
+			display_error(_('The FSMA 204 tracking event could not be recorded.'));
 	}
 	$active_tab = 'fsma';
 }
@@ -263,7 +276,7 @@ if (isset($_POST['add_udi'])) {
 	}
 
 	if ($input_error == 0) {
-		add_udi_registration(array(
+				if (add_udi_registration(array(
 			'stock_id'             => get_post('udi_stock_id'),
 			'udi_di'               => get_post('udi_di_input'),
 			'issuing_agency'       => get_post('udi_agency', 'GS1'),
@@ -280,16 +293,20 @@ if (isset($_POST['add_udi'])) {
 			'fda_listing_number'   => get_post('udi_fda_listing'),
 			'fda_premarket_number' => get_post('udi_fda_premarket'),
 			'gtin'                 => get_post('udi_gtin'),
-			'notes'                => get_post('udi_notes'),
-		));
-		display_notification(_('UDI registration has been added.'));
+						'notes'                => get_post('udi_notes'),
+		)))
+			display_notification(_('UDI registration has been added.'));
+		else
+			display_error(_('The UDI registration could not be added.'));
 	}
 	$active_tab = 'udi';
 }
 
 if (isset($_POST['delete_udi']) && isset($_POST['sel_udi'])) {
-	delete_udi_registration((int)$_POST['sel_udi']);
-	display_notification(_('UDI registration has been deleted.'));
+		if (delete_udi_registration((int)$_POST['sel_udi']))
+		display_notification(_('UDI registration has been deleted.'));
+	else
+		display_error(_('The UDI registration cannot be deleted while it retains a Dimension reference.'));
 	$active_tab = 'udi';
 }
 

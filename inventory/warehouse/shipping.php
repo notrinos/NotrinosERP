@@ -45,6 +45,8 @@ simple_page_mode(true);
 // Process Actions
 // =====================================================================
 
+// A refused retained-metadata write throws after the fence has rolled the whole action back.
+try {
 // --- Add Shipment ---
 if (isset($_POST['ADD_ITEM'])) {
 	$warehouse = get_post('ship_warehouse');
@@ -155,9 +157,14 @@ if ($Mode == 'Delete') {
 	if ($op && $op['op_status'] === 'draft') {
 		$pkg_cnt = count_shipment_packages($selected_id);
 		if ($pkg_cnt === 0) {
-			$sql = "DELETE FROM " . TB_PREF . "wh_operations WHERE op_id=" . (int)$selected_id . " AND op_type='ship'";
-			db_query($sql, 'could not delete shipment');
-			display_notification(_('Shipment deleted.'));
+						$sql = "DELETE FROM " . TB_PREF . "wh_operations WHERE op_id=" . (int)$selected_id . " AND op_type='ship'";
+			// Refused while the shipment retains a Dimension reference (closed/orphan included).
+			if (warehouse_config_dimension_write('wh_operations', (int)$selected_id, array(), function() use ($sql) {
+				return db_query($sql, 'could not delete shipment') ? true : false;
+			}, true))
+				display_notification(_('Shipment deleted.'));
+			else
+				display_error(_('The shipment cannot be deleted while it retains a Dimension reference.'));
 		} else {
 			display_error(_('Cannot delete shipment with packages. Remove packages first.'));
 		}
@@ -165,6 +172,11 @@ if ($Mode == 'Delete') {
 		display_error(_('Only draft shipments can be deleted.'));
 	}
 	$Mode = 'RESET';
+}
+
+} catch (DimensionFinancialReferenceWriteException $e) {
+	display_error(_('The shipment action was refused: retained Dimension metadata of the shipment or one of its lines could not be certified.'));
+	$Ajax->activate('_page_body');
 }
 
 if ($Mode == 'RESET') {

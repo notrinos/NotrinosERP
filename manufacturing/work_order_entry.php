@@ -238,19 +238,31 @@ if (isset($_POST['ADD_ITEM']) && can_process()) {
 	}
 	// --- End approval check ---
 
-	$id = add_work_order($_POST['wo_ref'], $_POST['StockLocation'], input_num('quantity'), $_POST['stock_id'],  $_POST['type'], $_POST['date_'], $_POST['RequDate'], $_POST['memo_'], input_num('Costs'), $_POST['cr_acc'], input_num('Labour'), $_POST['cr_lab_acc']);
+		try {
+		$id = add_work_order($_POST['wo_ref'], $_POST['StockLocation'], input_num('quantity'), $_POST['stock_id'],  $_POST['type'], $_POST['date_'], $_POST['RequDate'], $_POST['memo_'], input_num('Costs'), $_POST['cr_acc'], input_num('Labour'), $_POST['cr_lab_acc']);
+	} catch (DimensionFinancialReferenceWriteException $e) {
+		// The fence has already rolled the whole creation back.
+		display_error(_('The work order could not be created: its retained Dimension metadata could not be certified.'));
+		$id = 0;
+	}
 
-	new_doc_date($_POST['date_']);
-	meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$id.'&type='.$_POST['type'].'&date='.$_POST['date_']);
+	if ($id) {
+		new_doc_date($_POST['date_']);
+		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$id.'&type='.$_POST['type'].'&date='.$_POST['date_']);
+	}
 }
 
 //-------------------------------------------------------------------------------------
 
 if (isset($_POST['UPDATE_ITEM']) && can_process()) {
 
-	update_work_order($selected_id, $_POST['StockLocation'], input_num('quantity'), $_POST['stock_id'],  $_POST['date_'], $_POST['RequDate'], $_POST['memo_']);
-	new_doc_date($_POST['date_']);
-	meta_forward($_SERVER['PHP_SELF'], 'UpdatedID='.$selected_id);
+		try {
+		update_work_order($selected_id, $_POST['StockLocation'], input_num('quantity'), $_POST['stock_id'],  $_POST['date_'], $_POST['RequDate'], $_POST['memo_']);
+		new_doc_date($_POST['date_']);
+		meta_forward($_SERVER['PHP_SELF'], 'UpdatedID='.$selected_id);
+	} catch (DimensionFinancialReferenceWriteException $e) {
+		display_error(_('The work order could not be updated: its retained Dimension metadata could not be certified.'));
+	}
 }
 
 //--------------------------------------------------------------------------------------
@@ -268,8 +280,12 @@ if (isset($_POST['delete'])) {
 
 	if ($cancel_delete == false) { //ie not cancelled the delete as a result of above tests
 		// delete the actual work order
-		delete_work_order($selected_id, $_POST['stock_id'], $_POST['quantity'], $_POST['date_']);
-		meta_forward($_SERVER['PHP_SELF'], 'DeletedID='.$selected_id);
+				try {
+			delete_work_order($selected_id, $_POST['stock_id'], $_POST['quantity'], $_POST['date_']);
+			meta_forward($_SERVER['PHP_SELF'], 'DeletedID='.$selected_id);
+		} catch (DimensionFinancialReferenceWriteException $e) {
+			display_error(_('The work order cannot be deleted while it retains a Dimension reference.'));
+		}
 	}
 }
 
@@ -277,8 +293,12 @@ if (isset($_POST['delete'])) {
 
 if (isset($_POST['close'])) {
 	// update the closed flag in the work order
-	close_work_order($selected_id);
-	meta_forward($_SERVER['PHP_SELF'], 'ClosedID='.$selected_id);
+		try {
+		close_work_order($selected_id);
+		meta_forward($_SERVER['PHP_SELF'], 'ClosedID='.$selected_id);
+	} catch (DimensionFinancialReferenceWriteException $e) {
+		display_error(_('The work order could not be closed: its retained Dimension metadata could not be certified.'));
+	}
 }
 
 //-------------------------------------------------------------------------------------

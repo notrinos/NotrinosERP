@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/db/traceability_dimension_db.inc';
 
 /**
  * DSCSA (Drug Supply Chain Security Act) Compliance Functions.
@@ -24,8 +25,9 @@
  * Dependencies: regulatory_compliance_db.inc, gs1_standards.inc
  *
  * @package NotrinosERP
- * @subpackage Inventory/Regulatory/DSCSA
+  * @subpackage Inventory/Regulatory/DSCSA
  */
+require_once __DIR__.'/regulatory_dimension_db.inc';
 
 // =====================================================================
 // DSCSA TRANSACTION TYPES & STATUSES
@@ -397,6 +399,10 @@ function report_dscsa_suspect_product($serial_id, $batch_id, $stock_id, $reason,
 	$settings = get_item_regulatory_settings($stock_id, REG_DSCSA);
 	$ndc = isset($settings['ndc']) ? $settings['ndc'] : '';
 
+		// The suspect record, its suspect fields and the quarantine are one unit: a refusal throws and the
+	// fence has already rolled all of it back.
+	if (!begin_transaction())
+		return false;
 	$id = _create_dscsa_transaction(
 		'suspect', null, null, $stock_id,
 		$serial_id, $batch_id,
@@ -411,14 +417,18 @@ function report_dscsa_suspect_product($serial_id, $batch_id, $stock_id, $reason,
 		quarantine_action=" . db_escape($action) . ",
 		verification_status='suspect'
 		WHERE id=" . (int)$id;
-	db_query($sql, 'could not update suspect report');
+		regulatory_dimension_guard('dscsa_transactions', (int)$id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update suspect report') ? true : false;
+	});
+
 
 	// Quarantine the serial/batch
 	if ($quarantine_item) {
 		if ($serial_id) {
 			$sql = "UPDATE " . TB_PREF . "serial_numbers SET status='quarantine'
 				WHERE id=" . (int)$serial_id;
-			db_query($sql, 'could not quarantine serial');
+						traceability_dimension_update('serial_numbers', $serial_id, $sql, 'could not quarantine serial');
+
 
 			// Log movement
 			if (function_exists('add_serial_movement')) {
@@ -429,8 +439,14 @@ function report_dscsa_suspect_product($serial_id, $batch_id, $stock_id, $reason,
 		if ($batch_id) {
 			$sql = "UPDATE " . TB_PREF . "stock_batches SET status='quarantine'
 				WHERE id=" . (int)$batch_id;
-			db_query($sql, 'could not quarantine batch');
+									traceability_dimension_update('stock_batches', $batch_id, $sql, 'could not quarantine batch');
+
 		}
+	}
+
+	if (!commit_transaction()) {
+		cancel_transaction();
+		return false;
 	}
 
 	return $id;
@@ -499,7 +515,9 @@ function update_dscsa_verification($id, $status)
 		verification_date=NOW(),
 		verified_by=" . (int)$_SESSION['wa_current_user']->user
 		. " WHERE id=" . (int)$id;
-	db_query($sql, 'could not update DSCSA verification');
+		return regulatory_dimension_write('dscsa_transactions', (int)$id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update DSCSA verification') ? true : false;
+	}) ? true : false;
 }
 
 // =====================================================================
@@ -761,8 +779,11 @@ function _create_dscsa_transaction($type, $delivery_id, $grn_id, $stock_id,
 		. db_escape(json_encode($history))
 		. ")";
 
-	db_query($sql, 'could not create DSCSA transaction');
-	return db_insert_id();
+		// The native birth writes no custom_data (NULL). Delivery and receipt flows ignore the result,
+	// so a refusal throws after the fence has rolled the whole flow back.
+	return regulatory_dimension_guard('dscsa_transactions', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'could not create DSCSA transaction') ? db_insert_id() : false;
+	});
 }
 
 /**

@@ -9,6 +9,8 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/quality_dimension_db.inc';
+require_once __DIR__ . '/../../warehouse/includes/db/warehouse_config_dimension_db.inc';
 
 $serial_batch_db_path = dirname(__FILE__) . '/serial_batch_db.inc';
 if (file_exists($serial_batch_db_path))
@@ -460,8 +462,10 @@ function add_quality_inspection($stock_id, $inspection_type, $trans_type = null,
 		. "NOW()"
 		. ")";
 
-	db_query($sql, 'could not add quality inspection');
-	return db_insert_id();
+		// The native birth writes no metadata (NULL). Receipt flows ignore the result, so a refusal throws.
+	return quality_dimension_guard('quality_inspections', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'could not add quality inspection') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -480,7 +484,9 @@ function update_quality_inspection($inspection_id, $inspected_qty, $notes = null
 		. "updated_at=NOW()"
 		. " WHERE id=" . (int)$inspection_id;
 
-	db_query($sql, 'could not update quality inspection');
+		return quality_dimension_write('quality_inspections', (int)$inspection_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update quality inspection') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -614,17 +620,10 @@ function can_delete_quality_inspection($inspection_id)
  */
 function delete_quality_inspection($inspection_id)
 {
-	begin_transaction();
-
-	$sql = "DELETE FROM " . TB_PREF . "quality_inspection_readings"
-		. " WHERE inspection_id=" . (int)$inspection_id;
-	db_query($sql, 'could not delete inspection readings');
-
-	$sql = "DELETE FROM " . TB_PREF . "quality_inspections"
-		. " WHERE id=" . (int)$inspection_id;
-	db_query($sql, 'could not delete quality inspection');
-
-	commit_transaction();
+		// Refused (and the readings removal rolled back) while the inspection retains a Dimension reference.
+	return quality_dimension_remove_with_children('quality_inspections', $inspection_id,
+		"DELETE FROM " . TB_PREF . "quality_inspection_readings WHERE inspection_id=" . (int)$inspection_id,
+		"DELETE FROM " . TB_PREF . "quality_inspections WHERE id=" . (int)$inspection_id);
 }
 
 /**
@@ -821,7 +820,7 @@ function update_quality_tracking_bin_stock_status($stock_id, $stock_status, $bat
 		. "stock_status=" . db_escape($stock_status) . ", "
 		. "qty_available=" . $qty_available_sql
 		. " WHERE " . implode(' AND ', $where);
-	db_query($sql, 'could not update QC tracking bin stock status');
+		warehouse_config_dimension_update_statement('wh_bin_stock', $sql, 'could not update QC tracking bin stock status');
 }
 
 /**
@@ -884,7 +883,11 @@ function complete_quality_inspection($inspection_id, $result = '', $accepted_qty
 		. "completion_date=CURDATE(), "
 		. "updated_at=NOW()"
 		. " WHERE id=" . (int)$inspection_id;
-	db_query($sql, 'could not complete inspection');
+		// Completion runs inside receipt/inspection flows: a refusal throws so the whole completion unwinds.
+	quality_dimension_guard('quality_inspections', (int)$inspection_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not complete inspection') ? true : false;
+	});
+
 
 	// Update GRN inspection_status if this is an incoming inspection
 	if ($insp['trans_type'] == ST_SUPPRECEIVE && $insp['trans_no']) {

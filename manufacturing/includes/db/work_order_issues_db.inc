@@ -9,6 +9,8 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/manufacturing_dimension_db.inc';
+
 //--------------------------------------------------------------------------------------
 
 /**
@@ -334,12 +336,20 @@ function add_work_order_issue($woid, $ref, $to_work_order, $items, $location, $w
 			add_stock_move(ST_MANUISSUE, $item->stock_id, $number, $location, $date_, $memo_, -$item->quantity, $unit_cost);
 		}
 
-		$sql = "INSERT INTO ".TB_PREF."wo_issue_items (issue_id, stock_id, qty_issued, unit_cost)
+				$sql = "INSERT INTO ".TB_PREF."wo_issue_items (issue_id, stock_id, qty_issued, unit_cost)
 			SELECT ".db_escape($number).",".db_escape($item->stock_id).",".db_escape($item->quantity).", material_cost
 			FROM ".TB_PREF."stock_master
 			WHERE stock_id=".db_escape($item->stock_id);
 
-		db_query($sql, 'A work order issue item could not be added');
+		// An item without a stock master row never inserted anything (legacy no-op); otherwise the
+		// birth runs in the fence and a refusal throws so the whole issue unwinds.
+		$known = db_query("SELECT stock_id FROM ".TB_PREF."stock_master WHERE stock_id=".db_escape($item->stock_id));
+		if ($known && db_num_rows($known) > 0) {
+			manufacturing_dimension_guard('wo_issue_items', null, function() use ($sql) {
+				return db_query($sql, 'A work order issue item could not be added') ? db_insert_id() : false;
+			});
+		}
+
 
 		$unit_cost = get_unit_cost($item->stock_id);
 		$issue_cost = $unit_cost * $item->quantity;
@@ -457,9 +467,11 @@ function void_work_order_issue($type_no) {
 	// FIXME update issued material cost
 
 	// void the actual issue items and their quantities
-	$sql = "UPDATE ".TB_PREF."wo_issue_items SET qty_issued = 0 WHERE issue_id=".db_escape($type_no);
+		// Each item is voided under the writer fence (retained metadata must be unchanged).
+	manufacturing_issue_items_guard($type_no, function($id) {
+		return "UPDATE ".TB_PREF."wo_issue_items SET qty_issued = 0 WHERE id=".(int)$id;
+	}, 'A work order issue item could not be voided');
 
-	db_query($sql, 'A work order issue item could not be voided');
 
 	void_gl_trans(ST_MANUISSUE, $type_no);
 

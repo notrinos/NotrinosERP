@@ -50,8 +50,10 @@ if ($Mode == 'Delete') {
 	if ($can !== true) {
 		display_error($can);
 	} else {
-		delete_recall_campaign($selected_id);
-		display_notification(_('Recall campaign has been deleted.'));
+				if (delete_recall_campaign($selected_id))
+			display_notification(_('Recall campaign has been deleted.'));
+		else
+			display_error(_('The recall campaign cannot be deleted while it retains a Dimension reference.'));
 	}
 	$Mode = 'RESET';
 }
@@ -132,10 +134,14 @@ if (get_post('update_item_status')) {
 	$recall_id = (int)get_post('item_recall_id');
 	$can_update_item = can_update_recall_item_status($item_id, $new_item_status, $recall_id);
 	if ($can_update_item === true) {
-		update_recall_item_status($item_id, $new_item_status, $item_notes);
-		update_recall_campaign_totals($recall_id);
-		display_notification(sprintf(_('Recall item status updated to %s.'),
-			get_recall_item_status_label($new_item_status)));
+				try {
+			update_recall_item_status($item_id, $new_item_status, $item_notes);
+			update_recall_campaign_totals($recall_id);
+			display_notification(sprintf(_('Recall item status updated to %s.'),
+				get_recall_item_status_label($new_item_status)));
+		} catch (DimensionFinancialReferenceWriteException $e) {
+			display_error(_('The recall item could not be updated: the campaign retained Dimension metadata could not be certified.'));
+		}
 	} else {
 		display_error($can_update_item);
 	}
@@ -232,7 +238,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 
 		if ($Mode == 'ADD_ITEM') {
 			$reference = get_next_recall_campaign_reference();
-			$id = add_recall_campaign(
+						$id = add_recall_campaign(
 				$reference,
 				get_post('title'),
 				get_post('description'),
@@ -248,11 +254,14 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				$affected_date_to,
 				get_post('regulatory_reference'),
 				get_post('resolution'),
-				get_post('notes')
+								get_post('notes')
 			);
-			display_notification(sprintf(_('Recall campaign %s has been created.'), $reference));
+			if ($id)
+				display_notification(sprintf(_('Recall campaign %s has been created.'), $reference));
+			else
+				display_error(_('The recall campaign could not be created.'));
 		} else {
-			update_recall_campaign(
+						$recall_saved = update_recall_campaign(
 				$selected_id,
 				get_post('title'),
 				get_post('description'),
@@ -268,9 +277,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				$affected_date_to,
 				get_post('regulatory_reference'),
 				get_post('resolution'),
-				get_post('notes')
+								get_post('notes')
 			);
-			display_notification(_('Recall campaign has been updated.'));
+			if ($recall_saved)
+				display_notification(_('Recall campaign has been updated.'));
+			else
+				display_error(_('The recall campaign could not be updated.'));
 		}
 		$Mode = 'RESET';
 	}
@@ -494,6 +506,8 @@ text_row(_('Resolution Approach:'), 'resolution', get_post('resolution'), 40, 20
 textarea_row(_('Notes:'), 'notes', get_post('notes'), 60, 3);
 
 end_table(1);
+
+hidden('selected_id', $selected_id);
 
 submit_add_or_update_center($selected_id == -1, '', 'both');
 

@@ -57,7 +57,7 @@ if ($tab == 0) {
         $date_end   = get_post('date_end') !== '' ? date2sql(get_post('date_end')) : '';
 
         if ($Mode == 'ADD_ITEM') {
-            add_commission_plan(
+            $saved = add_commission_plan(
                 get_post('plan_name'),
                 get_post('plan_type'),
                 get_post('calculation_base'),
@@ -66,9 +66,12 @@ if ($tab == 0) {
                 $date_start,
                 $date_end
             );
-            display_notification(_('Commission plan has been added.'));
+            if ($saved)
+                display_notification(_('Commission plan has been added.'));
+            else
+                display_error(_('The commission plan could not be added.'));
         } else {
-            update_commission_plan(
+            $saved = update_commission_plan(
                 $selected_id,
                 get_post('plan_name'),
                 get_post('plan_type'),
@@ -79,14 +82,17 @@ if ($tab == 0) {
                 $date_end,
                 check_value('inactive') ? 1 : 0
             );
-            display_notification(_('Commission plan has been updated.'));
+            if ($saved)
+                display_notification(_('Commission plan has been updated.'));
+            else
+                display_error(_('The commission plan could not be updated.'));
         }
         $Mode = 'RESET';
     }
 
     if ($Mode == 'Delete') {
         if (!delete_commission_plan($selected_id)) {
-            display_error(_('Cannot delete this plan because commission entries already reference it.'));
+            display_error(_('Cannot delete this plan because commission entries already reference it or it retains a Dimension reference.'));
         } else {
             display_notification(_('Commission plan has been deleted.'));
         }

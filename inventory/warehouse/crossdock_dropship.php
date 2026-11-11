@@ -132,8 +132,12 @@ if (isset($_POST['UPDATE_LOC_FLAG'])) {
 	$loc_code = get_post('config_loc_code');
 	if (!empty($loc_code)) {
 		$enabled = check_value('loc_cross_dock_enabled');
-		update_location_cross_dock_flag($loc_code, $enabled);
-		display_notification(sprintf(_('Cross-dock flag updated for location %s.'), $loc_code));
+				try {
+			update_location_cross_dock_flag($loc_code, $enabled);
+			display_notification(sprintf(_('Cross-dock flag updated for location %s.'), $loc_code));
+		} catch (DimensionFinancialReferenceWriteException $e) {
+			display_error(_('The cross-dock flag was not saved: retained Dimension metadata could not be certified.'));
+		}
 	}
 	$Ajax->activate('_page_body');
 }

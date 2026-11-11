@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/warehouse_config_dimension_db.inc';
 
 /**
  * Warehouse Picking Operations — Wave/Pick CRUD, pick generation, path optimization.
@@ -152,8 +153,10 @@ function add_picking_wave($wave_name, $warehouse_loc_code, $picking_method = 'si
 		" . ($assigned_to ? (int)$assigned_to : 'NULL') . ",
 		" . db_escape($memo) . "
 	)";
-	db_query($sql, 'could not add picking wave');
-	return db_insert_id();
+		// The native birth writes no metadata: the stored default must stay NULL.
+	return warehouse_config_dimension_write('wh_picking_waves', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'could not add picking wave') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -178,7 +181,9 @@ function update_picking_wave($wave_id, $wave_name, $warehouse_loc_code, $picking
 		. "assigned_to=" . ($assigned_to ? (int)$assigned_to : 'NULL') . ", "
 		. "memo=" . db_escape($memo)
 		. " WHERE wave_id=" . (int)$wave_id;
-	db_query($sql, 'could not update picking wave');
+		return warehouse_config_dimension_write('wh_picking_waves', (int)$wave_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update picking wave') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -307,8 +312,10 @@ function delete_picking_wave($wave_id) {
 		return false;
 
 	$sql = "DELETE FROM " . TB_PREF . "wh_picking_waves WHERE wave_id=" . (int)$wave_id;
-	db_query($sql, 'could not delete picking wave');
-	return true;
+		// Refused while the wave retains a Dimension reference (closed/orphan included).
+	return warehouse_config_dimension_write('wh_picking_waves', (int)$wave_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not delete picking wave') ? true : false;
+	}, true) ? true : false;
 }
 
 // =====================================================================
@@ -462,9 +469,16 @@ function release_picking_wave($wave_id) {
 		. "total_orders=" . (int)$total_orders . ", "
 		. "total_lines=" . (int)$total_lines
 		. " WHERE wave_id=" . (int)$wave_id;
-	db_query($sql, 'could not update wave to released');
+		// A refusal has already rolled back the whole release (operations and lines included).
+	if (!warehouse_config_dimension_write('wh_picking_waves', (int)$wave_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update wave to released') ? true : false;
+	})) {
+		cancel_transaction();
+		return array('success' => false, 'message' => _('The wave could not be released: its retained Dimension metadata could not be certified.'));
+	}
 
 	commit_transaction();
+
 
 	return array(
 		'success' => true,
@@ -505,7 +519,12 @@ function complete_picking_wave($wave_id) {
 	$sql = "UPDATE " . TB_PREF . "wh_picking_waves SET "
 		. "status='done', completed_date=NOW() "
 		. "WHERE wave_id=" . (int)$wave_id;
-	db_query($sql, 'could not complete wave');
+		if (!warehouse_config_dimension_write('wh_picking_waves', (int)$wave_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not complete wave') ? true : false;
+	})) {
+		cancel_transaction();
+		return false;
+	}
 
 	commit_transaction();
 	return true;
@@ -537,7 +556,12 @@ function cancel_picking_wave($wave_id) {
 
 	$sql = "UPDATE " . TB_PREF . "wh_picking_waves SET status='cancelled' "
 		. "WHERE wave_id=" . (int)$wave_id;
-	db_query($sql, 'could not cancel wave');
+		if (!warehouse_config_dimension_write('wh_picking_waves', (int)$wave_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not cancel wave') ? true : false;
+	})) {
+		cancel_transaction();
+		return false;
+	}
 
 	commit_transaction();
 	return true;
@@ -554,16 +578,29 @@ function start_picking_wave($wave_id) {
 	if (!$wave || $wave['status'] !== 'released')
 		return false;
 
+		if (!begin_transaction())
+		return false;
 	$sql = "UPDATE " . TB_PREF . "wh_picking_waves SET status='in_progress' "
 		. "WHERE wave_id=" . (int)$wave_id;
-	db_query($sql, 'could not start wave');
+	if (!warehouse_config_dimension_write('wh_picking_waves', (int)$wave_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not start wave') ? true : false;
+	})) {
+		cancel_transaction();
+		return false;
+	}
+
 
 	// Start all ready operations in this wave
 	$sql = "SELECT op_id FROM " . TB_PREF . "wh_operations "
 		. "WHERE wave_id=" . (int)$wave_id . " AND op_status='ready'";
 	$result = db_query($sql, 'could not get wave operations');
 	while ($row = db_fetch($result)) {
-		update_wh_operation_status($row['op_id'], 'in_progress');
+				update_wh_operation_status($row['op_id'], 'in_progress');
+	}
+
+	if (!commit_transaction()) {
+		cancel_transaction();
+		return false;
 	}
 
 	return true;
@@ -582,7 +619,9 @@ function start_picking_wave($wave_id) {
 function update_operation_wave($op_id, $wave_id) {
 	$sql = "UPDATE " . TB_PREF . "wh_operations SET wave_id=" . (int)$wave_id
 		. " WHERE op_id=" . (int)$op_id;
-	db_query($sql, 'could not set wave_id on operation');
+		warehouse_config_dimension_guard('wh_operations', (int)$op_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not set wave_id on operation') ? true : false;
+	});
 }
 
 // =====================================================================

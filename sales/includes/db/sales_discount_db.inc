@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/sales_dimension_custody_db.inc';
 
 /**
  * Add a new sales discount program.
@@ -41,6 +42,9 @@ function add_discount_program($name, $program_type, $date_start, $date_end,
 	$stackable             = isset($options['stackable'])             ? (int)$options['stackable']        : 0;
 	$priority              = isset($options['priority'])              ? (int)$options['priority']         : 10;
 	$custom_data           = isset($options['custom_data'])           ? $options['custom_data']           : array();
+	$custom_json           = is_string($custom_data) ? $custom_data : json_encode($custom_data);
+	if (!is_string($custom_json))
+		return false;
 
 	$sql = "INSERT INTO ".TB_PREF."sales_discount_programs
 		(name, program_type, status, date_start, date_end,
@@ -69,11 +73,13 @@ function add_discount_program($name, $program_type, $date_start, $date_end,
 			".db_escape($stackable).",
 			".db_escape($priority).",
 			0,
-			".db_escape_json(json_encode($custom_data))."
+			".db_escape_json($custom_json)."
 		)";
 
-	db_query($sql, 'Sales discount program cannot be added');
-	return db_insert_id();
+	// A fresh reference must be open on its axis; the stored bytes must equal the admitted payload.
+	return sales_dimension_custody_write('sales_discount_programs', null, array('custom_data' => $custom_json), function() use ($sql) {
+		return db_query($sql, 'Sales discount program cannot be added') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -92,11 +98,16 @@ function update_discount_program($id, $update_data) {
 	$allowed_date = array('date_start','date_end');
 
 	$set_clause = array();
+	$next = array();
 	foreach ($update_data as $field => $value) {
 		if (in_array($field, $allowed_string)) {
-			if ($field === 'custom_data')
-				$set_clause[] = "$field = ".db_escape_json(is_array($value) ? json_encode($value) : $value);
-			else
+			if ($field === 'custom_data') {
+				$custom_json = is_array($value) ? json_encode($value) : $value;
+				if (!is_string($custom_json))
+					return false;
+				$next['custom_data'] = $custom_json;
+				$set_clause[] = "$field = ".db_escape_json($custom_json);
+			} else
 				$set_clause[] = "$field = ".db_escape($value);
 		} elseif (in_array($field, $allowed_num)) {
 			$set_clause[] = "$field = ".db_escape($value);
@@ -111,8 +122,10 @@ function update_discount_program($id, $update_data) {
 	$sql = "UPDATE ".TB_PREF."sales_discount_programs SET "
 		.implode(", ", $set_clause)
 		." WHERE id = ".db_escape($id);
-	db_query($sql, 'Sales discount program cannot be updated');
-	return true;
+	// Updates that omit custom_data must leave the retained bytes untouched.
+	return sales_dimension_custody_write('sales_discount_programs', $id, $next, function() use ($sql) {
+		return db_query($sql, 'Sales discount program cannot be updated') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -125,12 +138,8 @@ function delete_discount_program($id) {
 	$prog = get_discount_program($id);
 	if (!$prog || $prog['status'] !== 'draft')
 		return false;
-	// Delete coupons belonging to this program first
-	db_query("DELETE FROM ".TB_PREF."sales_coupons WHERE program_id = ".db_escape($id),
-		'Sales coupons cannot be deleted');
-	db_query("DELETE FROM ".TB_PREF."sales_discount_programs WHERE id = ".db_escape($id),
-		'Sales discount program cannot be deleted');
-	return true;
+	// Refused while the program or any of its coupons retains a Dimension reference.
+	return sales_discount_program_dimension_remove($id);
 }
 
 /**
@@ -254,6 +263,8 @@ function generate_coupons($program_id, $count, $prefix = '', $debtor_no = 0,
 	$valid_from = '', $valid_until = '', $usage_limit = 1) {
 
 	$created = 0;
+	if (!begin_transaction())
+		return 0;
 	$valid_from_sql  = (!empty($valid_from))  ? "'".date2sql($valid_from)."'"  : 'NULL';
 	$valid_until_sql = (!empty($valid_until)) ? "'".date2sql($valid_until)."'" : 'NULL';
 
@@ -275,8 +286,18 @@ function generate_coupons($program_id, $count, $prefix = '', $debtor_no = 0,
 				".db_escape($usage_limit).",
 				1
 			)";
-		db_query($sql, 'Coupon cannot be inserted');
+		if (!sales_dimension_custody_write('sales_coupons', null, array('custom_data' => null), function() use ($sql) {
+			return db_query($sql, 'Coupon cannot be inserted') ? db_insert_id() : false;
+		})) {
+			// A refused birth unwinds the whole batch.
+			cancel_transaction();
+			return 0;
+		}
 		$created++;
+	}
+	if (!commit_transaction()) {
+		cancel_transaction();
+		return 0;
 	}
 	return $created;
 }
@@ -384,12 +405,20 @@ function redeem_coupon($code, $debtor_no, $trans_type, $trans_no, $amount) {
 	if (!$coupon)
 		return;
 
-	// Increment coupon usage count
-	db_query("UPDATE ".TB_PREF."sales_coupons SET usage_count = usage_count + 1 WHERE id = ".db_escape($coupon['id']),
-		'Cannot update coupon usage count');
+	if (!begin_transaction())
+		return;
+	// Increment coupon usage count without touching retained metadata
+	$usage_sql = "UPDATE ".TB_PREF."sales_coupons SET usage_count = usage_count + 1 WHERE id = ".db_escape($coupon['id']);
+	if (!sales_dimension_custody_write('sales_coupons', $coupon['id'], array(), function() use ($usage_sql) {
+		return db_query($usage_sql, 'Cannot update coupon usage count') ? true : false;
+	})) {
+		cancel_transaction();
+		return;
+	}
 
 	// Record usage
 	record_discount_usage($coupon['program_id'], $coupon['id'], $debtor_no, $trans_type, $trans_no, $amount);
+	commit_transaction();
 }
 
 // ============================================================================
@@ -547,10 +576,15 @@ function record_discount_usage($program_id, $coupon_id, $debtor_no, $trans_type,
 		)";
 	db_query($sql, 'Cannot record discount usage');
 
-	// Increment program usage_count
-	db_query("UPDATE ".TB_PREF."sales_discount_programs SET usage_count = usage_count + 1
-		WHERE id = ".db_escape($program_id),
-		'Cannot update discount program usage count');
+	// Increment program usage_count (a program that no longer exists keeps its legacy no-op)
+	$exists = db_query("SELECT id FROM ".TB_PREF."sales_discount_programs WHERE id = ".db_escape($program_id)." FOR UPDATE");
+	if (!$exists || db_num_rows($exists) !== 1)
+		return;
+	$usage_sql = "UPDATE ".TB_PREF."sales_discount_programs SET usage_count = usage_count + 1
+		WHERE id = ".db_escape($program_id);
+	sales_dimension_custody_write('sales_discount_programs', $program_id, array(), function() use ($usage_sql) {
+		return db_query($usage_sql, 'Cannot update discount program usage count') ? true : false;
+	}) or dimension_financial_reference_failure();
 }
 
 /**

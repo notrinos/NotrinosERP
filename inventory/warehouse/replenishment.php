@@ -61,8 +61,10 @@ simple_page_mode(true);
 // --- Delete rule ---
 if ($Mode == 'Delete') {
 	if (can_delete_replenishment_rule($selected_id)) {
-		delete_replenishment_rule($selected_id);
-		display_notification(_('Replenishment rule has been deleted.'));
+				if (delete_replenishment_rule($selected_id))
+			display_notification(_('Replenishment rule has been deleted.'));
+		else
+			display_error(_('The replenishment rule cannot be deleted while it retains a Dimension reference.'));
 	}
 	$Mode = 'RESET';
 	$Ajax->activate('_page_body');
@@ -112,7 +114,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 
 	if ($input_error == 0) {
 		if ($Mode == 'ADD_ITEM') {
-			add_replenishment_rule(
+						if (add_replenishment_rule(
 				get_post('rule_name'),
 				$rule_type,
 				get_post('stock_id') ? get_post('stock_id') : null,
@@ -127,12 +129,14 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				get_post('supply_warehouse') ? get_post('supply_warehouse') : null,
 				get_post('supply_method', 'purchase'),
 				get_post('preferred_supplier') ? get_post('preferred_supplier') : null,
-				check_value('auto_execute') ? 1 : 0
-			);
-			display_notification(_('New replenishment rule has been added.'));
+								check_value('auto_execute') ? 1 : 0
+			))
+				display_notification(_('New replenishment rule has been added.'));
+			else
+				display_error(_('The replenishment rule could not be added.'));
 			$Ajax->activate('_page_body');
 		} else {
-			update_replenishment_rule(
+						if (update_replenishment_rule(
 				$selected_id,
 				get_post('rule_name'),
 				$rule_type,
@@ -149,9 +153,11 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				get_post('supply_method', 'purchase'),
 				get_post('preferred_supplier') ? get_post('preferred_supplier') : null,
 				check_value('auto_execute') ? 1 : 0,
-				check_value('rule_active') ? 1 : 0
-			);
-			display_notification(_('Replenishment rule has been updated.'));
+								check_value('rule_active') ? 1 : 0
+			))
+				display_notification(_('Replenishment rule has been updated.'));
+			else
+				display_error(_('The replenishment rule could not be updated.'));
 			$Ajax->activate('_page_body');
 		}
 		$Mode = 'RESET';
@@ -174,8 +180,10 @@ if (isset($_POST['toggle_auto'])) {
 	$tid = (int)$_POST['toggle_auto'];
 	$rule = get_replenishment_rule($tid);
 	if ($rule) {
-		toggle_replenishment_rule_auto_execute($tid, $rule['auto_execute'] ? 0 : 1);
-		display_notification(_('Auto-execute toggled.'));
+				if (toggle_replenishment_rule_auto_execute($tid, $rule['auto_execute'] ? 0 : 1))
+			display_notification(_('Auto-execute toggled.'));
+		else
+			display_error(_('The auto-execute setting could not be changed.'));
 		$Ajax->activate('_page_body');
 	}
 	$active_tab = 'rules';

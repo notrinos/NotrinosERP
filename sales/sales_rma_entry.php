@@ -125,7 +125,7 @@ if (isset($_POST['SAVE_RMA_NEW'])) {
 		// Add lines from the source document
 		$src_type = (int)get_post('source_type');
 		$src_no   = (int)get_post('source_no');
-		if ($src_no > 0) {
+		if ($rma_id && $src_no > 0) {
 			if ($src_type == ST_SALESINVOICE)
 				$items_result = get_invoice_items_for_rma($src_no);
 			elseif ($src_type == ST_CUSTDELIVERY)
@@ -150,8 +150,11 @@ if (isset($_POST['SAVE_RMA_NEW'])) {
 			}
 		}
 
-		$draft_data = get_sales_rma_approval_draft_data($rma_id);
-		if (!$draft_data) {
+		$draft_data = $rma_id ? get_sales_rma_approval_draft_data($rma_id) : false;
+		if (!$rma_id) {
+			display_error(_('The RMA could not be created.'));
+			$Ajax->activate('_page_body');
+		} elseif (!$draft_data) {
 			display_error(_('RMA was created but could not be prepared for approval submission.'));
 			$Ajax->activate('_page_body');
 		} else {
@@ -183,15 +186,17 @@ if (isset($_POST['SAVE_RMA_NEW'])) {
 // --- Update existing RMA ---
 if (isset($_POST['SAVE_RMA_UPDATE']) && $rma_id > 0) {
 	if (can_modify_rma_draft($rma_id) && can_save_rma_header()) {
-		update_sales_rma(
+		if (update_sales_rma(
 			$rma_id,
 			(int)get_post('return_reason_id'),
 			get_post('return_method', 'credit_note'),
 			get_post('customer_notes', ''),
 			get_post('internal_notes', ''),
 			(float)get_post('restocking_fee_percent', 0)
-		);
-		display_notification(_('RMA has been updated.'));
+		))
+			display_notification(_('RMA has been updated.'));
+		else
+			display_error(_('The RMA could not be updated.'));
 		$Ajax->activate('_page_body');
 	} else {
 		$Ajax->activate('_page_body');
@@ -287,10 +292,12 @@ if (isset($_POST['ADD_RMA_LINE']) && $rma_id > 0) {
 		display_error(_('Quantity must be greater than zero.'));
 	} else {
 		$item_row = db_fetch(db_query("SELECT description FROM " . TB_PREF . "stock_master WHERE stock_id = " . db_escape($stock_id), 'get item'));
-		add_rma_line($rma_id, $stock_id,
+		if (add_rma_line($rma_id, $stock_id,
 			$item_row ? $item_row['description'] : $stock_id,
-			$qty, $price, $cond);
-		display_notification(_('Line added.'));
+			$qty, $price, $cond))
+			display_notification(_('Line added.'));
+		else
+			display_error(_('The line could not be added.'));
 	}
 	$Ajax->activate('_page_body');
 	}
@@ -303,8 +310,10 @@ if (isset($_POST['DELETE_LINE'])) {
 	} else {
 		$line_id = (int)get_post('DELETE_LINE');
 		if ($line_id > 0) {
-			delete_rma_line($line_id);
-			display_notification(_('Line removed.'));
+			if (delete_rma_line($line_id))
+				display_notification(_('Line removed.'));
+			else
+				display_error(_('The line cannot be removed while it retains a Dimension reference.'));
 		}
 		$Ajax->activate('_page_body');
 	}

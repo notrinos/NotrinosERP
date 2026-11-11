@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/warehouse_config_dimension_db.inc';
 
 /**
  * Warehouse Operations CRUD, queries, and status management.
@@ -157,8 +158,10 @@ function add_wh_operation($op_type, $op_status = 'ready', $source_doc_type = nul
 		" . ($route_id !== null ? (int)$route_id : 'NULL') . ",
 		" . db_escape($memo) . "
 	)";
-	db_query($sql, 'could not add warehouse operation');
-	return db_insert_id();
+		// The native birth writes no metadata (NULL). Operation flows ignore the result, so a refusal throws.
+	return warehouse_config_dimension_guard('wh_operations', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'could not add warehouse operation') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -195,8 +198,9 @@ function add_wh_operation_line($op_id, $stock_id, $qty_planned, $qty_done = 0,
 		" . ($package_id !== null ? (int)$package_id : 'NULL') . ",
 		" . (float)$unit_cost . "
 	)";
-	db_query($sql, 'could not add warehouse operation line');
-	return db_insert_id();
+		return warehouse_config_dimension_guard('wh_operation_lines', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'could not add warehouse operation line') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -216,7 +220,9 @@ function update_wh_operation_status($op_id, $new_status) {
 	$sql = "UPDATE " . TB_PREF . "wh_operations SET "
 		. implode(', ', $sets)
 		. " WHERE op_id=" . (int)$op_id;
-	db_query($sql, 'could not update operation status');
+		warehouse_config_dimension_guard('wh_operations', (int)$op_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update operation status') ? true : false;
+	});
 }
 
 /**
@@ -228,7 +234,9 @@ function update_wh_operation_status($op_id, $new_status) {
 function link_wh_operations($parent_op_id, $child_op_id) {
 	$sql = "UPDATE " . TB_PREF . "wh_operations SET next_op_id="
 		. (int)$child_op_id . " WHERE op_id=" . (int)$parent_op_id;
-	db_query($sql, 'could not link parent operation');
+		warehouse_config_dimension_guard('wh_operations', (int)$parent_op_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not link parent operation') ? true : false;
+	});
 }
 
 /**
@@ -240,7 +248,9 @@ function link_wh_operations($parent_op_id, $child_op_id) {
 function update_wh_operation_line_done($line_id, $qty_done) {
 	$sql = "UPDATE " . TB_PREF . "wh_operation_lines SET qty_done="
 		. (float)$qty_done . " WHERE line_id=" . (int)$line_id;
-	db_query($sql, 'could not update operation line done qty');
+		warehouse_config_dimension_guard('wh_operation_lines', (int)$line_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update operation line done qty') ? true : false;
+	});
 }
 
 /**
@@ -249,11 +259,16 @@ function update_wh_operation_line_done($line_id, $qty_done) {
  * @param int $op_id Operation id
  */
 function complete_wh_operation($op_id) {
-	$sql = "UPDATE " . TB_PREF . "wh_operation_lines SET qty_done = qty_planned"
-		. " WHERE op_id=" . (int)$op_id;
-	db_query($sql, 'could not complete operation lines');
+			// The line completion and the status change are one unit.
+	if (!begin_transaction())
+		return;
+	warehouse_operation_lines_each($op_id, function($complete_line_id) {
+		return "UPDATE " . TB_PREF . "wh_operation_lines SET qty_done = qty_planned WHERE line_id=" . (int)$complete_line_id;
+	}, 'could not complete operation lines');
 
 	update_wh_operation_status($op_id, 'done');
+	if (!commit_transaction())
+		cancel_transaction();
 }
 
 //----------------------------------------------------------------------
@@ -548,7 +563,10 @@ function cancel_wh_operation($op_id, $reason = '') {
 
 	$sql = "UPDATE " . TB_PREF . "wh_operations SET op_status='cancelled', memo="
 		. db_escape($memo) . " WHERE op_id=" . (int)$op_id;
-	db_query($sql, 'could not cancel operation');
+		warehouse_config_dimension_guard('wh_operations', (int)$op_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not cancel operation') ? true : false;
+	});
+
 
 	// Cancel chained next operations
 	if ($op['next_op_id'])
@@ -562,15 +580,26 @@ function cancel_wh_operation($op_id, $reason = '') {
  * @param int $doc_no   Source document number
  */
 function void_wh_operations_for_document($doc_type, $doc_no) {
-	// Delete operation lines first (CASCADE should handle it, but be explicit)
-	$sql = "DELETE ol FROM " . TB_PREF . "wh_operation_lines ol
-		INNER JOIN " . TB_PREF . "wh_operations op ON ol.op_id = op.op_id
-		WHERE op.source_doc_type=" . (int)$doc_type
-		. " AND op.source_doc_no=" . (int)$doc_no;
-	db_query($sql, 'could not void operation lines');
-
-	$sql = "DELETE FROM " . TB_PREF . "wh_operations
+		// Each operation and each of its lines is removed under the writer fence (lines first, as the
+	// CASCADE would): an operation or line that retains a Dimension reference refuses the whole
+	// voiding, which throws so the voided document unwinds with it.
+	if (!begin_transaction())
+		return;
+	$rows = db_query("SELECT op_id FROM " . TB_PREF . "wh_operations
 		WHERE source_doc_type=" . (int)$doc_type
-		. " AND source_doc_no=" . (int)$doc_no;
-	db_query($sql, 'could not void operations');
+		. " AND source_doc_no=" . (int)$doc_no . " ORDER BY op_id FOR UPDATE", 'could not find operations to void');
+	$op_ids = array();
+	while ($rows && ($row = db_fetch_assoc($rows)))
+		$op_ids[] = (int)$row['op_id'];
+	foreach ($op_ids as $void_op_id) {
+		warehouse_operation_lines_each($void_op_id, function($void_line_id) {
+			return "DELETE FROM " . TB_PREF . "wh_operation_lines WHERE line_id=" . (int)$void_line_id;
+		}, 'could not void operation lines', '', true);
+		$sql = "DELETE FROM " . TB_PREF . "wh_operations WHERE op_id=" . $void_op_id;
+		warehouse_config_dimension_guard('wh_operations', $void_op_id, array(), function() use ($sql) {
+			return db_query($sql, 'could not void operations') ? true : false;
+		}, true);
+	}
+	if (!commit_transaction())
+		cancel_transaction();
 }

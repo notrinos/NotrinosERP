@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/traceability_dimension_db.inc';
 
 /**
  * Batch/Lot CRUD, queries, FEFO/FIFO allocation, expiry management,
@@ -146,8 +147,9 @@ function add_stock_batch($batch_no, $stock_id, $status = 'active',
 		" . (int)$_SESSION['wa_current_user']->user . ",
 		NOW()
 	)";
-	db_query($sql, 'could not add stock batch');
-	return db_insert_id();
+		return traceability_dimension_guard('stock_batches', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'could not add stock batch') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -206,7 +208,9 @@ function update_stock_batch($id, $batch_no, $status = null,
 	$sql = "UPDATE " . TB_PREF . "stock_batches SET "
 		. implode(', ', $sets)
 		. " WHERE id=" . (int)$id;
-	db_query($sql, 'could not update stock batch');
+		return traceability_dimension_write('stock_batches', (int)$id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update stock batch') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -395,7 +399,9 @@ function can_delete_stock_batch($id) {
  */
 function delete_stock_batch($id) {
 	$sql = "DELETE FROM " . TB_PREF . "stock_batches WHERE id=" . (int)$id;
-	db_query($sql, 'could not delete stock batch');
+		return traceability_dimension_write('stock_batches', (int)$id, array(), function() use ($sql) {
+		return db_query($sql, 'could not delete stock batch') ? true : false;
+	}, true) ? true : false;
 }
 
 //----------------------------------------------------------------------
@@ -516,7 +522,7 @@ function import_stock_batches($stock_id, $csv_text, $status = 'active',
 function update_batch_status($batch_id, $new_status, $notes = '') {
 	$sql = "UPDATE " . TB_PREF . "stock_batches SET status=" . db_escape($new_status)
 		. " WHERE id=" . (int)$batch_id;
-	db_query($sql, 'could not update batch status');
+		traceability_dimension_update('stock_batches', $batch_id, $sql, 'could not update batch status');
 }
 
 /**
@@ -526,15 +532,26 @@ function update_batch_status($batch_id, $new_status, $notes = '') {
  * @return int Number of batches expired
  */
 function auto_expire_batches() {
-	$sql = "UPDATE " . TB_PREF . "stock_batches
-		SET status='expired'
-		WHERE status='active' AND expiry_date IS NOT NULL AND expiry_date < CURDATE()";
-	db_query($sql, 'could not auto-expire batches');
+		// Each batch is expired under the writer fence; one refusal unwinds the whole sweep (it throws).
+	if (!begin_transaction())
+		return 0;
+	$rows = db_query("SELECT id FROM " . TB_PREF . "stock_batches
+		WHERE status='active' AND expiry_date IS NOT NULL AND expiry_date < CURDATE() ORDER BY id FOR UPDATE",
+		'could not find expired batches');
+	$ids = array();
+	while ($rows && ($row = db_fetch_assoc($rows)))
+		$ids[] = (int)$row['id'];
+	foreach ($ids as $expired_id) {
+		traceability_dimension_update('stock_batches', $expired_id,
+			"UPDATE " . TB_PREF . "stock_batches SET status='expired' WHERE id=" . $expired_id,
+			'could not auto-expire batches');
+	}
+	if (!commit_transaction()) {
+		cancel_transaction();
+		return 0;
+	}
 
-	$sql = "SELECT ROW_COUNT()";
-	$result = db_query($sql, 'could not get row count');
-	$row = db_fetch_row($result);
-	return (int)$row[0];
+	return count($ids);
 }
 
 //----------------------------------------------------------------------

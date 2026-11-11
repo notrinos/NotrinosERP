@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/warehouse_config_dimension_db.inc';
 
 /**
  * Database functions for warehouse hierarchical location management.
@@ -107,13 +108,20 @@ function add_warehouse_location($loc_code, $loc_name, $parent_loc_id, $warehouse
 		}
 	}
 
-	$sql .= ") VALUES (" . $values . ")";
-	db_query($sql, 'could not add warehouse location');
-
-	$loc_id = db_insert_id();
+		$sql .= ") VALUES (" . $values . ")";
+	// Birth and path are one unit; a refusal throws after the fence has unwound it.
+	if (!begin_transaction())
+		dimension_financial_reference_failure();
+	$loc_id = warehouse_config_dimension_guard('wh_locations', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'could not add warehouse location') ? db_insert_id() : false;
+	});
 
 	// Now compute and update location_path and full_name
 	update_warehouse_location_path($loc_id);
+	if (!commit_transaction()) {
+		cancel_transaction();
+		dimension_financial_reference_failure();
+	}
 
 	return $loc_id;
 }
@@ -149,12 +157,19 @@ function update_warehouse_location($loc_id, $loc_name, $location_type_id, $extra
 		}
 	}
 
-	$sql .= " WHERE loc_id = " . db_escape($loc_id);
-	db_query($sql, 'could not update warehouse location');
-
-	// Recompute path for this node and all descendants
-	update_warehouse_location_path($loc_id);
-	recompute_descendant_paths($loc_id);
+		$sql .= " WHERE loc_id = " . db_escape($loc_id);
+	// The row, its path and every descendant path are one unit; a refusal throws.
+	if (!begin_transaction())
+		dimension_financial_reference_failure();
+	if (warehouse_config_dimension_update('wh_locations', $loc_id, $sql, 'could not update warehouse location')) {
+		// Recompute path for this node and all descendants
+		update_warehouse_location_path($loc_id);
+		recompute_descendant_paths($loc_id);
+	}
+	if (!commit_transaction()) {
+		cancel_transaction();
+		dimension_financial_reference_failure();
+	}
 }
 
 /**
@@ -165,7 +180,15 @@ function update_warehouse_location($loc_id, $loc_name, $location_type_id, $extra
  */
 function delete_warehouse_location($loc_id) {
 	$sql = "DELETE FROM " . TB_PREF . "wh_locations WHERE loc_id = " . db_escape($loc_id);
-	db_query($sql, 'could not delete warehouse location');
+	$exists = db_query("SELECT loc_id FROM " . TB_PREF . "wh_locations WHERE loc_id = " . db_escape($loc_id), 'could not check warehouse location');
+	if (!$exists || !db_num_rows($exists))
+		return false;
+	// Refused (throws) while the location retains a Dimension reference, closed or orphan included.
+	warehouse_config_dimension_guard('wh_locations', (int)$loc_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not delete warehouse location') ? true : false;
+	}, true);
+
+	return true;
 }
 
 /**
@@ -390,7 +413,7 @@ function update_warehouse_location_path($loc_id) {
 		. "location_path = " . db_escape($path) . ", "
 		. "full_name = " . db_escape($full)
 		. " WHERE loc_id = " . db_escape($loc_id);
-	db_query($sql, 'could not update location path');
+		warehouse_config_dimension_update('wh_locations', $loc_id, $sql, 'could not update location path');
 }
 
 /**
@@ -1131,7 +1154,7 @@ function update_bin_current_capacity($loc_id, $weight_delta, $volume_delta, $uni
 		. "current_volume = GREATEST(0, COALESCE(current_volume, 0) + " . db_escape($volume_delta) . "), "
 		. "current_units = GREATEST(0, COALESCE(current_units, 0) + " . db_escape((int)$units_delta) . ") "
 		. "WHERE loc_id = " . db_escape($loc_id);
-	db_query($sql, 'could not update bin capacity');
+		warehouse_config_dimension_update('wh_locations', $loc_id, $sql, 'could not update bin capacity');
 }
 
 /**
@@ -1164,7 +1187,7 @@ function recalculate_bin_capacity($loc_id) {
 		. "current_volume = " . db_escape($total_volume) . ", "
 		. "current_units = " . db_escape($total_units)
 		. " WHERE loc_id = " . db_escape($loc_id);
-	db_query($sql, 'could not set recalculated bin capacity');
+		warehouse_config_dimension_update('wh_locations', $loc_id, $sql, 'could not set recalculated bin capacity');
 }
 
 /**
@@ -1175,10 +1198,17 @@ function recalculate_bin_capacity($loc_id) {
  */
 function recalculate_warehouse_capacity($warehouse_loc_code) {
 	$result = get_warehouse_storable_locations($warehouse_loc_code);
-	$count = 0;
+		$count = 0;
+	// One unit: a refused bin throws and unwinds every bin recalculated before it.
+	if (!begin_transaction())
+		dimension_financial_reference_failure();
 	while ($row = db_fetch($result)) {
 		recalculate_bin_capacity($row['loc_id']);
 		$count++;
+	}
+	if (!commit_transaction()) {
+		cancel_transaction();
+		dimension_financial_reference_failure();
 	}
 	return $count;
 }

@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/warehouse_config_dimension_db.inc';
 
 /**
  * Database functions for warehouse storage categories.
@@ -54,7 +55,10 @@ function add_storage_category($category_name, $max_weight, $max_volume, $max_uni
 		. ($humidity_max !== null && $humidity_max !== '' ? db_escape($humidity_max) : "NULL") . ", "
 		. db_escape($is_hazmat) . ")";
 
-	db_query($sql, 'could not add storage category');
+		// The native birth writes no metadata: the stored default must stay NULL.
+	return warehouse_config_dimension_write('wh_storage_categories', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'could not add storage category') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -91,7 +95,9 @@ function update_storage_category($id, $category_name, $max_weight, $max_volume, 
 		. "is_hazmat = " . db_escape($is_hazmat)
 		. " WHERE id = " . db_escape($id);
 
-	db_query($sql, 'could not update storage category');
+		return warehouse_config_dimension_write('wh_storage_categories', $id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update storage category') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -101,8 +107,11 @@ function update_storage_category($id, $category_name, $max_weight, $max_volume, 
  * @return void
  */
 function delete_storage_category($id) {
-	$sql = "DELETE FROM " . TB_PREF . "wh_storage_categories WHERE id = " . db_escape($id);
-	db_query($sql, 'could not delete storage category');
+		$sql = "DELETE FROM " . TB_PREF . "wh_storage_categories WHERE id = " . db_escape($id);
+	// Refused while the category retains a Dimension reference (closed/orphan included).
+	return warehouse_config_dimension_write('wh_storage_categories', $id, array(), function() use ($sql) {
+		return db_query($sql, 'could not delete storage category') ? true : false;
+	}, true) ? true : false;
 }
 
 /**

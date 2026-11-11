@@ -9,6 +9,8 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/../../includes/db/traceability_dimension_db.inc';
+require_once __DIR__ . '/db/warehouse_config_dimension_db.inc';
 
 /**
  * Warehouse Operations Orchestrator — Multi-step inbound/outbound flow management.
@@ -291,7 +293,9 @@ function normalize_wh_operation_item_payload($item, $item_index, &$error_message
 					. "qty_available=" . (float)$new_qty_available . ","
 					. "stock_status=" . db_escape($status)
 					. " WHERE id=" . (int)$existing['id'];
-				db_query($sql, 'could not update bin stock');
+				warehouse_config_dimension_guard('wh_bin_stock', (int)$existing['id'], array(), function() use ($sql) {
+			return db_query($sql, 'could not update bin stock') ? true : false;
+		});
 			} else {
 				if ((float)$qty <= 0)
 					return;
@@ -311,7 +315,9 @@ function normalize_wh_operation_item_payload($item, $item_index, &$error_message
 					" . ($expiry_date ? db_escape($expiry_date) : 'NULL') . ",
 					" . db_escape($status) . "
 				)";
-				db_query($sql, 'could not insert bin stock');
+				warehouse_config_dimension_guard('wh_bin_stock', null, array('custom_data' => null), function() use ($sql) {
+			return db_query($sql, 'could not insert bin stock') ? true : false;
+		});
 			}
 		}
 	}
@@ -971,7 +977,7 @@ function add_wh_operation_assignment_lines($op_id, $item, $from_loc_id, $assignm
 						. "loc_code=" . db_escape($warehouse_loc_code) . ", "
 						. "status='available' "
 						. "WHERE id=" . (int)$serial_id;
-					db_query($sql, 'could not update serial location from putaway assignment');
+										traceability_dimension_update('serial_numbers', (int)$serial_id, $sql, 'could not update serial location from putaway assignment');
 				}
 			}
 		} else {
@@ -1327,7 +1333,12 @@ function update_bin_stock($wh_loc_id, $stock_id, $qty, $batch_id = null,
 {
 	if (!$wh_loc_id) return;
 
+	// Bin row and its capacity tracking are one unit; a refusal throws after the fence unwinds it.
+	if (!begin_transaction())
+		dimension_financial_reference_failure();
+
 	// Check if a matching bin_stock row exists
+
 	$where = "wh_loc_id=" . (int)$wh_loc_id
 		. " AND stock_id=" . db_escape($stock_id)
 		. " AND " . ($batch_id !== null ? "batch_id=" . (int)$batch_id : "batch_id IS NULL")
@@ -1347,10 +1358,14 @@ function update_bin_stock($wh_loc_id, $stock_id, $qty, $batch_id = null,
 			. "qty_available=" . (float)$new_qty_available . ","
 			. "stock_status=" . db_escape($status)
 			. " WHERE id=" . (int)$existing['id'];
-		db_query($sql, 'could not update bin stock');
-	} else {
-		if ((float)$qty <= 0)
+		warehouse_config_dimension_guard('wh_bin_stock', (int)$existing['id'], array(), function() use ($sql) {
+			return db_query($sql, 'could not update bin stock') ? true : false;
+		});
+		} else {
+		if ((float)$qty <= 0) {
+			commit_transaction();
 			return;
+		}
 
 		$insert_qty_available = $status === 'available' && (float)$qty > 0 ? (float)$qty : 0;
 		$sql = "INSERT INTO " . TB_PREF . "wh_bin_stock (
@@ -1367,7 +1382,9 @@ function update_bin_stock($wh_loc_id, $stock_id, $qty, $batch_id = null,
 			" . ($expiry_date ? db_escape($expiry_date) : 'NULL') . ",
 			" . db_escape($status) . "
 		)";
-		db_query($sql, 'could not insert bin stock');
+		warehouse_config_dimension_guard('wh_bin_stock', null, array('custom_data' => null), function() use ($sql) {
+			return db_query($sql, 'could not insert bin stock') ? true : false;
+		});
 	}
 
 	// Update bin capacity tracking if available
@@ -1383,9 +1400,13 @@ function update_bin_stock($wh_loc_id, $stock_id, $qty, $batch_id = null,
 			if ($item_row) {
 				$weight_delta = (float)$item_row['item_weight'] * $qty;
 				$volume_delta = (float)$item_row['item_volume'] * $qty;
-				update_bin_current_capacity($wh_loc_id, $weight_delta, $volume_delta, $qty);
+								update_bin_current_capacity($wh_loc_id, $weight_delta, $volume_delta, $qty);
 			}
 		}
+	}
+	if (!commit_transaction()) {
+		cancel_transaction();
+		dimension_financial_reference_failure();
 	}
 }
 
@@ -2094,7 +2115,7 @@ function process_delivery_tracking_and_wms($delivery, $delivery_no, $date_, $loc
 						$sql = "UPDATE " . TB_PREF . "serial_numbers SET "
 							. implode(', ', $sets)
 							. " WHERE id=" . (int)$sid;
-						db_query($sql, 'could not update serial customer/warranty');
+												traceability_dimension_update('serial_numbers', (int)$sid, $sql, 'could not update serial customer/warranty');
 
 						// Update bin stock (remove from bin)
 						if ($is_wms && !empty($serial['wh_loc_id'])) {
@@ -2759,7 +2780,7 @@ function process_credit_tracking_returns($credit_note, $credit_no, $date_, $loca
 							. "customer_id=NULL, wh_loc_id="
 							. ($destination_bin_id ? (int)$destination_bin_id : 'NULL')
 							. " WHERE id=" . (int)$sid;
-						db_query($sql, 'could not clear serial customer on return');
+												traceability_dimension_update('serial_numbers', (int)$sid, $sql, 'could not clear serial customer on return');
 					}
 				}
 			}

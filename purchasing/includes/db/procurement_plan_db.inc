@@ -14,6 +14,7 @@ include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/hooks.inc');
 include_once($path_to_root . '/purchasing/includes/po_class.inc');
 include_once($path_to_root . '/purchasing/includes/db/po_db.inc');
+require_once __DIR__ . '/purch_policy_dimension_db.inc';
 
 /**
  * Generate the next procurement plan reference.
@@ -106,15 +107,21 @@ function generate_procurement_plan($plan_type, $location = '', $date_range = nul
 	if (empty($suggestions))
 		return false;
 
-	begin_transaction();
+	$header_metadata = encode_procurement_plan_custom_data($date_range);
+	if ($header_metadata === null && $date_range !== null && $date_range !== '' && $date_range !== array())
+		return false;
+
+	if (!begin_transaction())
+		return false;
 
 	$sql = "INSERT INTO " . TB_PREF . "procurement_plan
 		(reference, plan_date, plan_type, status, created_by, notes, custom_data)
 		VALUES ('', " . db_escape(date2sql(Today())) . ", " . db_escape($plan_type) . ", 'draft', "
-		. (int)$_SESSION['wa_current_user']->user . ", '', " . sql_procurement_plan_custom_data($date_range) . ")";
-	db_query($sql, 'could not create procurement plan header');
-
-	$plan_id = db_insert_id();
+		. (int)$_SESSION['wa_current_user']->user . ", '', " . sql_procurement_plan_custom_data($header_metadata) . ")";
+	// A fresh reference must be open on its axis; a refusal unwinds this whole transaction.
+	$plan_id = purch_policy_dimension_write('procurement_plan', null, array('custom_data' => $header_metadata), function() use ($sql) {
+		return db_query($sql, 'could not create procurement plan header') ? db_insert_id() : false;
+	});
 	if (!$plan_id) {
 		cancel_transaction();
 		return false;
@@ -123,7 +130,12 @@ function generate_procurement_plan($plan_type, $location = '', $date_range = nul
 	$reference = format_procurement_plan_reference($plan_id);
 	$sql = "UPDATE " . TB_PREF . "procurement_plan SET reference=" . db_escape($reference)
 		. " WHERE id=" . (int)$plan_id;
-	db_query($sql, 'could not update procurement plan reference');
+	if (!purch_policy_dimension_write('procurement_plan', $plan_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update procurement plan reference') ? true : false;
+	})) {
+		cancel_transaction();
+		return false;
+	}
 
 	$line_count = 0;
 	foreach ($suggestions as $suggestion) {
@@ -168,13 +180,17 @@ function generate_procurement_plan($plan_type, $location = '', $date_range = nul
 			. "'pending',0,"
 			. sql_procurement_plan_custom_data($line_custom_data)
 			. ")";
-		db_query($sql, 'could not insert procurement plan line');
+		if (!purch_policy_dimension_write('procurement_plan_lines', null, array('custom_data' => encode_procurement_plan_custom_data($line_custom_data)), function() use ($sql) {
+			return db_query($sql, 'could not insert procurement plan line') ? db_insert_id() : false;
+		})) {
+			cancel_transaction();
+			return false;
+		}
 		$line_count++;
 	}
 
 	if ($line_count === 0) {
-		$sql = "DELETE FROM " . TB_PREF . "procurement_plan WHERE id=" . (int)$plan_id;
-		db_query($sql, 'could not rollback empty procurement plan');
+		// The whole transaction is cancelled: the freshly born header never persists.
 		cancel_transaction();
 		return false;
 	}
@@ -352,8 +368,7 @@ function confirm_procurement_plan($plan_id)
 		WHERE id = " . (int)$plan_id . "
 		AND status IN ('draft', 'submitted', 'confirmed')";
 
-	db_query($sql, 'could not confirm procurement plan');
-	return db_num_affected_rows() > 0;
+	return purch_plan_status_write('procurement_plan', $plan_id, $sql, 'could not confirm procurement plan');
 }
 
 /**
@@ -369,8 +384,7 @@ function reopen_procurement_plan($plan_id)
 		WHERE id = " . (int)$plan_id . "
 		AND status IN ('submitted', 'draft')";
 
-	db_query($sql, 'could not reopen procurement plan');
-	return db_num_affected_rows() > 0;
+	return purch_plan_status_write('procurement_plan', $plan_id, $sql, 'could not reopen procurement plan');
 }
 
 /**
@@ -443,11 +457,16 @@ function submit_procurement_plan_for_core_approval($plan_id)
 function approve_plan_line($line_id, $approved_qty = 0, $supplier_id = 0)
 {
 	$line_id = (int)$line_id;
-	$sql = "SELECT * FROM " . TB_PREF . "procurement_plan_lines WHERE id = " . $line_id;
+	if (!begin_transaction())
+		return false;
+	// The line is locked before its current values are read so a concurrent edit cannot be overwritten.
+	$sql = "SELECT * FROM " . TB_PREF . "procurement_plan_lines WHERE id = " . $line_id . " FOR UPDATE";
 	$result = db_query($sql, 'could not retrieve procurement plan line');
 	$line = db_fetch($result);
-	if (!$line)
+	if (!$line) {
+		cancel_transaction();
 		return false;
+	}
 
 	$effective_qty = (float)$approved_qty > 0 ? (float)$approved_qty : (float)$line['suggested_order_qty'];
 	$effective_supplier = (int)$supplier_id > 0 ? (int)$supplier_id : (int)$line['supplier_id'];
@@ -457,7 +476,12 @@ function approve_plan_line($line_id, $approved_qty = 0, $supplier_id = 0)
 		supplier_id = " . db_escape($effective_supplier) . ",
 		status = 'approved'
 	WHERE id = " . $line_id;
-	db_query($sql, 'could not approve procurement plan line');
+	if (!purch_policy_dimension_write('procurement_plan_lines', $line_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not approve procurement plan line') ? true : false;
+	}) || !commit_transaction()) {
+		cancel_transaction();
+		return false;
+	}
 
 	return true;
 }
@@ -472,9 +496,16 @@ function approve_plan_line($line_id, $approved_qty = 0, $supplier_id = 0)
 function skip_plan_line($line_id, $reason = '')
 {
 	$line_id = (int)$line_id;
-	$sql = "SELECT custom_data FROM " . TB_PREF . "procurement_plan_lines WHERE id = " . $line_id;
+	if (!begin_transaction())
+		return false;
+	// Read-modify-write of retained metadata happens on the locked row.
+	$sql = "SELECT custom_data FROM " . TB_PREF . "procurement_plan_lines WHERE id = " . $line_id . " FOR UPDATE";
 	$result = db_query($sql, 'could not retrieve procurement plan line custom data');
 	$row = db_fetch($result);
+	if (!$row) {
+		cancel_transaction();
+		return false;
+	}
 	$custom_data = array();
 
 	if (!empty($row['custom_data'])) {
@@ -491,7 +522,13 @@ function skip_plan_line($line_id, $reason = '')
 		status = 'skipped',
 		custom_data = " . sql_procurement_plan_custom_data($custom_data) . "
 	WHERE id = " . $line_id;
-	db_query($sql, 'could not skip procurement plan line');
+	// Existing keys (including retained references) are carried over; only the skip keys are added.
+	if (!purch_policy_dimension_write('procurement_plan_lines', $line_id, array('custom_data' => encode_procurement_plan_custom_data($custom_data)), function() use ($sql) {
+		return db_query($sql, 'could not skip procurement plan line') ? true : false;
+	}) || !commit_transaction()) {
+		cancel_transaction();
+		return false;
+	}
 
 	return true;
 }

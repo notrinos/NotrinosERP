@@ -101,7 +101,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 			// Get old serial to detect status change
 			$old_serial = get_serial_number($selected_id);
 
-			update_serial_number(
+						$serial_saved = update_serial_number(
 				$selected_id,
 				get_post('serial_no'),
 				get_post('status'),
@@ -124,8 +124,8 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				get_post('notes')
 			);
 
-			// Log status change if changed
-			if ($old_serial && $old_serial['status'] !== get_post('status')) {
+						// Log status change if changed
+			if ($serial_saved && $old_serial && $old_serial['status'] !== get_post('status')) {
 				add_serial_movement(
 					$selected_id, 0, 0,
 					$old_serial['loc_code'], get_post('loc_code'),
@@ -134,8 +134,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				);
 			}
 
-			display_notification(_('Serial number has been updated.'));
+						if ($serial_saved)
+				display_notification(_('Serial number has been updated.'));
+			else
+				display_error(_('The serial number could not be updated.'));
 		} else {
+						try {
 			$new_id = add_serial_number(
 				get_post('serial_no'),
 				get_post('stock_id_edit'),
@@ -152,9 +156,13 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				get_post('warranty_type'),
 				get_post('purchase_cost', 0),
 				get_post('grn_id', null),
-				get_post('notes')
+								get_post('notes')
 			);
+			} catch (DimensionFinancialReferenceWriteException $e) {
+				$new_id = false;
+			}
 
+			if ($new_id) {
 			// Log initial creation movement
 			add_serial_movement(
 				$new_id, 0, 0,
@@ -163,7 +171,10 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				Today(), '', _('Serial number created manually')
 			);
 
-			display_notification(_('New serial number has been added.'));
+						display_notification(_('New serial number has been added.'));
+			} else {
+				display_error(_('The serial number could not be added.'));
+			}
 		}
 		$Mode = 'RESET';
 	}
@@ -175,8 +186,10 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 if ($Mode == 'Delete') {
 	$can = can_delete_serial_number($selected_id);
 	if ($can === true) {
-		delete_serial_number($selected_id);
-		display_notification(_('Selected serial number has been deleted.'));
+				if (delete_serial_number($selected_id))
+			display_notification(_('Selected serial number has been deleted.'));
+		else
+			display_error(_('The serial number cannot be deleted while it retains a Dimension reference.'));
 	} else {
 		display_error($can);
 	}

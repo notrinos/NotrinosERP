@@ -1,5 +1,6 @@
 <?php
 /** Immutable procurement-plan supplier commands through the existing PO approval workflow. */
+require_once __DIR__ . "/purch_policy_dimension_db.inc";
 
 /** Read current company rows, retaining driver types for exact source reconciliation. */
 function read_plan_purchase_rows($query) {
@@ -178,7 +179,8 @@ function complete_plan_purchase_progress($snapshot) {
  $lines = read_plan_purchase_rows($snapshot['queries']['all_lines']); $pending = false;
  foreach ($lines as $line) if (in_array($line['status'],array('pending','approved'),true)) $pending = true;
  $status = $pending ? 'in_progress' : 'completed';
- if (!db_query('UPDATE '.TB_PREF.'procurement_plan SET status='.db_escape($status).' WHERE id='.(int)$snapshot['header']['id'],'could not update procurement plan status')) throw new RuntimeException('Plan progress update failed.');
+ $progress_sql = 'UPDATE '.TB_PREF.'procurement_plan SET status='.db_escape($status).' WHERE id='.(int)$snapshot['header']['id'];
+ if (!purch_policy_dimension_write('procurement_plan',(int)$snapshot['header']['id'],array(),function() use ($progress_sql) { return db_query($progress_sql,'could not update procurement plan status') ? true : false; })) throw new RuntimeException('Plan progress update failed.');
  $want = $snapshot['header']; $want['status'] = $status;
  if (read_plan_purchase_rows($snapshot['queries']['header']) !== array($want)) throw new RuntimeException('Plan derived status differs from source intent.');
 }
@@ -215,7 +217,10 @@ function write_plan_purchase_order($snapshot,$approval_draft_id = 0,$defer_compl
   $rows = read_plan_purchase_rows($snapshot['queries'][$key]); if ($key === 'header') $rows = $rows[0];
   if ($rows !== $snapshot[$key]) throw new RuntimeException('Plan retained source changed.');
  }
- foreach ($snapshot['used'] as $id) if (!db_query('UPDATE '.TB_PREF."procurement_plan_lines SET status='ordered',po_number=".(int)$number.' WHERE id='.(int)$id,'could not mark procurement plan line as ordered')) throw new RuntimeException('Plan source linkage failed.');
+ foreach ($snapshot['used'] as $id) {
+  $order_sql = 'UPDATE '.TB_PREF."procurement_plan_lines SET status='ordered',po_number=".(int)$number.' WHERE id='.(int)$id;
+  if (!purch_policy_dimension_write('procurement_plan_lines',(int)$id,array(),function() use ($order_sql) { return db_query($order_sql,'could not mark procurement plan line as ordered') ? true : false; })) throw new RuntimeException('Plan source linkage failed.');
+ }
  $current = read_plan_purchase_rows($snapshot['queries']['all_lines']);
  foreach ($current as $key=>$line) {
   $want = $snapshot['all_lines'][$key];

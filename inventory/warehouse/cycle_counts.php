@@ -82,8 +82,10 @@ if (isset($_POST['AddPlan'])) {
     } elseif ($frequency_days < 1) {
         display_error(_('Frequency must be at least 1 day.'));
     } else {
-        add_cycle_count_plan($plan_name, $count_method, $plan_warehouse, $frequency_days, $abc_class);
-        display_notification(_('Count plan has been created.'));
+                if (add_cycle_count_plan($plan_name, $count_method, $plan_warehouse, $frequency_days, $abc_class))
+            display_notification(_('Count plan has been created.'));
+        else
+            display_error(_('The count plan could not be created.'));
         $plan_selected_id = -1;
         $plan_mode = '';
     }
@@ -104,9 +106,11 @@ if (isset($_POST['UpdatePlan'])) {
     if (strlen($plan_name) == 0) {
         display_error(_('Plan name cannot be empty.'));
     } else {
-        update_cycle_count_plan($plan_selected_id, $plan_name, $count_method,
-            $plan_warehouse, $frequency_days, $abc_class, $plan_active);
-        display_notification(_('Count plan has been updated.'));
+                if (update_cycle_count_plan($plan_selected_id, $plan_name, $count_method,
+            $plan_warehouse, $frequency_days, $abc_class, $plan_active))
+            display_notification(_('Count plan has been updated.'));
+        else
+            display_error(_('The count plan could not be updated.'));
         $plan_selected_id = -1;
         $plan_mode = '';
     }
@@ -116,8 +120,10 @@ if (isset($_POST['UpdatePlan'])) {
 
 if ($plan_mode == 'delete' && $plan_selected_id > 0) {
     if (can_delete_cycle_count_plan($plan_selected_id)) {
-        delete_cycle_count_plan($plan_selected_id);
-        display_notification(_('Count plan has been deleted.'));
+                if (delete_cycle_count_plan($plan_selected_id))
+            display_notification(_('Count plan has been deleted.'));
+        else
+            display_error(_('The count plan cannot be deleted while it retains a Dimension reference.'));
     } else {
         display_error(_('Cannot delete this plan because it has associated count sessions.'));
     }
@@ -152,12 +158,18 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
         display_error(_('Please select a warehouse.'));
     } else {
         if ($Mode == 'ADD_ITEM') {
-            $new_count_id = add_cycle_count($count_date, $count_warehouse, $count_plan_id, $count_memo);
-            $lines = generate_count_lines($new_count_id, $count_plan_id, $blind_mode);
-            display_notification(sprintf(_('Count session #%d created with %d lines.'), $new_count_id, $lines));
+                        $new_count_id = add_cycle_count($count_date, $count_warehouse, $count_plan_id, $count_memo);
+            if ($new_count_id) {
+                $lines = generate_count_lines($new_count_id, $count_plan_id, $blind_mode);
+                display_notification(sprintf(_('Count session #%d created with %d lines.'), $new_count_id, $lines));
+            } else {
+                display_error(_('The count session could not be created.'));
+            }
         } else {
-            update_cycle_count($selected_id, $count_date, $count_warehouse, $count_plan_id, $count_memo);
-            display_notification(_('Count session has been updated.'));
+                        if (update_cycle_count($selected_id, $count_date, $count_warehouse, $count_plan_id, $count_memo))
+                display_notification(_('Count session has been updated.'));
+            else
+                display_error(_('The count session could not be updated.'));
         }
         $Mode = 'RESET';
     }
@@ -165,8 +177,10 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 
 if ($Mode == 'Delete') {
     if (can_delete_cycle_count($selected_id)) {
-        delete_cycle_count($selected_id);
-        display_notification(_('Count session has been deleted.'));
+                if (delete_cycle_count($selected_id))
+            display_notification(_('Count session has been deleted.'));
+        else
+            display_error(_('The count session cannot be deleted while it retains a Dimension reference.'));
     } else {
         display_error(_('Cannot delete this count session. Only draft counts can be deleted.'));
     }

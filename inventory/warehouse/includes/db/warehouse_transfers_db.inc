@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/../../../includes/db/traceability_dimension_db.inc';
 
 /**
  * Warehouse Transfer Orders — CRUD and lifecycle management.
@@ -606,7 +607,7 @@ function ship_transfer_order($transfer_id, $ship_date) {
 				);
 
 				$sql_clear_serial_bin = "UPDATE " . TB_PREF . "serial_numbers SET wh_loc_id=NULL WHERE id=" . (int)$line['serial_id'];
-				db_query($sql_clear_serial_bin, 'could not clear shipped serial bin location');
+								traceability_dimension_update('serial_numbers', (int)$line['serial_id'], $sql_clear_serial_bin, 'could not clear shipped serial bin location');
 			}
 		}
 
@@ -839,7 +840,7 @@ function receive_transfer_order($transfer_id, $recv_date, $received = array(), $
 					. "loc_code=" . db_escape($order['to_loc_code'])
 					. ($line['to_bin_id'] ? ", wh_loc_id=" . (int)$line['to_bin_id'] : "")
 					. " WHERE id=" . (int)$line['serial_id'];
-				db_query($sql_update, 'could not update serial location');
+								traceability_dimension_update('serial_numbers', (int)$line['serial_id'], $sql_update, 'could not update serial location');
 			}
 		}
 

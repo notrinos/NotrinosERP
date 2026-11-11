@@ -83,7 +83,7 @@ if ($Mode=='ADD_ITEM' && can_process_pricelist()) {
 	$date_end = $_POST['date_end'] ? $_POST['date_end'] : null;
 	$applicable_id = get_post('applicable_id', 0);
 	
-	add_sales_pricelist(
+	$added = add_sales_pricelist(
 		$_POST['pricelist_name'],
 		$_POST['currency'],
 		$date_start,
@@ -93,7 +93,10 @@ if ($Mode=='ADD_ITEM' && can_process_pricelist()) {
 		$applicable_id,
 		$_POST['pricelist_description']
 	);
-	display_notification(_('New pricelist has been added'));
+	if ($added)
+		display_notification(_('New pricelist has been added'));
+	else
+		display_error(_('The pricelist could not be added'));
 	$Mode = 'RESET';
 }
 
@@ -110,14 +113,18 @@ if ($Mode=='UPDATE_ITEM' && can_process_pricelist()) {
 		'applicable_id' => $applicable_id
 	);
 	
-	update_sales_pricelist($selected_id, $update_data);
-	display_notification(_('Pricelist has been updated'));
+	if (update_sales_pricelist($selected_id, $update_data))
+		display_notification(_('Pricelist has been updated'));
+	else
+		display_error(_('The pricelist could not be updated'));
 	$Mode = 'RESET';
 }
 
 if ($Mode == 'Delete') {
-	delete_sales_pricelist($selected_id);
-	display_notification(_('Pricelist and all its rules have been deleted'));
+	if (delete_sales_pricelist($selected_id))
+		display_notification(_('Pricelist and all its rules have been deleted'));
+	else
+		display_error(_('The pricelist cannot be deleted while it or one of its rules retains a Dimension reference'));
 	$Mode = 'RESET';
 }
 
@@ -167,7 +174,7 @@ if (isset($_POST['rule_edit']) && $selected_id > 0) {
 }
 
 if (isset($_POST['add_rule']) && $selected_id > 0 && can_process_rule()) {
-	add_pricelist_rule(
+	$rule_added = add_pricelist_rule(
 		$selected_id,
 		$_POST['rule_stock_id'],
 		input_num('rule_category_id'),
@@ -183,7 +190,10 @@ if (isset($_POST['add_rule']) && $selected_id > 0 && can_process_rule()) {
 		$_POST['rule_date_start'] ? $_POST['rule_date_start'] : null,
 		$_POST['rule_date_end'] ? $_POST['rule_date_end'] : null
 	);
-	display_notification(_('Rule has been added to the pricelist'));
+	if ($rule_added)
+		display_notification(_('Rule has been added to the pricelist'));
+	else
+		display_error(_('The rule could not be added to the pricelist'));
 	unset($_POST['add_rule']);
 	unset($_POST['rule_stock_id']);
 	unset($_POST['rule_min_qty']);
@@ -193,7 +203,7 @@ if (isset($_POST['add_rule']) && $selected_id > 0 && can_process_rule()) {
 }
 
 if (isset($_POST['update_rule']) && $selected_id > 0 && $selected_rule_id > 0 && can_process_rule()) {
-	update_pricelist_rule($selected_rule_id, array(
+	$rule_updated = update_pricelist_rule($selected_rule_id, array(
 		'stock_id' => $_POST['rule_stock_id'],
 		'stock_category_id' => input_num('rule_category_id'),
 		'min_quantity' => input_num('rule_min_qty'),
@@ -208,7 +218,10 @@ if (isset($_POST['update_rule']) && $selected_id > 0 && $selected_rule_id > 0 &&
 		'date_start' => $_POST['rule_date_start'] ? $_POST['rule_date_start'] : null,
 		'date_end' => $_POST['rule_date_end'] ? $_POST['rule_date_end'] : null
 	));
-	display_notification(_('Rule has been updated.'));
+	if ($rule_updated)
+		display_notification(_('Rule has been updated.'));
+	else
+		display_error(_('The rule could not be updated.'));
 	$selected_rule_id = -1;
 	unset($_POST['selected_rule_id']);
 	unset($_POST['rule_stock_id'], $_POST['rule_category_id'], $_POST['rule_min_qty'],
@@ -219,8 +232,10 @@ if (isset($_POST['update_rule']) && $selected_id > 0 && $selected_rule_id > 0 &&
 
 if (isset($_POST['rule_delete']) && $selected_id > 0) {
 	$rule_id = (int) key($_POST['rule_delete']);
-	delete_pricelist_rule($rule_id);
-	display_notification(_('Rule has been deleted from the pricelist'));
+	if (delete_pricelist_rule($rule_id))
+		display_notification(_('Rule has been deleted from the pricelist'));
+	else
+		display_error(_('The rule cannot be deleted while it retains a Dimension reference'));
 	if ($selected_rule_id == $rule_id) {
 		$selected_rule_id = -1;
 		unset($_POST['selected_rule_id']);

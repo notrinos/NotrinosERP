@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/warehouse_config_dimension_db.inc';
 
 /**
  * Warehouse Returns — CRUD, lifecycle management, inspection, disposition routing.
@@ -151,8 +152,10 @@ function add_return_order($return_type, $warehouse_loc_code, $return_date,
 		. ($reference ? db_escape($reference) : 'NULL') . ", "
 		. ($memo ? db_escape($memo) : 'NULL')
 		. ")";
-	db_query($sql, 'Could not create return order');
-	return db_insert_id();
+		// The native birth writes no metadata: the stored default must stay NULL.
+	return warehouse_config_dimension_write('wh_return_orders', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'Could not create return order') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -187,8 +190,7 @@ function update_return_order($return_id, $return_type, $warehouse_loc_code, $ret
 		. "memo = " . ($memo ? db_escape($memo) : 'NULL')
 		. " WHERE return_id = " . (int)$return_id
 		. " AND status = 'draft'";
-	db_query($sql, 'Could not update return order');
-	return db_num_affected_rows() > 0;
+		return warehouse_config_dimension_status_write('wh_return_orders', (int)$return_id, $sql, 'Could not update return order');
 }
 
 /**
@@ -394,8 +396,13 @@ function add_return_order_line($return_id, $stock_id, $qty_expected,
 		. ($reason_code ? db_escape($reason_code) : 'NULL') . ", "
 		. ($memo ? db_escape($memo) : 'NULL')
 		. ")";
-	db_query($sql, 'Could not add return order line');
-	return db_insert_id();
+		return warehouse_config_dimension_write('wh_return_order_lines', null, array('custom_data' => null), function() use ($sql, $return_id) {
+		// The parent is held for the birth; a line cannot be born under an absent return order.
+		$rows = db_query('SELECT return_id FROM ' . TB_PREF . 'wh_return_orders WHERE return_id=' . (int)$return_id . ' FOR UPDATE');
+		if (!$rows || db_num_rows($rows) !== 1)
+			return false;
+		return db_query($sql, 'Could not add return order line') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -434,8 +441,7 @@ function update_return_order_line($line_id, $stock_id, $qty_expected,
 		. "reason_code = " . ($reason_code ? db_escape($reason_code) : 'NULL') . ", "
 		. "memo = " . ($memo ? db_escape($memo) : 'NULL')
 		. " WHERE line_id = " . (int)$line_id;
-	db_query($sql, 'Could not update return order line');
-	return db_num_affected_rows() > 0;
+		return warehouse_config_dimension_status_write('wh_return_order_lines', (int)$line_id, $sql, 'Could not update return order line');
 }
 
 /**
@@ -446,8 +452,10 @@ function update_return_order_line($line_id, $stock_id, $qty_expected,
  */
 function delete_return_order_line($line_id) {
 	$sql = "DELETE FROM " . TB_PREF . "wh_return_order_lines WHERE line_id = " . (int)$line_id;
-	db_query($sql, 'Could not delete return order line');
-	return true;
+		// Refused while the line retains a Dimension reference (closed/orphan included).
+	return warehouse_config_dimension_write('wh_return_order_lines', (int)$line_id, array(), function() use ($sql) {
+		return db_query($sql, 'Could not delete return order line') ? true : false;
+	}, true) ? true : false;
 }
 
 /**
@@ -554,8 +562,7 @@ function update_return_order_status($return_id, $status) {
 	$sql = "UPDATE " . TB_PREF . "wh_return_orders SET "
 		. $updates
 		. " WHERE return_id = " . (int)$return_id;
-	db_query($sql, 'Could not update return order status');
-	return db_num_affected_rows() > 0;
+		return warehouse_config_dimension_status_write('wh_return_orders', (int)$return_id, $sql, 'Could not update return order status');
 }
 
 /**
@@ -632,7 +639,14 @@ function receive_return_order($return_id, $date_ = null) {
 			// Update line qty_received
 			$sql = "UPDATE " . TB_PREF . "wh_return_order_lines SET qty_received = "
 				. db_escape($qty) . " WHERE line_id = " . (int)$line['line_id'];
-			db_query($sql, 'Could not update return line received qty');
+						if (!warehouse_config_dimension_write('wh_return_order_lines', (int)$line['line_id'], array(), function() use ($sql) {
+				return db_query($sql, 'Could not update return line received qty') ? true : false;
+			})) {
+				// A refusal has already rolled the whole receipt back (stock move, GL and bins included).
+				cancel_transaction();
+				return false;
+			}
+
 
 			// GL: debit inventory, credit COGS (reverse of delivery)
 			$stock_gl_codes = get_stock_gl_code($line['stock_id']);
@@ -655,7 +669,10 @@ function receive_return_order($return_id, $date_ = null) {
 		add_audit_trail(ST_INVADJUST, $adj_id, $date_);
 	}
 
-	update_return_order_status($return_id, 'received');
+		if (!update_return_order_status($return_id, 'received')) {
+		cancel_transaction();
+		return false;
+	}
 
 	// Create warehouse operation
 	include_once(dirname(__FILE__) . '/warehouse_operations_db.inc');
@@ -750,8 +767,9 @@ function inspect_return_line($line_id, $qty_good, $qty_damaged, $qty_scrap, $dis
 		. "qty_scrap = " . db_escape($qty_scrap) . ", "
 		. "disposition_code = " . ($disposition_code ? db_escape($disposition_code) : 'NULL')
 		. " WHERE line_id = " . (int)$line_id;
-	db_query($sql, 'Could not inspect return line');
-	return true;
+		return warehouse_config_dimension_write('wh_return_order_lines', (int)$line_id, array(), function() use ($sql) {
+		return db_query($sql, 'Could not inspect return line') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -813,12 +831,17 @@ function complete_return_order($return_id, $date_ = null) {
 				}
 			}
 			// Update bin stock status to available
+			// The status update below is plain SQL; the operations include is only needed so the guard below does not skip the restock
+			// (it is not loaded by the returns page, so completed customer returns never marked their bin stock available).
+			$wh_ops_restock_path = $path_to_root . '/inventory/warehouse/includes/warehouse_operations.inc';
+			if ($line['to_bin_id'] && file_exists($wh_ops_restock_path))
+				include_once($wh_ops_restock_path);
 			if ($line['to_bin_id'] && function_exists('update_bin_stock')) {
 				// Set available status; the qty is already there from receive step
 				$sql = "UPDATE " . TB_PREF . "wh_bin_stock SET stock_status = 'available'"
 					. " WHERE wh_loc_id = " . (int)$line['to_bin_id']
 					. " AND stock_id = " . db_escape($line['stock_id']);
-				db_query($sql, 'Could not update bin stock status');
+								warehouse_config_dimension_update_statement('wh_bin_stock', $sql, 'Could not update bin stock status');
 			}
 		}
 
@@ -826,6 +849,8 @@ function complete_return_order($return_id, $date_ = null) {
 		if ($line['qty_scrap'] > 0) {
 			include_once(dirname(__FILE__) . '/warehouse_scrap_db.inc');
 			if (function_exists('add_scrap_entry')) {
+				// A refused scrap entry has already rolled the whole processing back; throw so
+				// the remaining steps never run outside a transaction.
 				add_scrap_entry(
 					$line['stock_id'],
 					$line['qty_scrap'],
@@ -838,7 +863,7 @@ function complete_return_order($return_id, $date_ = null) {
 					$line['serial_id'],
 					$line['batch_id'],
 					sprintf(_('Scrap from return order RO#%s'), $order['return_no'])
-				);
+				) or dimension_financial_reference_failure();
 			}
 		}
 
@@ -900,7 +925,10 @@ function complete_return_order($return_id, $date_ = null) {
 		add_audit_trail(ST_INVADJUST, $adj_id, $date_);
 	}
 
-	update_return_order_status($return_id, 'completed');
+		if (!update_return_order_status($return_id, 'completed')) {
+		cancel_transaction();
+		return false;
+	}
 	commit_transaction();
 	return true;
 }
@@ -928,15 +956,8 @@ function delete_return_order($return_id) {
 	$order = get_return_order($return_id);
 	if (!$order || $order['status'] !== 'draft') return false;
 
-	begin_transaction();
-	$sql = "DELETE FROM " . TB_PREF . "wh_return_order_lines WHERE return_id = " . (int)$return_id;
-	db_query($sql, 'Could not delete return order lines');
-
-	$sql = "DELETE FROM " . TB_PREF . "wh_return_orders WHERE return_id = " . (int)$return_id;
-	db_query($sql, 'Could not delete return order');
-	commit_transaction();
-
-	return true;
+		// Refused while the order or any of its lines retains a Dimension reference.
+	return warehouse_return_order_dimension_remove($return_id);
 }
 
 /**

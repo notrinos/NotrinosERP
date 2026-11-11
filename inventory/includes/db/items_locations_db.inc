@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once dirname(__FILE__) . '/../../warehouse/includes/db/warehouse_config_dimension_db.inc';
 function add_item_location($loc_code, $location_name, $delivery_address, $phone, $phone2, $fax, $email, $contact, $fixed_asset = 0, $wh_enabled = 0, $inbound_steps = 1, $outbound_steps = 1) {
 	$inbound_steps = (int)$inbound_steps;
 	if ($inbound_steps < 1 || $inbound_steps > 3)
@@ -22,13 +23,19 @@ function add_item_location($loc_code, $location_name, $delivery_address, $phone,
 			.db_escape($phone).", ".db_escape($phone2).", ".db_escape($fax).", ".db_escape($email).", "
 			.db_escape($contact).", ".db_escape($fixed_asset).", ".db_escape($wh_enabled).", ".db_escape($inbound_steps).", ".db_escape($outbound_steps).")";
 
-	db_query($sql, 'a location could not be added');
+		// Location, stock rows and root bin are one unit; a refusal throws after the fence unwinds it.
+	if (!begin_transaction())
+		dimension_financial_reference_failure();
+	warehouse_config_dimension_guard('locations', null, array(), function() use ($sql) {
+		return db_query($sql, 'a location could not be added') ? true : false;
+	}, false, $loc_code);
 
 	/* Also need to add loc_stock records for all existing items */
 	$sql = "INSERT INTO ".TB_PREF."loc_stock (loc_code, stock_id, reorder_level)
 		SELECT ".db_escape($loc_code).", ".TB_PREF."stock_master.stock_id, 0 FROM ".TB_PREF."stock_master";
 
 	db_query($sql, 'a location could not be added');
+
 
 	/* If WMS enabled, auto-create root warehouse location */
 	if ($wh_enabled) {
@@ -37,9 +44,13 @@ function add_item_location($loc_code, $location_name, $delivery_address, $phone,
 			include_once($wh_db_file);
 			$root = get_warehouse_root_location($loc_code);
 			if (!$root) {
-				create_warehouse_root_location($loc_code, $location_name);
+								create_warehouse_root_location($loc_code, $location_name);
 			}
 		}
+	}
+	if (!commit_transaction()) {
+		cancel_transaction();
+		dimension_financial_reference_failure();
 	}
 }
 
@@ -64,7 +75,9 @@ function update_item_location($loc_code, $location_name, $delivery_address, $pho
 		outbound_steps=".db_escape($outbound_steps)."
 		WHERE loc_code = ".db_escape($loc_code);
 
-	db_query($sql, 'a location could not be updated');
+		if (!begin_transaction())
+		dimension_financial_reference_failure();
+	warehouse_config_dimension_update('locations', $loc_code, $sql, 'a location could not be updated');
 
 	/* If WMS just enabled, auto-create root warehouse location */
 	if ($wh_enabled) {
@@ -73,20 +86,32 @@ function update_item_location($loc_code, $location_name, $delivery_address, $pho
 			include_once($wh_db_file);
 			$root = get_warehouse_root_location($loc_code);
 			if (!$root) {
-				create_warehouse_root_location($loc_code, $location_name);
+								create_warehouse_root_location($loc_code, $location_name);
 			}
 		}
+	}
+	if (!commit_transaction()) {
+		cancel_transaction();
+		dimension_financial_reference_failure();
 	}
 }
 
 //------------------------------------------------------------------------------------
 
 function delete_item_location($item_location) {
-	$sql="DELETE FROM ".TB_PREF."locations WHERE loc_code=".db_escape($item_location);
-	db_query($sql,"a location could not be deleted");
+		$sql="DELETE FROM ".TB_PREF."locations WHERE loc_code=".db_escape($item_location);
+	$stock_sql = "DELETE FROM ".TB_PREF."loc_stock WHERE loc_code =".db_escape($item_location);
+	$exists = db_query("SELECT loc_code FROM ".TB_PREF."locations WHERE loc_code=".db_escape($item_location), 'a location could not be checked');
+	if (!$exists || !db_num_rows($exists)) {
+		db_query($stock_sql, 'a location could not be deleted');
+		return false;
+	}
+	// Refused (throws) while the location retains a Dimension reference, closed or orphan included.
+	warehouse_config_dimension_guard('locations', $item_location, array(), function() use ($sql, $stock_sql) {
+		return db_query($sql, "a location could not be deleted") && db_query($stock_sql, 'a location could not be deleted');
+	}, true);
 
-	$sql = "DELETE FROM ".TB_PREF."loc_stock WHERE loc_code =".db_escape($item_location);
-	db_query($sql, 'a location could not be deleted');
+	return true;
 }
 
 //------------------------------------------------------------------------------------

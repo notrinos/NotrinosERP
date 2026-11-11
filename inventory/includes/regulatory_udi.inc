@@ -28,6 +28,7 @@
  */
 
 require_once __DIR__.'/regulatory_json.inc';
+require_once __DIR__.'/regulatory_dimension_db.inc';
 
 // =====================================================================
 // UDI CONSTANTS
@@ -74,8 +75,12 @@ function get_udi_mri_safety_options()
  */
 function add_udi_registration($data)
 {
-	$custom_json = isset($data['custom_data']) ? regulatory_json_sql($data['custom_data']) : "''";
+		$custom_json = isset($data['custom_data']) ? regulatory_json_sql($data['custom_data']) : "''";
 	if ($custom_json === false) return false;
+	// The exact text this birth stores (JSON, or the historical empty string) is what the fence certifies.
+	$custom_text = regulatory_dimension_custom_text($data);
+	if ($custom_text === false) return false;
+
 
 	$sql = "INSERT INTO " . TB_PREF . "udi_registrations
 		(stock_id, udi_di, udi_pi, issuing_agency,
@@ -112,8 +117,9 @@ function add_udi_registration($data)
 		. $custom_json
 		. ")";
 
-	db_query($sql, 'could not add UDI registration');
-	return db_insert_id();
+		return regulatory_dimension_write('udi_registrations', null, array('custom_data' => $custom_text), function() use ($sql) {
+		return db_query($sql, 'could not add UDI registration') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -147,13 +153,15 @@ function update_udi_registration($id, $data)
 		$updates[] = "gudid_submission_date=NOW()";
 	}
 
-	if (empty($updates))
-		return;
+		if (empty($updates))
+		return true;
 
 	$sql = "UPDATE " . TB_PREF . "udi_registrations SET "
 		. implode(', ', $updates)
 		. " WHERE id=" . (int)$id;
-	db_query($sql, 'could not update UDI registration');
+	return regulatory_dimension_write('udi_registrations', (int)$id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update UDI registration') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -165,7 +173,10 @@ function update_udi_registration($id, $data)
 function delete_udi_registration($id)
 {
 	$sql = "DELETE FROM " . TB_PREF . "udi_registrations WHERE id=" . (int)$id;
-	db_query($sql, 'could not delete UDI registration');
+		// Refused while the registration retains a Dimension reference (closed/orphan included).
+	return regulatory_dimension_write('udi_registrations', (int)$id, array(), function() use ($sql) {
+		return db_query($sql, 'could not delete UDI registration') ? true : false;
+	}, true) ? true : false;
 }
 
 /**

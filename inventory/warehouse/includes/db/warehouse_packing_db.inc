@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/warehouse_config_dimension_db.inc';
 
 /**
  * Warehouse Packing DB layer — Package CRUD, packing station operations,
@@ -190,8 +191,9 @@ function add_package($package_code = '', $package_type = 'box', $current_loc_id 
 		" . db_escape($tracking_number) . ",
 		" . db_escape($shipping_label) . "
 	)";
-	db_query($sql, 'could not add package');
-	return db_insert_id();
+		return warehouse_config_dimension_write('wh_packages', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'could not add package') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -225,7 +227,9 @@ function update_package($package_id, $package_code, $package_type, $current_loc_
 		. "tracking_number=" . db_escape($tracking_number) . ", "
 		. "shipping_label=" . db_escape($shipping_label)
 		. " WHERE package_id=" . (int)$package_id;
-	db_query($sql, 'could not update package');
+		return warehouse_config_dimension_write('wh_packages', (int)$package_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update package') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -370,8 +374,9 @@ function delete_package($package_id) {
 		return false;
 
 	$sql = "DELETE FROM " . TB_PREF . "wh_packages WHERE package_id=" . (int)$package_id;
-	db_query($sql, 'could not delete package');
-	return true;
+		return warehouse_config_dimension_write('wh_packages', (int)$package_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not delete package') ? true : false;
+	}, true) ? true : false;
 }
 
 /**
@@ -533,7 +538,10 @@ function seal_package($package_id) {
 
 	$sql = "UPDATE " . TB_PREF . "wh_packages SET status='sealed' "
 		. "WHERE package_id=" . (int)$package_id;
-	db_query($sql, 'could not seal package');
+		if (!warehouse_config_dimension_write('wh_packages', (int)$package_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not seal package') ? true : false;
+	}))
+		return array('success' => false, 'message' => _('The package could not be sealed: its retained Dimension metadata could not be certified.'));
 
 	return array('success' => true, 'message' => sprintf(_('Package %s has been sealed.'), $pkg['package_code']));
 }
@@ -554,7 +562,10 @@ function unseal_package($package_id) {
 
 	$sql = "UPDATE " . TB_PREF . "wh_packages SET status='open' "
 		. "WHERE package_id=" . (int)$package_id;
-	db_query($sql, 'could not unseal package');
+		if (!warehouse_config_dimension_write('wh_packages', (int)$package_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not unseal package') ? true : false;
+	}))
+		return array('success' => false, 'message' => _('The package could not be reopened: its retained Dimension metadata could not be certified.'));
 
 	return array('success' => true, 'message' => sprintf(_('Package %s has been reopened.'), $pkg['package_code']));
 }
@@ -583,7 +594,11 @@ function ship_package($package_id, $carrier = '', $tracking_number = '') {
 
 	$sql = "UPDATE " . TB_PREF . "wh_packages SET " . implode(', ', $sets)
 		. " WHERE package_id=" . (int)$package_id;
-	db_query($sql, 'could not ship package');
+		// The only caller is the shipment transaction, which ignores this result: a refusal throws so
+	// the (already rolled back) shipment cannot carry on.
+	warehouse_config_dimension_write('wh_packages', (int)$package_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not ship package') ? true : false;
+	}) or dimension_financial_reference_failure();
 
 	return array('success' => true, 'message' => sprintf(_('Package %s has been shipped.'), $pkg['package_code']));
 }
@@ -604,7 +619,10 @@ function deliver_package($package_id) {
 
 	$sql = "UPDATE " . TB_PREF . "wh_packages SET status='delivered' "
 		. "WHERE package_id=" . (int)$package_id;
-	db_query($sql, 'could not deliver package');
+		if (!warehouse_config_dimension_write('wh_packages', (int)$package_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not deliver package') ? true : false;
+	}))
+		return array('success' => false, 'message' => _('The package could not be marked delivered: its retained Dimension metadata could not be certified.'));
 
 	return array('success' => true, 'message' => sprintf(_('Package %s has been delivered.'), $pkg['package_code']));
 }
@@ -623,18 +641,25 @@ function cancel_package($package_id) {
 	if (in_array($pkg['status'], array('shipped', 'delivered')))
 		return array('success' => false, 'message' => _('Cannot cancel a shipped or delivered package.'));
 
-	begin_transaction();
+		if (!begin_transaction())
+		return array('success' => false, 'message' => _('The package could not be cancelled.'));
 
 	// Remove all contents
 	$sql = "DELETE FROM " . TB_PREF . "wh_package_contents WHERE package_id=" . (int)$package_id;
 	db_query($sql, 'could not remove package contents');
 
-	// Cancel the package
+	// Cancel the package (a refusal has already rolled the content removal back)
 	$sql = "UPDATE " . TB_PREF . "wh_packages SET status='cancelled' "
 		. "WHERE package_id=" . (int)$package_id;
-	db_query($sql, 'could not cancel package');
+	if (!warehouse_config_dimension_write('wh_packages', (int)$package_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not cancel package') ? true : false;
+	})) {
+		cancel_transaction();
+		return array('success' => false, 'message' => _('The package could not be cancelled: its retained Dimension metadata could not be certified.'));
+	}
 
 	commit_transaction();
+
 
 	return array('success' => true, 'message' => sprintf(_('Package %s has been cancelled.'), $pkg['package_code']));
 }
@@ -800,7 +825,11 @@ function confirm_pack_line($line_id, $package_id, $qty) {
 		. "qty_done=" . $packed_qty . ", "
 		. "package_id=" . (int)$package_id
 		. " WHERE line_id=" . (int)$line_id;
-	db_query($sql, 'could not confirm pack line');
+		// A refusal throws after the fence has rolled the whole packing step back.
+	warehouse_config_dimension_guard('wh_operation_lines', (int)$line_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not confirm pack line') ? true : false;
+	});
+
 
 	// Add to package contents
 	add_package_content(

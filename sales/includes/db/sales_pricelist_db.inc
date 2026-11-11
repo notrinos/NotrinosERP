@@ -10,6 +10,8 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+require_once __DIR__ . '/sales_dimension_custody_db.inc';
+
 /**
  * Add a new sales pricelist.
  * 
@@ -41,13 +43,17 @@ function add_sales_pricelist($name, $currency = '', $date_start = null, $date_en
 		'custom_data' => $custom_data
 	);
 
-	begin_transaction();
+		$custom_json = json_encode($custom_data);
+	if (!is_string($custom_json))
+		return false;
+	if (!begin_transaction())
+		return false;
 	hook_invoke_all('sales_pricelist_before_save', $pricelist_data);
-	
+
 	$date_start_sql = ($date_start) ? db_escape(date2sql($date_start)) : 'NULL';
 	$date_end_sql = ($date_end) ? db_escape(date2sql($date_end)) : 'NULL';
-	
-	$sql = "INSERT INTO ".TB_PREF."sales_pricelists 
+
+	$sql = "INSERT INTO ".TB_PREF."sales_pricelists  
 		(name, description, currency, is_default, date_start, date_end, priority, 
 		 applicable_to, applicable_id, custom_data, inactive)
 		VALUES (
@@ -60,16 +66,25 @@ function add_sales_pricelist($name, $currency = '', $date_start = null, $date_en
 			".db_escape($priority).",
 			".db_escape($applicable_to).",
 			".db_escape($applicable_id).",
-			".db_escape_json(json_encode($custom_data)).",
+						".db_escape_json($custom_json).",
 			0
 		)";
-	
-	db_query($sql, 'Sales pricelist cannot be added');
-	$pricelist_id = db_insert_id();
-	
+
+	// A fresh reference must be open on its axis; a refusal unwinds this whole transaction.
+	$pricelist_id = sales_dimension_custody_write('sales_pricelists', null, array('custom_data' => $custom_json), function() use ($sql) {
+		return db_query($sql, 'Sales pricelist cannot be added') ? db_insert_id() : false;
+	});
+	if (!$pricelist_id) {
+		cancel_transaction();
+		return false;
+	}
+
 	hook_invoke_all('sales_pricelist_after_save', $pricelist_id);
-	commit_transaction();
-	
+	if (!commit_transaction()) {
+		cancel_transaction();
+		return false;
+	}
+
 	return $pricelist_id;
 }
 
@@ -81,10 +96,12 @@ function add_sales_pricelist($name, $currency = '', $date_start = null, $date_en
  * @return bool True on success
  */
 function update_sales_pricelist($id, $update_data) {
-	begin_transaction();
+	if (!begin_transaction())
+		return false;
 	hook_invoke_all('sales_pricelist_before_save', $update_data);
-	
+
 	$set_clause = array();
+	$next = array();
 	foreach ($update_data as $field => $value) {
 		if (in_array($field, array('name', 'description', 'currency', 'applicable_to'))) {
 			$set_clause[] = "$field = ".db_escape($value);
@@ -92,22 +109,37 @@ function update_sales_pricelist($id, $update_data) {
 			$set_clause[] = "$field = ".db_escape($value);
 		} else if ($field == 'date_start' || $field == 'date_end') {
 			$set_clause[] = "$field = ".($value ? db_escape(date2sql($value)) : 'NULL');
-		} else if ($field == 'custom_data') {
-			$set_clause[] = "$field = ".db_escape_json(json_encode($value));
+				} else if ($field == 'custom_data') {
+			$custom_json = json_encode($value);
+			if (!is_string($custom_json)) {
+				cancel_transaction();
+				return false;
+			}
+			$next['custom_data'] = $custom_json;
+			$set_clause[] = "$field = ".db_escape_json($custom_json);
 		}
 	}
-	
+
 	if (empty($set_clause)) {
 		commit_transaction();
 		return true;
 	}
-	
+
 	$sql = "UPDATE ".TB_PREF."sales_pricelists SET ".implode(", ", $set_clause)." WHERE id = ".db_escape($id);
-	db_query($sql, 'Sales pricelist cannot be updated');
-	
+	// Updates that omit custom_data must leave the retained bytes untouched.
+	if (!sales_dimension_custody_write('sales_pricelists', $id, $next, function() use ($sql) {
+		return db_query($sql, 'Sales pricelist cannot be updated') ? true : false;
+	})) {
+		cancel_transaction();
+		return false;
+	}
+
 	hook_invoke_all('sales_pricelist_after_save', $id);
-	commit_transaction();
-	
+	if (!commit_transaction()) {
+		cancel_transaction();
+		return false;
+	}
+
 	return true;
 }
 
@@ -118,18 +150,8 @@ function update_sales_pricelist($id, $update_data) {
  * @return bool True on success
  */
 function delete_sales_pricelist($id) {
-	begin_transaction();
-	
-	// Delete all rules for this pricelist
-	$sql = "DELETE FROM ".TB_PREF."sales_pricelist_rules WHERE pricelist_id = ".db_escape($id);
-	db_query($sql, 'Pricelist rules cannot be deleted');
-	
-	// Delete pricelist itself
-	$sql = "DELETE FROM ".TB_PREF."sales_pricelists WHERE id = ".db_escape($id);
-	db_query($sql, 'Pricelist cannot be deleted');
-	
-	commit_transaction();
-	return true;
+	// Refused while the pricelist or any of its rules retains a Dimension reference.
+	return sales_pricelist_dimension_remove($id);
 }
 
 /**
@@ -257,10 +279,14 @@ function get_applicable_pricelists($customer_id = 0, $branch_code = 0, $sales_ty
 function add_pricelist_rule($pricelist_id, $stock_id = '', $category_id = 0, $min_quantity = 0, 
 	$computation_type = 'fixed', $fixed_price = 0, $percentage = 0, $base_price_type = 'list_price', 
 	$base_pricelist_id = 0, $surcharge = 0, $rounding = 0.01, $priority = 10, 
-	$date_start = null, $date_end = null, $custom_data = array()) {
-	
-	begin_transaction();
-	
+		$date_start = null, $date_end = null, $custom_data = array()) {
+
+	$custom_json = json_encode($custom_data);
+	if (!is_string($custom_json))
+		return false;
+	if (!begin_transaction())
+		return false;
+
 	$date_start_sql = ($date_start) ? db_escape(date2sql($date_start)) : 'NULL';
 	$date_end_sql = ($date_end) ? db_escape(date2sql($date_end)) : 'NULL';
 	
@@ -283,14 +309,21 @@ function add_pricelist_rule($pricelist_id, $stock_id = '', $category_id = 0, $mi
 			".db_escape($priority).",
 			".$date_start_sql.",
 			".$date_end_sql.",
-			".db_escape_json(json_encode($custom_data)).",
+						".db_escape_json($custom_json).",
 			0
 		)";
-	
-	db_query($sql, 'Pricelist rule cannot be added');
-	$rule_id = db_insert_id();
-	
-	commit_transaction();
+
+	$rule_id = sales_dimension_custody_write('sales_pricelist_rules', null, array('custom_data' => $custom_json), function() use ($sql, $pricelist_id) {
+		// The parent is held for the birth; a rule cannot be born under an absent pricelist.
+		$rows = db_query('SELECT id FROM '.TB_PREF.'sales_pricelists WHERE id='.(int)$pricelist_id.' FOR UPDATE');
+		if (!$rows || db_num_rows($rows) !== 1)
+			return false;
+		return db_query($sql, 'Pricelist rule cannot be added') ? db_insert_id() : false;
+	});
+	if (!$rule_id || !commit_transaction()) {
+		cancel_transaction();
+		return false;
+	}
 	return $rule_id;
 }
 
@@ -302,9 +335,11 @@ function add_pricelist_rule($pricelist_id, $stock_id = '', $category_id = 0, $mi
  * @return bool True on success
  */
 function update_pricelist_rule($id, $update_data) {
-	begin_transaction();
-	
+	if (!begin_transaction())
+		return false;
+
 	$set_clause = array();
+	$next = array();
 	foreach ($update_data as $field => $value) {
 		if (in_array($field, array('stock_id', 'computation_type', 'base_price_type'))) {
 			$set_clause[] = "$field = ".db_escape($value);
@@ -314,20 +349,29 @@ function update_pricelist_rule($id, $update_data) {
 			$set_clause[] = "$field = ".db_escape($value);
 		} else if ($field == 'date_start' || $field == 'date_end') {
 			$set_clause[] = "$field = ".($value ? db_escape(date2sql($value)) : 'NULL');
-		} else if ($field == 'custom_data') {
-			$set_clause[] = "$field = ".db_escape_json(json_encode($value));
+				} else if ($field == 'custom_data') {
+			$custom_json = json_encode($value);
+			if (!is_string($custom_json)) {
+				cancel_transaction();
+				return false;
+			}
+			$next['custom_data'] = $custom_json;
+			$set_clause[] = "$field = ".db_escape_json($custom_json);
 		}
 	}
-	
+
 	if (empty($set_clause)) {
 		commit_transaction();
 		return true;
 	}
-	
+
 	$sql = "UPDATE ".TB_PREF."sales_pricelist_rules SET ".implode(", ", $set_clause)." WHERE id = ".db_escape($id);
-	db_query($sql, 'Pricelist rule cannot be updated');
-	
-	commit_transaction();
+	if (!sales_dimension_custody_write('sales_pricelist_rules', $id, $next, function() use ($sql) {
+		return db_query($sql, 'Pricelist rule cannot be updated') ? true : false;
+	}) || !commit_transaction()) {
+		cancel_transaction();
+		return false;
+	}
 	return true;
 }
 
@@ -338,13 +382,11 @@ function update_pricelist_rule($id, $update_data) {
  * @return bool True on success
  */
 function delete_pricelist_rule($id) {
-	begin_transaction();
-	
 	$sql = "DELETE FROM ".TB_PREF."sales_pricelist_rules WHERE id = ".db_escape($id);
-	db_query($sql, 'Pricelist rule cannot be deleted');
-	
-	commit_transaction();
-	return true;
+	// Refused while the rule retains a Dimension reference (closed/orphan included).
+	return sales_dimension_custody_write('sales_pricelist_rules', $id, array(), function() use ($sql) {
+		return db_query($sql, 'Pricelist rule cannot be deleted') ? true : false;
+	}, true) ? true : false;
 }
 
 /**

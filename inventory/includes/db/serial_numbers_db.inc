@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/traceability_dimension_db.inc';
 
 /**
  * Serial Number CRUD, queries, bulk operations, status management, and movement logging.
@@ -155,8 +156,10 @@ function add_serial_number($serial_no, $stock_id, $status = 'available', $loc_co
 		" . (int)$_SESSION['wa_current_user']->user . ",
 		NOW()
 	)";
-	db_query($sql, 'could not add serial number');
-	return db_insert_id();
+		// The native birth writes no metadata (NULL). Flows ignore the result, so a refusal throws.
+	return traceability_dimension_guard('serial_numbers', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'could not add serial number') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -230,7 +233,9 @@ function update_serial_number($id, $serial_no, $status = null, $loc_code = null,
 	$sql = "UPDATE " . TB_PREF . "serial_numbers SET "
 		. implode(', ', $sets)
 		. " WHERE id=" . (int)$id;
-	db_query($sql, 'could not update serial number');
+		return traceability_dimension_write('serial_numbers', (int)$id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update serial number') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -403,7 +408,10 @@ function can_delete_serial_number($id) {
  */
 function delete_serial_number($id) {
 	$sql = "DELETE FROM " . TB_PREF . "serial_numbers WHERE id=" . (int)$id;
-	db_query($sql, 'could not delete serial number');
+		// Refused while the serial retains a Dimension reference (closed/orphan included).
+	return traceability_dimension_write('serial_numbers', (int)$id, array(), function() use ($sql) {
+		return db_query($sql, 'could not delete serial number') ? true : false;
+	}, true) ? true : false;
 }
 
 //----------------------------------------------------------------------
@@ -551,7 +559,8 @@ function update_serial_status($serial_id, $new_status, $trans_type = 0, $trans_n
 	if ($to_loc !== null)
 		$sql .= ", loc_code=" . db_escape($to_loc);
 	$sql .= " WHERE id=" . (int)$serial_id;
-	db_query($sql, 'could not update serial status');
+		traceability_dimension_update('serial_numbers', $serial_id, $sql, 'could not update serial status');
+
 
 	// Log the movement
 	if ($tran_date === null)

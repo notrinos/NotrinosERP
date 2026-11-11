@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/../../../inventory/includes/db/traceability_dimension_db.inc';
 
 /**
  * Normalize manual finished-serial input into a unique ordered list.
@@ -436,7 +437,7 @@ function work_order_produce($woid, $ref, $quantity, $date_, $memo, $close_wo) {
 					foreach ($finished_serial_ids as $fs_id) {
 						$sql = "UPDATE " . TB_PREF . "serial_numbers SET batch_id=" . (int)$finished_batch_id
 							. " WHERE id=" . (int)$fs_id;
-						db_query($sql, 'could not link serial to batch');
+												traceability_dimension_update('serial_numbers', (int)$fs_id, $sql, 'could not link serial to batch');
 					}
 				}
 			}

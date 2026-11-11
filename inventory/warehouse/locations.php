@@ -152,7 +152,8 @@ if (isset($_POST['bulk_create']) && $_POST['bulk_create'] != '') {
 
 	if ($input_error == 0) {
 		$type_code = $type['type_code'];
-		begin_transaction();
+				begin_transaction();
+		try {
 		for ($i = 0; $i < $bulk_count; $i++) {
 			$auto_code = generate_warehouse_location_code(
 				$bulk_parent ? $bulk_parent : null,
@@ -169,9 +170,13 @@ if (isset($_POST['bulk_create']) && $_POST['bulk_create'] != '') {
 				$auto_code,
 				$type['type_name'] . ' ' . ($i + 1),
 				$bulk_parent ? $bulk_parent : null,
-				$warehouse,
+								$warehouse,
 				$bulk_type
 			);
+		}
+		} catch (DimensionFinancialReferenceWriteException $e) {
+			$input_error = 1;
+			display_error(_('The locations were not created: retained Dimension metadata could not be certified.'));
 		}
 		if ($input_error == 0) {
 			commit_transaction();
@@ -344,6 +349,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 		$extra['is_default_scrap'] = check_value('is_default_scrap') ? 1 : 0;
 		$extra['is_default_production'] = check_value('is_default_production') ? 1 : 0;
 
+				try {
 		if ($selected_id != -1) {
 			// Update
 			update_warehouse_location(
@@ -364,10 +370,13 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				(int)$location_type_id,
 				$extra
 			);
-			display_notification(_('New location has been added.'));
+						display_notification(_('New location has been added.'));
 		}
 
 		$Mode = 'RESET';
+		} catch (DimensionFinancialReferenceWriteException $e) {
+			display_error(_('The location was not saved: retained Dimension metadata could not be certified.'));
+		}
 	}
 }
 
@@ -382,9 +391,13 @@ if ($Mode == 'Delete' && $selected_id != -1) {
 		display_error(_('Selected location does not belong to the selected warehouse.'));
 	} else {
 		$can = can_delete_warehouse_location($selected_id);
-		if ($can === true) {
-			delete_warehouse_location($selected_id);
-			display_notification(_('Location has been deleted.'));
+				if ($can === true) {
+			try {
+				if (delete_warehouse_location($selected_id))
+					display_notification(_('Location has been deleted.'));
+			} catch (DimensionFinancialReferenceWriteException $e) {
+				display_error(_('The location was not deleted: it retains Dimension metadata that cannot be erased.'));
+			}
 		} else {
 			display_error($can);
 		}

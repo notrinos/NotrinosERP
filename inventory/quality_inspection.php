@@ -74,16 +74,21 @@ if (get_post('create_inspection')) {
 	}
 
 	if ($input_error == 0) {
-		$insp_id = add_quality_inspection(
-			$_POST['new_stock_id'],
-			$_POST['new_insp_type'],
-			null, null,
-			(float)$_POST['new_qty'],
-			!empty($_POST['new_loc_code']) ? $_POST['new_loc_code'] : null,
-			!empty($_POST['new_batch_id']) ? (int)$_POST['new_batch_id'] : null,
-			!empty($_POST['new_serial_id']) ? (int)$_POST['new_serial_id'] : null,
-			!empty($_POST['new_notes']) ? $_POST['new_notes'] : null
-		);
+				try {
+			$insp_id = add_quality_inspection(
+				$_POST['new_stock_id'],
+				$_POST['new_insp_type'],
+				null, null,
+				(float)$_POST['new_qty'],
+				!empty($_POST['new_loc_code']) ? $_POST['new_loc_code'] : null,
+				!empty($_POST['new_batch_id']) ? (int)$_POST['new_batch_id'] : null,
+				!empty($_POST['new_serial_id']) ? (int)$_POST['new_serial_id'] : null,
+				!empty($_POST['new_notes']) ? $_POST['new_notes'] : null
+			);
+		} catch (DimensionFinancialReferenceWriteException $e) {
+			$insp_id = false;
+			display_error(_('The quality inspection could not be created.'));
+		}
 
 		if ($insp_id) {
 			display_notification(sprintf(_('Quality inspection #%d created.'), $insp_id));
@@ -183,8 +188,10 @@ if (get_post('complete_inspection')) {
 if (get_post('delete_inspection')) {
 	$del_id = (int)get_post('delete_inspection');
 	if (can_delete_quality_inspection($del_id)) {
-		delete_quality_inspection($del_id);
-		display_notification(_('Inspection has been deleted.'));
+				if (delete_quality_inspection($del_id))
+			display_notification(_('Inspection has been deleted.'));
+		else
+			display_error(_('The inspection cannot be deleted while it retains a Dimension reference.'));
 	} else {
 		display_error(_('Only pending inspections can be deleted.'));
 	}

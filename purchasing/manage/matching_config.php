@@ -187,7 +187,7 @@ if ($edit_match_id > 0) {
 
 if (isset($_POST['SaveMatch']) && can_save_matching_config()) {
     if ((int)get_post('selected_match_id') > 0) {
-        update_matching_config(
+        if (update_matching_config(
             (int)get_post('selected_match_id'),
             get_post('match_type'),
             get_post('tolerance_type'),
@@ -197,10 +197,12 @@ if (isset($_POST['SaveMatch']) && can_save_matching_config()) {
             null,
             check_value('match_inactive') ? 1 : 0,
             true
-        );
-        display_notification(_('Matching configuration has been updated.'));
+        ))
+            display_notification(_('Matching configuration has been updated.'));
+        else
+            display_error(_('The matching configuration could not be updated.'));
     } else {
-        add_matching_config(
+        if (add_matching_config(
             get_post('match_type'),
             get_post('tolerance_type'),
             input_num('tolerance_value'),
@@ -208,8 +210,10 @@ if (isset($_POST['SaveMatch']) && can_save_matching_config()) {
             (int)get_post('supplier_id'),
             null,
             check_value('match_inactive') ? 1 : 0
-        );
-        display_notification(_('Matching configuration has been added.'));
+        ))
+            display_notification(_('Matching configuration has been added.'));
+        else
+            display_error(_('The matching configuration could not be added.'));
     }
     reset_matching_config_form();
 }
@@ -235,7 +239,7 @@ if ($edit_policy_id > 0) {
 
 if (isset($_POST['SavePolicy']) && can_save_bill_policy()) {
     if ((int)get_post('selected_policy_id') > 0) {
-        update_bill_control_policy(
+        if (update_bill_control_policy(
             (int)get_post('selected_policy_id'),
             trim(get_post('policy_name')),
             get_post('bill_basis'),
@@ -247,10 +251,12 @@ if (isset($_POST['SavePolicy']) && can_save_bill_policy()) {
             check_value('policy_inactive') ? 1 : 0,
             null,
             true
-        );
-        display_notification(_('Bill control policy has been updated.'));
+        ))
+            display_notification(_('Bill control policy has been updated.'));
+        else
+            display_error(_('The bill control policy could not be updated.'));
     } else {
-        add_bill_control_policy(
+        if (add_bill_control_policy(
             trim(get_post('policy_name')),
             get_post('bill_basis'),
             check_value('require_grn_before_invoice') ? 1 : 0,
@@ -260,8 +266,10 @@ if (isset($_POST['SavePolicy']) && can_save_bill_policy()) {
             check_value('policy_is_default') ? 1 : 0,
             check_value('policy_inactive') ? 1 : 0,
             null
-        );
-        display_notification(_('Bill control policy has been added.'));
+        ))
+            display_notification(_('Bill control policy has been added.'));
+        else
+            display_error(_('The bill control policy could not be added.'));
     }
     reset_bill_policy_form();
 }

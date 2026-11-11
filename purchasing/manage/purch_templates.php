@@ -77,12 +77,18 @@ if (isset($_POST['save_template']) && can_save_purchase_template_header()) {
 		check_value('template_inactive') ? 1 : 0,
 		array('created_by_ui' => 1)
 	);
-	display_notification(_('Purchase order template has been created.'));
-	meta_forward($_SERVER['PHP_SELF'], 'template_id=' . $selected_id . '&sel_app=AP');
+	if (!$selected_id) {
+		display_error(_('The purchase order template could not be created.'));
+		$selected_id = 0;
+	} else {
+		display_notification(_('Purchase order template has been created.'));
+		meta_forward($_SERVER['PHP_SELF'], 'template_id=' . $selected_id . '&sel_app=AP');
+	}
 }
 
 if (isset($_POST['update_template']) && $selected_id > 0 && can_save_purchase_template_header()) {
-	update_purch_template(
+	// Metadata is omitted so retained Dimension references survive routine saves.
+	$updated = update_purch_template(
 		$selected_id,
 		trim(get_post('template_name')),
 		trim(get_post('template_description')),
@@ -90,28 +96,35 @@ if (isset($_POST['update_template']) && $selected_id > 0 && can_save_purchase_te
 		get_post('template_delivery_location') == ALL_TEXT ? '' : get_post('template_delivery_location'),
 		get_post('template_payment_terms') == ALL_TEXT ? 0 : (int)get_post('template_payment_terms'),
 		trim(get_post('template_notes')),
-		check_value('template_inactive') ? 1 : 0,
-		array('updated_by_ui' => 1)
+		check_value('template_inactive') ? 1 : 0
 	);
-	display_notification(_('Purchase order template has been updated.'));
+	if ($updated)
+		display_notification(_('Purchase order template has been updated.'));
+	else
+		display_error(_('The purchase order template could not be updated.'));
 }
 
 if (isset($_POST['delete_template']) && $selected_id > 0) {
-	delete_purch_template($selected_id);
-	display_notification(_('Purchase order template has been deleted.'));
-	$selected_id = 0;
+	if (delete_purch_template($selected_id)) {
+		display_notification(_('Purchase order template has been deleted.'));
+		$selected_id = 0;
+	} else {
+		display_error(_('The purchase order template cannot be deleted while it retains a Dimension reference.'));
+	}
 }
 
 if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_purchase_template_line()) {
-	add_template_line(
+	if (add_template_line(
 		$selected_id,
 		trim(get_post('line_stock_id')),
 		trim(get_post('line_description')),
 		input_num('line_default_quantity'),
 		(int)input_num('line_sort_order'),
 		array('created_by_ui' => 1)
-	);
-	display_notification(_('Template line has been added.'));
+	))
+		display_notification(_('Template line has been added.'));
+	else
+		display_error(_('The template line could not be added.'));
 }
 
 $update_line_id = find_submit('UpdateLine');
@@ -120,16 +133,19 @@ if ($update_line_id > 0 && $selected_id > 0) {
 	if (!$line) {
 		display_error(_('The selected template line no longer exists. Refresh and try again.'));
 	} elseif (can_save_purchase_template_line('edit_stock_' . $update_line_id, 'edit_quantity_' . $update_line_id)) {
-		update_template_line(
+		// Metadata is omitted (null) so retained Dimension references survive routine saves.
+		if (update_template_line(
 			$update_line_id,
 			trim(get_post('edit_stock_' . $update_line_id)),
 			trim(get_post('edit_description_' . $update_line_id)),
 			input_num('edit_quantity_' . $update_line_id),
 			(int)input_num('edit_sort_' . $update_line_id),
-			array('updated_by_ui' => 1),
+			null,
 			$selected_id
-		);
-		display_notification(_('Template line has been updated.'));
+		))
+			display_notification(_('Template line has been updated.'));
+		else
+			display_error(_('The template line could not be updated.'));
 	}
 }
 
@@ -138,8 +154,10 @@ if ($delete_line_id > 0 && $selected_id > 0) {
 	if (!get_template_line($delete_line_id, $selected_id)) {
 		display_error(_('The selected template line no longer exists. Refresh and try again.'));
 	} else {
-		delete_template_line($delete_line_id, $selected_id);
-		display_notification(_('Template line has been deleted.'));
+		if (delete_template_line($delete_line_id, $selected_id))
+			display_notification(_('Template line has been deleted.'));
+		else
+			display_error(_('The template line cannot be deleted while it retains a Dimension reference.'));
 	}
 }
 

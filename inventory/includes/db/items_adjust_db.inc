@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/traceability_dimension_db.inc';
 
 /**
  * Remove tracked batch quantity from warehouse bins for an adjustment.
@@ -451,7 +452,9 @@ function process_adjustment_tracking($items, $adj_id, $location, $date_, $refere
 							$sql_link_serial_batch = "UPDATE " . TB_PREF . "serial_numbers"
 								. " SET batch_id=" . (int)$batch_id
 								. " WHERE id IN (" . implode(',', array_map('intval', $created_serial_ids)) . ")";
-							db_query($sql_link_serial_batch, 'could not link adjusted serials to batch');
+														traceability_dimension_update_group('serial_numbers', $created_serial_ids, function($link_sid) use ($batch_id) {
+								return "UPDATE " . TB_PREF . "serial_numbers SET batch_id=" . (int)$batch_id . " WHERE id=" . (int)$link_sid;
+							}, 'could not link adjusted serials to batch');
 						}
 
 						add_batch_movement(
@@ -512,7 +515,7 @@ function process_adjustment_tracking($items, $adj_id, $location, $date_, $refere
 							);
 
 							$sql_clear_bin = "UPDATE " . TB_PREF . "serial_numbers SET wh_loc_id=NULL WHERE id=" . $sid;
-							db_query($sql_clear_bin, 'could not clear scrapped serial bin location');
+														traceability_dimension_update('serial_numbers', $sid, $sql_clear_bin, 'could not clear scrapped serial bin location');
 						}
 					}
 				}

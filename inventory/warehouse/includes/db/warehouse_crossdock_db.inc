@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/warehouse_config_dimension_db.inc';
 
 /**
  * Cross-Docking & Drop-Shipping Database Functions.
@@ -755,10 +756,10 @@ function update_item_crossdock_dropship_flags($stock_id, $cross_dock_eligible, $
  */
 function update_location_cross_dock_flag($loc_code, $cross_dock_enabled)
 {
-	$sql = "UPDATE " . TB_PREF . "locations
+		$sql = "UPDATE " . TB_PREF . "locations
 		SET cross_dock_enabled = " . ($cross_dock_enabled ? 1 : 0)
 		. " WHERE loc_code = " . db_escape($loc_code);
-	db_query($sql, 'could not update location cross-dock flag');
+	warehouse_config_dimension_update('locations', $loc_code, $sql, 'could not update location cross-dock flag');
 }
 
 /**

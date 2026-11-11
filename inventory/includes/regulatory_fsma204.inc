@@ -34,6 +34,7 @@
  */
 
 require_once __DIR__.'/regulatory_json.inc';
+require_once __DIR__.'/regulatory_dimension_db.inc';
 
 // =====================================================================
 // CTE TYPE / KDE CONSTANTS
@@ -126,8 +127,12 @@ function add_fsma_tracking_event($event_type, $stock_id, $batch_id, $lot_code, $
 	$temperature_json = isset($kde_data['temperature_data']) ? regulatory_json_sql($kde_data['temperature_data']) : "''";
 	if ($temperature_json === false) return false;
 
-	$custom_json = isset($kde_data['custom_data']) ? regulatory_json_sql($kde_data['custom_data']) : "''";
+		$custom_json = isset($kde_data['custom_data']) ? regulatory_json_sql($kde_data['custom_data']) : "''";
 	if ($custom_json === false) return false;
+	// The exact text this birth stores (JSON, or the historical empty string) is what the fence certifies.
+	$custom_text = regulatory_dimension_custom_text($kde_data);
+	if ($custom_text === false) return false;
+
 
 	$sql = "INSERT INTO " . TB_PREF . "fsma_tracking_events
 		(event_type, stock_id, batch_id, lot_code, location_description, loc_code,
@@ -163,8 +168,10 @@ function add_fsma_tracking_event($event_type, $stock_id, $batch_id, $lot_code, $
 		. $custom_json
 		. ")";
 
-	db_query($sql, 'could not add FSMA tracking event');
-	return db_insert_id();
+		// Called from receiving/shipping flows that ignore the result: a refusal throws so the flow unwinds.
+	return regulatory_dimension_guard('fsma_tracking_events', null, array('custom_data' => $custom_text), function() use ($sql) {
+		return db_query($sql, 'could not add FSMA tracking event') ? db_insert_id() : false;
+	});
 }
 
 /**

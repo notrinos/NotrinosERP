@@ -138,7 +138,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 		}
 
 		if ($input_error != 1 && $selected_id != -1) {
-			update_putaway_rule(
+						if (update_putaway_rule(
 				$selected_id,
 				get_post('rule_name'),
 				$warehouse_loc_code,
@@ -149,11 +149,13 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				$target_loc_id,
 				$target_zone_id,
 				$strategy,
-				check_value('active') ? 1 : 0
-			);
-			display_notification(_('Putaway rule has been updated.'));
+								check_value('active') ? 1 : 0
+			))
+				display_notification(_('Putaway rule has been updated.'));
+			else
+				display_error(_('The putaway rule could not be updated.'));
 		} elseif ($input_error != 1) {
-			add_putaway_rule(
+						if (add_putaway_rule(
 				get_post('rule_name'),
 				$warehouse_loc_code,
 				(int)$sequence,
@@ -162,10 +164,12 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				$storage_category_id,
 				$target_loc_id,
 				$target_zone_id,
-				$strategy,
+								$strategy,
 				1
-			);
-			display_notification(_('New putaway rule has been added.'));
+			))
+				display_notification(_('New putaway rule has been added.'));
+			else
+				display_error(_('The putaway rule could not be added.'));
 		}
 		$Mode = 'RESET';
 	}
@@ -178,8 +182,10 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 if ($Mode == 'Delete') {
 	$can = can_delete_putaway_rule($selected_id);
 	if ($can === true) {
-		delete_putaway_rule($selected_id);
-		display_notification(_('Selected putaway rule has been deleted.'));
+				if (delete_putaway_rule($selected_id))
+			display_notification(_('Selected putaway rule has been deleted.'));
+		else
+			display_error(_('The putaway rule cannot be deleted while it retains a Dimension reference.'));
 	} else {
 		display_error($can);
 	}

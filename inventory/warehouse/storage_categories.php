@@ -83,7 +83,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 
 	if ($input_error != 1) {
 		if ($selected_id != -1) {
-			update_storage_category(
+						if (update_storage_category(
 				$selected_id,
 				get_post('category_name'),
 				$max_weight !== '' ? $max_weight : null,
@@ -94,11 +94,13 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				$temp_min !== '' ? $temp_min : null,
 				$temp_max !== '' ? $temp_max : null,
 				$humidity_max !== '' ? $humidity_max : null,
-				check_value('is_hazmat') ? 1 : 0
-			);
-			display_notification(_('Storage category has been updated.'));
+								check_value('is_hazmat') ? 1 : 0
+			))
+				display_notification(_('Storage category has been updated.'));
+			else
+				display_error(_('The storage category could not be updated.'));
 		} else {
-			add_storage_category(
+						if (add_storage_category(
 				get_post('category_name'),
 				$max_weight !== '' ? $max_weight : null,
 				$max_volume !== '' ? $max_volume : null,
@@ -108,9 +110,11 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				$temp_min !== '' ? $temp_min : null,
 				$temp_max !== '' ? $temp_max : null,
 				$humidity_max !== '' ? $humidity_max : null,
-				check_value('is_hazmat') ? 1 : 0
-			);
-			display_notification(_('New storage category has been added.'));
+								check_value('is_hazmat') ? 1 : 0
+			))
+				display_notification(_('New storage category has been added.'));
+			else
+				display_error(_('The storage category could not be added.'));
 		}
 		$Mode = 'RESET';
 	}
@@ -123,8 +127,10 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 if ($Mode == 'Delete') {
 	$can = can_delete_storage_category($selected_id);
 	if ($can === true) {
-		delete_storage_category($selected_id);
-		display_notification(_('Selected storage category has been deleted.'));
+				if (delete_storage_category($selected_id))
+			display_notification(_('Selected storage category has been deleted.'));
+		else
+			display_error(_('The storage category cannot be deleted while it retains a Dimension reference.'));
 	} else {
 		display_error($can);
 	}

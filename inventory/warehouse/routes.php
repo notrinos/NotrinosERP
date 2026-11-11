@@ -138,17 +138,19 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 		$active = check_value('active') ? true : false;
 
 		if ($selected_id != -1) {
-			update_route(
+						if (update_route(
 				$selected_id,
 				trim((string)$route_name),
 				$route_type,
 				$warehouse_loc_code,
 				$is_default,
 				(int)$sequence,
-				$active,
+								$active,
 				(string)$description
-			);
-			display_notification(_('Route has been updated.'));
+			))
+				display_notification(_('Route has been updated.'));
+			else
+				display_error(_('The route could not be updated.'));
 		} else {
 			$new_id = add_route(
 				trim((string)$route_name),
@@ -156,10 +158,13 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 				$warehouse_loc_code,
 				$is_default,
 				(int)$sequence,
-				true,
+								true,
 				(string)$description
 			);
-			display_notification(_('New route has been added.'));
+			if ($new_id)
+				display_notification(_('New route has been added.'));
+			else
+				display_error(_('The route could not be added.'));
 		}
 		$Mode = 'RESET';
 	}
@@ -175,8 +180,10 @@ if ($Mode == 'Delete') {
 	} else {
 		$can = can_delete_route($selected_id);
 		if ($can === true) {
-			delete_route($selected_id);
-			display_notification(_('Selected route and its rules have been deleted.'));
+						if (delete_route($selected_id))
+				display_notification(_('Selected route and its rules have been deleted.'));
+			else
+				display_error(_('The route cannot be deleted while it or one of its rules retains a Dimension reference.'));
 		} else {
 			display_error($can);
 		}
@@ -252,7 +259,7 @@ if (isset($_POST['AddRule']) && get_post('edit_route_id')) {
 		$to_loc_id = ($to_loc_id && $to_loc_id !== '' && $to_loc_id != 0 && $to_loc_id != -1) ? (int)$to_loc_id : null;
 		$delay_days = (int)$delay_days;
 
-		add_route_rule(
+				if (add_route_rule(
 			$edit_route_id,
 			$rule_type,
 			(int)$rule_sequence,
@@ -260,10 +267,12 @@ if (isset($_POST['AddRule']) && get_post('edit_route_id')) {
 			$to_loc_id,
 			$operation_type,
 			$trigger_method,
-			$delay_days,
+						$delay_days,
 			true
-		);
-		display_notification(_('Rule has been added to the route.'));
+		))
+			display_notification(_('Rule has been added to the route.'));
+		else
+			display_error(_('The rule could not be added to the route.'));
 	}
 	$Ajax->activate('_page_body');
 }
@@ -281,8 +290,10 @@ if (isset($_POST['DeleteRule'])) {
 		|| !route_rule_belongs_to_route((int)$rule_id, (int)$edit_route_id)) {
 		display_error(_('Selected rule must belong to the route being edited.'));
 	} else {
-		delete_route_rule((int)$rule_id);
-		display_notification(_('Rule has been deleted.'));
+				if (delete_route_rule((int)$rule_id))
+			display_notification(_('Rule has been deleted.'));
+		else
+			display_error(_('The rule cannot be deleted while it retains a Dimension reference.'));
 	}
 	$Ajax->activate('_page_body');
 }

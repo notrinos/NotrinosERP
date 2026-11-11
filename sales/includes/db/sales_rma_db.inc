@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/sales_dimension_custody_db.inc';
 
 /**
  * Sales RMA (Returns Management) — Database Functions
@@ -216,8 +217,10 @@ function add_sales_rma($debtor_no, $branch_code, $request_date, $source_type, $s
 		. (float)$restocking_fee_pct . ", "
 		. (int)$_SESSION['wa_current_user']->user
 		. ")";
-	db_query($sql, 'Could not create RMA');
-	return db_insert_id();
+		// The native birth writes no metadata: the stored default must stay NULL.
+	return sales_dimension_custody_write('sales_rma', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'Could not create RMA') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -240,8 +243,10 @@ function update_sales_rma($rma_id, $return_reason_id, $return_method,
 		customer_notes = " . db_escape($customer_notes) . ",
 		internal_notes = " . db_escape($internal_notes) . ",
 		restocking_fee_percent = " . (float)$restocking_fee_pct . "
-		WHERE id = " . (int)$rma_id . " AND status = 'pending'";
-	db_query($sql, 'Could not update RMA');
+				WHERE id = " . (int)$rma_id . " AND status = 'pending'";
+	return sales_dimension_custody_write('sales_rma', (int)$rma_id, array(), function() use ($sql) {
+		return db_query($sql, 'Could not update RMA') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -334,9 +339,19 @@ function add_rma_line($rma_id, $stock_id, $description, $quantity_requested,
 		. db_escape($batch_number) . ", "
 		. db_escape($notes)
 		. ")";
-	db_query($sql, 'Could not add RMA line');
-	$line_id = db_insert_id();
-	_recalc_rma_totals($rma_id);
+		if (!begin_transaction())
+		return false;
+	$line_id = sales_dimension_custody_write('sales_rma_lines', null, array('custom_data' => null), function() use ($sql, $rma_id) {
+		// The parent is held for the birth; a line cannot be born under an absent RMA.
+		$rows = db_query('SELECT id FROM ' . TB_PREF . 'sales_rma WHERE id=' . (int)$rma_id . ' FOR UPDATE');
+		if (!$rows || db_num_rows($rows) !== 1)
+			return false;
+		return db_query($sql, 'Could not add RMA line') ? db_insert_id() : false;
+	});
+	if (!$line_id || !_recalc_rma_totals($rma_id) || !commit_transaction()) {
+		cancel_transaction();
+		return false;
+	}
 	return $line_id;
 }
 
@@ -358,13 +373,23 @@ function update_rma_line($line_id, $quantity_requested, $quantity_authorized,
 		quantity_authorized = " . (float)$quantity_authorized . ",
 		return_condition = " . db_escape($return_condition) . ",
 		notes = " . db_escape($notes) . "
-		WHERE id = " . (int)$line_id;
-	db_query($sql, 'Could not update RMA line');
+				WHERE id = " . (int)$line_id;
+	if (!begin_transaction())
+		return false;
+	if (!sales_dimension_custody_write('sales_rma_lines', (int)$line_id, array(), function() use ($sql) {
+		return db_query($sql, 'Could not update RMA line') ? true : false;
+	})) {
+		cancel_transaction();
+		return false;
+	}
 
 	// Recalculate totals on the parent RMA
 	$row = db_fetch(db_query("SELECT rma_id FROM " . TB_PREF . "sales_rma_lines WHERE id = " . (int)$line_id, 'get rma_id'));
-	if ($row)
-		_recalc_rma_totals($row['rma_id']);
+	if (($row && !_recalc_rma_totals($row['rma_id'])) || !commit_transaction()) {
+		cancel_transaction();
+		return false;
+	}
+	return true;
 }
 
 /**
@@ -375,10 +400,22 @@ function update_rma_line($line_id, $quantity_requested, $quantity_authorized,
  */
 function delete_rma_line($line_id)
 {
-	$row = db_fetch(db_query("SELECT rma_id FROM " . TB_PREF . "sales_rma_lines WHERE id = " . (int)$line_id, 'get rma_id'));
-	db_query("DELETE FROM " . TB_PREF . "sales_rma_lines WHERE id = " . (int)$line_id, 'Could not delete RMA line');
-	if ($row)
-		_recalc_rma_totals($row['rma_id']);
+		if (!begin_transaction())
+		return false;
+	$row = db_fetch(db_query("SELECT rma_id FROM " . TB_PREF . "sales_rma_lines WHERE id = " . (int)$line_id . " FOR UPDATE", 'get rma_id'));
+	$sql = "DELETE FROM " . TB_PREF . "sales_rma_lines WHERE id = " . (int)$line_id;
+	// Refused while the line retains a Dimension reference (closed/orphan included).
+	if (!sales_dimension_custody_write('sales_rma_lines', (int)$line_id, array(), function() use ($sql) {
+		return db_query($sql, 'Could not delete RMA line') ? true : false;
+	}, true)) {
+		cancel_transaction();
+		return false;
+	}
+	if (($row && !_recalc_rma_totals($row['rma_id'])) || !commit_transaction()) {
+		cancel_transaction();
+		return false;
+	}
+	return true;
 }
 
 /**
@@ -485,8 +522,10 @@ function _recalc_rma_totals($rma_id)
 		total_amount = " . $total . ",
 		restocking_fee_amount = " . $fee_amount . ",
 		refund_amount = " . $refund_amount . "
-		WHERE id = " . (int)$rma_id;
-	db_query($sql, 'Could not recalculate RMA totals');
+				WHERE id = " . (int)$rma_id;
+	return sales_dimension_custody_write('sales_rma', (int)$rma_id, array(), function() use ($sql) {
+		return db_query($sql, 'Could not recalculate RMA totals') ? true : false;
+	}) ? true : false;
 }
 
 // ============================================================================
@@ -626,8 +665,7 @@ function authorize_rma($rma_id, $notes = '')
 		authorized_date = NOW()"
 		. $auth_notes_sql
 		. " WHERE id = " . (int)$rma_id . " AND status = 'pending'";
-	db_query($sql, 'Could not authorize RMA');
-	$success = db_num_affected_rows() > 0;
+		$success = sales_dimension_status_write('sales_rma', (int)$rma_id, $sql, 'Could not authorize RMA');
 	if ($success)
 		hook_invoke_all('sales_rma_authorized', $rma_id);
 	return $success;
@@ -648,8 +686,7 @@ function reject_rma($rma_id, $rejection_reason)
 		rejected_date = NOW(),
 		rejection_reason = " . db_escape($rejection_reason) . "
 		WHERE id = " . (int)$rma_id . " AND status = 'pending'";
-	db_query($sql, 'Could not reject RMA');
-	$success = db_num_affected_rows() > 0;
+		$success = sales_dimension_status_write('sales_rma', (int)$rma_id, $sql, 'Could not reject RMA');
 	if ($success)
 		hook_invoke_all('sales_rma_rejected', $rma_id, $rejection_reason);
 	return $success;
@@ -730,8 +767,11 @@ function create_wh_return_from_rma($rma_id, $warehouse_loc_code)
 	if (!$rma || $rma['status'] !== 'authorized')
 		return false;
 
-	$lines_result = get_rma_lines($rma_id);
+		$lines_result = get_rma_lines($rma_id);
 
+	// The return order, its lines and the RMA link form one unit: any refusal unwinds all of it.
+	if (!begin_transaction())
+		return false;
 	$wh_return_id = add_return_order(
 		'customer',
 		$warehouse_loc_code,
@@ -741,12 +781,16 @@ function create_wh_return_from_rma($rma_id, $warehouse_loc_code)
 		ST_SALESRETURN,
 		$rma_id,
 		'RMA#' . $rma['id'],
-		'Created from RMA ' . $rma['reference']
+				'Created from RMA ' . $rma['reference']
 	);
+	if (!$wh_return_id) {
+		cancel_transaction();
+		return false;
+	}
 
 	while ($line = db_fetch($lines_result)) {
 		$tracking = resolve_rma_line_tracking_payload($line);
-		add_return_order_line(
+				if (add_return_order_line(
 			$wh_return_id,
 			$line['stock_id'],
 			(float)$line['quantity_authorized'],
@@ -755,7 +799,10 @@ function create_wh_return_from_rma($rma_id, $warehouse_loc_code)
 			$tracking['batch_id'],
 			null,
 			$line['notes']
-		);
+		) === false) {
+			cancel_transaction();
+			return false;
+		}
 	}
 
 	// Link WH return back to RMA and advance status
@@ -763,7 +810,15 @@ function create_wh_return_from_rma($rma_id, $warehouse_loc_code)
 		wh_return_order_id = " . (int)$wh_return_id . ",
 		status = 'wh_processing'
 		WHERE id = " . (int)$rma_id;
-	db_query($sql, 'Could not link WH return to RMA');
+		sales_dimension_custody_write('sales_rma', (int)$rma_id, array(), function() use ($sql) {
+		return db_query($sql, 'Could not link WH return to RMA') ? true : false;
+	}) or dimension_financial_reference_failure();
+
+
+		if (!commit_transaction()) {
+		cancel_transaction();
+		return false;
+	}
 
 	hook_invoke_all('sales_rma_wh_return_created', $rma_id, $wh_return_id);
 	return $wh_return_id;
@@ -874,7 +929,10 @@ function create_credit_from_rma($rma_id)
 		credit_note_no = " . (int)$credit_no . ",
 		status = 'refunded'
 		WHERE id = " . (int)$rma_id;
-	db_query($sql, 'Could not link credit note to RMA');
+		sales_dimension_custody_write('sales_rma', (int)$rma_id, array(), function() use ($sql) {
+		return db_query($sql, 'Could not link credit note to RMA') ? true : false;
+	}) or dimension_financial_reference_failure();
+
 
 	hook_invoke_all('sales_rma_credit_created', $rma_id, $credit_no);
 	return $credit_no;
@@ -958,7 +1016,10 @@ function create_replacement_from_rma($rma_id)
 	$sql = "UPDATE " . TB_PREF . "sales_rma SET
 		replacement_order_no = " . (int)$order_no . "
 		WHERE id = " . (int)$rma_id;
-	db_query($sql, 'Could not link replacement order to RMA');
+		sales_dimension_custody_write('sales_rma', (int)$rma_id, array(), function() use ($sql) {
+		return db_query($sql, 'Could not link replacement order to RMA') ? true : false;
+	}) or dimension_financial_reference_failure();
+
 
 	hook_invoke_all('sales_rma_replacement_created', $rma_id, $order_no);
 	return $order_no;

@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/../includes/db/traceability_dimension_db.inc';
 
 /**
  * Mobile Scanner AJAX Endpoint
@@ -693,8 +694,8 @@ function mobile_confirm_receive() {
 		$sql = "UPDATE " . TB_PREF . "serial_numbers SET status='available', loc_code="
 			. db_escape($loc_code) . ", wh_loc_id=" . (int)$bin_loc_id
 			. " WHERE id=" . (int)$serial_id;
-		$sql = str_replace("status='available'", "status=" . db_escape($received_stock_status), $sql);
-		db_query($sql);
+				$sql = str_replace("status='available'", "status=" . db_escape($received_stock_status), $sql);
+		traceability_dimension_update('serial_numbers', $serial_id, $sql, 'could not update serial on mobile receive');
 		if ($serial_state_changed) {
 			add_serial_movement($serial_id, ST_SUPPRECEIVE, 0, $serial['loc_code'], $loc_code,
 				$serial['status'], $received_stock_status, Today(), 'Mobile receive', 'Received via mobile scanner');
@@ -833,9 +834,9 @@ function mobile_confirm_transfer() {
 
 	// Update serial location if applicable
 	if ($serial_id) {
-		$sql = "UPDATE " . TB_PREF . "serial_numbers SET wh_loc_id=" . (int)$to_bin_id
+				$sql = "UPDATE " . TB_PREF . "serial_numbers SET wh_loc_id=" . (int)$to_bin_id
 			. " WHERE id=" . (int)$serial_id;
-		db_query($sql);
+		traceability_dimension_update('serial_numbers', $serial_id, $sql, 'could not update serial on mobile transfer');
 		add_serial_movement($serial_id, ST_LOCTRANSFER, 0,
 			$loc_code, $loc_code, 'available', 'available',
 			Today(), 'Mobile transfer', 'Bin-to-bin transfer via mobile');
@@ -1097,9 +1098,9 @@ function mobile_confirm_putaway() {
 
 		$sql = "UPDATE " . TB_PREF . "serial_numbers SET wh_loc_id=" . (int)$bin_loc_id
 			. ", loc_code=" . db_escape($loc_code)
-			. ", status='available'"
+						. ", status='available'"
 			. " WHERE id=" . (int)$serial_id;
-		db_query($sql);
+		traceability_dimension_update('serial_numbers', $serial_id, $sql, 'could not update serial on mobile putaway');
 		if ($serial_state_changed) {
 			add_serial_movement($serial_id, ST_INVADJUST, 0, $serial['loc_code'], $loc_code,
 				$serial['status'], 'available', Today(), 'Mobile putaway', 'Putaway via mobile scanner');

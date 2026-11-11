@@ -75,8 +75,12 @@ if (isset($_POST['CREATE_RETURN'])) {
 			get_post('memo')
 		);
 
-		display_notification(sprintf(_('Return order RO#%s has been created.'), get_next_return_order_no() - 1));
-		$selected_id = $return_id;
+				if ($return_id) {
+			display_notification(sprintf(_('Return order RO#%s has been created.'), get_next_return_order_no() - 1));
+			$selected_id = $return_id;
+		} else {
+			display_error(_('The return order could not be created.'));
+		}
 	}
 	$Ajax->activate('_page_body');
 }
@@ -91,7 +95,7 @@ if (isset($_POST['UPDATE_RETURN']) && $selected_id > 0) {
 	}
 
 	if ($input_error == 0) {
-		update_return_order(
+				if (update_return_order(
 			$selected_id,
 			$_POST['return_type'],
 			$_POST['warehouse'],
@@ -99,10 +103,12 @@ if (isset($_POST['UPDATE_RETURN']) && $selected_id > 0) {
 			get_post('customer_id') ? (int)get_post('customer_id') : null,
 			get_post('supplier_id') ? (int)get_post('supplier_id') : null,
 			null, null,
-			get_post('reference'),
+						get_post('reference'),
 			get_post('memo')
-		);
-		display_notification(_('Return order has been updated.'));
+		))
+			display_notification(_('Return order has been updated.'));
+		else
+			display_error(_('The return order could not be updated (only draft orders can be changed).'));
 	}
 	$Ajax->activate('_page_body');
 }
@@ -149,8 +155,10 @@ if (isset($_POST['ADD_LINE']) && $selected_id > 0) {
 if (isset($_POST['DELETE_LINE'])) {
 	$line_id = (int)get_post('delete_line_id');
 	if ($line_id > 0) {
-		delete_return_order_line($line_id);
-		display_notification(_('Line item has been deleted.'));
+				if (delete_return_order_line($line_id))
+			display_notification(_('Line item has been deleted.'));
+		else
+			display_error(_('The line cannot be deleted while it retains a Dimension reference.'));
 	}
 	$Ajax->activate('_page_body');
 }
@@ -185,8 +193,10 @@ if (isset($_POST['INSPECT_LINE'])) {
 
 // --- Mark inspected ---
 if (isset($_POST['MARK_INSPECTED']) && $selected_id > 0) {
-	mark_return_inspected($selected_id);
-	display_notification(_('Return order has been marked as inspected.'));
+		if (mark_return_inspected($selected_id))
+		display_notification(_('Return order has been marked as inspected.'));
+	else
+		display_error(_('The return order could not be marked as inspected.'));
 	$Ajax->activate('_page_body');
 }
 
@@ -218,7 +228,7 @@ if (isset($_POST['DELETE_RETURN']) && $selected_id > 0) {
 		display_notification(_('Return order has been deleted.'));
 		$selected_id = -1;
 	} else {
-		display_error(_('Cannot delete this return order. Only draft orders can be deleted.'));
+				display_error(_('Cannot delete this return order. Only draft orders without a retained Dimension reference can be deleted.'));
 	}
 	$Ajax->activate('_page_body');
 }

@@ -123,11 +123,16 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 		display_error(_('Please select a warehouse.'));
 	} else {
 		if ($Mode == 'ADD_ITEM') {
-			$new_id = add_picking_wave($wave_name, $warehouse_loc_code, $picking_method, $wave_type, $assigned_to, $memo);
-			display_notification(sprintf(_('Picking wave #%d created.'), $new_id));
+						$new_id = add_picking_wave($wave_name, $warehouse_loc_code, $picking_method, $wave_type, $assigned_to, $memo);
+			if ($new_id)
+				display_notification(sprintf(_('Picking wave #%d created.'), $new_id));
+			else
+				display_error(_('The picking wave could not be created.'));
 		} else {
-			update_picking_wave($selected_id, $wave_name, $warehouse_loc_code, $picking_method, $wave_type, $assigned_to, $memo);
-			display_notification(sprintf(_('Picking wave #%d updated.'), $selected_id));
+						if (update_picking_wave($selected_id, $wave_name, $warehouse_loc_code, $picking_method, $wave_type, $assigned_to, $memo))
+				display_notification(sprintf(_('Picking wave #%d updated.'), $selected_id));
+			else
+				display_error(_('The picking wave could not be updated.'));
 		}
 		$Mode = 'RESET';
 	}
@@ -136,8 +141,10 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 if ($Mode == 'Delete') {
 	$check = can_delete_picking_wave($selected_id);
 	if ($check === true) {
-		delete_picking_wave($selected_id);
-		display_notification(_('Picking wave deleted.'));
+				if (delete_picking_wave($selected_id))
+			display_notification(_('Picking wave deleted.'));
+		else
+			display_error(_('The picking wave cannot be deleted while it retains a Dimension reference.'));
 	} else {
 		display_error($check);
 	}

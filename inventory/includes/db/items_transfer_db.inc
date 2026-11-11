@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/traceability_dimension_db.inc';
 
 /**
  * Remove tracked batch quantity from warehouse bins for a non-bin transfer.
@@ -355,7 +356,7 @@ function process_transfer_tracking($items, $transfer_id, $location_from, $locati
 							. "loc_code=" . db_escape($location_to)
 							. ", wh_loc_id=NULL"
 							. " WHERE id=" . (int)$sid;
-						db_query($sql, 'could not update serial location for transfer');
+												traceability_dimension_update('serial_numbers', $sid, $sql, 'could not update serial location for transfer');
 
 						// Log serial movement
 						add_serial_movement(

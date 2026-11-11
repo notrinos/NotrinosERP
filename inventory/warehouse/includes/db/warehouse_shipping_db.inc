@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/warehouse_config_dimension_db.inc';
 
 /**
  * Warehouse Shipping DB layer — Shipment CRUD, ship confirmation,
@@ -132,11 +133,15 @@ function add_shipment($warehouse_loc_code, $carrier = '', $tracking_number = '',
 		$ship_memo
 	);
 
-	// Store structured data in custom_data
+		// Store structured data in custom_data (the exact text written is what the fence certifies)
+	$custom_text = json_encode($custom);
 	$sql = "UPDATE " . TB_PREF . "wh_operations SET custom_data="
-		. db_escape_json(json_encode($custom))
+		. db_escape_json($custom_text)
 		. " WHERE op_id=" . (int)$op_id;
-	db_query($sql, 'could not set shipment custom data');
+	warehouse_config_dimension_guard('wh_operations', (int)$op_id, array('custom_data' => $custom_text), function() use ($sql) {
+		return db_query($sql, 'could not set shipment custom data') ? true : false;
+	});
+
 
 	return $op_id;
 }
@@ -165,6 +170,9 @@ function update_shipment($shipment_id, $carrier, $tracking, $ship_date = null,
 	if ($op && !empty($op['custom_data'])) {
 		$existing = json_decode($op['custom_data'], true);
 		if (is_array($existing)) {
+			// Every other existing key (including retained Dimension references) is carried over;
+			// only the shipment fields set above are replaced.
+			$custom = array_merge($existing, $custom);
 			$custom['warehouse'] = isset($existing['warehouse']) ? $existing['warehouse'] : '';
 		}
 	}
@@ -179,13 +187,17 @@ function update_shipment($shipment_id, $carrier, $tracking, $ship_date = null,
 		$ship_memo = implode(' | ', $meta) . (!empty($memo) ? ' | ' . $memo : '');
 	}
 
+		$custom_text = json_encode($custom);
 	$sql = "UPDATE " . TB_PREF . "wh_operations SET "
 		. "memo=" . db_escape($ship_memo) . ", "
-		. "custom_data=" . db_escape_json(json_encode($custom)) . ", "
+		. "custom_data=" . db_escape_json($custom_text) . ", "
 		. "scheduled_date=" . ($ship_date ? db_escape($ship_date) : 'NULL') . ", "
 		. "assigned_to=" . ($assigned_to ? (int)$assigned_to : 'NULL')
 		. " WHERE op_id=" . (int)$shipment_id;
-	db_query($sql, 'could not update shipment');
+	// The merged custom_data keeps every existing key; retained references may not be dropped.
+	warehouse_config_dimension_guard('wh_operations', (int)$shipment_id, array('custom_data' => $custom_text), function() use ($sql) {
+		return db_query($sql, 'could not update shipment') ? true : false;
+	});
 }
 
 /**
@@ -356,9 +368,11 @@ function remove_package_from_shipment($shipment_id, $package_id) {
 	if (!in_array($op['op_status'], array('draft', 'ready')))
 		return array('success' => false, 'message' => _('Can only remove packages from draft or confirmed shipments.'));
 
-	$sql = "DELETE FROM " . TB_PREF . "wh_operation_lines "
-		. "WHERE op_id=" . (int)$shipment_id . " AND package_id=" . (int)$package_id;
-	db_query($sql, 'could not remove package from shipment');
+		// Each line is removed under the writer fence (a retained line refuses and throws).
+	warehouse_operation_lines_each($shipment_id, function($pkg_line_id) {
+		return "DELETE FROM " . TB_PREF . "wh_operation_lines WHERE line_id=" . (int)$pkg_line_id;
+	}, 'could not remove package from shipment', ' AND package_id=' . (int)$package_id, true);
+
 
 	return array('success' => true, 'message' => _('Package removed from shipment.'));
 }
@@ -449,7 +463,13 @@ function ship_shipment($shipment_id, $carrier = '', $tracking = '') {
 	while ($pkg_row = db_fetch($packages)) {
 		$pkg_carrier = !empty($carrier) ? $carrier : '';
 		$pkg_tracking = !empty($tracking) ? $tracking : '';
-		ship_package((int)$pkg_row['package_id'], $pkg_carrier, $pkg_tracking);
+		try {
+			ship_package((int)$pkg_row['package_id'], $pkg_carrier, $pkg_tracking);
+		} catch (DimensionFinancialReferenceWriteException $e) {
+			// The fence has already rolled the whole shipment back.
+			cancel_transaction();
+			return array('success' => false, 'message' => _("The shipment could not be shipped: a package's retained Dimension metadata could not be certified."));
+		}
 		$pkg_count++;
 	}
 
@@ -464,16 +484,21 @@ function ship_shipment($shipment_id, $carrier = '', $tracking = '') {
 			$custom['tracking_number'] = $tracking;
 		$custom['shipped_at'] = date('Y-m-d H:i:s');
 
+				$custom_text = json_encode($custom);
 		$sql = "UPDATE " . TB_PREF . "wh_operations SET custom_data="
-			. db_escape_json(json_encode($custom))
+			. db_escape_json($custom_text)
 			. " WHERE op_id=" . (int)$shipment_id;
-		db_query($sql, 'could not update shipment custom data');
+		warehouse_config_dimension_guard('wh_operations', (int)$shipment_id, array('custom_data' => $custom_text), function() use ($sql) {
+			return db_query($sql, 'could not update shipment custom data') ? true : false;
+		});
+
 	}
 
 	// Complete all operation lines
-	$sql = "UPDATE " . TB_PREF . "wh_operation_lines SET qty_done = qty_planned "
-		. "WHERE op_id=" . (int)$shipment_id;
-	db_query($sql, 'could not complete shipment lines');
+		warehouse_operation_lines_each($shipment_id, function($ship_line_id) {
+		return "UPDATE " . TB_PREF . "wh_operation_lines SET qty_done = qty_planned WHERE line_id=" . (int)$ship_line_id;
+	}, 'could not complete shipment lines');
+
 
 	// Mark shipment as done
 	update_wh_operation_status($shipment_id, 'done');
@@ -502,8 +527,10 @@ function cancel_shipment($shipment_id) {
 	begin_transaction();
 
 	// Remove operation lines (package references)
-	$sql = "DELETE FROM " . TB_PREF . "wh_operation_lines WHERE op_id=" . (int)$shipment_id;
-	db_query($sql, 'could not remove shipment lines');
+		warehouse_operation_lines_each($shipment_id, function($cancel_line_id) {
+		return "DELETE FROM " . TB_PREF . "wh_operation_lines WHERE line_id=" . (int)$cancel_line_id;
+	}, 'could not remove shipment lines', '', true);
+
 
 	// Cancel the operation
 	update_wh_operation_status($shipment_id, 'cancelled');

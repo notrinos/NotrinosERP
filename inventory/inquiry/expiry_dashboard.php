@@ -39,11 +39,15 @@ include_once($path_to_root . '/inventory/includes/serial_batch_ui.inc');
 start_form();
 
 if (isset($_POST['auto_expire']) && $_POST['auto_expire'] != '') {
-	$expired_count = auto_expire_batches();
-	if ($expired_count > 0)
-		display_notification(sprintf(_('%d batches have been marked as expired.'), $expired_count));
-	else
-		display_note(_('No active batches found with past expiry dates.'));
+		try {
+		$expired_count = auto_expire_batches();
+		if ($expired_count > 0)
+			display_notification(sprintf(_('%d batches have been marked as expired.'), $expired_count));
+		else
+			display_note(_('No active batches found with past expiry dates.'));
+	} catch (DimensionFinancialReferenceWriteException $e) {
+		display_error(_('The expiry sweep was refused: a batch retained Dimension metadata could not be certified.'));
+	}
 }
 
 // Filter

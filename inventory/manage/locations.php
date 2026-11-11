@@ -74,8 +74,9 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 	}
 
 	if ($input_error != 1) {
+				try {
 		if ($selected_id != -1) {
-	
+
 			update_item_location($selected_id, $_POST['location_name'], $_POST['delivery_address'], $_POST['phone'], $_POST['phone2'], $_POST['fax'], $_POST['email'], $_POST['contact'], check_value('fixed_asset'), check_value('wh_enabled') ? 1 : 0, (int)$inbound_steps, (int)$outbound_steps);
 			display_notification(_('Selected location has been updated'));
 		} 
@@ -84,10 +85,13 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 		// selected_id is null cos no item selected on first time round so must be adding a	record must be submitting new entries in the new Location form
 		
 			add_item_location($_POST['loc_code'], $_POST['location_name'], $_POST['delivery_address'], $_POST['phone'], $_POST['phone2'], $_POST['fax'], $_POST['email'], $_POST['contact'], check_value('fixed_asset'), check_value('wh_enabled') ? 1 : 0, (int)$inbound_steps, (int)$outbound_steps);
-			display_notification(_('New location has been added'));
+						display_notification(_('New location has been added'));
 		}
-		
+
 		$Mode = 'RESET';
+		} catch (DimensionFinancialReferenceWriteException $e) {
+			display_error(_('The location was not saved: retained Dimension metadata could not be certified.'));
+		}
 	}
 } 
 
@@ -136,8 +140,12 @@ function can_delete($selected_id) {
 if ($Mode == 'Delete') {
 
 	if (can_delete($selected_id)) {
-		delete_item_location($selected_id);
-		display_notification(_('Selected location has been deleted'));
+				try {
+			delete_item_location($selected_id);
+			display_notification(_('Selected location has been deleted'));
+		} catch (DimensionFinancialReferenceWriteException $e) {
+			display_error(_('The location was not deleted: it retains Dimension metadata that cannot be erased.'));
+		}
 	}
 	$Mode = 'RESET';
 }

@@ -101,12 +101,16 @@ if ($Mode == 'ADD_ITEM' && can_process_template()) {
 		(int)get_post('tpl_payment_terms', 0),
 		(int)get_post('tpl_ship_via', 0)
 	);
-	display_notification(_('New quotation template has been added.'));
-	$selected_id = $id;
-	$Mode = 'EDIT_ITEM';
+	if ($id) {
+		display_notification(_('New quotation template has been added.'));
+		$selected_id = $id;
+		$Mode = 'EDIT_ITEM';
+	} else {
+		display_error(_('The quotation template could not be added.'));
+	}
 }
 elseif ($Mode == 'UPDATE_ITEM' && can_process_template()) {
-	update_quotation_template(
+	$updated = update_quotation_template(
 		$selected_id,
 		get_post('tpl_name'),
 		get_post('tpl_description'),
@@ -118,7 +122,10 @@ elseif ($Mode == 'UPDATE_ITEM' && can_process_template()) {
 		(int)get_post('tpl_ship_via', 0),
 		check_value('tpl_inactive') ? 1 : 0
 	);
-	display_notification(_('Quotation template has been updated.'));
+	if ($updated)
+		display_notification(_('Quotation template has been updated.'));
+	else
+		display_error(_('The quotation template could not be updated.'));
 }
 elseif ($Mode == 'DELETE_ITEM') {
 	// Only delete if no orders reference this template
@@ -129,10 +136,15 @@ elseif ($Mode == 'DELETE_ITEM') {
 	if ($in_use && $in_use['cnt'] > 0) {
 		display_error(_('This template cannot be deleted because it is referenced by existing quotations.'));
 	} else {
-		delete_quotation_template($selected_id);
-		display_notification(_('Quotation template has been deleted.'));
+		if (delete_quotation_template($selected_id)) {
+			display_notification(_('Quotation template has been deleted.'));
+			$selected_id = -1;
+		} else {
+			display_error(_('The quotation template cannot be deleted while it retains a Dimension reference.'));
+		}
 	}
-	$selected_id = -1;
+	if ($in_use && $in_use['cnt'] > 0)
+		$selected_id = -1;
 }
 
 // ============================================================================
@@ -145,8 +157,10 @@ if ($selected_id != -1) {
 	$del_line_id = find_submit('DeleteLine');
 
 	if ($del_line_id != -1) {
-		delete_quotation_template_line($del_line_id);
-		display_notification(_('Template line has been removed.'));
+		if (delete_quotation_template_line($del_line_id))
+			display_notification(_('Template line has been removed.'));
+		else
+			display_error(_('The template line cannot be removed while it retains a Dimension reference.'));
 	}
 	elseif ($add_line_id != -1 || $edit_line_id != -1) {
 		if (can_process_line()) {
@@ -154,7 +168,7 @@ if ($selected_id != -1) {
 			$is_optional = ($line_type === 'optional') ? 1 : (int)check_value('line_is_optional');
 
 			if ($edit_line_id != -1) {
-				update_quotation_template_line(
+				if (update_quotation_template_line(
 					$edit_line_id,
 					$line_type,
 					get_post('line_stock_id'),
@@ -163,10 +177,12 @@ if ($selected_id != -1) {
 					input_num('line_discount', 0),
 					$is_optional,
 					(int)get_post('line_sort_order', 0)
-				);
-				display_notification(_('Template line has been updated.'));
+				))
+					display_notification(_('Template line has been updated.'));
+				else
+					display_error(_('The template line could not be updated.'));
 			} else {
-				add_quotation_template_line(
+				if (add_quotation_template_line(
 					$selected_id,
 					$line_type,
 					get_post('line_stock_id'),
@@ -175,8 +191,10 @@ if ($selected_id != -1) {
 					input_num('line_discount', 0),
 					$is_optional,
 					(int)get_post('line_sort_order', 0)
-				);
-				display_notification(_('Template line has been added.'));
+				))
+					display_notification(_('Template line has been added.'));
+				else
+					display_error(_('The template line could not be added.'));
 			}
 		}
 	}

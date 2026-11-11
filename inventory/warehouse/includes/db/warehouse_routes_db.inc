@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/warehouse_config_dimension_db.inc';
 
 /**
  * Warehouse Routes & Push/Pull Rules — CRUD, resolution, and auto-trigger logic.
@@ -140,12 +141,7 @@ function get_trigger_methods() {
 function add_route($route_name, $route_type, $warehouse_loc_code = null,
 	$is_default = false, $sequence = 10, $active = true, $description = '')
 {
-	// If setting as default, unset any existing default for this type+warehouse
-	if ($is_default) {
-		unset_default_route($route_type, $warehouse_loc_code);
-	}
-
-	$sql = "INSERT INTO " . TB_PREF . "wh_routes (
+		$sql = "INSERT INTO " . TB_PREF . "wh_routes (
 		route_name, route_type, warehouse_loc_code,
 		is_default, sequence, active, description
 	) VALUES (
@@ -157,8 +153,12 @@ function add_route($route_name, $route_type, $warehouse_loc_code = null,
 		" . ($active ? 1 : 0) . ",
 		" . db_escape($description) . "
 	)";
-	db_query($sql, 'could not add warehouse route');
-	return db_insert_id();
+		return warehouse_config_dimension_write('wh_routes', null, array('custom_data' => null), function() use ($sql, $is_default, $route_type, $warehouse_loc_code) {
+		// If setting as default, unset any existing default for this type+warehouse (siblings held)
+		if ($is_default && !warehouse_route_reset_default($route_type, $warehouse_loc_code))
+			return false;
+		return db_query($sql, 'could not add warehouse route') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -176,11 +176,7 @@ function add_route($route_name, $route_type, $warehouse_loc_code = null,
 function update_route($route_id, $route_name, $route_type, $warehouse_loc_code = null,
 	$is_default = false, $sequence = 10, $active = true, $description = '')
 {
-	if ($is_default) {
-		unset_default_route($route_type, $warehouse_loc_code, $route_id);
-	}
-
-	$sql = "UPDATE " . TB_PREF . "wh_routes SET "
+		$sql = "UPDATE " . TB_PREF . "wh_routes SET "
 		. "route_name=" . db_escape($route_name) . ","
 		. "route_type=" . db_escape($route_type) . ","
 		. "warehouse_loc_code=" . ($warehouse_loc_code ? db_escape($warehouse_loc_code) : 'NULL') . ","
@@ -189,7 +185,11 @@ function update_route($route_id, $route_name, $route_type, $warehouse_loc_code =
 		. "active=" . ($active ? 1 : 0) . ","
 		. "description=" . db_escape($description)
 		. " WHERE route_id=" . (int)$route_id;
-	db_query($sql, 'could not update warehouse route');
+		return warehouse_config_dimension_write('wh_routes', (int)$route_id, array(), function() use ($sql, $is_default, $route_type, $warehouse_loc_code, $route_id) {
+		if ($is_default && !warehouse_route_reset_default($route_type, $warehouse_loc_code, $route_id))
+			return false;
+		return db_query($sql, 'could not update warehouse route') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -269,13 +269,8 @@ function can_delete_route($route_id) {
  * @param int $route_id Route ID
  */
 function delete_route($route_id) {
-	// Delete rules first
-	$sql = "DELETE FROM " . TB_PREF . "wh_route_rules WHERE route_id=" . (int)$route_id;
-	db_query($sql, 'could not delete route rules');
-
-	// Delete route
-	$sql = "DELETE FROM " . TB_PREF . "wh_routes WHERE route_id=" . (int)$route_id;
-	db_query($sql, 'could not delete route');
+		// Refused while the route or any of its rules retains a Dimension reference.
+	return warehouse_route_dimension_remove($route_id);
 }
 
 /**
@@ -295,7 +290,7 @@ function unset_default_route($route_type, $warehouse_loc_code = null, $exclude_r
 	if ($exclude_route_id) {
 		$sql .= " AND route_id != " . (int)$exclude_route_id;
 	}
-	db_query($sql, 'could not unset default route');
+		return db_query($sql, 'could not unset default route') ? true : false;
 }
 
 /**
@@ -390,8 +385,13 @@ function add_route_rule($route_id, $rule_type, $sequence = 10, $from_loc_id = nu
 		" . (int)$delay_days . ",
 		" . ($active ? 1 : 0) . "
 	)";
-	db_query($sql, 'could not add route rule');
-	return db_insert_id();
+		return warehouse_config_dimension_write('wh_route_rules', null, array('custom_data' => null), function() use ($sql, $route_id) {
+		// The parent is held for the birth; a rule cannot be born under an absent route.
+		$rows = db_query('SELECT route_id FROM ' . TB_PREF . 'wh_routes WHERE route_id=' . (int)$route_id . ' FOR UPDATE');
+		if (!$rows || db_num_rows($rows) !== 1)
+			return false;
+		return db_query($sql, 'could not add route rule') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -421,7 +421,9 @@ function update_route_rule($rule_id, $rule_type, $sequence = 10, $from_loc_id = 
 		. "delay_days=" . (int)$delay_days . ","
 		. "active=" . ($active ? 1 : 0)
 		. " WHERE rule_id=" . (int)$rule_id;
-	db_query($sql, 'could not update route rule');
+		return warehouse_config_dimension_write('wh_route_rules', (int)$rule_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update route rule') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -499,8 +501,10 @@ function count_route_rules($route_id) {
  * @param int $rule_id Rule ID
  */
 function delete_route_rule($rule_id) {
-	$sql = "DELETE FROM " . TB_PREF . "wh_route_rules WHERE rule_id=" . (int)$rule_id;
-	db_query($sql, 'could not delete route rule');
+		$sql = "DELETE FROM " . TB_PREF . "wh_route_rules WHERE rule_id=" . (int)$rule_id;
+	return warehouse_config_dimension_write('wh_route_rules', (int)$rule_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not delete route rule') ? true : false;
+	}, true) ? true : false;
 }
 
 /**
@@ -509,8 +513,7 @@ function delete_route_rule($rule_id) {
  * @param int $route_id Route ID
  */
 function delete_route_rules($route_id) {
-	$sql = "DELETE FROM " . TB_PREF . "wh_route_rules WHERE route_id=" . (int)$route_id;
-	db_query($sql, 'could not delete route rules');
+		return warehouse_route_rules_dimension_remove($route_id);
 }
 
 //----------------------------------------------------------------------
@@ -831,6 +834,8 @@ function install_route_template($template_key, $warehouse_loc_code = null, $set_
 
 	$template = $templates[$template_key];
 
+		if (!begin_transaction())
+		return false;
 	$route_id = add_route(
 		$template['name'],
 		$template['type'],
@@ -841,20 +846,31 @@ function install_route_template($template_key, $warehouse_loc_code = null, $set_
 		$template['description']
 	);
 
-	if (!$route_id) return false;
+	if (!$route_id) {
+		cancel_transaction();
+		return false;
+	}
 
 	foreach ($template['rules'] as $rule_def) {
-		add_route_rule(
+		if (!add_route_rule(
 			$route_id,
 			$rule_def['rule_type'],
 			$rule_def['sequence'],
 			null, // from_loc_id — user configures via UI
 			null, // to_loc_id — user configures via UI
 			$rule_def['operation_type'],
-			$rule_def['trigger_method'],
+						$rule_def['trigger_method'],
 			0,    // delay_days
 			true
-		);
+		)) {
+			cancel_transaction();
+			return false;
+		}
+	}
+
+	if (!commit_transaction()) {
+		cancel_transaction();
+		return false;
 	}
 
 	return $route_id;

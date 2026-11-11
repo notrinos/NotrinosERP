@@ -134,7 +134,10 @@ if (isset($_POST['ADD_ITEM'])) {
 		display_error(_('Package code already exists.'));
 	} else {
 		$new_id = add_package($pkg_code, $pkg_type, null, $weight, $length, $width, $height);
-		display_notification(sprintf(_('Package #%d created.'), $new_id));
+		if ($new_id)
+			display_notification(sprintf(_('Package #%d created.'), $new_id));
+		else
+			display_error(_('The package could not be created.'));
 		$Mode = 'RESET';
 	}
 	$Ajax->activate('_page_body');
@@ -157,8 +160,10 @@ if (isset($_POST['UPDATE_ITEM'])) {
 	} elseif (!is_package_code_unique($pkg_code, $pkg_id)) {
 		display_error(_('Package code already exists.'));
 	} else {
-		update_package($pkg_id, $pkg_code, $pkg_type, null, $weight, $length, $width, $height, $carrier, $tracking);
-		display_notification(_('Package has been updated.'));
+		if (update_package($pkg_id, $pkg_code, $pkg_type, null, $weight, $length, $width, $height, $carrier, $tracking))
+			display_notification(_('Package has been updated.'));
+		else
+			display_error(_('The package could not be updated.'));
 		$Mode = 'RESET';
 	}
 	$Ajax->activate('_page_body');
@@ -167,8 +172,10 @@ if (isset($_POST['UPDATE_ITEM'])) {
 // --- Delete Package ---
 if ($Mode == 'Delete') {
 	if (can_delete_package($selected_id)) {
-		delete_package($selected_id);
-		display_notification(_('Package has been deleted.'));
+		if (delete_package($selected_id))
+			display_notification(_('Package has been deleted.'));
+		else
+			display_error(_('The package cannot be deleted while it retains a Dimension reference.'));
 	} else {
 		display_error(_('Cannot delete this package — it has contents or is not open.'));
 	}

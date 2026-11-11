@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/warehouse_config_dimension_db.inc';
 
 /**
  * Database functions for warehouse putaway rules.
@@ -59,7 +60,9 @@ function add_putaway_rule($rule_name, $warehouse_loc_code, $sequence, $stock_id,
 		. db_escape($strategy) . ", "
 		. db_escape((int)$active) . ")";
 
-	db_query($sql, 'could not add putaway rule');
+		return warehouse_config_dimension_write('wh_putaway_rules', null, array('custom_data' => null), function() use ($sql) {
+		return db_query($sql, 'could not add putaway rule') ? db_insert_id() : false;
+	});
 }
 
 /**
@@ -95,7 +98,9 @@ function update_putaway_rule($rule_id, $rule_name, $warehouse_loc_code, $sequenc
 		. "active = " . db_escape((int)$active)
 		. " WHERE rule_id = " . db_escape((int)$rule_id);
 
-	db_query($sql, 'could not update putaway rule');
+		return warehouse_config_dimension_write('wh_putaway_rules', (int)$rule_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not update putaway rule') ? true : false;
+	}) ? true : false;
 }
 
 /**
@@ -106,7 +111,9 @@ function update_putaway_rule($rule_id, $rule_name, $warehouse_loc_code, $sequenc
  */
 function delete_putaway_rule($rule_id) {
 	$sql = "DELETE FROM " . TB_PREF . "wh_putaway_rules WHERE rule_id = " . db_escape((int)$rule_id);
-	db_query($sql, 'could not delete putaway rule');
+		return warehouse_config_dimension_write('wh_putaway_rules', (int)$rule_id, array(), function() use ($sql) {
+		return db_query($sql, 'could not delete putaway rule') ? true : false;
+	}, true) ? true : false;
 }
 
 /**

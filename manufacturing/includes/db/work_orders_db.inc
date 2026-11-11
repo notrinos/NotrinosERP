@@ -9,6 +9,8 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/manufacturing_dimension_db.inc';
+
 /*
 	Common entry procedure for all work order types
 */
@@ -32,9 +34,12 @@ function add_work_order($wo_ref, $loc_code, $units_reqd, $stock_id, $type, $date
 		VALUES (".db_escape($wo_ref).", ".db_escape($loc_code).", "
 		.db_escape($units_reqd).", ".db_escape($stock_id).",
 		".db_escape($type).", '$date', ".db_escape($required).")";
-	db_query($sql, 'could not add work order');
+		// The native birth writes no metadata (the column defaults to '{}'). A refusal throws: the
+	// fence has already rolled the whole work order creation back.
+	$woid = manufacturing_dimension_guard('workorders', null, function() use ($sql) {
+		return db_query($sql, 'could not add work order') ? db_insert_id() : false;
+	});
 
-	$woid = db_insert_id();
 
 	add_comments(ST_WORKORDER, $woid, $required_by, $memo_);
 
@@ -82,7 +87,10 @@ function update_work_order($woid, $loc_code, $units_reqd, $stock_id, $date_, $re
 		date_='$date'
 		WHERE id = ".db_escape($woid);
 
-	db_query($sql, 'could not update work order');
+		manufacturing_dimension_guard('workorders', (int)$woid, function() use ($sql) {
+		return db_query($sql, 'could not update work order') ? true : false;
+	});
+
 
 	update_comments(ST_WORKORDER, $woid, null, $memo_);
 	add_audit_trail(ST_WORKORDER, $woid, $date_, _('Updated.'));
@@ -99,8 +107,12 @@ function delete_work_order($woid, $stock_id, $qty, $date) {
 	delete_wo_requirements($woid);
 
 	// delete the actual work order
-	$sql = "DELETE FROM ".TB_PREF."workorders WHERE id=".db_escape($woid);
-	db_query($sql,'The work order could not be deleted');
+		$sql = "DELETE FROM ".TB_PREF."workorders WHERE id=".db_escape($woid);
+	// Refused (and the requirement removal rolled back) while the work order retains a Dimension reference.
+	manufacturing_dimension_guard('workorders', (int)$woid, function() use ($sql) {
+		return db_query($sql, 'The work order could not be deleted') ? true : false;
+	}, true);
+
 
 	delete_comments(ST_WORKORDER, $woid);
 	add_audit_trail(ST_WORKORDER, $woid, $date, _('Canceled.'));
@@ -174,7 +186,10 @@ function release_work_order($woid, $releaseDate, $memo_) {
 
 	$sql = "UPDATE ".TB_PREF."workorders SET released_date='$date',
 		released=1 WHERE id = ".db_escape($woid);
-	db_query($sql, 'could not release work order');
+		manufacturing_dimension_guard('workorders', (int)$woid, function() use ($sql) {
+		return db_query($sql, 'could not release work order') ? true : false;
+	});
+
 
 	// create wo_requirements records according to current BOM
 	create_wo_requirements($woid, $stock_id);
@@ -189,7 +204,9 @@ function release_work_order($woid, $releaseDate, $memo_) {
 
 function close_work_order($woid) {
 	$sql = "UPDATE ".TB_PREF."workorders SET closed=1 WHERE id = ".db_escape($woid);
-	db_query($sql, 'could not close work order');
+		manufacturing_dimension_guard('workorders', (int)$woid, function() use ($sql) {
+		return db_query($sql, 'could not close work order') ? true : false;
+	});
 }
 
 //--------------------------------------------------------------------------------------
@@ -211,14 +228,22 @@ function work_order_update_finished_quantity($woid, $quantity, $force_close=0) {
 	$sql = "UPDATE ".TB_PREF."workorders SET units_issued = units_issued + ".db_escape($quantity)."
 		WHERE id = ".db_escape($woid). " AND !closed";
 
-	db_query($sql, "The work order issued quantity couldn't be updated");
+		manufacturing_dimension_guard('workorders', (int)$woid, function() use ($sql) {
+		return db_query($sql, "The work order issued quantity couldn't be updated") ? true : false;
+	});
 
 	$sql = "UPDATE ".TB_PREF."workorders SET closed = ((units_issued >= units_reqd) OR ".db_escape($force_close).")
 		WHERE id = ".db_escape($woid);
 
-	db_query($sql, "The work order couldn't be closed");
+	$affected = 0;
+	manufacturing_dimension_guard('workorders', (int)$woid, function() use ($sql, &$affected) {
+		if (!db_query($sql, "The work order couldn't be closed"))
+			return false;
+		$affected = db_num_affected_rows();
+		return true;
+	});
 
-	return db_num_affected_rows();	// returns 1 if WO has been closed
+	return $affected;	// returns 1 if WO has been closed
 }
 
 function reopen_work_order($woid) {
@@ -231,7 +256,9 @@ function reopen_work_order($woid) {
 
 	$sql = "UPDATE ".TB_PREF."workorders SET closed=0 WHERE id = ".db_escape($woid);
 
-	db_query($sql, "The work order couldn't be reopened");
+		manufacturing_dimension_guard('workorders', (int)$woid, function() use ($sql) {
+		return db_query($sql, "The work order couldn't be reopened") ? true : false;
+	});
 }
 
 //--------------------------------------------------------------------------------------
@@ -271,7 +298,10 @@ function void_work_order($woid) {
 	// FIXME: due to bug in 2.4 db scheme (conflicting wo_ref unique key) we have to fix wo_ref here:
 	$sql = "UPDATE ".TB_PREF."workorders SET closed=1,units_reqd=0,units_issued=0, wo_ref=CONCAT(wo_ref, ' ', '".uniqid()."') WHERE id = "
 		.db_escape($woid);
-	db_query($sql, "The work order couldn't be voided");
+		manufacturing_dimension_guard('workorders', (int)$woid, function() use ($sql) {
+		return db_query($sql, "The work order couldn't be voided") ? true : false;
+	});
+
 
 	commit_transaction();
 }

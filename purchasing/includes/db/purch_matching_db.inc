@@ -9,18 +9,19 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/purch_policy_dimension_db.inc';
 
 /**
- * Quote matching metadata without HTML encoding; retain valid raw JSON exactly.
+ * Normalize matching metadata without HTML encoding; retain valid raw JSON exactly.
  * Structured inputs retain the existing array conversion. Only the established
  * slash-escaped input fallback is normalized; invalid input fails before SQL.
  *
  * @param mixed $custom_data Owner metadata or its serialized representation
- * @return string|false SQL literal, or false for an encoding failure
+ * @return string|null|false Admitted JSON text, null for SQL NULL, or false for an encoding failure
  */
-function sql_purch_matching_retained_data($custom_data)
+function purch_matching_retained_json($custom_data)
 {
-    if ($custom_data === null) return 'NULL';
+    if ($custom_data === null) return null;
     $json = is_string($custom_data) ? $custom_data : json_encode((array)$custom_data);
     if ($json === false || preg_match('//u', $json) !== 1) return false;
     json_decode($json);
@@ -31,7 +32,20 @@ function sql_purch_matching_retained_data($custom_data)
         $json = json_encode($decoded);
         if ($json === false) return false;
     }
-    return "'".db_escape_function($json)."'";
+    return $json;
+}
+
+/**
+ * Quote matching metadata without HTML encoding; see purch_matching_retained_json().
+ *
+ * @param mixed $custom_data Owner metadata or its serialized representation
+ * @return string|false SQL literal, or false for an encoding failure
+ */
+function sql_purch_matching_retained_data($custom_data)
+{
+    $json = purch_matching_retained_json($custom_data);
+    if ($json === false) return false;
+    return $json === null ? 'NULL' : "'".db_escape_function($json)."'";
 }
 
 /**
@@ -130,8 +144,9 @@ function clear_last_purch_match_result()
  */
 function add_matching_config($match_type, $tolerance_type, $tolerance_value, $action_on_exceed, $supplier_id = 0, $custom_data = null, $inactive = 0)
 {
-    $custom_data_sql = sql_purch_matching_retained_data($custom_data);
-    if ($custom_data_sql === false) return false;
+    $json = purch_matching_retained_json($custom_data);
+    if ($json === false) return false;
+    $custom_data_sql = $json === null ? 'NULL' : "'".db_escape_function($json)."'";
 
     $sql = "INSERT INTO " . TB_PREF . "purch_matching_config (
             match_type, supplier_id, tolerance_type, tolerance_value, action_on_exceed, custom_data, inactive
@@ -145,8 +160,10 @@ function add_matching_config($match_type, $tolerance_type, $tolerance_value, $ac
             " . (int)$inactive . "
         )";
 
-    db_query($sql, 'could not add purchase matching configuration');
-    return db_insert_id();
+    // A fresh reference must be open on its axis; the stored bytes must equal the admitted payload.
+    return purch_policy_dimension_write('purch_matching_config', null, array('custom_data' => $json), function() use ($sql) {
+        return db_query($sql, 'could not add purchase matching configuration') ? db_insert_id() : false;
+    });
 }
 
 /**
@@ -165,8 +182,9 @@ function add_matching_config($match_type, $tolerance_type, $tolerance_value, $ac
  */
 function update_matching_config($id, $match_type, $tolerance_type, $tolerance_value, $action_on_exceed, $supplier_id = 0, $custom_data = null, $inactive = 0, $preserve_custom_data = false)
 {
-    $custom_data_sql = $preserve_custom_data ? 'custom_data' : sql_purch_matching_retained_data($custom_data);
-    if ($custom_data_sql === false) return false;
+    $json = $preserve_custom_data ? null : purch_matching_retained_json($custom_data);
+    if ($json === false) return false;
+    $custom_data_sql = $preserve_custom_data ? 'custom_data' : ($json === null ? 'NULL' : "'".db_escape_function($json)."'");
 
     $sql = "UPDATE " . TB_PREF . "purch_matching_config SET
             match_type = " . db_escape($match_type) . ",
@@ -178,8 +196,10 @@ function update_matching_config($id, $match_type, $tolerance_type, $tolerance_va
             inactive = " . (int)$inactive . "
         WHERE id = " . (int)$id;
 
-    db_query($sql, 'could not update purchase matching configuration');
-    return true;
+    // Preserved metadata must remain byte-exact; replacement may not drop retained references.
+    return purch_policy_dimension_write('purch_matching_config', $id, $preserve_custom_data ? array() : array('custom_data' => $json), function() use ($sql) {
+        return db_query($sql, 'could not update purchase matching configuration') ? true : false;
+    });
 }
 
 /**
@@ -309,8 +329,9 @@ function get_matching_tolerance($match_type, $supplier_id = 0)
  */
 function create_matching_exception($exception_type, $trans_type, $trans_no, $details)
 {
-    $custom_data_sql = sql_purch_matching_retained_data(isset($details['custom_data']) ? $details['custom_data'] : null);
-    if ($custom_data_sql === false) return false;
+    $json = purch_matching_retained_json(isset($details['custom_data']) ? $details['custom_data'] : null);
+    if ($json === false) return false;
+    $custom_data_sql = $json === null ? 'NULL' : "'".db_escape_function($json)."'";
 
     $sql = "INSERT INTO " . TB_PREF . "purch_matching_exceptions (
             exception_type, trans_type, trans_no, supplier_id, po_number, grn_batch_id,
@@ -336,8 +357,10 @@ function create_matching_exception($exception_type, $trans_type, $trans_no, $det
             " . $custom_data_sql . "
         )";
 
-    db_query($sql, 'could not create purchase matching exception');
-    $exception_id = db_insert_id();
+    $exception_id = purch_policy_dimension_write('purch_matching_exceptions', null, array('custom_data' => $json), function() use ($sql) {
+        return db_query($sql, 'could not create purchase matching exception') ? db_insert_id() : false;
+    });
+    if (!$exception_id) return false;
 
     if (function_exists('hook_invoke_all'))
         hook_invoke_all('purch_match_exception_created', $exception_id);
@@ -401,7 +424,10 @@ function update_matching_exception_status($id, $status, $resolved_by, $notes)
             resolved_date = NOW()
         WHERE id = " . (int)$id;
 
-    db_query($sql, 'could not update purchase matching exception');
+    // Status maintenance never owns metadata: the locked row's bytes must be unchanged.
+    if (!purch_policy_dimension_write('purch_matching_exceptions', $id, array(), function() use ($sql) {
+        return db_query($sql, 'could not update purchase matching exception') ? true : false;
+    })) return false;
 
     if (function_exists('hook_invoke_all') && $status === 'resolved')
         hook_invoke_all('purch_match_exception_resolved', $id, $status);
@@ -681,11 +707,9 @@ function get_bill_control_policy()
  */
 function add_bill_control_policy($name, $bill_basis, $require_grn_before_invoice, $require_po_for_invoice, $allow_over_invoice, $auto_match_on_grn, $is_default, $inactive, $custom_data = null)
 {
-    $custom_data_sql = sql_purch_matching_retained_data($custom_data);
-    if ($custom_data_sql === false) return false;
-
-    if ((int)$is_default)
-        db_query("UPDATE " . TB_PREF . "purch_bill_control_policy SET is_default = 0", 'could not reset default policy');
+    $json = purch_matching_retained_json($custom_data);
+    if ($json === false) return false;
+    $custom_data_sql = $json === null ? 'NULL' : "'".db_escape_function($json)."'";
 
     $sql = "INSERT INTO " . TB_PREF . "purch_bill_control_policy (
             name, bill_basis, require_grn_before_invoice, require_po_for_invoice,
@@ -702,8 +726,11 @@ function add_bill_control_policy($name, $bill_basis, $require_grn_before_invoice
             " . $custom_data_sql . "
         )";
 
-    db_query($sql, 'could not add bill control policy');
-    return db_insert_id();
+    return purch_policy_dimension_write('purch_bill_control_policy', null, array('custom_data' => $json), function() use ($sql, $is_default) {
+        if ((int)$is_default && !purch_bill_control_policy_reset_default())
+            return false;
+        return db_query($sql, 'could not add bill control policy') ? db_insert_id() : false;
+    });
 }
 
 /**
@@ -724,11 +751,9 @@ function add_bill_control_policy($name, $bill_basis, $require_grn_before_invoice
  */
 function update_bill_control_policy($id, $name, $bill_basis, $require_grn_before_invoice, $require_po_for_invoice, $allow_over_invoice, $auto_match_on_grn, $is_default, $inactive, $custom_data = null, $preserve_custom_data = false)
 {
-    $custom_data_sql = $preserve_custom_data ? 'custom_data' : sql_purch_matching_retained_data($custom_data);
-    if ($custom_data_sql === false) return false;
-
-    if ((int)$is_default)
-        db_query("UPDATE " . TB_PREF . "purch_bill_control_policy SET is_default = 0", 'could not reset default policy');
+    $json = $preserve_custom_data ? null : purch_matching_retained_json($custom_data);
+    if ($json === false) return false;
+    $custom_data_sql = $preserve_custom_data ? 'custom_data' : ($json === null ? 'NULL' : "'".db_escape_function($json)."'");
 
     $sql = "UPDATE " . TB_PREF . "purch_bill_control_policy SET
             name = " . db_escape($name) . ",
@@ -742,8 +767,11 @@ function update_bill_control_policy($id, $name, $bill_basis, $require_grn_before
             custom_data = " . $custom_data_sql . "
         WHERE id = " . (int)$id;
 
-    db_query($sql, 'could not update bill control policy');
-    return true;
+    return purch_policy_dimension_write('purch_bill_control_policy', $id, $preserve_custom_data ? array() : array('custom_data' => $json), function() use ($sql, $is_default) {
+        if ((int)$is_default && !purch_bill_control_policy_reset_default())
+            return false;
+        return db_query($sql, 'could not update bill control policy') ? true : false;
+    });
 }
 
 /**
