@@ -33,6 +33,11 @@ include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/sales/includes/db/sales_quotation_template_db.inc');
 
 simple_page_mode(true);
+// Line buttons (DeleteLine<id>/EditLine<id>) match the generic Delete/Edit prefixes; keep the selected template and leave them to the line handlers.
+if (find_submit('DeleteLine') != -1 || find_submit('EditLine') != -1) {
+	$Mode = '';
+	$selected_id = get_post('selected_id', -1);
+}
 
 // ============================================================================
 // VALIDATION
