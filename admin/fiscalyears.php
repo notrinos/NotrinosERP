@@ -107,8 +107,8 @@ function handle_delete() {
 
 	if (check_can_delete($selected_id)) {
 	//only delete if used in neither customer or supplier, comp prefs, bank trans accounts
-		delete_this_fiscalyear($selected_id);
-		display_notification(_('Selected fiscal year has been deleted'));
+		if (delete_this_fiscalyear($selected_id))
+			display_notification(_('Selected fiscal year has been deleted'));
 	}
 	$Mode = 'RESET';
 }

@@ -1102,6 +1102,20 @@ function generate_attachment_unique_name() {
  * @return int|false  The new attachment ID, or false on failure.
  */
 function create_attachment($type_no, $trans_no, $description, $upload_info, $tran_date = '', $custom_data = array()) {
+    // B06 shared-record fence: no coordinate key in shared JSON, and a Dimension-bound
+    // attachment is serialized with the Dimension master lock until the insert commits.
+    require_once dirname(__DIR__).'/dimensions/includes/dimension_shared_record_authority.inc';
+    if (!dimension_shared_record_custom_data_admit($custom_data)) {
+        return false;
+    }
+    $dimension_bound = defined('ST_DIMENSION') && (string)$type_no === (string)ST_DIMENSION;
+    if ($dimension_bound && !begin_transaction()) {
+        return false;
+    }
+    if ($dimension_bound && !dimension_shared_record_identity_admit($type_no, $trans_no)) {
+        cancel_transaction();
+        return false;
+    }
     if ($tran_date === '') {
         $tran_date = date2sql(Today());
     }
@@ -1117,6 +1131,7 @@ function create_attachment($type_no, $trans_no, $description, $upload_info, $tra
     // Stage the uploaded file.
     $dest_path = $dir . '/' . $unique_name;
     if (!move_uploaded_file($tmp_name, $dest_path)) {
+        if ($dimension_bound) cancel_transaction();
         return false;
     }
 
@@ -1124,6 +1139,7 @@ function create_attachment($type_no, $trans_no, $description, $upload_info, $tra
     clearstatcache(true, $dest_path);
     if (!file_exists($dest_path) || filesize($dest_path) !== $filesize) {
         @unlink($dest_path);
+        if ($dimension_bound) cancel_transaction();
         return false;
     }
 
@@ -1150,8 +1166,12 @@ function create_attachment($type_no, $trans_no, $description, $upload_info, $tra
         . attachment_db_json($custom_json) . ")";
 
     db_query($sql, 'Attachment could not be inserted');
+    $attachment_id = db_insert_id();
+    if ($dimension_bound && !commit_transaction()) {
+        return false;
+    }
 
-    return db_insert_id();
+    return $attachment_id;
 }
 
 /**
@@ -1179,6 +1199,11 @@ function create_private_hrm_attachment($trans_no, $description, $validated, $cus
         if ($stored !== false && isset($stored['path'])) {
             @unlink($stored['path']);
         }
+        return false;
+    }
+    require_once dirname(__DIR__).'/dimensions/includes/dimension_shared_record_authority.inc';
+    if (!dimension_shared_record_custom_data_admit($custom_data)) {
+        if (isset($stored['path'])) @unlink($stored['path']);
         return false;
     }
     $metadata = array_merge($custom_data, array(
@@ -1290,6 +1315,11 @@ function update_attachment_metadata($attachment_id, $description, $tran_date = '
     }
 
     if ($custom_data !== null && is_array($custom_data)) {
+        // B06 shared-record fence: shared JSON never gains a coordinate key.
+        require_once dirname(__DIR__).'/dimensions/includes/dimension_shared_record_authority.inc';
+        if (!dimension_shared_record_custom_data_admit($custom_data)) {
+            return false;
+        }
         $custom_json = json_encode($custom_data, JSON_UNESCAPED_UNICODE);
         if ($custom_json === false) {
             $custom_json = '{}';
@@ -1316,6 +1346,12 @@ function delete_attachment_with_file($attachment_id) {
     if (!$existing) {
         // Already gone.
         return true;
+    }
+
+    // B07: retained Dimension evidence is never deleted; decide before the file is removed.
+    require_once dirname(__DIR__).'/dimensions/includes/dimension_retention_authority.inc';
+    if (!dimension_retention_attachment_delete_admit($attachment_id)) {
+        return false;
     }
 
     // Delete the physical file first.

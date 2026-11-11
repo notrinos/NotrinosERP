@@ -435,6 +435,7 @@ include_once($path_to_root.'/includes/access_levels.inc');
 include_once($path_to_root.'/version.php');
 include_once($path_to_root.'/includes/main.inc');
 include_once($path_to_root.'/includes/session_registry.inc');
+include_once($path_to_root.'/dimensions/includes/dimension_session_draft_authority.inc');
 include_once($path_to_root.'/includes/app_entries.inc');
 include_once($path_to_root.'/includes/approval/approval_workflow.inc');
 
@@ -619,6 +620,11 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 		$_SESSION['App'] = new NotrinosErp();
 		$_SESSION['App']->init();
 	}
+
+	// DIM-LFC-001 B08: register this session's live drafts (Dimension references) before the session is written.
+	// Registered after end_flush, so an aborted transaction is rolled back first. Failure fails closed.
+	if ($_SESSION['wa_current_user']->logged_in() && !defined('FA_LOGOUT_PHP_FILE'))
+		register_shutdown_function('dimension_session_draft_shutdown');
 
 	// Register core notification providers for the logged-in user
 	if ($_SESSION['wa_current_user']->logged_in()) {

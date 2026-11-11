@@ -106,18 +106,31 @@ function delete_tag($id) {
 }
 
 function add_tag_associations($recordid, $tagids) {
+	require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_shared_record_authority.inc';
 	foreach($tagids as $tagid) {
 		if (!$tagid)
 			continue;
+		// B06 shared-record fence: a Dimension-typed tag association is serialized with the
+		// Dimension master lock (ascending writer order is kept by the caller's transaction).
+		$type_row = db_fetch_row(db_query("SELECT type FROM ".TB_PREF."tags WHERE id=".db_escape($tagid), 'could not get tag type'));
 		$sql = "INSERT INTO ".TB_PREF."tag_associations (record_id, tag_id) VALUES (".db_escape($recordid).", ".db_escape($tagid).")";
 
-		db_query($sql, 'could not add tag association');
+		if (dimension_shared_record_bound_write($type_row ? $type_row[0] : null, $recordid, function() use ($sql) {
+			return db_query($sql, 'could not add tag association');
+		}, true) === false)
+			return false;
 	}
 }
 
 function update_tag_associations($type, $recordid, $tagids) {
+	// One atomic replace: a refused B06 fence must not leave the old associations deleted.
+	begin_transaction();
 	delete_tag_associations($type, $recordid, false);
-	add_tag_associations($recordid, $tagids);
+	if (add_tag_associations($recordid, $tagids) === false) {
+		cancel_transaction();
+		return false;
+	}
+	commit_transaction();
 }
 
 /* 	

@@ -5187,6 +5187,41 @@ CREATE TABLE `0_user_sessions` (
 -- Data of table `0_user_sessions` --
 
 
+-- Structure of table `0_session_draft_seals` --
+
+DROP TABLE IF EXISTS `0_session_draft_seals`;
+
+CREATE TABLE `0_session_draft_seals` (
+	`session_id` bigint(20) unsigned NOT NULL,
+	`company_id` int(11) NOT NULL,
+	`user_id` smallint(6) NOT NULL,
+	`state` varchar(10) NOT NULL,
+	`fingerprint` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
+	`updated_at` datetime NOT NULL,
+	PRIMARY KEY (`session_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_session_draft_seals` --
+
+
+-- Structure of table `0_session_draft_references` --
+
+DROP TABLE IF EXISTS `0_session_draft_references`;
+
+CREATE TABLE `0_session_draft_references` (
+	`id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`session_id` bigint(20) unsigned NOT NULL,
+	`draft_key` varchar(40) NOT NULL,
+	`slot` varchar(40) NOT NULL,
+	`dimension_id` int(11) NOT NULL,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `session_reference` (`session_id`,`draft_key`,`slot`,`dimension_id`),
+	KEY `dimension_session` (`dimension_id`,`session_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_session_draft_references` --
+
+
 -- Structure of table `0_user_session_assurance_events` --
 
 DROP TABLE IF EXISTS `0_user_session_assurance_events`;

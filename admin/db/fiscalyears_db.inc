@@ -11,6 +11,7 @@
 ***********************************************************************/
 require_once($path_to_root.'/includes/ui/items_cart.inc');
 require_once($path_to_root.'/admin/db/fiscal_years_entity.inc');
+require_once($path_to_root.'/dimensions/includes/dimension_retention_authority.inc');
 
 /**
  * Validate that a stored unique_name resolves safely within the attachments directory.
@@ -170,6 +171,9 @@ function open_year($year) {
 
 //---------------------------------------------------------------------------------------------
 function delete_attachments_and_comments($type_no, $trans_no) {
+	// B07: a Dimension's own identity-bound evidence is never removed by a purge.
+	if ((int)$type_no === (int)ST_DIMENSION)
+		return;
 	
 	$sql = "SELECT * FROM ".TB_PREF."attachments WHERE type_no = $type_no AND trans_no = $trans_no";
 	$result = db_query($sql, 'Could not retrieve attachments');
@@ -194,14 +198,34 @@ function delete_attachments_and_comments($type_no, $trans_no) {
 }	
 
 //---------------------------------------------------------------------------------------------
+/**
+ * Purge a closed fiscal year into opening balances.
+ *
+ * B07: the purge destroys and rewrites history, so it is admitted only when no
+ * destroyed row retains a Dimension reference (native scalar, retained
+ * custom_data, or evidence that cannot be verified). The check runs twice: early
+ * and lock-free, so a refused purge makes no backup, then again under shared
+ * locks inside the purge transaction, before the first change. A Dimension's own
+ * evidence (audit rows, comments, references) is never purged.
+ *
+ * @param int $selected_id Fiscal year identity
+ * @return bool False when the purge was refused; true when it ran
+ */
 function delete_this_fiscalyear($selected_id) {
 	global $db_connections;
-	
+
+	$early = fiscal_year_entity::find($selected_id);
+	if (!$early || !dimension_retention_purge_admit($early['end'], false))
+		return false;
 	db_backup($db_connections[user_company()], 'Security backup before Fiscal Year Removal');
 	begin_transaction();
 	$ref = _('Open Balance');
 	$myrow = fiscal_year_entity::find($selected_id);
 	$to = $myrow['end'];
+	if (!dimension_retention_purge_admit($to, true)) {
+		cancel_transaction();
+		return false;
+	}
 	$sql = "SELECT order_no, trans_type FROM ".TB_PREF."sales_orders WHERE ord_date <= '$to' AND type <> 1"; // don't take the templates
 	$result = db_query($sql, 'Could not retrieve sales orders');
 	while ($row = db_fetch($result)) {
@@ -355,10 +379,10 @@ function delete_this_fiscalyear($selected_id) {
 		db_query($sql, 'Could not insert bank trans');
 	}	
 	
-	$sql = "DELETE FROM ".TB_PREF."audit_trail WHERE gl_date <= '$to'";
+	$sql = "DELETE FROM ".TB_PREF."audit_trail WHERE gl_date <= '$to' AND type <> ".ST_DIMENSION;
 	db_query($sql, 'Could not delete audit trail');
-	
-	$sql = "SELECT type, id FROM ".TB_PREF."comments WHERE type != ".ST_SALESQUOTE." AND type != ".ST_SALESORDER." AND type != ".ST_PURCHORDER;
+
+	$sql = "SELECT type, id FROM ".TB_PREF."comments WHERE type != ".ST_SALESQUOTE." AND type != ".ST_SALESORDER." AND type != ".ST_PURCHORDER." AND type != ".ST_DIMENSION;
 	$result = db_query($sql, 'Could not retrieve comments');
 	while ($row = db_fetch($result)) {
 		$sql = "SELECT count(*) FROM ".TB_PREF."gl_trans WHERE type = {$row['type']} AND type_no = {$row['id']}";
@@ -369,7 +393,7 @@ function delete_this_fiscalyear($selected_id) {
 			db_query($sql, 'Could not delete comments');
 		}
 	}	
-	$sql = "SELECT type, id FROM ".TB_PREF."refs WHERE type != ".ST_SALESQUOTE." AND type != ".ST_SALESORDER." AND type != ".ST_PURCHORDER;
+	$sql = "SELECT type, id FROM ".TB_PREF."refs WHERE type != ".ST_SALESQUOTE." AND type != ".ST_SALESORDER." AND type != ".ST_PURCHORDER." AND type != ".ST_DIMENSION;
 	$result = db_query($sql, 'Could not retrieve refs');
 	while ($row = db_fetch($result)) {
 		$sql = "SELECT count(*) FROM ".TB_PREF."gl_trans WHERE type = {$row['type']} AND type_no = {$row['id']}";
@@ -382,7 +406,8 @@ function delete_this_fiscalyear($selected_id) {
 	}	
 		
 	fiscal_year_entity::remove($selected_id);
-	commit_transaction();	
+	commit_transaction();
+	return true;
 }
 
 

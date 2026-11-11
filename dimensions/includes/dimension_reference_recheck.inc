@@ -4,8 +4,21 @@
  * reference owner. This is the "unused" authority the serialized protocol
  * needs; it is still NOT a deletion certificate. Protected (B04/B05), shared
  * (B06), approval (B03), session (B08) and extension (B09) owners keep their
- * own authority and always report unknown here, so the aggregate state can
- * only be used or unknown until those owners deliver theirs (C01).
+ * own authority; extension (B09) owners always report unknown here, so the
+ * aggregate state can only be used or unknown until that owner delivers its own (C01).
+ *
+ * B08 replaces the deferred session-draft owner with the durable session draft
+ * registration in dimensions/includes/dimension_session_draft_authority.inc: every
+ * live registered session needs a complete seal of this company, the live carts of
+ * the actor's own request are classified from memory, and a live reference reports
+ * used. A missing seal, unknown seal, company mismatch or unreadable table is unknown.
+ *
+ * B06 assigns the shared stores (attachments, audit trail, comments, references,
+ * reference lines, tags and tag associations) to their domain authorities in
+ * dimensions/includes/dimension_shared_record_authority.inc: ordinary
+ * transaction/master families decode through the canonical projection, protected
+ * HRM and payroll families deny a coordinate-like key, and every unassigned,
+ * ambiguous or dangling key stays unknown.
  *
  * B04 adds the six HRM scalar owners (attendance, overtime, departments,
  * employees, organization units, assignments) with the same locked current
@@ -26,6 +39,8 @@ require_once __DIR__.'/dimension_lifecycle_db.inc';
 require_once __DIR__.'/dimension_reference_registry.inc';
 require_once __DIR__.'/dimension_reference_writer_fence.inc';
 require_once __DIR__.'/dimension_master_payload_guard.inc';
+require_once __DIR__.'/dimension_shared_record_authority.inc';
+require_once __DIR__.'/dimension_session_draft_authority.inc';
 
 /**
  * Return the ordinary owners the B02 matrix registers for reconciliation:
@@ -78,8 +93,7 @@ function dimension_reference_recheck_scalar_only()
 function dimension_reference_recheck_deferred_owners()
 {
     return array(
-        'audit_trail'=>'B06', 'reflines'=>'B06', 'tags'=>'B06', 'attachments'=>'B06',
-        'session_drafts'=>'B08', 'extensions'=>'B09');
+        'extensions'=>'B09');
 }
 
 /**
@@ -174,11 +188,13 @@ function dimension_reference_locked_recheck($id)
     $result = array('state'=>'unknown', 'owners'=>array(), 'deletion_authorized'=>false);
     foreach (array_keys($owners) as $name) $result['owners'][$name] = 'unknown';
     foreach (dimension_reference_recheck_deferred_owners() as $name=>$requirement) $result['owners'][$name] = 'unknown';
+    $result['owners']['session_drafts'] = 'unknown';
     $hrm_retained = array('hrm_lifecycle_hire_commands', 'hrm_lifecycle_hire_payloads', 'hrm_worker_profile_versions');
     $result['owners']['hrm_lifecycle_hire_payloads'] = 'unknown';
     $result['owners']['hrm_worker_profile_versions'] = 'unknown';
     require_once dirname(dirname(__DIR__)).'/hrm/includes/db/pay_dimension_reference_authority_db.inc';
     foreach (pay_dimension_reference_owner_names() as $name) $result['owners'][$name] = 'unknown';
+    foreach (dimension_shared_record_owner_names() as $name) $result['owners'][$name] = 'unknown';
     if (!dimension_lifecycle_authorized() || !dimension_lifecycle_valid_id($id) || empty($GLOBALS['transaction_level'])) return $result;
     $id = (int)$id;
     try {
@@ -186,7 +202,8 @@ function dimension_reference_locked_recheck($id)
         $level = $level ? db_fetch_row($level) : false;
         if (!$level || !in_array(strtoupper($level[0]), array('REPEATABLE-READ', 'SERIALIZABLE'), true)) return $result;
         $scalar_only = dimension_reference_recheck_scalar_only();
-        $columns = dimension_reference_recheck_columns(array_merge(array_keys($owners), $hrm_retained, pay_dimension_reference_tables()));
+        $columns = dimension_reference_recheck_columns(array_merge(array_keys($owners), $hrm_retained, pay_dimension_reference_tables(),
+            dimension_shared_record_tables()));
         if ($columns === false) return $result;
         foreach ($owners as $name=>$scalar) {
             $state = dimension_reference_recheck_owner($name, $columns[$name], $scalar, !in_array($name, $scalar_only, true), $id);
@@ -209,6 +226,16 @@ function dimension_reference_locked_recheck($id)
         }
         // B05: payroll-owned minimized decoder for PAY-GL, payslip, reversal and PAY-GLB evidence.
         foreach (pay_dimension_reference_observe($id, $columns) as $name=>$state) {
+            $result['owners'][$name] = $state;
+            if ($state === 'unknown' && db_error_no()) return $result;
+        }
+        // B06: shared attachments, audit, comments, references, reference lines and tags.
+        foreach (dimension_shared_record_observe($id, $columns) as $name=>$state) {
+            $result['owners'][$name] = $state;
+            if ($state === 'unknown' && db_error_no()) return $result;
+        }
+        // B08: durable session draft registration of every live session, and the actor's own live carts.
+        foreach (dimension_session_draft_observe($id) as $name=>$state) {
             $result['owners'][$name] = $state;
             if ($state === 'unknown' && db_error_no()) return $result;
         }

@@ -36,7 +36,25 @@ function get_all_overtime($all=false) {
 	return db_query($sql, 'could not get overtime data');
 }
 
+/**
+ * Delete one overtime type.
+ *
+ * B07: the legacy Dimension coordinate columns of the row are retained
+ * references (no HRM source writes them), so a row that still carries one is
+ * never deleted. The check and the delete share one transaction and a locking read.
+ *
+ * @param int|string $overtime_id Overtime type identity
+ * @return bool True when the row was deleted or absent; false when it is retained evidence
+ */
 function delete_overtime($overtime_id) {
+	require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_retention_authority.inc';
+	begin_transaction();
+	if (!dimension_retention_row_delete_admit('overtime', 't.overtime_id = '.db_escape($overtime_id))) {
+		cancel_transaction();
+		return false;
+	}
 	$sql = "DELETE FROM ".TB_PREF."overtime WHERE overtime_id = ".db_escape($overtime_id);
 	db_query($sql, 'Could not delete overtime record');
+	commit_transaction();
+	return true;
 }

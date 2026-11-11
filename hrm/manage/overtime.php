@@ -54,8 +54,10 @@ if ($Mode == 'Delete') {
 	if(key_in_foreign_table($selected_id, 'attendance', 'overtime_id'))
 		display_error(_('The selected overtime cannot be deleted.'));
 	else {
-		delete_overtime($selected_id);
-		display_notification(_('Selected overtime has been deleted'));
+		if (delete_overtime($selected_id))
+			display_notification(_('Selected overtime has been deleted'));
+		else
+			display_error(_('The selected overtime cannot be deleted because it retains a Dimension reference.'));
 	}
 	$Mode = 'RESET';
 }

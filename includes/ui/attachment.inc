@@ -254,7 +254,12 @@ class attachments extends simple_crud {
 			. "`description` = " . db_escape($_POST['description']) . ","
 			. "tran_date = " . db_escape(date2sql($_POST['tran_date']));
 		$sql .=  " WHERE id = " . db_escape($this->selected_id);
-		if(db_query($sql, "Could not Update Attachment $this->selected_id")) {
+		// B06 shared-record fence: a Dimension-bound attachment is serialized with the master lock.
+		require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_shared_record_authority.inc';
+		$selected_id = $this->selected_id;
+		if(dimension_shared_record_bound_write($dat['type_no'], $this->entity, function() use ($sql, $selected_id) {
+			return db_query($sql, "Could not Update Attachment $selected_id");
+		})) {
 			display_notification(_("The Selected Attachment $this->selected_id Updated Successfully"));
 			return true;
 		}
@@ -284,6 +289,12 @@ class attachments extends simple_crud {
 	//	Delete all attachments for Customer / Supplier in current class/entity
 	//
 	function db_delete() {
+		// B07: retained Dimension evidence is never deleted; decide before the file is removed.
+		require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_retention_authority.inc';
+		if (!dimension_retention_attachment_delete_admit($this->selected_id)) {
+			display_error(_('This attachment cannot be deleted because it retains a Dimension reference or its metadata cannot be verified.'));
+			return false;
+		}
 		$sql = "SELECT * FROM ".TB_PREF."attachments WHERE id = ".db_escape($this->selected_id);
 		$row = db_fetch(db_query($sql), "Cannot retrieve attachment $this->selected_id");
 

@@ -214,6 +214,13 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 if ($Mode == 'Delete') {
 	$row = get_attachment($selected_id);
 
+	// B07: an attachment that still retains a Dimension reference is retained evidence; check before its file is touched.
+	require_once($path_to_root.'/dimensions/includes/dimension_retention_authority.inc');
+	if (!dimension_retention_attachment_delete_admit($selected_id)) {
+		display_error(_('This attachment cannot be deleted because it retains a Dimension reference or its metadata cannot be verified.'));
+		reset_form();
+		$Mode = 'RESET';
+	} else {
 	// Block generic deletion of employee document attachments.
 	if (attachment_is_hr_employee_document($row)) {
 		display_error(_('Employee documents must be managed through the HR module.'));
@@ -227,6 +234,7 @@ if ($Mode == 'Delete') {
 	delete_attachment($selected_id);	
 	display_notification(_('Attachment has been deleted.'));
 	reset_form();
+	}
 }
 
 if ($Mode == 'RESET')

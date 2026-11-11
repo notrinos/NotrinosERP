@@ -162,8 +162,13 @@ function session_registry_revoke_session($session_id, $actor_id, $reason)
 			revocation_reason=COALESCE(revocation_reason, ".db_escape($reason).")
 		WHERE id=".(int)$session_id;
 	$result = db_query($sql, 'Could not revoke authenticated session');
-	if ($result)
+	if ($result) {
+		// B08: a revoked session can no longer open its carts; drop its draft registration (best effort,
+		// dead sessions are ignored by the draft authority regardless).
+		if (function_exists('dimension_session_draft_release'))
+			dimension_session_draft_release($session_id);
 		session_log_security_event('session_revoked_'.$reason);
+	}
 	return (bool)$result;
 }
 

@@ -146,6 +146,8 @@ function write_attendance($employee_id, $time_id, $hours_no, $rate, $date, $leav
 	$sql_date = date2sql($date);
 
 	if (!empty($leave_id)) {
+		// B07: the leave entry replaces the attendance row; a row that retains a Dimension coordinate refuses before anything is written.
+		hrm_attendance_delete_guarded($employee_id, $sql_date, false);
 		$approval_user = isset($_SESSION['wa_current_user']) ? $_SESSION['wa_current_user']->loginname : '';
 		$approval_date = date2sql(Today());
 
@@ -181,10 +183,6 @@ function write_attendance($employee_id, $time_id, $hours_no, $rate, $date, $leav
 		}
 		db_query($sql, 'Could not write leave data');
 
-		$sql = "DELETE FROM ".TB_PREF."attendance
-			WHERE employee_id = ".db_escape($employee_id)."
-			AND date = '".$sql_date."'";
-		db_query($sql, 'Could not clear attendance data');
 		return;
 	}
 
@@ -494,7 +492,47 @@ function hrm_delete_single_day_leave_records($employee_id, $date_sql) {
  * @return void
  */
 function delete_attendance_record($employee_id, $date_sql) {
-	hrm_delete_single_day_leave_records($employee_id, $date_sql);
+	hrm_attendance_delete_guarded($employee_id, $date_sql, true);
+}
+
+/**
+ * Delete the attendance row of one employee/day, optionally with the exact single-day leave records.
+ *
+ * B07: the legacy Dimension coordinate columns of an attendance row are retained
+ * references (no HRM source writes them), so a row that still carries one is never
+ * deleted. The check is a locking read inside the caller's transaction (every
+ * lifecycle consumer holds one), so the row cannot gain a reference before the
+ * delete. A refusal, an unreadable check or a schema without the coordinate columns
+ * throws before anything is deleted, so the consumers roll back and deny.
+ *
+ * @param string $employee_id
+ * @param string $date_sql Date in Y-m-d format.
+ * @param bool $with_leave Also delete the exact single-day leave records.
+ * @return void
+ * @throws RuntimeException When the row retains a Dimension reference or cannot be verified.
+ */
+function hrm_attendance_delete_guarded($employee_id, $date_sql, $with_leave) {
+	// Only the coordinate columns that physically exist can retain a reference.
+	$columns = db_query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()
+		AND TABLE_NAME = '".TB_PREF."attendance' AND COLUMN_NAME IN ('dimension_id', 'dimension2_id')",
+		'could not read attendance Dimension columns');
+	if (!$columns)
+		throw new RuntimeException('Attendance row retains a Dimension reference or cannot be verified.');
+	$conditions = array();
+	while ($column = db_fetch($columns))
+		$conditions[] = 'IFNULL(`'.$column['COLUMN_NAME'].'`, 0) <> 0';
+	if (count($conditions)) {
+		$sql = "SELECT 1 FROM ".TB_PREF."attendance
+			WHERE employee_id = ".db_escape($employee_id)."
+			AND `date` = ".db_escape($date_sql)."
+			AND (".implode(' OR ', $conditions).")
+			LIMIT 1 FOR UPDATE";
+		$retained = db_query($sql, 'could not check attendance Dimension references');
+		if (!$retained || db_num_rows($retained) !== 0)
+			throw new RuntimeException('Attendance row retains a Dimension reference or cannot be verified.');
+	}
+	if ($with_leave)
+		hrm_delete_single_day_leave_records($employee_id, $date_sql);
 
 	$sql = "DELETE FROM ".TB_PREF."attendance
 		WHERE employee_id = ".db_escape($employee_id)."
