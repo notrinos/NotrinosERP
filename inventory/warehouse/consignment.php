@@ -316,8 +316,17 @@ if (isset($_POST['SAVE_VMI'])) {
 // HANDLE ACTIONS — DELETE VMI LEVEL
 // =====================================================================
 
+// VMI level deletion is state-changing and must never execute from a
+// bookmarked or crafted GET request. Keep the old parameter as an explicit
+// denial; deletion runs only from the CSRF-checked form submission below.
 if (isset($_GET['delete_vmi'])) {
-	$vmi_id = (int)$_GET['delete_vmi'];
+	display_error(_('VMI level removal requires a confirmed form submission.'));
+	$current_tab = 'vmi';
+}
+
+$delete_vmi_id = find_submit('DELETE_VMI');
+if ($delete_vmi_id != -1) {
+	$vmi_id = (int)$delete_vmi_id;
 	if ($vmi_id <= 0) {
 		display_error(_('Invalid VMI level selected for deletion.'));
 	} else {
@@ -798,6 +807,8 @@ if ($current_tab == 'vmi') {
 
 	$vmi_levels = get_vmi_levels();
 
+	// Row delete buttons post through this form so the CSRF token is checked.
+	start_form();
 	start_table(TABLESTYLE, "width='90%'");
 	$th = array(_('Item'), _('Supplier'), _('Min Level'), _('Max Level'),
 		_('Reorder Qty'), _('Location'), _('Current On Hand'), _('Status'), '');
@@ -829,16 +840,17 @@ if ($current_tab == 'vmi') {
 		}
 		label_cell($badge);
 
-		// Delete link
-		echo '<td><a href="?tab=vmi&delete_vmi=' . $row['id']
-			. '" onclick="return confirm(\'' . _('Delete this VMI level?') . '\');">'
-			. _('Delete') . '</a></td>';
+		// Delete button (POST + CSRF token via the enclosing form)
+		echo '<td><button type="submit" class="editbutton" name="DELETE_VMI' . (int)$row['id'] . '" value="1"'
+			. ' onclick="return confirm(\'' . htmlspecialchars(_('Delete this VMI level?'), ENT_QUOTES, 'UTF-8') . '\');">'
+			. htmlspecialchars(_('Delete'), ENT_QUOTES, 'UTF-8') . '</button></td>';
 		end_row();
 	}
 	if (!$has_vmi) {
 		label_row('', _('No VMI levels configured yet.'), 'colspan="9" align="center"');
 	}
 	end_table(1);
+	end_form();
 
 	// Add VMI Level form
 	echo '<h4>' . _('Add / Update VMI Level') . '</h4>';
