@@ -496,6 +496,9 @@ display_heading($selected_id == -1 ? _('New Package') : _('Edit Package'));
 
 start_table(TABLESTYLE2);
 
+if ($selected_id != -1)
+	hidden('selected_id', $selected_id);
+
 if ($Mode == 'Edit') {
 	$pkg = get_package($selected_id);
 	if ($pkg) {

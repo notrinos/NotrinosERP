@@ -435,6 +435,9 @@ display_heading2($selected_id == -1 ? _('New Picking Wave') : _('Edit Picking Wa
 
 start_table(TABLESTYLE2);
 
+if ($selected_id != -1)
+	hidden('selected_id', $selected_id);
+
 text_row(_('Wave Name:'), 'wave_name', null, 50, 60);
 
 // Warehouse selector (WMS-enabled only)

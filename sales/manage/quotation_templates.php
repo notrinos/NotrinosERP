@@ -127,7 +127,7 @@ elseif ($Mode == 'UPDATE_ITEM' && can_process_template()) {
 	else
 		display_error(_('The quotation template could not be updated.'));
 }
-elseif ($Mode == 'DELETE_ITEM') {
+elseif ($Mode == 'DELETE_ITEM' || $Mode == 'Delete') {
 	// Only delete if no orders reference this template
 	$in_use = db_fetch(db_query(
 		"SELECT COUNT(*) AS cnt FROM " . TB_PREF . "sales_orders WHERE template_id = " . db_escape((int)$selected_id),
