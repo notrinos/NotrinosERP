@@ -29,6 +29,7 @@ include_once($path_to_root . '/hrm/includes/db/employee_person_canonical_link_db
 include_once($path_to_root . '/hrm/includes/db/employee_employment_rehire_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_projection_command_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_projection_control_db.inc');
+include_once($path_to_root . '/hrm/includes/db/hrm_dimension_reference_writer_db.inc');
 
 /**
  * Enhanced Employee CRUD
@@ -147,6 +148,12 @@ function add_employee($data, $hire_command_id = 0) {
 
 	begin_transaction();
 	if (!hrm_employee_projection_policy()) { cancel_transaction(); return false; }
+	// B04: a new Hire reference is locked and admitted (correct axis, open) before the row exists.
+	if (!hrm_dimension_writer_admit(array(
+		array('axis' => 1, 'old' => 0, 'new' => isset($data['cost_center_id']) ? $data['cost_center_id'] : 0),
+		array('axis' => 2, 'old' => 0, 'new' => isset($data['dimension2_id']) ? $data['dimension2_id'] : 0)))) {
+		cancel_transaction(); return false;
+	}
 	// Reserve the immutable legacy numeric identity inside the uncommitted Hire.
 	// It becomes visible only after owners, projection and command audit succeed.
 	$sql = "INSERT INTO ".TB_PREF."employees ($cols) VALUES ($vals)";

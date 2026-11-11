@@ -14,6 +14,7 @@ if (!function_exists('append_domain_audit_event'))
 	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
 include_once($path_to_root . '/hrm/includes/db/legal_entity_db.inc');
 include_once($path_to_root . '/hrm/includes/db/organization_unit_db.inc');
+include_once($path_to_root . '/hrm/includes/db/hrm_dimension_reference_writer_db.inc');
 
 /**
  * Reuse the existing Department maintenance authority inside the server writer.
@@ -192,7 +193,10 @@ class departments_entity extends Entity {
 		begin_transaction();
 		$e = new static();
 		$existing = static::lock_hierarchy(true);
-		$result = is_array($existing) && $e->insert($data);
+		// B04: the Department Cost Center is locked and admitted before the insert.
+		$result = is_array($existing) && hrm_dimension_writer_admit(array(
+			array('axis' => 1, 'old' => 0, 'new' => isset($data['cost_center_id']) ? $data['cost_center_id'] : 0)))
+			&& $e->insert($data);
 		$department_id = $result ? (int)db_insert_id() : 0;
 		if ($result)
 			$result = is_array(static::lock_hierarchy(false))
@@ -224,7 +228,11 @@ class departments_entity extends Entity {
 		$rows = static::lock_hierarchy(true);
 		$before = is_array($rows) && isset($rows[(int)$key]) ? $rows[(int)$key] : false;
 		$changed = $before ? static::projection_changed_fields($before, $data) : array();
-		$result = $before !== false && $e->update($key, $data);
+		// B04: lock the former and new Cost Center in ascending order; a changed one must be open.
+		$result = $before !== false && hrm_dimension_writer_admit(array(
+			array('axis' => 1, 'old' => $before['cost_center_id'],
+				'new' => array_key_exists('cost_center_id', $data) ? $data['cost_center_id'] : $before['cost_center_id'])))
+			&& $e->update($key, $data);
 		if ($result)
 			$result = is_array(static::lock_hierarchy(false));
 		if ($result && !empty($changed))

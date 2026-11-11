@@ -52,7 +52,7 @@ function dimension_financial_reference_row($owner,$key)
  * Admission and final reread retain both scalar axes and raw custom_data.
  * The callback returns its inserted identity or a true update/remove outcome.
  */
-function dimension_financial_reference_write($owner,$key,$next,$persist,$remove=false)
+function dimension_financial_reference_write($owner,$key,$next,$persist,$remove=false,$historical=array())
 {
     $context=dimension_financial_reference_context();
     if (!$context || !is_array($next) || !is_callable($persist)
@@ -78,7 +78,7 @@ function dimension_financial_reference_write($owner,$key,$next,$persist,$remove=
                 }
                 if ($key===null && !in_array($owner,array('debtor_trans','supp_trans'),true) && !db_preserve_insert_id($result)) return false;
                 return $result;
-            },true,$remove);
+            },true,$remove,$owner==='gl_trans' && $key===null ? $historical : array());
         if (!$result || dimension_financial_reference_context()!==$context || !commit_transaction()) dimension_financial_reference_failure();
         if ($key===null && !in_array($owner,array('debtor_trans','supp_trans'),true) && !db_preserve_insert_id($result)) dimension_financial_reference_failure();
         return $result;

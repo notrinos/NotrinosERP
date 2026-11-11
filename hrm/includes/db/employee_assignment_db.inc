@@ -1,5 +1,6 @@
 <?php
 include_once(dirname(__FILE__).'/lifecycle_rehire_evidence_db.inc');
+include_once(dirname(__FILE__).'/hrm_dimension_reference_writer_db.inc');
 /**********************************************************************
     Copyright (C) NotrinosERP.
     Released under the terms of the GNU General Public License, GPL,
@@ -110,6 +111,24 @@ function hrm_assignment_nullable_legacy_int($value, $allow_legacy_irregular = fa
     if ($value === null || $value === '')
         return null;
     return hrm_assignment_required_legacy_int($value, $allow_legacy_irregular);
+}
+
+/**
+ * B04: lock the Dimension masters behind an Assignment projection write. The
+ * projection is a copy of the locked Employee compatibility row, so only the
+ * lock is taken (legacy closed, orphan and irregular values stay maintainable).
+ *
+ * @param array|null $current    Existing Assignment row being changed, or null for a first insert
+ * @param array      $projection Projection about to be stored
+ * @return bool
+ */
+function hrm_assignment_dimension_admit($current, $projection)
+{
+    return hrm_dimension_writer_admit(array(
+        array('axis' => 1, 'old' => is_array($current) ? $current['legacy_cost_center_id'] : $projection['legacy_cost_center_id'],
+            'new' => $projection['legacy_cost_center_id'], 'validate' => false),
+        array('axis' => 2, 'old' => is_array($current) ? $current['legacy_dimension2_id'] : $projection['legacy_dimension2_id'],
+            'new' => $projection['legacy_dimension2_id'], 'validate' => false)));
 }
 
 function hrm_assignment_projection_from_employee($employee, $employment, $allow_legacy_irregular = false)
@@ -778,6 +797,8 @@ function execute_hrm_assignment_effective_change($employee, $effective_date, $ch
     if (empty($changed))
         return false;
 
+    // B04: lock the former and successor Cost Center/Dimension masters before any interval row changes.
+    if (!hrm_assignment_dimension_admit($current, $projection)) return false;
     $actor = hrm_assignment_actor_id();
     $close = "UPDATE ".TB_PREF."hrm_assignments SET legacy_current=NULL,effective_to=".db_escape($previous_end)
         .",source=".db_escape($source).",updated_at=NOW(),updated_by=".(int)$actor
@@ -993,6 +1014,7 @@ function create_hrm_assignment_from_employee($employee, $audit = true,
         return false;
     if (!hrm_assignment_employment_interval_policy_allows((int)$employment['employment_id']))
         return false;
+    if (!hrm_assignment_dimension_admit(null, $projection)) return false; // B04
 
     $actor = hrm_assignment_actor_id();
     $organization_column = hrm_assignment_organization_unit_column_ready()
@@ -1120,6 +1142,7 @@ function synchronize_hrm_assignment_from_employee($employee)
     ))
         return false;
 
+    if (!hrm_assignment_dimension_admit($current, $projection)) return false; // B04
     $actor = hrm_assignment_actor_id();
     $organization_update = hrm_assignment_organization_unit_column_ready()
         ? ",organization_unit_id=".($projection['organization_unit_id'] === null

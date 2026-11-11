@@ -10,6 +10,8 @@
 
 if (!function_exists('append_domain_audit_event'))
     include_once($path_to_root.'/includes/db/domain_audit_db.inc');
+if (!function_exists('hrm_dimension_writer_admit'))
+    include_once(dirname(__FILE__).'/hrm_dimension_reference_writer_db.inc');
 
 if (!defined('HRM_LIFECYCLE_HIRE_PAYLOAD_ENVELOPE_VERSION'))
     define('HRM_LIFECYCLE_HIRE_PAYLOAD_ENVELOPE_VERSION', 1);
@@ -600,6 +602,11 @@ function stage_hrm_lifecycle_employee_hire_payload($payload, $effective_date, $i
         }
         if (!hrm_lifecycle_hire_employee_code_available_for_update($canonical['employee_id']))
             break;
+        // B04: the staged envelope is a new Cost Center reference. Lock and admit the
+        // master (axis one, open) before the encrypted reference becomes retained evidence.
+        if ((int)$canonical['cost_center_id'] !== 0
+            && !hrm_dimension_writer_admit(array(array('axis'=>1, 'old'=>0, 'new'=>$canonical['cost_center_id']))))
+            break;
         if (!db_query("INSERT INTO ".TB_PREF."hrm_lifecycle_hire_commands "
             ."(command_status,effective_at,idempotency_key_hash,request_hash,approval_draft_id,row_version,requested_by) VALUES "
             ."('staged',".db_escape($effective_date.' 00:00:00').','.db_escape($idempotency_hash).','
@@ -615,11 +622,13 @@ function stage_hrm_lifecycle_employee_hire_payload($payload, $effective_date, $i
         if ($ciphertext === false)
             break;
         $ciphertext_hash = hash('sha256', $ciphertext);
+        // B04: binary ciphertext goes in as a hex literal. db_escape() HTML-encodes its
+        // input, which empties or rewrites non-UTF-8 bytes and left the envelope unreadable.
         $purge_after = gmdate('Y-m-d H:i:s', time() + HRM_LIFECYCLE_HIRE_PAYLOAD_RETENTION_DAYS * 86400);
         if (!db_query("INSERT INTO ".TB_PREF."hrm_lifecycle_hire_payloads "
             ."(hire_command_id,payload_state,envelope_version,payload_ciphertext,ciphertext_sha256,request_hash,key_id,"
             ."key_generation,purge_after,purged_at,row_version,created_by) VALUES (".$command_id.",'staged',"
-            .HRM_LIFECYCLE_HIRE_PAYLOAD_ENVELOPE_VERSION.','.db_escape($ciphertext).','.db_escape($ciphertext_hash).','
+            .HRM_LIFECYCLE_HIRE_PAYLOAD_ENVELOPE_VERSION.',0x'.bin2hex($ciphertext).','.db_escape($ciphertext_hash).','
             .db_escape($request_hash).','.db_escape($key['key_id']).','.(int)$key['generation'].','
             .db_escape($purge_after).",NULL,1,".$actor.")", 'could not store encrypted Employee Hire staged payload'))
             break;

@@ -120,8 +120,12 @@ function dimension_writer_master_id($owner,$value)
  * and master locks remain held. Its result retains the native Entity contract.
  * Entity callers may opt into partial data: omitted coordinates are validated
  * and locked from current owner state but are never added to the write payload.
+ * $historical (B05) names column => identity pairs that the caller already
+ * proved, under its own row lock, to be an exact copy of a locked historical
+ * row (an exact inverse). Their masters are still locked, but a closed or
+ * orphan historical identity is not re-validated, so the inverse stays exact.
  */
-function dimension_ordinary_master_write($owner, $key, $next, $callback, $partial = false, $remove = false)
+function dimension_ordinary_master_write($owner, $key, $next, $callback, $partial = false, $remove = false, $historical = array())
 {
     $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id', 'purch_requisition_lines'=>'id', 'wh_material_request_lines'=>'line_id', 'wh_transfer_order_lines'=>'line_id', 'wh_material_requests'=>'request_id', 'wh_transfer_orders'=>'transfer_id', 'purch_requisitions'=>'id', 'purch_rfq'=>'id', 'purch_rfq_items'=>'id', 'purch_rfq_vendors'=>'id', 'purch_rfq_vendor_lines'=>'id');
     $sources['warranty_provision_log'] = 'id';
@@ -241,7 +245,8 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
         foreach ($columns as $column=>$axis) {
             $id = $new[$column];
             if (!$id) continue;
-            $unchanged = ($id === $old[$column]);
+            $unchanged = ($id === $old[$column])
+                || (is_array($historical) && isset($historical[$column]) && $historical[$column] === $id);
             $master = $masters[$id];
             if (!$unchanged && (!is_array($master) || (int)$master['type_'] !== $axis
                 || (int)$master['closed'] !== 0)) { cancel_transaction(); return false; }

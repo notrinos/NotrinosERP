@@ -2,6 +2,8 @@
 /** HRM-FND-007 explicit maker/checker legacy custom_data mapping command custody. */
 if (!function_exists('hrm_typed_attribute_legacy_mapping_key'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_legacy_mapping_db.inc');
+if (!function_exists('hrm_dimension_legacy_key_is_coordinate'))
+    include_once(dirname(__FILE__).'/hrm_dimension_retained_evidence_db.inc');
 
 function hrm_typed_attribute_legacy_mapping_user_can_manage()
 {
@@ -38,6 +40,8 @@ function hrm_typed_attribute_legacy_mapping_canonical_command($input)
     foreach(array('legacy_key','attribute_code','effective_from','qualified_review_ref') as $field)
         if(!array_key_exists($field,$input) || !is_string($input[$field])) return false;
     $key=hrm_typed_attribute_legacy_mapping_key($input['legacy_key']);
+    // B04: a Dimension coordinate key is never re-homed into a Typed Attribute value.
+    if($key!==false&&hrm_dimension_legacy_key_is_coordinate($key)) $key=false;
     $code=preg_match('/^[a-z][a-z0-9_.-]{0,63}$/D',$input['attribute_code'])===1 ? $input['attribute_code'] : false;
     $from=hrm_typed_attribute_legacy_mapping_date($input['effective_from'],false);
     $to=hrm_typed_attribute_legacy_mapping_date(array_key_exists('effective_to',$input)?$input['effective_to']:null,true);

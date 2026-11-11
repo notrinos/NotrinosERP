@@ -16,6 +16,8 @@
  */
 
 /** @return bool */
+include_once(dirname(__FILE__).'/hrm_dimension_reference_writer_db.inc');
+
 function hrm_organization_unit_table_ready()
 {
     if (!function_exists('db_query') || !function_exists('db_escape_function') || !defined('TB_PREF'))
@@ -300,6 +302,9 @@ function synchronize_hrm_organization_unit_from_department($department_id,
     if ($action === 'create') {
         if ($existing !== null)
             return false;
+        // B04: projection copy of the locked Department Cost Center; take the master lock first.
+        if (!hrm_dimension_writer_admit(array(array('axis' => 1, 'old' => $projection['legacy_cost_center_id'],
+            'new' => $projection['legacy_cost_center_id'], 'validate' => false)))) return false;
         $sql = "INSERT INTO ".TB_PREF."hrm_organization_units (legal_entity_id,legacy_department_id,"
             ."unit_code,legacy_department_code,unit_name,parent_organization_unit_id,legacy_manager_employee_id,"
             ."legacy_cost_center_id,unit_status,reference_quality,source,created_by) VALUES ("
@@ -318,6 +323,9 @@ function synchronize_hrm_organization_unit_from_department($department_id,
         if (!is_array($existing) || (int)$existing['legal_entity_id'] !== (int)$legal_entity_id)
             return false;
         $organization_unit_id = (int)$existing['organization_unit_id'];
+        // B04: lock the former and projected Cost Center before the unit changes.
+        if (!hrm_dimension_writer_admit(array(array('axis' => 1, 'old' => $existing['legacy_cost_center_id'],
+            'new' => $projection['legacy_cost_center_id'], 'validate' => false)))) return false;
         $sql = "UPDATE ".TB_PREF."hrm_organization_units SET unit_code=".db_escape($projection['unit_code'])
             .",legacy_department_code=".($projection['legacy_department_code'] === null ? 'NULL' : db_escape($projection['legacy_department_code']))
             .",unit_name=".db_escape($projection['unit_name'])

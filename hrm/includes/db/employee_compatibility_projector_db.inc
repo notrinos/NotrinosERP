@@ -1,4 +1,5 @@
 <?php
+include_once(dirname(__FILE__).'/hrm_dimension_reference_writer_db.inc');
 /**
  * Internal FND-006 compatibility projector. Existing pages retain their field
  * and object gates. This service exposes no public full-profile read endpoint.
@@ -194,6 +195,12 @@ function hrm_employee_projection_store($stored, $expected)
         if (!preg_match('/^[a-z_]+$/D', $field) || in_array($field, array('employee_number','employee_id'), true)) return false;
         $sets[] = $field.'='.($expected[$field] === null ? 'NULL' : db_escape($expected[$field]));
     }
+    // B04: the projected Cost Center/Dimension is a copy of locked Assignment state; lock the masters first.
+    if (!hrm_dimension_writer_admit(array(
+        array('axis' => 1, 'old' => isset($stored['cost_center_id']) ? $stored['cost_center_id'] : null,
+            'new' => isset($expected['cost_center_id']) ? $expected['cost_center_id'] : null, 'validate' => false),
+        array('axis' => 2, 'old' => isset($stored['dimension2_id']) ? $stored['dimension2_id'] : null,
+            'new' => isset($expected['dimension2_id']) ? $expected['dimension2_id'] : null, 'validate' => false)))) return false;
     return db_query('UPDATE '.TB_PREF.'employees SET '.implode(',', $sets)
         .' WHERE employee_number='.(int)$expected['employee_number'].' AND employee_id='.db_escape($expected['employee_id']),
         'could not materialize employee compatibility projection') !== false;

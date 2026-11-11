@@ -1645,6 +1645,12 @@ function payroll_create_linked_gl_reversal(
     $original_hash = payroll_reversal_state_hash(array('lines' => $original));
     if ($original_hash === false)
         return false;
+    // B05: the exact inverse copies the original's historical coordinates (closed
+    // or orphan included) without re-validating them, but must hold their masters
+    // so a concurrent close or delete-side recheck serializes with it.
+    require_once __DIR__.'/db/pay_dimension_reference_authority_db.inc';
+    if (!pay_dimension_inverse_copy_lock($original))
+        return false;
 
     $reversal_trans_no = payroll_get_next_payslip_trans_no();
     $reversal_sql_date = date2sql($reversal_date);

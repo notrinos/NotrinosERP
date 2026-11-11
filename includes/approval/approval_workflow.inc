@@ -161,7 +161,7 @@ class ApprovalWorkflow {
 	 * @param int|string $id Exact positive Dimension identity in the active company
 	 * @return array Owner names and used/unused/unknown states only
 	 */
-	public function observeDimensionReferences($id)
+	public function observeDimensionReferences($id, $locked = false)
 	{
 		require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_lifecycle_db.inc';
 		require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_reference_registry.inc';
@@ -169,22 +169,32 @@ class ApprovalWorkflow {
 		if (!dimension_lifecycle_authorized() || !dimension_lifecycle_valid_id($id)
 			|| !defined('ST_JOURNAL') || !defined('ST_BANKPAYMENT') || !defined('ST_BANKDEPOSIT')) return $result;
 		require_once dirname(dirname(__DIR__)).'/purchasing/includes/db/purch_dimension_references_db.inc';
-		$supported_types = array((int)ST_JOURNAL, (int)ST_BANKPAYMENT, (int)ST_BANKDEPOSIT);
-		foreach (array('ST_PURCHORDER','ST_SUPPINVOICE','ST_PURCHREQUISITION','ST_PURCHAGREEMENT',
-			'ST_SALESINVOICE','ST_SALESORDER','ST_CUSTDELIVERY','ST_INVADJUST','ST_LOCTRANSFER','ST_WORKORDER',
-			'ST_WH_MATERIAL_REQUEST','ST_WH_TRANSFER_ORDER','ST_WH_SCRAP','ST_WH_CYCLE_COUNT') as $type)
-			if (defined($type)) $supported_types[] = (int)constant($type);
-		$types = implode(',', $supported_types);
+		$types = implode(',', self::dimensionOrdinaryTypes());
+		// B03: locked mode reads the latest committed rows and keeps shared locks to the
+		// caller's transaction end, so no draft/snapshot can appear after "unused".
+		$suffix = '';
+		if ($locked) {
+			if (empty($GLOBALS['transaction_level'])) return $result;
+			$suffix = ' LOCK IN SHARE MODE';
+		}
+		// B04: HRM approval families are decoded by the HRM-owned minimized authority.
+		require_once dirname(dirname(__DIR__)).'/hrm/includes/db/hrm_dimension_retained_evidence_db.inc';
+		$hrm_types = hrm_dimension_approval_family_types();
+		$hrm = $hrm_types ? implode(',', $hrm_types) : '0';
+		// B05: the payroll family is decoded by the payroll-owned minimized authority.
+		require_once dirname(dirname(__DIR__)).'/hrm/includes/db/pay_dimension_reference_authority_db.inc';
+		$pay_types = pay_dimension_approval_family_types();
+		$pay = $pay_types ? implode(',', $pay_types) : '0';
 		$queries = array(
-			'approval_drafts'=>'SELECT CASE WHEN trans_type IN ('.$types.') THEN 1 ELSE 0 END AS supported,'
+			'approval_drafts'=>'SELECT CASE WHEN trans_type IN ('.$types.') THEN 1 WHEN trans_type IN ('.$hrm.') THEN 2 WHEN trans_type IN ('.$pay.') THEN 3 ELSE 0 END AS supported,'
 				.' CASE WHEN trans_type IN ('.$types.') THEN trans_type ELSE NULL END AS source_type,'
-				.' CASE WHEN trans_type IN ('.$types.') THEN draft_data ELSE NULL END AS payload'
-				.' FROM '.TB_PREF.'approval_drafts',
-			'approval_actions'=>'SELECT CASE WHEN d.trans_type IN ('.$types.') THEN 1 ELSE 0 END AS supported,'
+				.' CASE WHEN trans_type IN ('.$types.','.$hrm.','.$pay.') THEN draft_data ELSE NULL END AS payload'
+				.' FROM '.TB_PREF.'approval_drafts'.$suffix,
+			'approval_actions'=>'SELECT CASE WHEN d.trans_type IN ('.$types.') THEN 1 WHEN d.trans_type IN ('.$hrm.') THEN 2 WHEN d.trans_type IN ('.$pay.') THEN 3 ELSE 0 END AS supported,'
 				.' CASE WHEN d.trans_type IN ('.$types.') THEN d.trans_type ELSE NULL END AS source_type,'
-				.' CASE WHEN d.trans_type IN ('.$types.') THEN a.draft_data_snapshot ELSE NULL END AS payload'
+				.' CASE WHEN d.trans_type IN ('.$types.','.$hrm.','.$pay.') THEN a.draft_data_snapshot ELSE NULL END AS payload'
 				.' FROM '.TB_PREF.'approval_actions a LEFT JOIN '.TB_PREF.'approval_drafts d ON d.id=a.draft_id'
-				.' WHERE a.draft_data_snapshot IS NOT NULL');
+				.' WHERE a.draft_data_snapshot IS NOT NULL'.$suffix);
 		foreach ($queries as $owner=>$sql) {
 			$status = 'unused';
 			try {
@@ -196,9 +206,19 @@ class ApprovalWorkflow {
 				$rows = db_query($sql);
 				if (!$rows) $status = 'unknown';
 				else while ($row = db_fetch($rows)) {
-					if ((int)$row['supported'] !== 1) { $status = 'unknown'; continue; }
+					if (!in_array((int)$row['supported'], array(1, 2, 3), true)) { $status = 'unknown'; continue; }
 					$ok = false;
 					$payload = $this->decodeDraftData($row['payload'], $ok);
+					if ((int)$row['supported'] === 3) {
+						$observed = $ok ? pay_dimension_approval_payload_status($payload) : 'unknown';
+						if ($observed !== 'unused') $status = 'unknown';
+						continue;
+					}
+					if ((int)$row['supported'] === 2) {
+						$observed = $ok ? hrm_dimension_approval_payload_status($payload) : 'unknown';
+						if ($observed !== 'unused') $status = 'unknown';
+						continue;
+					}
 					$observed = $ok ? dimension_reference_payload_status($payload, (int)$id) : 'unknown';
 					if ($ok && defined('ST_SUPPINVOICE') && (int)$row['source_type'] === (int)ST_SUPPINVOICE)
 						$observed = purchasing_invoice_approval_dimension_status($payload, (int)$id);
@@ -209,6 +229,56 @@ class ApprovalWorkflow {
 			$result[$owner] = $status;
 		}
 		return $result;
+	}
+
+	/**
+	 * Ordinary families whose draft payloads use the native Dimension shapes.
+	 * HRM families are decoded by the HRM authority (B04), the payroll family by
+	 * the payroll authority (B05); every other family stays unknown here.
+	 *
+	 * @return int[] Transaction type identities
+	 */
+	public static function dimensionOrdinaryTypes()
+	{
+		$types = array();
+		foreach (array('ST_JOURNAL','ST_BANKPAYMENT','ST_BANKDEPOSIT','ST_PURCHORDER','ST_SUPPINVOICE','ST_PURCHREQUISITION','ST_PURCHAGREEMENT',
+			'ST_SALESINVOICE','ST_SALESORDER','ST_CUSTDELIVERY','ST_INVADJUST','ST_LOCTRANSFER','ST_WORKORDER',
+			'ST_WH_MATERIAL_REQUEST','ST_WH_TRANSFER_ORDER','ST_WH_SCRAP','ST_WH_CYCLE_COUNT') as $type)
+			if (defined($type)) $types[] = (int)constant($type);
+		return $types;
+	}
+
+	/**
+	 * B03 submit fence: inside the submission transaction, lock every Dimension
+	 * master an ordinary draft references (ascending identity, the writer-fence
+	 * order), so a concurrent close/delete cannot interleave with the new hidden
+	 * draft. Closed or missing masters are legitimate historical references and
+	 * stay the source executor's concern (as in the owner writer fence). Other
+	 * families are not fenced here.
+	 *
+	 * @param int   $trans_type Draft transaction type
+	 * @param mixed $data       Decoded draft payload
+	 * @return bool False on a lock/SQL failure
+	 */
+	private function lockDraftDimensionMasters($trans_type, $data)
+	{
+		if (!in_array((int)$trans_type, self::dimensionOrdinaryTypes(), true) || !is_array($data)) return true;
+		$ids = array();
+		$walk = function ($node, $depth) use (&$walk, &$ids) {
+			if ($depth > 64 || !is_array($node)) return;
+			foreach ($node as $key => $value) {
+				if (is_array($value)) { $walk($value, $depth + 1); continue; }
+				if (in_array($key, array('dimension_id','dimension2_id','dimension','dimension2','gl_dim','gl_dim2'), true)
+					&& (is_int($value) || (is_string($value) && preg_match('/^[1-9][0-9]*$/D', $value)))
+					&& (int)$value > 0) $ids[(int)$value] = (int)$value;
+			}
+		};
+		$walk($data, 0);
+		sort($ids, SORT_NUMERIC);
+		foreach ($ids as $id) {
+			if (!db_query('SELECT id FROM '.TB_PREF.'dimensions WHERE id='.$id.' FOR UPDATE')) return false;
+		}
+		return true;
 	}
 
 	// =====================================================
@@ -282,6 +352,11 @@ class ApprovalWorkflow {
 				'reference' => '',
 				'status'    => 'serialization_failed',
 			);
+		}
+
+		if (!$this->lockDraftDimensionMasters($trans_type, $data)) {
+			cancel_transaction();
+			return array('draft_id'=>0, 'trans_no'=>0, 'reference'=>'', 'status'=>'dimension_unavailable');
 		}
 
 		// Store the draft

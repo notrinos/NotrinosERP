@@ -7,6 +7,7 @@ include_once(dirname(__FILE__).'/lifecycle_separation_command_db.inc');
 include_once(dirname(__FILE__).'/employee_contract_db.inc');
 include_once(dirname(__FILE__).'/lifecycle_rehire_rollover_plan_db.inc');
 include_once(dirname(__FILE__).'/lifecycle_rehire_evidence_db.inc');
+include_once(dirname(__FILE__).'/hrm_dimension_reference_writer_db.inc');
 
 /** Require an active, unconditional, non-self-approving central workflow. */
 function hrm_lifecycle_rehire_workflow_is_maker_checker()
@@ -341,6 +342,9 @@ function execute_approved_hrm_lifecycle_rehire($data, $reserved_trans_no, $draft
         'job_id','work_location_id','manager_assignment_id','legacy_grade_id','grade_id','legacy_shift_id',
         'legacy_reporting_to','legacy_cost_center_id','legacy_dimension2_id','reference_quality');
     $values = array(); foreach ($columns as $column) $values[] = db_escape($assignment[$column]);
+    if (!hrm_assignment_dimension_admit(null, array(
+        'legacy_cost_center_id' => $assignment['legacy_cost_center_id'],
+        'legacy_dimension2_id' => $assignment['legacy_dimension2_id']))) return false; // B04
     if (!db_query("INSERT INTO ".TB_PREF."hrm_assignments (employment_id,assignment_sequence,legacy_employee_number,"
         ."legacy_current,assignment_type_code,primary_flag,".implode(',', $columns)
         .",effective_from,effective_to,interval_quality,source,created_by) VALUES (".$employment_id.",1,"
