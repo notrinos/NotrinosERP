@@ -720,7 +720,7 @@ function get_sql_for_po_search_completed($from, $to, $supplier_id=ALL_TEXT, $loc
 		AND location.loc_code = porder.into_stock_location ";
 
 	if ($supplier_id != ALL_TEXT)
-		$sql .= "AND supplier.supplier_id=".$supplier_id." ";
+		$sql .= "AND supplier.supplier_id=".db_escape($supplier_id)." ";
 	if ($order_number != "")
 		$sql .= "AND porder.reference LIKE ".db_escape('%'. $order_number . '%');
 	else {
@@ -730,8 +730,6 @@ function get_sql_for_po_search_completed($from, $to, $supplier_id=ALL_TEXT, $loc
 			$sql .= " AND porder.into_stock_location = ".db_escape($location);
 		if ($stock_id !== '')
 			$sql .= " AND line.item_code=".db_escape($stock_id);
-		if ($supplier_id != ALL_TEXT)
-			$sql .= " AND supplier.supplier_id=".db_escape($supplier_id);
 	}
 
 	if (!$also_closed)
