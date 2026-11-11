@@ -35,9 +35,15 @@ page(_($help_context = 'CRM Leads'), false, false, '', $js);
 //--------------------------------------------------------------------------
 // Delete handling
 //--------------------------------------------------------------------------
-if (isset($_GET['delete'])) {
-    $id = (int)$_GET['delete'];
-    crm_leads_entity::delete_cascade($id, false);
+// Deletion is state-changing and must never execute from a bookmarked or
+// crafted GET request. Keep the old parameter as an explicit denial;
+// deletion runs only from the CSRF-checked form submission below.
+if (isset($_GET['delete']))
+    display_error(_('Lead deactivation requires a confirmed form submission.'));
+
+$delete_id = find_submit('crm_delete');
+if ($delete_id > 0) {
+    crm_leads_entity::delete_cascade($delete_id, false);
     display_notification(_('Lead has been deactivated.'));
 }
 
@@ -166,9 +172,10 @@ while ($myrow = db_fetch($result)) {
         echo "<td>-</td>";
     }
     
-    echo "<td><a style='color:#dc2626;' href='" . $_SERVER['PHP_SELF'] . "?delete=" . $myrow['id']
-        . crm_sel_app_param() . "' onclick=\"return confirm('" . _('Are you sure deactive the selected lead ?') . "');\">"
-        . set_icon(ICON_CLOSED, _('Deactivate')) . "</a></td>";
+    // Delete button posts through the enclosing form so the CSRF token is checked.
+    echo "<td><button type='submit' class='editbutton' style='color:#dc2626;' name='crm_delete" . (int)$myrow['id'] . "' value='1'"
+        . " onclick=\"return confirm('" . htmlspecialchars(_('Are you sure deactive the selected lead ?'), ENT_QUOTES, 'UTF-8') . "');\">"
+        . set_icon(ICON_CLOSED, _('Deactivate')) . "</button></td>";
 
     end_row();
 }

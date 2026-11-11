@@ -1289,9 +1289,17 @@ function tab_dependents($employee_id) {
 		return;
 	}
 
-	// Handle delete dependent
-	if (isset($_GET['delete_dep'])) {
-		$dependent = get_employee_dependent($_GET['delete_dep']);
+	// Dependent deletion is state-changing and must never execute from a
+	// bookmarked or crafted GET request. Keep the old parameter as an explicit
+	// denial; deletion runs only from the CSRF-checked form submission below.
+	if (isset($_GET['delete_dep']))
+		display_error(_('Dependent removal requires a confirmed form submission.'));
+
+	// Handle POST/CSRF-protected dependent deletion.
+	$delete_dependent_id = find_submit('delete_dep');
+	if ($delete_dependent_id != -1) {
+		$dependent = $delete_dependent_id > 0
+			? get_employee_dependent($delete_dependent_id) : false;
 		if (is_employee_child_record_accessible($dependent, $employee_id, _('Dependent'))) {
 			delete_employee_dependent($dependent['dependent_id']);
 			display_notification(_('Dependent deleted.'));

@@ -243,7 +243,9 @@ function display_employee_dependents($employee_id, $can_view_identity_details = 
 		label_cell($dep['is_beneficiary'] ? _('Yes') : _('No'));
 
 		$actions = "<a href='".($_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_dependents&edit_dep=".$dep['dependent_id'])."'>"._('Edit')."</a>"
-			." | <a href='".($_SERVER['PHP_SELF']."?employee_no=".urlencode($employee_id)."&_tabs_sel=tab_dependents&delete_dep=".$dep['dependent_id'])."' onclick=\"return confirm('"._('Are you sure?')."');\">"._('Delete')."</a>";
+			." | <button type='submit' class='editbutton' name='delete_dep".(int)$dep['dependent_id']."' value='1'"
+			." onclick=\"return confirm('".htmlspecialchars(_('Are you sure?'), ENT_QUOTES, 'UTF-8')."');\">"
+			.htmlspecialchars(_('Delete'), ENT_QUOTES, 'UTF-8')."</button>";
 		label_cell($actions, "nowrap");
 
 		end_row();
