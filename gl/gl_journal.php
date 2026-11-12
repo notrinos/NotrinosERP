@@ -18,6 +18,7 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 
+include_once($path_to_root.'/dimensions/includes/dimension_validation_contract.inc');
 include_once($path_to_root.'/gl/includes/ui/gl_journal_ui.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
 include_once($path_to_root.'/gl/includes/gl_ui.inc');
@@ -225,6 +226,16 @@ if (isset($_POST['Process'])) {
 		set_focus('ref');
 		$input_error = 1;
 	}
+	// DIM-FND-004: every user-entered line must still be a valid new-event classification at save
+	// time. The writer rechecks axis/closure/existence under its own locks; this preflight blocks the
+	// request, states the exact category and never substitutes a default.
+	$classification = dimension_validation_gl_cart($_SESSION['journal_items']->gl_items, 'new_event');
+	if (!$classification['ok']) {
+		foreach ($classification['errors'] as $classification_error)
+			display_error($classification_error);
+		set_focus('code_id');
+		$input_error = 1;
+	}
 	if (get_post('currency') != get_company_pref('curr_default'))
 		if (isset($_POST['_ex_rate']) && !check_num('_ex_rate', 0.000001)) {
 			display_error(_('The exchange rate must be numeric and greater than zero.'));
@@ -358,14 +369,22 @@ function check_item_data() {
 			return false;
 		}
 	}
-	if (isset($_POST['dimension_id']) && $_POST['dimension_id'] != 0 && dimension_is_closed($_POST['dimension_id'])) {
-		display_error(_('Dimension is closed.'));
-		set_focus('dimension_id');
-		return false;
-	}
-	if (isset($_POST['dimension2_id']) && $_POST['dimension2_id'] != 0 && dimension_is_closed($_POST['dimension2_id'])) {
-		display_error(_('Dimension is closed.'));
-		set_focus('dimension2_id');
+	// DIM-FND-004: one shared classification contract for the line editor. It replaces the old
+	// closure-only peek, which also delegated a missing identity to a fatal master lookup, with an
+	// explicit existence/axis/closure/enabled/required/pair refusal.
+	$classification = dimension_validation_classification(
+		isset($_POST['dimension_id']) ? $_POST['dimension_id'] : 0,
+		isset($_POST['dimension2_id']) ? $_POST['dimension2_id'] : 0,
+		'new_event', array('account' => get_post('code_id')));
+	if (!$classification['ok']) {
+		foreach ($classification['errors'] as $classification_error)
+			display_error($classification_error);
+		$focus = 'dimension_id';
+		if (isset($classification['states'][1], $classification['states'][2])
+			&& in_array($classification['states'][1], array('unassigned', 'open'), true)
+			&& !in_array($classification['states'][2], array('unassigned', 'open'), true))
+			$focus = 'dimension2_id';
+		set_focus($focus);
 		return false;
 	}
 	if (!(input_num('AmountDebit')!=0 ^ input_num('AmountCredit')!=0) ) {

@@ -950,6 +950,44 @@ CREATE TABLE `0_dimensions` (
 
 -- Data of table `0_dimensions` --
 
+-- Structure of table `0_dimension_category_policies` --
+
+DROP TABLE IF EXISTS `0_dimension_category_policies`;
+
+CREATE TABLE `0_dimension_category_policies` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`version` int(11) NOT NULL,
+	`axis` tinyint(1) NOT NULL,
+	`label` varchar(64) NOT NULL DEFAULT '',
+	`purpose` varchar(32) NOT NULL DEFAULT '',
+	`required` tinyint(1) NOT NULL DEFAULT '0',
+	`created_at` datetime NOT NULL,
+	`created_by` int(11) NOT NULL DEFAULT '0',
+	`digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `version_axis` (`version`,`axis`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_category_policies` --
+
+-- Structure of table `0_dimension_category_policy_rules` --
+
+DROP TABLE IF EXISTS `0_dimension_category_policy_rules`;
+
+CREATE TABLE `0_dimension_category_policy_rules` (
+	`id` int(11) NOT NULL AUTO_INCREMENT,
+	`version` int(11) NOT NULL,
+	`axis` tinyint(1) NOT NULL DEFAULT '0',
+	`kind` varchar(16) NOT NULL DEFAULT '',
+	`left_value` varchar(64) NOT NULL DEFAULT '',
+	`right_value` varchar(64) NOT NULL DEFAULT '',
+	`note` varchar(255) NOT NULL DEFAULT '',
+	PRIMARY KEY (`id`),
+	KEY `version` (`version`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_category_policy_rules` --
+
 -- Structure of table `0_employees` --
 
 DROP TABLE IF EXISTS `0_employees`;

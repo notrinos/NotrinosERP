@@ -12,6 +12,7 @@
 
 include_once($path_to_root . '/taxes/db/tax_types_entity.inc');
 require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+require_once __DIR__.'/../../../dimensions/includes/dimension_validation_contract.inc';
 
 /*
 *	Base function for adding a GL transaction
@@ -34,18 +35,16 @@ function add_gl_trans($type, $trans_id, $date_, $account, $dimension, $dimension
     $dimension = dimension_writer_reference_id($dimension);
     $dimension2 = dimension_writer_reference_id($dimension2);
     if ($dimension === false || $dimension2 === false) dimension_financial_reference_failure();
-    // B05 exact inverse: a linked reversal of one locked historical GL row keeps its
-    // exact account and coordinates (closed or orphan included) and negates its amount.
+    // DIM-FND-004 exact inverse policy: the shared contract locks the original row and proves the
+    // account, both axes and the exactly negated base amount. Only its returned historical pair may
+    // admit a closed, disabled or deleted value; a caller cannot supply a skip flag or identity list.
     $historical = array();
     if ($inverse_of_counter !== null) {
-        $predecessor = dimension_writer_reference_id($inverse_of_counter);
-        if (!$predecessor || empty($GLOBALS['transaction_level'])) dimension_financial_reference_failure();
-        $row = db_query("SELECT account, dimension_id, dimension2_id, amount FROM ".TB_PREF."gl_trans WHERE counter=".$predecessor." FOR UPDATE");
-        $row = $row && db_num_rows($row) === 1 ? db_fetch_assoc($row) : false;
-        if (!$row || (string)$row['account'] !== (string)$account || (int)$row['dimension_id'] !== $dimension
-            || (int)$row['dimension2_id'] !== $dimension2 || round2((float)$row['amount'] + (float)$amount_in_home_currency, 2) != 0)
-            dimension_financial_reference_failure();
-        $historical = array('dimension_id'=>$dimension, 'dimension2_id'=>$dimension2);
+        $inverse = dimension_inverse_authorize($inverse_of_counter, array('account' => $account,
+            'dimension_id' => $dimension, 'dimension2_id' => $dimension2,
+            'amount' => $amount_in_home_currency));
+        if (!$inverse['ok']) dimension_financial_reference_failure();
+        $historical = $inverse['historical'];
     }
 	if (isset($SysPrefs->use_audit_trail) && $SysPrefs->use_audit_trail) {
 		if ($memo_ == '' || $memo_ == null)
