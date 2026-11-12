@@ -255,8 +255,16 @@ if ($selected_id != -1 && (int)$myrow['type_'] > $dim) {
 	label_row(_('Type').':', (int)$myrow['type_']);
 	hidden('type_', (int)$myrow['type_']);
 }
-else
-	number_list_row(_('Type').':', 'type_', null, 1, max(1, $dim));
+else {
+	// DIM-CFG-001: an optional published category policy only supplies the display name of each
+	// enabled category; the stored value is still the native axis 1..N and never a semantic key.
+	require_once($path_to_root.'/dimensions/includes/dimension_category_policy.inc');
+	$axis_choices = dimension_category_policy_axis_choices($dim);
+	if (count($axis_choices) > 0)
+		array_selector_row(_('Type').':', 'type_', null, $axis_choices, array('select_submit' => false, 'async' => false));
+	else
+		number_list_row(_('Type').':', 'type_', null, 1, max(1, $dim));
+}
 date_row(_('Start Date').':', 'date_');
 date_row(_('Date Required By').':', 'due_date', '', null, $SysPrefs->default_dimension_required_by());
 tag_list_row(_('Tags:'), 'dimension_tags', 5, TAG_DIMENSION, true);

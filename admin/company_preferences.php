@@ -272,6 +272,30 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 		set_focus('add_pct');
 		$input_error = 1;
 	}	
+	if ($input_error != 1 && isset($_POST['use_dimension'])
+		&& (int)$_POST['use_dimension'] !== (int)get_company_pref('use_dimension')) {
+		// DIM-CFG-001: changing the enabled Dimension categories needs Company Setup (this page) and the
+		// Finance Dimension authority. A reduction is checked here, before any file side effect such as the
+		// logo upload/removal below, so a refused reduction writes and removes nothing at all.
+		require_once($path_to_root.'/dimensions/includes/dimension_category_policy.inc');
+		if (!dimension_category_policy_authorized()) {
+			display_error(_('Changing the enabled Dimension categories requires both Company Setup and Dimension entry authority.'));
+			set_focus('use_dimension');
+			$input_error = 1;
+		} else {
+			$dimension_transition_conflicts = dimension_category_transition_refusal(
+				(int)get_company_pref('use_dimension'), (int)$_POST['use_dimension']);
+			if (count($dimension_transition_conflicts)) {
+				display_error(_('The company setup was not updated: the requested Dimension category reduction still has unresolved conflicts.'));
+				foreach ($dimension_transition_conflicts as $dimension_transition_conflict)
+					display_error(htmlspecialchars($dimension_transition_conflict, ENT_QUOTES, 'UTF-8'));
+				display_note(sprintf(_('Review the impact preview at %s before reducing the enabled categories.'),
+					"<a href='$path_to_root/dimensions/category_policy.php?sel_app=dimensions'>"._('Dimension category policy').'</a>'));
+				set_focus('use_dimension');
+				$input_error = 1;
+			}
+		}
+	}
 	if ($input_error != 1 && !check_value('del_coy_logo')
 		&& isset($_FILES['pic']) && $_FILES['pic']['name'] != '') {
 		$logo_error = '';
@@ -303,7 +327,7 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 	if ($_POST['udi_issuing_agency'] == '')
 		$_POST['udi_issuing_agency'] = 'GS1';
 	if ($input_error != 1) {
-		update_company_prefs(
+		$company_setup_updated = update_company_prefs(
 			get_post(
 				array_merge(
 					array('coy_name', 'coy_no', 'gst_no', 'tax_prd', 'tax_last', 'postal_address', 'phone', 'fax', 'email', 'coy_logo', 'domicile', 'use_dimension', 'curr_default', 'f_year', 'shortname_name_in_list', 'base_sales', 'ref_no_auto_increase'=>0, 'dim_on_recurrent_invoice'=>0, 'long_description_invoice'=>0, 'max_days_in_docs'=>180, 'company_logo_on_views'=>0, 'time_zone'=>0, 'company_logo_report'=>0, 'barcodes_on_stock'=>0, 'print_dialog_direct'=>0, 'add_pct', 'round_to', 'login_tout', 'auto_curr_reval', 'bcc_email', 'alternative_tax_include_on_docs', 'suppress_tax_rates', 'use_manufacturing', 'use_fixed_assets', 'use_hrm', 'use_crm'),
@@ -312,18 +336,36 @@ if (isset($_POST['update']) && $_POST['update'] != '') {
 			)
 		);
 
-		$_SESSION['wa_current_user']->timeout = $_POST['login_tout'];
+		if (!$company_setup_updated) {
+			// DIM-CFG-001: a refused axis reduction wrote nothing. Show exactly which active sources,
+			// stored defaults, drafts, HRM bindings or declared policy rules must be resolved first.
+			require_once($path_to_root.'/dimensions/includes/dimension_category_policy.inc');
+			$dimension_transition_conflicts = dimension_category_transition_last_error();
+			if (count($dimension_transition_conflicts)) {
+				display_error(_('The company setup was not updated: the requested Dimension category reduction still has unresolved conflicts.'));
+				foreach ($dimension_transition_conflicts as $dimension_transition_conflict)
+					display_error(htmlspecialchars($dimension_transition_conflict, ENT_QUOTES, 'UTF-8'));
+				display_note(sprintf(_('Review the impact preview at %s before reducing the enabled categories.'),
+					"<a href='$path_to_root/dimensions/category_policy.php?sel_app=dimensions'>"._('Dimension category policy').'</a>'));
+				set_focus('use_dimension');
+			} else {
+				display_error(_('The company setup could not be updated.'));
+			}
+			$Ajax->activate('_page_body');
+		} else {
+			$_SESSION['wa_current_user']->timeout = $_POST['login_tout'];
 
-		if ($application_navigation_changed) {
-			$_SESSION['company_setup_updated_notice'] = 1;
-			$SysPrefs->refresh();
-			refresh_current_session_application_switcher();
-			meta_forward($_SERVER['PHP_SELF'], 'sel_app='.(isset($_SESSION['sel_app']) ? $_SESSION['sel_app'] : 'system'));
+			if ($application_navigation_changed) {
+				$_SESSION['company_setup_updated_notice'] = 1;
+				$SysPrefs->refresh();
+				refresh_current_session_application_switcher();
+				meta_forward($_SERVER['PHP_SELF'], 'sel_app='.(isset($_SESSION['sel_app']) ? $_SESSION['sel_app'] : 'system'));
+			}
+
+			display_notification_centered(_('Company setup has been updated.'));
+			set_focus('coy_name');
+			$Ajax->activate('_page_body');
 		}
-
-		display_notification_centered(_('Company setup has been updated.'));
-		set_focus('coy_name');
-		$Ajax->activate('_page_body');
 	}
 }
 
@@ -475,6 +517,8 @@ table_section_title(_('Optional Modules'));
 check_row(_('Manufacturing:'), 'use_manufacturing', null);
 check_row(_('Fixed Assets').':', 'use_fixed_assets', null);
 number_list_row(_('Use Dimensions:'), 'use_dimension', null, 0, 2);
+// DIM-CFG-001: category meanings and the read-only impact preview of every axis-count transition.
+label_row(_('Dimension categories:'), "<a href='$path_to_root/dimensions/category_policy.php?sel_app=dimensions'>"._('Category policy and transition preview').'</a>');
 check_row(_('Human Resources Management:'), 'use_hrm', null);
 check_row(_('CRM (Customer Relationship Management):'), 'use_crm', null);
 

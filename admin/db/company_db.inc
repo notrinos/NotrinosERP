@@ -13,7 +13,33 @@ include_once($path_to_root . '/admin/db/payment_terms_entity.inc');
 /*
 	Update main or gl company setup.
 */
+/**
+ * Update company preferences, refusing an unresolvable Dimension axis reduction.
+ *
+ * DIM-CFG-001: reducing `use_dimension` disables a category for new events. The change is applied
+ * only when no active source, stored default, pending draft, HRM binding or published policy rule
+ * still depends on the category being disabled; otherwise nothing is written and the conflicts are
+ * available through `dimension_category_transition_last_error()` so the page can explain them.
+ * Increasing the axis count, or updating any other preference, is never gated here.
+ *
+ * @param array $params Preference name => new value
+ * @return bool True only when every preference was written
+ */
 function update_company_prefs($params) {
+	$GLOBALS['dimension_category_transition_error'] = array();
+	if (isset($params['use_dimension'])) {
+		$current_axis_count = (int)get_company_pref('use_dimension');
+		$requested_axis_count = (int)$params['use_dimension'];
+		if ($requested_axis_count >= 0 && $requested_axis_count <= 2
+			&& $requested_axis_count < $current_axis_count) {
+			require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_category_policy.inc';
+			$conflicts = dimension_category_transition_refusal($current_axis_count, $requested_axis_count);
+			if (count($conflicts)) {
+				$GLOBALS['dimension_category_transition_error'] = $conflicts;
+				return false;
+			}
+		}
+	}
 	$sql = "UPDATE ".TB_PREF."sys_prefs SET value = ";
 	foreach($params as $name => $value) {
 		if (!db_query($sql. db_escape($value). " WHERE name=".db_escape($name), 'The company prefferences could not be updated '))

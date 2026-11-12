@@ -30,6 +30,11 @@ class DimensionsApp extends application {
 		$this->add_module(_('Maintenance'));
 		$this->add_lapp_function($dim > 0 ? 2 : 1, _('Dimension &Tags'), 'admin/tags.php?type=dimension', 'SA_DIMTAGS', MENU_MAINTENANCE);
 
+		// DIM-CFG-001: the category policy and the read-only transition preview live under Company Setup
+		// authority; publishing additionally requires the Dimension master authority.
+		$this->add_module(_('Setup'));
+		$this->add_lapp_function($dim > 0 ? 3 : 2, _('Dimension &Category Policy'), 'dimensions/category_policy.php?', 'SA_SETUPCOMPANY', MENU_SETTINGS);
+
 		$this->add_extensions();
 	}
 }
