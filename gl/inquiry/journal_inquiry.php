@@ -52,8 +52,10 @@ end_row();
 start_row();
 ref_cells(_('Memo:'), 'Memo', '',null, _('Enter memo fragment or leave empty'));
 users_list_cells(_('User:'), 'userid', null, false);
-if (get_company_pref('use_dimension') && isset($_POST['dimension'])) // display dimension only, when started in dimension mode
-	dimensions_list_cells(_('Dimension:'), 'dimension', null, true, null, true);
+// DIM-LFC-002: a journal drilldown may carry an axis-2 identity even when axis 2 is no longer enabled
+// for new postings, so the historical list (closed/retained included) is used.
+if (isset($_POST['dimension']))
+	dimensions_history_list_cells(_('Dimension:'), 'dimension', null, true, _('All Dimensions'));
 check_cells( _('Show closed:'), 'AlsoClosed', null);
 submit_cells('Search', _('Apply Filter'), '', '', 'default');
 end_row();

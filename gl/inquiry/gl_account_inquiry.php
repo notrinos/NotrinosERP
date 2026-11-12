@@ -73,10 +73,10 @@ function gl_inquiry_controls() {
 
 	start_table(TABLESTYLE_NOBORDER);
 	start_row();
-	if ($dim >= 1)
-		dimensions_list_cells(_('Dimension').' 1:', 'Dimension', null, true, ' ', false, 1);
-	if ($dim > 1)
-		dimensions_list_cells(_('Dimension').' 2:', 'Dimension2', null, true, ' ', false, 2);
+	// DIM-LFC-002: both historical axes stay filterable even when the posting preference enables only
+	// one of them (or none); the filter lists closed and retained/unknown identities explicitly.
+	dimensions_history_list_cells(_('Dimension').' 1:', 'Dimension', null, true, _('All Dimensions'));
+	dimensions_history_list_cells(_('Dimension').' 2:', 'Dimension2', null, true, _('All Dimensions'));
 
 	ref_cells(_('Memo:'), 'Memo', '',null, _('Enter memo fragment or leave empty'));
 	small_amount_cells(_('Amount min:'), 'amount_min', null, ' ');
@@ -109,7 +109,7 @@ function show_results() {
 		$_POST['account'], $_POST['Dimension'], $_POST['Dimension2'], null,
 		input_num('amount_min'), input_num('amount_max'), null, null, $_POST['Memo']);
 
-	$colspan = ($dim == 2 ? '7' : ($dim == 1 ? '6' : '5'));
+	$colspan = '7';
 
 	if ($_POST['account'] != null)
 		display_heading($_POST['account']. '&nbsp;&nbsp;&nbsp;'.$act_name);
@@ -128,12 +128,7 @@ function show_results() {
 	else
 		$account_col = array();
 	
-	if ($dim == 2)
-		$dim_cols = array(_('Dimension').' 1', _('Dimension').' 2');
-	elseif ($dim == 1)
-		$dim_cols = array(_('Dimension'));
-	else
-		$dim_cols = array();
+	$dim_cols = array(_('Dimension').' 1', _('Dimension').' 2');
 	
 	if ($show_balances)
 		$remaining_cols = array(_('Person/Item'), _('Debit'), _('Credit'), _('Balance'), _('Memo'), '');
@@ -183,10 +178,8 @@ function show_results() {
 		if ($_POST['account'] == null)
 			label_cell($myrow['account'] . ' ' . get_gl_account_name($myrow['account']));
 		
-		if ($dim >= 1)
-			label_cell(get_dimension_string($myrow['dimension_id'], true));
-		if ($dim > 1)
-			label_cell(get_dimension_string($myrow['dimension2_id'], true));
+		label_cell(get_dimension_string($myrow['dimension_id'], true));
+		label_cell(get_dimension_string($myrow['dimension2_id'], true));
 		label_cell(payment_person_name($myrow['person_type_id'],$myrow['person_id']));
 		display_debit_or_credit_cells($myrow['amount']);
 		if ($show_balances)

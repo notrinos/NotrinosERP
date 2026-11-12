@@ -159,10 +159,9 @@ function inquiry_controls() {
 	echo array_selector('Compare', null, $compare_types);
 	filter_cell_close();
 
-	if ($dim >= 1)
-		dimensions_list_cells(_('Dimension').' 1:', 'Dimension', null, true, ' ', false, 1);
-	if ($dim > 1)
-		dimensions_list_cells(_('Dimension').' 2:', 'Dimension2', null, true, ' ', false, 2);
+	// DIM-LFC-002: historical axis filters are independent of the current posting preference.
+	dimensions_history_list_cells(_('Dimension').' 1:', 'Dimension', null, true, _('All Dimensions'));
+	dimensions_history_list_cells(_('Dimension').' 2:', 'Dimension2', null, true, _('All Dimensions'));
 	
 	submit_cells('Show',_('Show'), '', '', 'default');
 	end_row();

@@ -13,6 +13,25 @@ include_once($path_to_root . '/includes/ui.inc');
 
 //--------------------------------------------------------------------------------------
 
+/**
+ * DIM-LFC-002: name the historical state of a Dimension in its read-only view.
+ *
+ * A closed master and a master whose identity was legitimately deleted both remain explainable from
+ * their stored GL/budget IDs. This only renders state; it never reopens, edits or authorizes posting.
+ *
+ * @param array|false $row Master row, or false for a retained/deleted identity
+ * @param int|string $id Exact native Dimension identity
+ * @return void
+ */
+function display_dimension_history_state($row, $id) {
+	if (!is_array($row))
+		display_note(sprintf(_('Unknown Dimension #%d (deleted). Its historical GL and budget rows remain readable by the original ID.'), (int)$id));
+	elseif ((int)$row['closed'] === 1)
+		display_note(_('This dimension is closed. Its historical classifications remain readable; no new posting accepts it.'));
+}
+
+//--------------------------------------------------------------------------------------
+
 function display_dimension_balance($id, $from, $to) {
 	global $path_to_root;
 

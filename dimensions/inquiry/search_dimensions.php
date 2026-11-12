@@ -62,6 +62,13 @@ if (isset($_GET['stock_id']))
 
 //--------------------------------------------------------------------------------------
 
+// DIM-LFC-002: the default historical scope must not hide an older master. The explicit From/To
+// filters remain available and labelled, but opening the inquiry starts from the full stored history.
+if (!isset($_POST['FromDate']) || $_POST['FromDate'] == '')
+	$_POST['FromDate'] = sql2date('1900-01-01');
+if (!isset($_POST['ToDate']) || $_POST['ToDate'] == '')
+	$_POST['ToDate'] = sql2date('2099-12-31');
+
 start_form(false, $_SERVER['PHP_SELF'].'?outstanding_only='.$outstanding_only);
 
 start_table(TABLESTYLE_NOBORDER);

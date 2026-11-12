@@ -11,8 +11,27 @@
 ***********************************************************************/
 require_once __DIR__.'/dimension_lifecycle_db.inc';
 
+/**
+ * Decide whether an axis may be assigned to a NEW or newly reassigned master.
+ *
+ * DIM-LFC-002: the enabled-axis posting preference governs new events only. The type must be a real
+ * axis (1 or 2) and not above the company's enabled axis count; this is the server-side authority,
+ * so a crafted POST cannot create a master on a disabled axis that the entry selector hides.
+ *
+ * @param mixed $type_ Requested axis (1 or 2)
+ * @return bool True when the axis is currently open for new entries
+ */
+function dimension_axis_open_for_new_entry($type_) {
+	if (!in_array($type_, array(1, 2, '1', '2'), true))
+		return false;
+	return (int)$type_ <= (int)get_company_pref('use_dimension');
+}
+
 function add_dimension($reference, $name, $type_, $date_, $due_date, $memo_) {
 	global $Refs;
+
+	if (!dimension_axis_open_for_new_entry($type_))
+		return false;
 
 	begin_transaction();
 
@@ -107,16 +126,32 @@ function get_dimension($id, $allow_null=false) {
 	return db_fetch($result);
 }
 
+/**
+ * Name one stored Dimension identity for display, including its historical state.
+ *
+ * A positive identity whose master row no longer exists is shown as an explicit unknown/deleted
+ * Dimension instead of emitting a PHP warning or silently rendering blank, and a closed master is
+ * marked as closed. Both are read-only state labels; they grant no reopen, edit or posting authority.
+ *
+ * @param int|string $id Stored native Dimension identity from a historical row
+ * @param bool $html Whether the returned text is inserted into HTML
+ * @param string $space Separator between reference and name
+ * @return string Explicit historical display text
+ */
 function get_dimension_string($id, $html=false, $space=' ') {
 
 	if ($id <= 0)
-		$dim = $html ? '&nbsp;' : '';
+		return $html ? '&nbsp;' : '';
+	$row = get_dimension($id, true);
+	if (!is_array($row))
+		$dim = sprintf(_('Unknown Dimension #%d (deleted)'), (int)$id);
 	else {
-		$row = get_dimension($id, true);
 		$dim = $row['reference'].$space.$row['name'];
+		if ((int)$row['closed'] === 1)
+			$dim .= ' ['._('closed').']';
 	}
 
-	return $dim;
+	return $html ? htmlspecialchars($dim, ENT_QUOTES, 'UTF-8') : $dim;
 }
 
 function get_dimensions() {
@@ -195,8 +230,8 @@ function get_sql_for_search_dimensions($dim, $from, $to, $order='', $type = -1, 
 	if ($order)
 		$sql .= " AND reference LIKE ".db_escape("%". $order . "%");
 	else {
-		if ($dim == 1)
-			$sql .= " AND type_=1";
+		// DIM-LFC-002: the enabled-axis posting preference governs new events only. It must never
+		// narrow a historical search, so the caller's explicit Type/Open filters are the only scope.
 		if ($open)
 			$sql .= " AND closed=0";
 		if ($type > 0)

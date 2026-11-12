@@ -18,6 +18,8 @@ include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/gl/includes/gl_db.inc');
 include_once($path_to_root . '/admin/db/tags_db.inc');
 
+check_page_security('SA_GLANALYTIC');
+
 //----------------------------------------------------------------------------------------------------
 
 function display_type ($type, $typename, $from, $to, $convert, &$dec, &$rep, $dimension, $dimension2, $tags, &$pg, $graphics) {
@@ -113,38 +115,19 @@ print_balance_sheet();
 function print_balance_sheet() {
 	global $path_to_root, $SysPrefs;
 
-	$dim = get_company_pref('use_dimension');
+	// DIM-LFC-002: both axes are read on every posting preference.
 	$dimension = $dimension2 = 0;
 
 	$from = $_POST['PARAM_0'];
 	$to = $_POST['PARAM_1'];
-	if ($dim == 2) {
-		$dimension = $_POST['PARAM_2'];
-		$dimension2 = $_POST['PARAM_3'];
-		$tags = (isset($_POST['PARAM_4']) ? $_POST['PARAM_4'] : -1);
-		$decimals = $_POST['PARAM_5'];
-		$graphics = $_POST['PARAM_6'];
-		$comments = $_POST['PARAM_7'];
-		$orientation = $_POST['PARAM_8'];
-		$destination = $_POST['PARAM_9'];
-	}
-	elseif ($dim == 1) {
-		$dimension = $_POST['PARAM_2'];
-		$tags = (isset($_POST['PARAM_3']) ? $_POST['PARAM_3'] : -1);
-		$decimals = $_POST['PARAM_4'];
-		$graphics = $_POST['PARAM_5'];
-		$comments = $_POST['PARAM_6'];
-		$orientation = $_POST['PARAM_7'];
-		$destination = $_POST['PARAM_8'];
-	}
-	else {
-		$tags = (isset($_POST['PARAM_2']) ? $_POST['PARAM_2'] : -1);
-		$decimals = $_POST['PARAM_3'];
-		$graphics = $_POST['PARAM_4'];
-		$comments = $_POST['PARAM_5'];
-		$orientation = $_POST['PARAM_6'];
-		$destination = $_POST['PARAM_7'];
-	}
+	$dimension = $_POST['PARAM_2'];
+	$dimension2 = $_POST['PARAM_3'];
+	$tags = (isset($_POST['PARAM_4']) ? $_POST['PARAM_4'] : -1);
+	$decimals = isset($_POST['PARAM_5']) ? $_POST['PARAM_5'] : 0;
+	$graphics = isset($_POST['PARAM_6']) ? $_POST['PARAM_6'] : 0;
+	$comments = isset($_POST['PARAM_7']) ? $_POST['PARAM_7'] : '';
+	$orientation = isset($_POST['PARAM_8']) ? $_POST['PARAM_8'] : 0;
+	$destination = isset($_POST['PARAM_9']) ? $_POST['PARAM_9'] : 0;
 	if ($destination)
 		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
@@ -167,27 +150,13 @@ function print_balance_sheet() {
 
 	$aligns = array('left',	'left',	'right', 'right', 'right');
 
-	if ($dim == 2) {
-		$params =   array( 	0 => $comments,
-						1 => array('text' => _('Period'),'from' => $from, 'to' => $to),
-						2 => array('text' => _('Dimension').' 1',
-							'from' => get_dimension_string($dimension), 'to' => ''),
-						3 => array('text' => _('Dimension').' 2',
-							'from' => get_dimension_string($dimension2), 'to' => ''),
-						4 => array('text' => _('Tags'), 'from' => get_tag_names($tags), 'to' => ''));
-	}
-	elseif ($dim == 1) {
-		$params =   array( 	0 => $comments,
-						1 => array('text' => _('Period'),'from' => $from, 'to' => $to),
-						2 => array('text' => _('Dimension'),
-							'from' => get_dimension_string($dimension), 'to' => ''),
-						3 => array('text' => _('Tags'), 'from' => get_tag_names($tags), 'to' => ''));
-	}
-	else {
-		$params =   array( 	0 => $comments,
-						1 => array('text' => _('Period'),'from' => $from, 'to' => $to),
-						2 => array('text' => _('Tags'), 'from' => get_tag_names($tags), 'to' => ''));
-	}
+	$params =   array( 	0 => $comments,
+					1 => array('text' => _('Period'),'from' => $from, 'to' => $to),
+					2 => array('text' => _('Dimension').' 1',
+						'from' => get_dimension_string($dimension), 'to' => ''),
+					3 => array('text' => _('Dimension').' 2',
+						'from' => get_dimension_string($dimension2), 'to' => ''),
+					4 => array('text' => _('Tags'), 'from' => get_tag_names($tags), 'to' => ''));
 
 	$rep = new FrontReport(_('Balance Sheet'), 'BalanceSheet', user_pagesize(), 9, $orientation);
 	if ($orientation == 'L')

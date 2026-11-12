@@ -18,6 +18,8 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
 include_once($path_to_root.'/admin/db/tags_db.inc');
 
+check_page_security('SA_GLANALYTIC');
+
 print_annual_expense_breakdown();
 
 //----------------------------------------------------------------------------------------------------
@@ -143,37 +145,18 @@ function display_type ($type, $typename, $yr, $mo, $convert, &$dec, &$rep, $dime
 function print_annual_expense_breakdown() {
 	global $path_to_root, $SysPrefs, $tmonths;
 
-	$dim = get_company_pref('use_dimension');
+	// DIM-LFC-002: both axes are read on every posting preference.
 	$dimension = $dimension2 = 0;
 	$thousands = 0;
 
-	if ($dim == 2) {
-		$year = $_POST['PARAM_0'];
-		$dimension = $_POST['PARAM_1'];
-		$dimension2 = $_POST['PARAM_2'];
-		$tags = (isset($_POST['PARAM_3']) ? $_POST['PARAM_3'] : -1);
-		$comments = $_POST['PARAM_4'];
-		$orientation = $_POST['PARAM_5'];
-		$thousands = $_POST['PARAM_6'];
-		$destination = $_POST['PARAM_7'];
-	}
-	elseif ($dim == 1) {
-		$year = $_POST['PARAM_0'];
-		$dimension = $_POST['PARAM_1'];
-		$tags = (isset($_POST['PARAM_2']) ? $_POST['PARAM_2'] : -1);
-		$comments = $_POST['PARAM_3'];
-		$orientation = $_POST['PARAM_4'];
-		$thousands = $_POST['PARAM_5'];
-		$destination = $_POST['PARAM_6'];
-	}
-	else {
-		$year = $_POST['PARAM_0'];
-		$tags = (isset($_POST['PARAM_1']) ? $_POST['PARAM_1'] : -1);
-		$comments = $_POST['PARAM_2'];
-		$orientation = $_POST['PARAM_3'];
-		$thousands = $_POST['PARAM_4'];
-		$destination = $_POST['PARAM_5'];
-	}
+	$year = $_POST['PARAM_0'];
+	$dimension = $_POST['PARAM_1'];
+	$dimension2 = $_POST['PARAM_2'];
+	$tags = (isset($_POST['PARAM_3']) ? $_POST['PARAM_3'] : -1);
+	$comments = isset($_POST['PARAM_4']) ? $_POST['PARAM_4'] : '';
+	$orientation = isset($_POST['PARAM_5']) ? $_POST['PARAM_5'] : 0;
+	$thousands = isset($_POST['PARAM_6']) ? $_POST['PARAM_6'] : 0;
+	$destination = isset($_POST['PARAM_7']) ? $_POST['PARAM_7'] : 0;
 	if ($destination)
 		include_once($path_to_root.'/reporting/includes/excel_report.inc');
 	else
@@ -227,33 +210,15 @@ function print_annual_expense_breakdown() {
 
 	$aligns = array('left',	'left',	'right', 'right', 'right',	'right', 'right', 'right', 'right', 'right', 'right',	'right', 'right', 'right', 'right');
 
-	if ($dim == 2) {
-		$params =   array( 	0 => $comments,
-						1 => array('text' => _('Year'),
-							'from' => $year, 'to' => ''),
-						2 => array('text' => _('Dimension').' 1',
-							'from' => get_dimension_string($dimension), 'to' => ''),
-						3 => array('text' => _('Dimension').' 2',
-							'from' => get_dimension_string($dimension2), 'to' => ''),
-						4 => array('text' => _('Tags'), 'from' => get_tag_names($tags), 'to' => ''),	
-						5 => array('text' => _('Info'), 'from' => $amts_thousands, 'to' => ''));
-	}
-	elseif ($dim == 1) {
-		$params =   array( 	0 => $comments,
-						1 => array('text' => _('Year'),
-							'from' => $year, 'to' => ''),
-						2 => array('text' => _('Dimension'),
-							'from' => get_dimension_string($dimension), 'to' => ''),
-						3 => array('text' => _('Tags'), 'from' => get_tag_names($tags), 'to' => ''),	
-						4 => array('text' => _('Info'), 'from' => $amts_thousands, 'to' => ''));
-	}
-	else {
-		$params =   array( 	0 => $comments,
-						1 => array('text' => _('Year'),
-							'from' => $year, 'to' => ''),
-						2 => array('text' => _('Tags'), 'from' => get_tag_names($tags), 'to' => ''),	
-						3 => array('text' => _('Info'), 'from' => $amts_thousands, 'to' => ''));
-	}
+	$params =   array( 	0 => $comments,
+					1 => array('text' => _('Year'),
+						'from' => $year, 'to' => ''),
+					2 => array('text' => _('Dimension').' 1',
+						'from' => get_dimension_string($dimension), 'to' => ''),
+					3 => array('text' => _('Dimension').' 2',
+						'from' => get_dimension_string($dimension2), 'to' => ''),
+					4 => array('text' => _('Tags'), 'from' => get_tag_names($tags), 'to' => ''),
+					5 => array('text' => _('Info'), 'from' => $amts_thousands, 'to' => ''));
 
 	$rep = new FrontReport(_('Annual Expense Breakdown'), 'AnnualBreakDown', user_pagesize(), $fontSize,
 										$orientation);

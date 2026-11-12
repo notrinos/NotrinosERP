@@ -34,6 +34,17 @@ elseif(isset($_POST['selected_id']))
 else
 	$selected_id = -1;
 
+// DIM-LFC-002: no new Dimension may be entered while the company enables no posting axis. Historical
+// masters remain reachable for authorized viewing/exit, but this page does not create a disabled-axis event.
+// The completion redirects (Added/Updated/Deleted/Closed/Reopened) also carry no trans_no, so they
+// must reach their confirmation blocks below instead of being replaced by this error.
+if ($selected_id == -1 && (int)get_company_pref('use_dimension') < 1
+	&& !isset($_GET['AddedID']) && !isset($_GET['UpdatedID']) && !isset($_GET['DeletedID'])
+	&& !isset($_GET['ClosedID']) && !isset($_GET['ReopenedID'])) {
+	display_error(_('No Dimension axis is enabled for new entries. Historical Dimension inquiry and reports remain available.'));
+	display_footer_exit();
+}
+
 //---------------------------------------------------------------------------------------
 
 if (isset($_GET['AddedID'])) {
@@ -96,6 +107,20 @@ function can_process() {
 			set_focus('ref');
 			return false;
 		}
+	}
+	// DIM-LFC-002: a new master (or an axis change on an existing one) must use an axis that is enabled
+	// for new entries; an unchanged historical axis on an existing master is never rejected here.
+	$type_requested = isset($_POST['type_']) ? $_POST['type_'] : null;
+	$stored_type = null;
+	if ($selected_id != -1) {
+		$stored = get_dimension($selected_id, true);
+		$stored_type = is_array($stored) ? (int)$stored['type_'] : null;
+	}
+	if (!in_array($type_requested, array(1, 2, '1', '2'), true)
+		|| (($stored_type === null || (int)$type_requested !== $stored_type) && !dimension_axis_open_for_new_entry($type_requested))) {
+		display_error(_('The selected Dimension axis is not enabled for new entries.'));
+		set_focus('type_');
+		return false;
 	}
 	if (strlen($_POST['name']) == 0) {
 		display_error( _('The dimension name must be entered.'));
@@ -223,8 +248,15 @@ else {
 }
 
 text_row_ex(_('Name').':', 'name', 50, 75);
-$dim = get_company_pref('use_dimension');
-number_list_row(_('Type').':', 'type_', null, 1, $dim);
+$dim = (int)get_company_pref('use_dimension');
+// DIM-LFC-002: a disabled axis preference governs new events only. An existing historical master keeps
+// displaying (and resubmitting) its stored axis instead of being silently reassigned by a shortened list.
+if ($selected_id != -1 && (int)$myrow['type_'] > $dim) {
+	label_row(_('Type').':', (int)$myrow['type_']);
+	hidden('type_', (int)$myrow['type_']);
+}
+else
+	number_list_row(_('Type').':', 'type_', null, 1, max(1, $dim));
 date_row(_('Start Date').':', 'date_');
 date_row(_('Date Required By').':', 'due_date', '', null, $SysPrefs->default_dimension_required_by());
 tag_list_row(_('Tags:'), 'dimension_tags', 5, TAG_DIMENSION, true);

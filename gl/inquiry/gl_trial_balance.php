@@ -59,10 +59,9 @@ function gl_inquiry_controls() {
 	start_row();	
 	date_cells(_('From:'), 'TransFromDate');
 	date_cells(_('To:'), 'TransToDate');
-	if ($dim >= 1)
-		dimensions_list_cells(_('Dimension').' 1:', 'Dimension', null, true, ' ', false, 1);
-	if ($dim > 1)
-		dimensions_list_cells(_('Dimension').' 2:', 'Dimension2', null, true, ' ', false, 2);
+	// DIM-LFC-002: report history independently of the current posting preference.
+	dimensions_history_list_cells(_('Dimension').' 1:', 'Dimension', null, true, _('All Dimensions'));
+	dimensions_history_list_cells(_('Dimension').' 2:', 'Dimension2', null, true, _('All Dimensions'));
 	check_cells(_('No zero values'), 'NoZero', null);
 	check_cells(_('Only balances'), 'Balance', null);
 	check_cells(_('Group totals only'), 'GroupTotalOnly', null);

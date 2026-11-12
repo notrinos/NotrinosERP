@@ -10,6 +10,8 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+require_once(dirname(__DIR__).'/includes/report_selection.inc');
+
 // Standard report classess
 define('RC_CUSTOMER', 0);
 define('RC_SUPPLIER', 1);
@@ -149,8 +151,8 @@ class BoxReports {
 				if (($id == 102 || $id == 202) && $cnt == 3)
 					$_POST['PARAM_'.$cnt] = 1;
 				
-				if (isset($_COOKIE['select'][$id][$cnt]))
-					$_POST['PARAM_'.$cnt] = $_COOKIE['select'][$id][$cnt];
+				if (isset($_COOKIE['select'][$id][report_selection_key($id, $cnt)]))
+					$_POST['PARAM_'.$cnt] = $_COOKIE['select'][$id][report_selection_key($id, $cnt)];
 				$ctrl = $this->get_ctrl('PARAM_'.$cnt, $type);
 			}
 			if ($ctrl != '')  {
@@ -414,22 +416,22 @@ class BoxReports {
 					return bank_accounts_list($name);
 
 			case 'DIMENSION':
-				return dimensions_list($name, null, false, ' ', false, true, 0);
-					
+				return dimensions_history_list($name, null, false, ' ', false);
+
 			case 'DIMENSIONS':
-				return dimensions_list($name, null, true, _('No Dimension Filter'), false, true, 0);
+				return dimensions_history_list($name, null, true, _('No Dimension Filter'), false);
 
 			case 'DIMENSION1':
-				return dimensions_list($name, null, false, ' ', false, true, 1);
+				return dimensions_history_list($name, null, false, ' ', false);
 
 			case 'DIMENSIONS1':
-				return dimensions_list($name, null, true, _('No Dimension Filter'), false, true, 1);
+				return dimensions_history_list($name, null, true, _('No Dimension Filter'), false);
 
 			case 'DIMENSION2':
-				return dimensions_list($name, null, false, ' ', false, true, 2);
+				return dimensions_history_list($name, null, false, ' ', false);
 
 			case 'DIMENSIONS2':
-				return dimensions_list($name, null, true, _('No Dimension Filter'), false, true, 2);
+				return dimensions_history_list($name, null, true, _('No Dimension Filter'), false);
 
 			case 'CUSTOMERS_NO_FILTER':
 			case 'CUSTOMERS':

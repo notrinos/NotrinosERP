@@ -18,12 +18,14 @@ global $page_security;
 $page_security = 'SA_OPEN';	// this level is later overriden in rep file
 include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/reporting/includes/report_artifact_security.inc');
+include_once($path_to_root . '/reporting/includes/report_selection.inc');
 
 if (user_save_report_selections() > 0 && isset($_POST['REP_ID'])) {	// save parameters from Report Center
 	for($i=0; $i<12; $i++) {
 		if (isset($_POST['PARAM_'.$i]) && !is_array($_POST['PARAM_'.$i])) {
 			$rep = $_POST['REP_ID'];
-			setcookie("select[$rep][$i]", $_POST['PARAM_'.$i], time()+60*60*24*user_save_report_selections()); // days from user_save_report_selections()
+			// DIM-LFC-002/AT-12: never replay a saved native Dimension ID into another company/user.
+			setcookie("select[".(int)$rep."][".report_selection_key($rep, $i)."]", $_POST['PARAM_'.$i], time()+60*60*24*user_save_report_selections()); // days from user_save_report_selections()
 		}	
 	}
 }	
@@ -64,10 +66,11 @@ if (isset($_GET['xls']) || isset($_GET['xml']) || isset($_GET['unique'])) {
 }
 
 if (!isset($_POST['REP_ID'])) {	// print link clicked
-	$def_pars = array(0, 0, '', '', 0, '', '', 0); //default values
+	$def_pars = array(0, 0, '', '', 0, '', '', '', 0, 0, 0, 0); //default values
 	$rep = $_POST['REP_ID'] = $_GET['REP_ID'];
-	for($i=0; $i<8; $i++) {
-		$_POST['PARAM_'.$i] = isset($_GET['PARAM_'.$i]) ? $_GET['PARAM_'.$i] : $def_pars[$i];
+	for($i=0; $i<12; $i++) {
+		$_POST['PARAM_'.$i] = isset($_GET['PARAM_'.$i]) ? $_GET['PARAM_'.$i]
+			: (isset($def_pars[$i]) ? $def_pars[$i] : '');
 	}
 }
 

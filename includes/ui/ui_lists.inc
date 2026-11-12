@@ -12,6 +12,7 @@
 include_once($path_to_root.'/includes/banking.inc');
 include_once($path_to_root.'/includes/types.inc');
 include_once($path_to_root.'/includes/current_user.inc');
+include_once($path_to_root.'/includes/dimension_history.inc');
 
 define('SEARCH_BUTTON', "<input %s type='submit' class='combo_submit' style='border:0;background:url($path_to_root/themes/"
 	."%s/images/locate.png) no-repeat;%s' aspect='fallback' name='%s' value=' ' title='"._('Set filter')."'> ");
@@ -904,6 +905,54 @@ function dimensions_list($name, $selected_id=null, $no_option=false, $showname='
 		$options['where'][] = "(type_=".db_escape($showtype).($retained_id ? ' OR id='.$retained_id : '').")";
 
 	return combo_input($name, $selected_id, $sql, 'id', 'ref', $options);
+}
+
+/**
+ * Historical Dimension selector for filters, searches and drilldowns (DIM-LFC-002).
+ *
+ * Unlike the new-entry selectors above, this projection includes closed masters and both axes, and
+ * keeps an exact stored identity whose master was legitimately deleted visible as an explicit
+ * "Unknown Dimension" option. It is therefore safe for inquiries and reports but must never be used
+ * to collect a value for a new posting.
+ *
+ * @param string $name Form field name
+ * @param mixed $selected_id Stored/selected identity (closed or deleted identities included)
+ * @param bool $no_option Whether to prepend the supplied "all" option
+ * @param string $showname Text of the "all" option
+ * @param bool $submit_on_change Submit the form when the selection changes
+ * @return string Rendered selector HTML
+ */
+function dimensions_history_list($name, $selected_id=null, $no_option=false, $showname=' ', $submit_on_change=false) {
+	if ($selected_id === null)
+		$selected_id = get_post($name, 0);
+	$options = array(
+		'spec_option'=>$no_option ? $showname : false,
+		'spec_id' => 0,
+		'select_submit'=> $submit_on_change,
+		'async' => false,
+	);
+	return array_selector($name, $selected_id, dimension_history_options($selected_id, true), $options);
+}
+
+function dimensions_history_list_cells($label, $name, $selected_id=null, $no_option=false, $showname=null, $submit_on_change=false) {
+	filter_cell_open($label);
+	echo dimensions_history_list($name, $selected_id, $no_option, $showname, $submit_on_change);
+	filter_cell_close();
+}
+
+function dimensions_history_list_row($label, $name, $selected_id=null, $no_option=false, $showname=null, $submit_on_change=false) {
+	if (ui_current_table_mode() != 'table') {
+		echo "<div class='form-group'>";
+		echo "<label class='form-label'>".$label."</label>";
+		echo "<div class='form-control-wrap'>";
+		echo dimensions_history_list($name, $selected_id, $no_option, $showname, $submit_on_change);
+		echo "</div></div>\n";
+		return;
+	}
+	echo "<tr><td class='label'>".$label."</td>";
+	echo "<td>";
+	echo dimensions_history_list($name, $selected_id, $no_option, $showname, $submit_on_change);
+	echo "</td></tr>\n";
 }
 
 function dimensions_list_cells($label, $name, $selected_id=null, $no_option=false, $showname=null, $showclosed=false, $showtype=0, $submit_on_change=false, $retained_id=0) {

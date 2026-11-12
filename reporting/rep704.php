@@ -18,6 +18,10 @@ include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/gl/includes/gl_db.inc');
 
+// DIM-LFC-002/H03: prn_redirect bootstraps with SA_OPEN, so the report rechecks its own authority
+// before reading any parameter or GL row.
+check_page_security('SA_GLREP');
+
 //----------------------------------------------------------------------------------------------------
 
 print_GL_transactions();
@@ -27,31 +31,19 @@ print_GL_transactions();
 function print_GL_transactions() {
 	global $path_to_root, $systypes_array;
 
-	$dim = get_company_pref('use_dimension');
 	$dimension = $dimension2 = 0;
 
 	$from = $_POST['PARAM_0'];
 	$to = $_POST['PARAM_1'];
 	$fromacc = $_POST['PARAM_2'];
 	$toacc = $_POST['PARAM_3'];
-	if ($dim == 2) {
-		$dimension = $_POST['PARAM_4'];
-		$dimension2 = $_POST['PARAM_5'];
-		$comments = $_POST['PARAM_6'];
-		$orientation = $_POST['PARAM_7'];
-		$destination = $_POST['PARAM_8'];
-	}
-	elseif ($dim == 1) {
-		$dimension = $_POST['PARAM_4'];
-		$comments = $_POST['PARAM_5'];
-		$orientation = $_POST['PARAM_6'];
-		$destination = $_POST['PARAM_7'];
-	}
-	else {
-		$comments = $_POST['PARAM_4'];
-		$orientation = $_POST['PARAM_5'];
-		$destination = $_POST['PARAM_6'];
-	}
+	// DIM-LFC-002: both historical axes are read on every preference so an axis-2 classification
+	// remains reportable after axis 2 is disabled for new postings.
+	$dimension = $_POST['PARAM_4'];
+	$dimension2 = $_POST['PARAM_5'];
+	$comments = isset($_POST['PARAM_6']) ? $_POST['PARAM_6'] : '';
+	$orientation = isset($_POST['PARAM_7']) ? $_POST['PARAM_7'] : 0;
+	$destination = isset($_POST['PARAM_8']) ? $_POST['PARAM_8'] : 0;
 	if ($destination)
 		include_once($path_to_root . '/reporting/includes/excel_report.inc');
 	else
@@ -61,44 +53,16 @@ function print_GL_transactions() {
 	$rep = new FrontReport(_('GL Account Transactions'), 'GLAccountTransactions', user_pagesize(), 9, $orientation);
 	$dec = user_price_dec();
 
-	if ($dim == 2) {
-		$cols = array(0, 65, 105, 125, 175, 230, 290, 345, 405, 465, 525);
-		//------------0--1---2----3----4----5----6----7----8----9----10-------
-		//------------------------dim1-dim2-----------------------------------
-		$headers = array(_('Type'),	_('Ref'), _('#'),	_('Date'), _('Dimension').' 1', _('Dimension').' 2', _('Person/Item'), _('Debit'),	_('Credit'), _('Balance'));
-	}
-	elseif ($dim == 1) {
-		$cols = array(0, 65, 105, 125, 175, 260, 260, 345, 405, 465, 525);
-		//------------0--1---2----3----4----5----6----7----8----9----10-------
-		//------------------------dim1----------------------------------------
-		$headers = array(_('Type'),	_('Ref'), _('#'),	_('Date'), _('Dimension'), '', _('Person/Item'), _('Debit'),	_('Credit'), _('Balance'));
-	}
-	else {
-		$cols = array(0, 65, 105, 125, 175, 175, 175, 345, 405, 465, 525);
-		//------------0--1---2----3----4----5----6----7----8----9----10-------
-		//--------------------------------------------------------------------
-		$headers = array(_('Type'),	_('Ref'), _('#'),	_('Date'), '', '', _('Person/Item'), _('Debit'),	_('Credit'), _('Balance'));
-	}
+	$cols = array(0, 65, 105, 125, 175, 230, 290, 345, 405, 465, 525);
+	//------------0--1---2----3----4----5----6----7----8----9----10-------
+	$headers = array(_('Type'),	_('Ref'), _('#'),	_('Date'), _('Dimension').' 1', _('Dimension').' 2', _('Person/Item'), _('Debit'),	_('Credit'), _('Balance'));
 	$aligns = array('left', 'left', 'left',	'left',	'left',	'left',	'left',	'right', 'right', 'right');
 
-	if ($dim == 2) {
-		$params =   array( 	0 => $comments,
-						1 => array('text' => _('Period'), 'from' => $from, 'to' => $to),
-						2 => array('text' => _('Accounts'),'from' => $fromacc,'to' => $toacc),
-						3 => array('text' => _('Dimension').' 1', 'from' => get_dimension_string($dimension), 'to' => ''),
-						4 => array('text' => _('Dimension').' 2', 'from' => get_dimension_string($dimension2), 'to' => ''));
-	}
-	elseif ($dim == 1) {
-		$params =   array( 	0 => $comments,
-						1 => array('text' => _('Period'), 'from' => $from, 'to' => $to),
-						2 => array('text' => _('Accounts'),'from' => $fromacc,'to' => $toacc),
-						3 => array('text' => _('Dimension'), 'from' => get_dimension_string($dimension), 'to' => ''));
-	}
-	else {
-		$params =   array( 	0 => $comments,
-						1 => array('text' => _('Period'), 'from' => $from, 'to' => $to),
-						2 => array('text' => _('Accounts'),'from' => $fromacc,'to' => $toacc));
-	}
+	$params =   array( 	0 => $comments,
+					1 => array('text' => _('Period'), 'from' => $from, 'to' => $to),
+					2 => array('text' => _('Accounts'),'from' => $fromacc,'to' => $toacc),
+					3 => array('text' => _('Dimension').' 1', 'from' => get_dimension_string($dimension), 'to' => ''),
+					4 => array('text' => _('Dimension').' 2', 'from' => get_dimension_string($dimension2), 'to' => ''));
 	if ($orientation == 'L')
 		recalculate_cols($cols);
 
@@ -142,10 +106,8 @@ function print_GL_transactions() {
 				$rep->TextCol(1, 2, $reference);
 				$rep->TextCol(2, 3,	$myrow['type_no'], -2);
 				$rep->DateCol(3, 4,	$myrow['tran_date'], true);
-				if ($dim >= 1)
-					$rep->TextCol(4, 5,	get_dimension_string($myrow['dimension_id']));
-				if ($dim > 1)
-					$rep->TextCol(5, 6,	get_dimension_string($myrow['dimension2_id']));
+				$rep->TextCol(4, 5,	get_dimension_string($myrow['dimension_id']));
+				$rep->TextCol(5, 6,	get_dimension_string($myrow['dimension2_id']));
 				$txt = payment_person_name($myrow['person_type_id'], $myrow['person_id'], false);
 				$memo = $myrow['memo_'];
 				if ($txt != '') {

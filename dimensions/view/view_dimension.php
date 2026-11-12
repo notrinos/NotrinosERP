@@ -40,31 +40,28 @@ display_heading($systypes_array[ST_DIMENSION] . ' # ' . $id);
 br(1);
 $myrow = get_dimension($id, true);
 
-if ($myrow == false) {
-	echo _('The dimension number sent is not valid.');
-	exit;
+if (is_array($myrow)) {
+	start_table(TABLESTYLE);
+
+	$th = array(_('#'), _('Reference'), _('Name'), _('Type'), _('Date'), _('Due Date'));
+	table_header($th);
+
+	start_row();
+	label_cell($myrow['id']);
+	label_cell($myrow['reference']);
+	label_cell($myrow['name']);
+	label_cell($myrow['type_']);
+	label_cell(sql2date($myrow['date_']));
+	label_cell(sql2date($myrow['due_date']));
+	end_row();
+
+	comments_display_row(ST_DIMENSION, $id);
+
+	end_table();
 }
 
-start_table(TABLESTYLE);
-
-$th = array(_('#'), _('Reference'), _('Name'), _('Type'), _('Date'), _('Due Date'));
-table_header($th);
-
-start_row();
-label_cell($myrow['id']);
-label_cell($myrow['reference']);
-label_cell($myrow['name']);
-label_cell($myrow['type_']);
-label_cell(sql2date($myrow['date_']));
-label_cell(sql2date($myrow['due_date']));
-end_row();
-
-comments_display_row(ST_DIMENSION, $id);
-
-end_table();
-
-if ($myrow['closed'] == true)
-	display_note(_('This dimension is closed.'));
+// DIM-LFC-002: a deleted master keeps its balance/history viewable by the original stored ID.
+display_dimension_history_state($myrow, $id);
 
 start_form();
 

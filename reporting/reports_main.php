@@ -30,8 +30,6 @@ page(_($help_context = 'Reports and Analysis'), false, false, '', $js);
 
 $reports = new BoxReports;
 
-$dim = get_company_pref('use_dimension');
-
 $reports->addReportClass(_('Customer'), RC_CUSTOMER);
 $reports->addReport(RC_CUSTOMER, 101, _('Customer &Balances'),
 	array(	_('Start Date') => 'DATEBEGIN',
@@ -503,15 +501,15 @@ if (get_company_pref('use_fixed_assets')) {
 				_('Destination') => 'DESTINATION'));
 }				
 $reports->addReportClass(_('Dimensions'), RC_DIMENSIONS);
-if ($dim > 0) {
-	$reports->addReport(RC_DIMENSIONS, 501, _('Dimension &Summary'),
+// DIM-LFC-002: report 501 is a historical report. It stays registered when the posting preference
+// enables no axis, because closed and disabled-axis masters must remain reconcilable.
+$reports->addReport(RC_DIMENSIONS, 501, _('Dimension &Summary'),
 	array(	_('From Dimension') => 'DIMENSION',
 			_('To Dimension') => 'DIMENSION',
 			_('Show Balance') => 'YES_NO',
 			_('Comments') => 'TEXTBOX',
 			_('Orientation') => 'ORIENTATION',
 			_('Destination') => 'DESTINATION'));
-}
 $reports->addReportClass(_('Banking'), RC_BANKING);
 	$reports->addReport(RC_BANKING,  601, _('Bank &Statement'),
 	array(	_('Bank Accounts') => 'BANK_ACCOUNTS_NO_FILTER',
@@ -542,153 +540,62 @@ $reports->addReport(RC_GL, 702, _('List of &Journal Entries'),
 			_('Orientation') => 'ORIENTATION',
 			_('Destination') => 'DESTINATION'));
 
-if ($dim == 2) {
-	$reports->addReport(RC_GL, 704, _('GL Account &Transactions'),
-	array(	_('Start Date') => 'DATEBEGINM',
-			_('End Date') => 'DATEENDM',
-			_('From Account') => 'GL_ACCOUNTS',
-			_('To Account') => 'GL_ACCOUNTS',
-			_('Dimension').' 1' =>  'DIMENSIONS1',
-			_('Dimension').' 2' =>  'DIMENSIONS2',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Destination') => 'DESTINATION'));
-	$reports->addReport(RC_GL, 705, _('Annual &Expense Breakdown'),
-	array(	_('Year') => 'TRANS_YEARS',
-			_('Dimension').' 1' =>  'DIMENSIONS1',
-			_('Dimension').' 2' =>  'DIMENSIONS2',
-			_('Account Tags') =>  'ACCOUNTTAGS',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Amounts in thousands') => 'YES_NO',
-			_('Destination') => 'DESTINATION'));
-	$reports->addReport(RC_GL, 706, _('&Balance Sheet'),
-	array(	_('Start Date') => 'DATEBEGIN',
-			_('End Date') => 'DATEENDM',
-			_('Dimension').' 1' => 'DIMENSIONS1',
-			_('Dimension').' 2' => 'DIMENSIONS2',
-			_('Account Tags') =>  'ACCOUNTTAGS',
-			_('Decimal values') => 'YES_NO',
-			_('Graphics') => 'GRAPHIC',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Destination') => 'DESTINATION'));
-	$reports->addReport(RC_GL, 707, _('&Profit and Loss Statement'),
-	array(	_('Start Date') => 'DATEBEGINM',
-			_('End Date') => 'DATEENDM',
-			_('Compare to') => 'COMPARE',
-			_('Dimension').' 1' =>  'DIMENSIONS1',
-			_('Dimension').' 2' =>  'DIMENSIONS2',
-			_('Account Tags') =>  'ACCOUNTTAGS',
-			_('Decimal values') => 'YES_NO',
-			_('Graphics') => 'GRAPHIC',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Destination') => 'DESTINATION'));
-	$reports->addReport(RC_GL, 708, _('Trial &Balance'),
-	array(	_('Start Date') => 'DATEBEGINM',
-			_('End Date') => 'DATEENDM',
-			_('Zero values') => 'YES_NO',
-			_('Only balances') => 'YES_NO',
-			_('Dimension').' 1' =>  'DIMENSIONS1',
-			_('Dimension').' 2' =>  'DIMENSIONS2',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Destination') => 'DESTINATION'));
-}
-elseif ($dim == 1) {
-	$reports->addReport(RC_GL, 704, _('GL Account &Transactions'),
-	array(	_('Start Date') => 'DATEBEGINM',
-			_('End Date') => 'DATEENDM',
-			_('From Account') => 'GL_ACCOUNTS',
-			_('To Account') => 'GL_ACCOUNTS',
-			_('Dimension') =>  'DIMENSIONS1',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Destination') => 'DESTINATION'));
-	$reports->addReport(RC_GL, 705, _('Annual &Expense Breakdown'),
-	array(	_('Year') => 'TRANS_YEARS',
-			_('Dimension') =>  'DIMENSIONS1',
-			_('Account Tags') =>  'ACCOUNTTAGS',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Amounts in thousands') => 'YES_NO',
-			_('Destination') => 'DESTINATION'));
-	$reports->addReport(RC_GL, 706, _('&Balance Sheet'),
-	array(	_('Start Date') => 'DATEBEGIN',
-			_('End Date') => 'DATEENDM',
-			_('Dimension') => 'DIMENSIONS1',
-			_('Account Tags') =>  'ACCOUNTTAGS',
-			_('Decimal values') => 'YES_NO',
-			_('Graphics') => 'GRAPHIC',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Destination') => 'DESTINATION'));
-	$reports->addReport(RC_GL, 707, _('&Profit and Loss Statement'),
-	array(	_('Start Date') => 'DATEBEGINM',
-			_('End Date') => 'DATEENDM',
-			_('Compare to') => 'COMPARE',
-			_('Dimension') => 'DIMENSIONS1',
-			_('Account Tags') =>  'ACCOUNTTAGS',
-			_('Decimal values') => 'YES_NO',
-			_('Graphics') => 'GRAPHIC',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Destination') => 'DESTINATION'));
-	$reports->addReport(RC_GL, 708, _('Trial &Balance'),
-	array(	_('Start Date') => 'DATEBEGINM',
-			_('End Date') => 'DATEENDM',
-			_('Zero values') => 'YES_NO',
-			_('Only balances') => 'YES_NO',
-			_('Dimension') => 'DIMENSIONS1',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Destination') => 'DESTINATION'));
-}
-else {
-	$reports->addReport(RC_GL, 704, _('GL Account &Transactions'),
-	array(	_('Start Date') => 'DATEBEGINM',
-			_('End Date') => 'DATEENDM',
-			_('From Account') => 'GL_ACCOUNTS',
-			_('To Account') => 'GL_ACCOUNTS',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Destination') => 'DESTINATION'));
-	$reports->addReport(RC_GL, 705, _('Annual &Expense Breakdown'),
-	array(	_('Year') => 'TRANS_YEARS',
-			_('Account Tags') =>  'ACCOUNTTAGS',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Amounts in thousands') => 'YES_NO',
-			_('Destination') => 'DESTINATION'));
-	$reports->addReport(RC_GL, 706, _('&Balance Sheet'),
-	array(	_('Start Date') => 'DATEBEGIN',
-			_('End Date') => 'DATEENDM',
-			_('Account Tags') =>  'ACCOUNTTAGS',
-			_('Decimal values') => 'YES_NO',
-			_('Graphics') => 'GRAPHIC',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Destination') => 'DESTINATION'));
-	$reports->addReport(RC_GL, 707, _('&Profit and Loss Statement'),
-	array(	_('Start Date') => 'DATEBEGINM',
-			_('End Date') => 'DATEENDM',
-			_('Compare to') => 'COMPARE',
-			_('Account Tags') =>  'ACCOUNTTAGS',
-			_('Decimal values') => 'YES_NO',
-			_('Graphics') => 'GRAPHIC',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Destination') => 'DESTINATION'));
-	$reports->addReport(RC_GL, 708, _('Trial &Balance'),
-	array(	_('Start Date') => 'DATEBEGINM',
-			_('End Date') => 'DATEENDM',
-			_('Zero values') => 'YES_NO',
-			_('Only balances') => 'YES_NO',
-			_('Comments') => 'TEXTBOX',
-			_('Orientation') => 'ORIENTATION',
-			_('Destination') => 'DESTINATION'));
-}
+// DIM-LFC-002: every native GL report exposes both historical Dimension filters regardless of the
+// current posting preference. A company that later disables axis 2 can still report the axis-2
+// classifications already stored on its GL and budget rows; a zero filter remains "no filter".
+$reports->addReport(RC_GL, 704, _('GL Account &Transactions'),
+array(	_('Start Date') => 'DATEBEGINM',
+		_('End Date') => 'DATEENDM',
+		_('From Account') => 'GL_ACCOUNTS',
+		_('To Account') => 'GL_ACCOUNTS',
+		_('Dimension').' 1' =>  'DIMENSIONS1',
+		_('Dimension').' 2' =>  'DIMENSIONS2',
+		_('Comments') => 'TEXTBOX',
+		_('Orientation') => 'ORIENTATION',
+		_('Destination') => 'DESTINATION'));
+$reports->addReport(RC_GL, 705, _('Annual &Expense Breakdown'),
+array(	_('Year') => 'TRANS_YEARS',
+		_('Dimension').' 1' =>  'DIMENSIONS1',
+		_('Dimension').' 2' =>  'DIMENSIONS2',
+		_('Account Tags') =>  'ACCOUNTTAGS',
+		_('Comments') => 'TEXTBOX',
+		_('Orientation') => 'ORIENTATION',
+		_('Amounts in thousands') => 'YES_NO',
+		_('Destination') => 'DESTINATION'));
+$reports->addReport(RC_GL, 706, _('&Balance Sheet'),
+array(	_('Start Date') => 'DATEBEGIN',
+		_('End Date') => 'DATEENDM',
+		_('Dimension').' 1' => 'DIMENSIONS1',
+		_('Dimension').' 2' => 'DIMENSIONS2',
+		_('Account Tags') =>  'ACCOUNTTAGS',
+		_('Decimal values') => 'YES_NO',
+		_('Graphics') => 'GRAPHIC',
+		_('Comments') => 'TEXTBOX',
+		_('Orientation') => 'ORIENTATION',
+		_('Destination') => 'DESTINATION'));
+$reports->addReport(RC_GL, 707, _('&Profit and Loss Statement'),
+array(	_('Start Date') => 'DATEBEGINM',
+		_('End Date') => 'DATEENDM',
+		_('Compare to') => 'COMPARE',
+		_('Dimension').' 1' =>  'DIMENSIONS1',
+		_('Dimension').' 2' =>  'DIMENSIONS2',
+		_('Account Tags') =>  'ACCOUNTTAGS',
+		_('Decimal values') => 'YES_NO',
+		_('Graphics') => 'GRAPHIC',
+		_('Comments') => 'TEXTBOX',
+		_('Orientation') => 'ORIENTATION',
+		_('Destination') => 'DESTINATION'));
+$reports->addReport(RC_GL, 708, _('Trial &Balance'),
+array(	_('Start Date') => 'DATEBEGINM',
+		_('End Date') => 'DATEENDM',
+		_('Zero values') => 'YES_NO',
+		_('Only balances') => 'YES_NO',
+		_('Dimension').' 1' =>  'DIMENSIONS1',
+		_('Dimension').' 2' =>  'DIMENSIONS2',
+		_('Comments') => 'TEXTBOX',
+		_('Orientation') => 'ORIENTATION',
+		_('Destination') => 'DESTINATION'));
+
 $reports->addReport(RC_GL, 709, _('Ta&x Report'),
 	array(	_('Start Date') => 'DATEBEGINTAX',
 			_('End Date') => 'DATEENDTAX',
