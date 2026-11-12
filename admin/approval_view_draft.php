@@ -37,6 +37,7 @@ include_once($path_to_root . '/admin/db/approval_rules_setup_db.inc');
 include_once($path_to_root . '/admin/db/approval_dashboard_db.inc');
 include_once($path_to_root . '/includes/approval/approval_delegation.inc');
 include_once($path_to_root . '/includes/approval/approval_escalation.inc');
+include_once($path_to_root . '/includes/approval/approval_dimension_snapshot.inc');
 
 // =====================================================
 // Get draft ID from request
@@ -139,6 +140,17 @@ echo "<h3 style='margin:12px 0 8px 0;'>"
 	. _('Draft Information') . "</h3>\n";
 
 display_approval_summary_box($draft);
+
+// --- Section 1b: Classification Snapshot (DIM-APR-001) ---
+// Read-only review of the sealed approval classification. A legacy payload is shown as a visible
+// compatibility outcome; no classification is recalculated on this page.
+$snapshot_review = approval_dimension_snapshot_review($draft);
+if (is_array($snapshot_review) && $snapshot_review['state'] !== 'not_governed') {
+	echo "<h3 style='margin:16px 0 8px 0;'>"
+		. default_theme_icon('check-circle')
+		. _('Classification Snapshot') . "</h3>\n";
+	echo approval_dimension_snapshot_render_review($snapshot_review);
+}
 
 // --- Section 2: Approval Progress Bar ---
 $max_level = get_max_approval_level($draft['workflow_id']);

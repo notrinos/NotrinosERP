@@ -32,6 +32,7 @@ include_once(dirname(__FILE__) . '/db/approval_history_db.inc');
 include_once(dirname(__FILE__) . '/approval_number.inc');
 include_once(dirname(__FILE__) . '/approval_notify.inc');
 include_once(dirname(__FILE__) . '/approval_conditions.inc');
+include_once(dirname(__FILE__) . '/approval_dimension_snapshot.inc');
 
 class ApprovalWorkflow {
 
@@ -49,6 +50,15 @@ class ApprovalWorkflow {
 
 	/** @var array Cached user approval levels by trans_type */
 	private $user_levels_cache = array();
+
+	/** @var string Classification state observed by the last submission/decision/execution */
+	private $last_classification_state = 'not_governed';
+
+	/** @var string Execution error of the last attempted approved execution */
+	private $last_execution_error = '';
+
+	/** @var string Verified/legacy notice of the last approved execution */
+	private $last_execution_notice = '';
 
 	// =====================================================
 	// REGISTRATION API (Static)
@@ -320,10 +330,27 @@ class ApprovalWorkflow {
 
 		begin_transaction();
 
+		// DIM-APR-001: bind or verify the versioned classification envelope before the draft is
+		// serialized. A legacy payload stays admissible and reports its compatibility outcome.
+		$snapshot = approval_dimension_snapshot_attach_submission($trans_type, $data,
+			isset($context['dimension_snapshot']) ? $context['dimension_snapshot'] : null);
+		if (!$snapshot['ok']) {
+			cancel_transaction();
+			return array('draft_id'=>0, 'trans_no'=>0, 'reference'=>'', 'status'=>'snapshot_invalid',
+				'message'=>approval_dimension_snapshot_refusal_text($snapshot, 'submit'),
+				'classification'=>array('state'=>$snapshot['state'], 'version'=>0),
+				'errors'=>$snapshot['errors'], 'codes'=>$snapshot['codes']);
+		}
+		$data = $snapshot['data'];
+		$this->last_classification_state = $snapshot['state'];
+
 		// Reserve transaction number
 		if (!$this->validateRegisteredAction('submit', $trans_type, $data)) {
 			cancel_transaction();
-			return array('draft_id'=>0, 'trans_no'=>0, 'reference'=>'', 'status'=>'validation_failed');
+			$failed = array('draft_id'=>0, 'trans_no'=>0, 'reference'=>'', 'status'=>'validation_failed');
+			if ($snapshot['state'] !== 'not_governed')
+				$failed['message'] = _('The business approval source could not be verified.');
+			return $this->decorateSubmitResult($failed, $snapshot);
 		}
 		$number_context = isset(self::$registered_types[$trans_type]['number_context'])
 			? self::$registered_types[$trans_type]['number_context']
@@ -412,12 +439,20 @@ class ApprovalWorkflow {
 			$exec_result = $this->executeApprovedDraft($draft_id);
 			if (!$exec_result) {
 				cancel_transaction();
-				return array(
+				$failed = array(
 					'draft_id'  => $draft_id,
 					'trans_no'  => 0,
 					'reference' => $reserved['reference'],
 					'status'    => 'execution_failed',
 				);
+				if ($snapshot['state'] !== 'not_governed') {
+					$failed['message'] = $this->last_execution_error !== ''
+						? $this->last_execution_error
+						: _('The approved transaction could not be posted. No changes were committed.');
+					$failed['classification'] = array('state'=>$this->last_classification_state,
+						'version'=>$snapshot['version']);
+				}
+				return $failed;
 			}
 			commit_transaction();
 
@@ -427,12 +462,19 @@ class ApprovalWorkflow {
 				? (int)$posted_draft['approved_trans_no']
 				: $reserved['trans_no'];
 
-			return array(
+			$approved = array(
 				'draft_id'  => $draft_id,
 				'trans_no'  => $actual_trans_no,
 				'reference' => $reserved['reference'],
 				'status'    => 'auto_approved',
 			);
+			if ($snapshot['state'] !== 'not_governed') {
+				$approved['message'] = _('Draft has been approved and posted.')
+					. ($this->last_execution_notice !== '' ? ' '.$this->last_execution_notice : '');
+				$approved['classification'] = array('state'=>$this->last_classification_state,
+					'version'=>$snapshot['version']);
+			}
+			return $approved;
 		}
 
 		// Persist level-1 notifications inside the submission transaction.
@@ -465,12 +507,19 @@ class ApprovalWorkflow {
 
 		commit_transaction();
 
-		return array(
+		$pending = array(
 			'draft_id'  => $draft_id,
 			'trans_no'  => $reserved['trans_no'],
 			'reference' => $reserved['reference'],
 			'status'    => 'pending',
 		);
+		if ($snapshot['state'] !== 'not_governed') {
+			$pending['message'] = $this->last_classification_state === 'legacy'
+				? approval_dimension_snapshot_notice('legacy') : '';
+			$pending['classification'] = array('state'=>$this->last_classification_state,
+				'version'=>$snapshot['version']);
+		}
+		return $pending;
 	}
 
 	/**
@@ -536,6 +585,22 @@ class ApprovalWorkflow {
 			return array('status' => 'error', 'trans_no' => null, 'message' => _('Comments are required for approval.'));
 		}
 
+		// DIM-APR-001: a delayed approval may not decide a changed, closed, stale or tampered
+		// classification. Reject/cancel deliberately keep their original authorities and are not
+		// gated here, so a stale draft can still be refused by its owner.
+		$decode_ok = false;
+		$draft_payload = $this->decodeDraftData($draft['draft_data'], $decode_ok);
+		$classification = approval_dimension_snapshot_preflight($draft, $draft_payload);
+		if (!$classification['ok']) {
+			cancel_transaction();
+			return array('status'=>'error', 'trans_no'=>null,
+				'message'=>approval_dimension_snapshot_refusal_text($classification, 'decision'),
+				'classification'=>array('state'=>$classification['state'],
+					'version'=>approval_dimension_snapshot_schema_version()),
+				'errors'=>$classification['errors']);
+		}
+		$this->last_classification_state = $classification['state'];
+
 		// Record the approval action
 		add_approval_action($draft_id, 'approve', $this->user_id, $current_level, $comments);
 
@@ -563,11 +628,13 @@ class ApprovalWorkflow {
 				$exec_result = $this->executeApprovedDraft($draft_id);
 				if (!$exec_result) {
 					cancel_transaction();
-					return array(
+					return $this->decorateDecisionResult(array(
 						'status'   => 'error',
 						'trans_no' => null,
-						'message'  => _('The approved transaction could not be posted. No approval changes were committed.'),
-					);
+						'message'  => $this->last_execution_error !== ''
+							? $this->last_execution_error
+							: _('The approved transaction could not be posted. No approval changes were committed.'),
+					));
 				}
 
 				// Notify submitter
@@ -584,11 +651,12 @@ class ApprovalWorkflow {
 
 				commit_transaction();
 
-				return array(
+				return $this->decorateDecisionResult(array(
 					'status'   => 'approved',
 					'trans_no' => (int)$posted_draft['approved_trans_no'],
-					'message'  => _('Draft has been approved and posted.'),
-				);
+					'message'  => _('Draft has been approved and posted.')
+						. ($this->last_execution_notice !== '' ? ' '.$this->last_execution_notice : ''),
+				));
 			} else {
 				// Advance to next level
 				$next_level = $current_level + 1;
@@ -616,11 +684,13 @@ class ApprovalWorkflow {
 					$exec_result = $this->executeApprovedDraft($draft_id);
 					if (!$exec_result) {
 						cancel_transaction();
-						return array(
+						return $this->decorateDecisionResult(array(
 							'status'   => 'error',
 							'trans_no' => null,
-							'message'  => _('The approved transaction could not be posted. No approval changes were committed.'),
-						);
+							'message'  => $this->last_execution_error !== ''
+								? $this->last_execution_error
+								: _('The approved transaction could not be posted. No approval changes were committed.'),
+						));
 					}
 					notify_approval_submitter($draft_id, $draft['submitted_by'], 'approved');
 					$posted_draft = get_approval_draft($draft_id);
@@ -633,11 +703,12 @@ class ApprovalWorkflow {
 
 					commit_transaction();
 
-					return array(
+					return $this->decorateDecisionResult(array(
 						'status'   => 'approved',
 						'trans_no' => (int)$posted_draft['approved_trans_no'],
-						'message'  => _('Draft has been approved and posted (auto-approved at next level).'),
-					);
+						'message'  => _('Draft has been approved and posted (auto-approved at next level).')
+							. ($this->last_execution_notice !== '' ? ' '.$this->last_execution_notice : ''),
+					));
 				}
 
 				// Notify next level approvers
@@ -656,11 +727,11 @@ class ApprovalWorkflow {
 
 				commit_transaction();
 
-				return array(
+				return $this->decorateDecisionResult(array(
 					'status'   => 'pending_next_level',
 					'trans_no' => null,
 					'message'  => sprintf(_('Approved at level %d. Pending approval at level %d.'), $current_level, $next_level),
-				);
+				));
 			}
 		}
 
@@ -672,7 +743,7 @@ class ApprovalWorkflow {
 
 		commit_transaction();
 
-		return array(
+		return $this->decorateDecisionResult(array(
 			'status'   => 'pending_more_approvers',
 			'trans_no' => null,
 			'message'  => sprintf(
@@ -680,7 +751,7 @@ class ApprovalWorkflow {
 				$min_required - $approvals_at_level,
 				$current_level
 			),
-		);
+		));
 	}
 
 	/**
@@ -1050,6 +1121,41 @@ class ApprovalWorkflow {
 	// =====================================================
 
 	/**
+	 * Add the classification state to a governed decision result only.
+	 *
+	 * @param array $result Workflow decision result
+	 * @return array
+	 */
+	private function decorateDecisionResult($result)
+	{
+		if ($this->last_classification_state === 'not_governed')
+			return $result;
+		$result['classification'] = array('state'=>$this->last_classification_state,
+			'version'=>approval_dimension_snapshot_schema_version());
+		return $result;
+	}
+
+	/**
+	 * Add the classification state to a governed submission result only.
+	 *
+	 * Non-governed families keep their exact historical result shape so payroll and every other
+	 * untouched caller observes no compatibility change.
+	 *
+	 * @param array $result Workflow result
+	 * @param array $snapshot Submission attachment result
+	 * @return array
+	 */
+	private function decorateSubmitResult($result, $snapshot)
+	{
+		if (!is_array($snapshot) || !isset($snapshot['state'])
+			|| $snapshot['state'] === 'not_governed')
+			return $result;
+		$result['classification'] = array('state'=>$snapshot['state'],
+			'version'=>isset($snapshot['version']) ? (int)$snapshot['version'] : 0);
+		return $result;
+	}
+
+	/**
 	 * Get the active workflow configuration for a transaction type (cached).
 	 *
 	 * @param int $trans_type Transaction type constant
@@ -1254,6 +1360,8 @@ class ApprovalWorkflow {
 	 */
 	private function executeApprovedDraft($draft_id)
 	{
+		$this->last_execution_error = '';
+		$this->last_execution_notice = '';
 		$draft = get_approval_draft($draft_id);
 
 		if (!$draft)
@@ -1269,6 +1377,19 @@ class ApprovalWorkflow {
 		$draft_data = $this->decodeDraftData($draft['draft_data'], $decode_ok);
 		if (!$decode_ok || $draft_data === null)
 			return false;
+
+		// DIM-APR-001: restore the verified classification snapshot before any executor writes. A
+		// changed, closed, stale or tampered source refuses the whole execution transaction; a legacy
+		// payload records its visible compatibility outcome and keeps the existing source behavior.
+		$classification = approval_dimension_snapshot_execution($draft, $draft_data);
+		if (!$classification['ok']) {
+			$this->last_execution_error = approval_dimension_snapshot_refusal_text($classification, 'execution');
+			$this->last_classification_state = $classification['state'];
+			return false;
+		}
+		$draft_data = $classification['data'];
+		$this->last_classification_state = $classification['state'];
+		$this->last_execution_notice = $classification['notice'];
 
 		// Release the reserved number so the executor can use it
 		release_reserved_trans_number($trans_type, $draft['reserved_trans_no']);
@@ -1293,6 +1414,17 @@ class ApprovalWorkflow {
 				&& (string)(int)$result === $result && (int)$result > 0))
 				? (int)$result : (int)$draft['reserved_trans_no'];
 			update_approval_draft_trans_no($draft_id, $posted_trans_no);
+
+			// A versioned execution retains one immutable audit receipt in the same transaction.
+			// Without it the posting and the approval action are rolled back together.
+			if ($classification['state'] === 'versioned') {
+				$receipt = approval_dimension_snapshot_receipt($classification['validation'], $posted_trans_no);
+				if (add_approval_action($draft_id, 'snapshot', null, (int)$draft['current_level'],
+					$receipt) === false) {
+					$this->last_execution_error = _('The classification snapshot audit receipt could not be recorded. No transaction was posted.');
+					return false;
+				}
+			}
 		}
 
 		return $result !== false;

@@ -147,6 +147,7 @@ function format_approval_action_badge($action_type)
 		'escalate'  => array('bg' => '#fd7e14', 'icon' => 'arrow-up',   'label' => _('Escalated')),
 		'edit'      => array('bg' => '#ffc107', 'icon' => 'edit',       'label' => _('Edited')),
 		'resubmit'  => array('bg' => '#6610f2', 'icon' => 'undo',       'label' => _('Resubmitted')),
+		'snapshot'  => array('bg' => '#0f766e', 'icon' => 'check',      'label' => _('Classification Verified')),
 	);
 
 	if (isset($badges[$action_type])) {
