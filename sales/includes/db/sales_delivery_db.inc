@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__.'/../../../dimensions/includes/dimension_resolution.inc';
 //-----------------------------------------------------------------------------
 // insert/update sales delivery
 //
@@ -112,12 +113,15 @@ function write_sales_delivery(&$delivery,$bo_policy) {
 
 			$stock_gl_code = get_stock_gl_code($delivery_line->stock_id);
 
-			// If there is a Customer Dimension, then override with this,
-			// else take the Item Dimension (if any)
-			$dim = ($delivery->dimension_id != $customer['dimension_id'] ? $delivery->dimension_id : 
-				($customer['dimension_id'] != 0 ? $customer['dimension_id'] : $stock_gl_code['dimension_id']));
-			$dim2 = ($delivery->dimension2_id != $customer['dimension2_id'] ? $delivery->dimension2_id : 
-				($customer['dimension2_id'] != 0 ? $customer['dimension2_id'] : $stock_gl_code['dimension2_id']));
+			// DIM-FND-005: one shared resolver. An unsnapshotted document keeps the
+			// characterized E08 equality/default adapter; an explicit intent (including
+			// Explicitly Unassigned) is honored and never falls through to a default.
+			$dim = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
+				$delivery->dimension_id, $customer['dimension_id'], $stock_gl_code['dimension_id'], 1,
+				dimension_resolution_document_intent($delivery, 1)));
+			$dim2 = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
+				$delivery->dimension2_id, $customer['dimension2_id'], $stock_gl_code['dimension2_id'], 2,
+				dimension_resolution_document_intent($delivery, 2)));
 			if ($delivery->is_prepaid()) {
 				$sales_account = ($branch_data['sales_account'] != '' ? $branch_data['sales_account'] : $stock_gl_code['sales_account']);
 

@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__.'/../../../dimensions/includes/dimension_resolution.inc';
 /*
 	Add or update Sales Invoice
 */
@@ -150,12 +151,15 @@ function write_sales_invoice(&$invoice) {
 				// else take the Item Sales Account
 				if (!$invoice->is_prepaid())
 					$sales_account = ($branch_data['sales_account'] != '' ? $branch_data['sales_account'] : $stock_gl_code['sales_account']);
-				// If there is a Customer Dimension, then override with this,
-				// else take the Item Dimension (if any)
-				$dim = ($invoice->dimension_id != $customer['dimension_id'] ? $invoice->dimension_id : 
-					($customer['dimension_id'] != 0 ? $customer['dimension_id'] : $stock_gl_code['dimension_id']));
-				$dim2 = ($invoice->dimension2_id != $customer['dimension2_id'] ? $invoice->dimension2_id : 
-					($customer['dimension2_id'] != 0 ? $customer['dimension2_id'] : $stock_gl_code['dimension2_id']));
+				// DIM-FND-005: one shared resolver. An unsnapshotted document keeps the
+				// characterized E08 equality/default adapter; an explicit intent (including
+				// Explicitly Unassigned) is honored and never falls through to a default.
+				$dim = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
+					$invoice->dimension_id, $customer['dimension_id'], $stock_gl_code['dimension_id'], 1,
+					dimension_resolution_document_intent($invoice, 1)));
+				$dim2 = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
+					$invoice->dimension2_id, $customer['dimension2_id'], $stock_gl_code['dimension2_id'], 2,
+					dimension_resolution_document_intent($invoice, 2)));
 				$total += add_gl_trans_customer(ST_SALESINVOICE, $invoice_no, $date_, $sales_account, $dim, $dim2,
 					-$line_taxfree_price*$prepaid_factor,
 					$invoice->customer_id, 'The sales price GL posting could not be inserted');

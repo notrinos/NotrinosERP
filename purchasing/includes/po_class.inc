@@ -37,6 +37,8 @@ class purch_order {
 	var $cash_account;
 	var $dimension,
 		$dimension2;
+	// DIM-FND-005 explicit ADR-02 modes for this request; null is a legacy document.
+	var $classification_intents = null;
 
 	var $reference;
 	var $tax_overrides = array();		// array of taxes manually inserted during sales invoice entry (direct invoice)

@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__.'/../../../dimensions/includes/dimension_resolution.inc';
 //----------------------------------------------------------------------------------------
 // if ($writeoff_acc==0) return goods into $cart->Location
 // if src_docs!=0 => credit invoice else credit note
@@ -272,12 +273,15 @@ function add_credit_movements_item(&$credit_note, &$credit_line, $credit_type, $
 function add_gl_trans_credit_costs($order, $order_line, $credit_no, $date_, $credit_type, $write_off_gl_code, &$branch_data) {
 	$stock_gl_codes = get_stock_gl_code($order_line->stock_id);
 	$customer = debtors_master_entity::find($order->customer_id);
-	// If there is a Customer Dimension, then override with this,
-	// else take the Item Dimension (if any)
-	$dim = ($order->dimension_id != $customer['dimension_id'] ? $order->dimension_id : 
-		($customer['dimension_id'] != 0 ? $customer['dimension_id'] : $stock_gl_codes['dimension_id']));
-	$dim2 = ($order->dimension2_id != $customer['dimension2_id'] ? $order->dimension2_id : 
-		($customer['dimension2_id'] != 0 ? $customer['dimension2_id'] : $stock_gl_codes['dimension2_id']));
+	// DIM-FND-005: one shared resolver. An unsnapshotted document keeps the characterized
+	// E08 equality/default adapter; an explicit intent (including Explicitly Unassigned) is
+	// honored and never falls through to a default.
+	$dim = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
+		$order->dimension_id, $customer['dimension_id'], $stock_gl_codes['dimension_id'], 1,
+		dimension_resolution_document_intent($order, 1)));
+	$dim2 = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
+		$order->dimension2_id, $customer['dimension2_id'], $stock_gl_codes['dimension2_id'], 2,
+		dimension_resolution_document_intent($order, 2)));
 
 	$total = 0;
 	/* insert gl_trans to credit stock and debit cost of sales at standard cost*/

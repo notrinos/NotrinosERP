@@ -70,6 +70,8 @@ class Cart {
 	public $cash_discount;	// not used as of FA 2.1
 	public $dimension_id;
 	public $dimension2_id;
+	// DIM-FND-005 explicit ADR-02 modes for this request; null is a legacy document.
+	public $classification_intents = null;
 	public $payment;
 	public $payment_terms = array('cash_sale' => false, 'days_before_due' => 0); // cached payment terms
 	public $credit;

@@ -47,6 +47,8 @@ class supp_trans {
 
 	var $dimension,
 		$dimension2;
+	// DIM-FND-005 explicit ADR-02 modes for this request; null is a legacy document.
+	var $classification_intents = null;
 
 	function __construct($trans_type, $trans_no=0) {
 		$this->trans_type = $trans_type;

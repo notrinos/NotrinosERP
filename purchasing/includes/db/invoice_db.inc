@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__.'/purchase_document_dimension_db.inc';
+require_once __DIR__.'/../../../dimensions/includes/dimension_resolution.inc';
 include_once($path_to_root.'/purchasing/includes/db/invoice_items_db.inc');
 include_once($path_to_root.'/admin/db/attachments_db.inc');
 
@@ -198,8 +199,15 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 		throw new RuntimeException('Approved direct invoice intent changed during matching.');
 	$trans_type = $supp_trans->trans_type;
 	$supplier = suppliers_entity::find($supp_trans->supplier_id);
-	$dim = !empty($supp_trans->dimension) ? $supp_trans->dimension : ($supplier['dimension_id'] ? $supplier['dimension_id'] : 0);
-	$dim2 = !empty($supp_trans->dimension2) ? $supp_trans->dimension2 : ($supplier['dimension2_id'] ? $supplier['dimension2_id'] : 0);
+	// DIM-FND-005: one shared resolver. An unsnapshotted document keeps the characterized
+	// E10 nonempty supplier default; an explicit intent (including Explicitly Unassigned)
+	// is honored and never falls through to that default.
+	$dim = dimension_resolution_document_value(dimension_resolution_document_axis('purchasing',
+		$supp_trans->dimension, $supplier['dimension_id'], null, 1,
+		dimension_resolution_document_intent($supp_trans, 1)));
+	$dim2 = dimension_resolution_document_value(dimension_resolution_document_axis('purchasing',
+		$supp_trans->dimension2, $supplier['dimension2_id'], null, 2,
+		dimension_resolution_document_intent($supp_trans, 2)));
 
 	begin_transaction();
 	if ($preserve_approved_intent) {
@@ -327,8 +335,14 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 
 		$stock_gl_code = get_stock_gl_code($entered_grn->item_code);
 
-		$dim = !empty($supp_trans->dimension) ? $supp_trans->dimension : ($supplier['dimension_id'] ? $supplier['dimension_id'] : $stock_gl_code['dimension_id']);
-		$dim2 = !empty($supp_trans->dimension2) ? $supp_trans->dimension2 : ($supplier['dimension2_id'] ? $supplier['dimension2_id'] : $stock_gl_code['dimension2_id']);
+		// DIM-FND-005: the expense/GRN line adds the item default only after the supplier
+		// default; an explicit unassigned header still wins over both.
+		$dim = dimension_resolution_document_value(dimension_resolution_document_axis('purchasing',
+			$supp_trans->dimension, $supplier['dimension_id'], $stock_gl_code['dimension_id'], 1,
+			dimension_resolution_document_intent($supp_trans, 1)));
+		$dim2 = dimension_resolution_document_value(dimension_resolution_document_axis('purchasing',
+			$supp_trans->dimension2, $supplier['dimension2_id'], $stock_gl_code['dimension2_id'], 2,
+			dimension_resolution_document_intent($supp_trans, 2)));
 		if ($trans_type == ST_SUPPCREDIT) {
 			$iv_act = (is_inventory_item($entered_grn->item_code) ? $stock_gl_code['inventory_account'] : ($supplier['purchase_account'] ? $supplier['purchase_account'] : $stock_gl_code['cogs_account']));
 			$total += add_gl_trans_supplier($trans_type, $invoice_id, $date_, $iv_act, $dim, $dim2, $taxfree_line, $supp_trans->supplier_id);
