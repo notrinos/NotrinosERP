@@ -80,6 +80,14 @@ function safe_exit() {
 	display_footer_exit();
 }
 
+/** Names of the owners that denied the latest lifecycle decision (never any data). */
+function dimension_denial_detail() {
+	$denial = dimension_lifecycle_last_denial();
+	if (!count($denial['owners']))
+		return '';
+	return ' ('._('Blocked by').': '.htmlspecialchars(implode(', ', array_keys($denial['owners'])), ENT_QUOTES, 'UTF-8').')';
+}
+
 function can_process() {
 	global $selected_id, $Refs;
 
@@ -118,12 +126,16 @@ if (isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) {
 
 		if ($selected_id == -1) {
 			$id = add_dimension($_POST['ref'], $_POST['name'], $_POST['type_'], $_POST['date_'], $_POST['due_date'], $_POST['memo_']);
-			add_tag_associations($id, $_POST['dimension_tags']);
-			meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$id);
+			if (!$id)
+				display_error(_('The dimension could not be entered. Its identity is still retained by an earlier dimension.'));
+			else {
+				add_tag_associations($id, $_POST['dimension_tags']);
+				meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$id);
+			}
 		} 
 		else {
 			if (!update_dimension($selected_id, $_POST['name'], $_POST['type_'], $_POST['date_'], $_POST['due_date'], $_POST['memo_'])) {
-				display_error(_('The dimension could not be updated. Axis reassignment is unavailable while reference ownership is unresolved.'));
+				display_error(_('The dimension could not be updated. The axis can only be reassigned while no record, draft, approval or extension references the dimension.').dimension_denial_detail());
 			} else {
 				update_tag_associations(TAG_DIMENSION, $selected_id, $_POST['dimension_tags']);
 				meta_forward($_SERVER['PHP_SELF'], 'UpdatedID='.$selected_id);
@@ -148,7 +160,7 @@ if (isset($_POST['delete'])) {
 		if (delete_dimension($selected_id))
 			meta_forward($_SERVER['PHP_SELF'], 'DeletedID='.$selected_id);
 		else
-			display_error(_('This dimension cannot be deleted while reference ownership is unresolved. Close it to retain its identity and history.'));
+			display_error(_('This dimension cannot be deleted while any record, draft, approval, attachment, tag or comment references it, or while ownership is unresolved. Close it to retain its identity and history.').dimension_denial_detail());
 	}
 }
 

@@ -4,8 +4,15 @@
  * reference owner. This is the "unused" authority the serialized protocol
  * needs; it is still NOT a deletion certificate. Protected (B04/B05), shared
  * (B06), approval (B03), session (B08) and extension (B09) owners keep their
- * own authority; extension (B09) owners always report unknown here, so the
- * aggregate state can only be used or unknown until that owner delivers its own (C01).
+ * own authority. With B09 every owner family now has an observer, so a fully reviewed,
+ * unreferenced deployment aggregates to `unused`; the answer is still never a deletion
+ * certificate (`deletion_authorized` stays false until C01 owns the delete lifecycle).
+ *
+ * B09 replaces the deferred extension owner with dimensions/includes/dimension_extension_authority.inc:
+ * installed, inactive and unregistered extension code, the live schema and declared external writers
+ * must all be accounted for (reviewed source digests) or the owner is unknown. The registry write path
+ * takes the exclusive fence row the recheck holds shared (sys_prefs version_id), and a signature of the
+ * deployment is compared before the first lock and after the master lock.
  *
  * B08 replaces the deferred session-draft owner with the durable session draft
  * registration in dimensions/includes/dimension_session_draft_authority.inc: every
@@ -41,6 +48,7 @@ require_once __DIR__.'/dimension_reference_writer_fence.inc';
 require_once __DIR__.'/dimension_master_payload_guard.inc';
 require_once __DIR__.'/dimension_shared_record_authority.inc';
 require_once __DIR__.'/dimension_session_draft_authority.inc';
+require_once __DIR__.'/dimension_extension_authority.inc';
 
 /**
  * Return the ordinary owners the B02 matrix registers for reconciliation:
@@ -89,11 +97,10 @@ function dimension_reference_recheck_scalar_only()
         'hrm_organization_units', 'overtime');
 }
 
-/** Owners that remain unknown here because another requirement owns their authority. */
+/** Owners that remain unknown here because another requirement owns their authority (none after B09). */
 function dimension_reference_recheck_deferred_owners()
 {
-    return array(
-        'extensions'=>'B09');
+    return array();
 }
 
 /**
@@ -178,9 +185,11 @@ function dimension_reference_recheck_owner($table, $columns, $scalar, $retained,
  * serializable isolation so the shared gap locks block new references.
  *
  * @param int|string $id Exact positive native Dimension identity
+ * @param string[] $tolerate_own Shared owners whose rows bound to the Dimension's own identity the caller retains
+ *        (C01 delete keeps refs and audit_trail; reassignment keeps all own evidence). Empty by default.
  * @return array state (used|unknown|unused), owners name=>state; deletion_authorized is always false
  */
-function dimension_reference_locked_recheck($id)
+function dimension_reference_locked_recheck($id, $tolerate_own = array())
 {
     $owners = dimension_reference_recheck_owners();
     $owners['dimensions'] = array();
@@ -189,6 +198,7 @@ function dimension_reference_locked_recheck($id)
     foreach (array_keys($owners) as $name) $result['owners'][$name] = 'unknown';
     foreach (dimension_reference_recheck_deferred_owners() as $name=>$requirement) $result['owners'][$name] = 'unknown';
     $result['owners']['session_drafts'] = 'unknown';
+    $result['owners']['extensions'] = 'unknown';
     $hrm_retained = array('hrm_lifecycle_hire_commands', 'hrm_lifecycle_hire_payloads', 'hrm_worker_profile_versions');
     $result['owners']['hrm_lifecycle_hire_payloads'] = 'unknown';
     $result['owners']['hrm_worker_profile_versions'] = 'unknown';
@@ -197,6 +207,8 @@ function dimension_reference_locked_recheck($id)
     foreach (dimension_shared_record_owner_names() as $name) $result['owners'][$name] = 'unknown';
     if (!dimension_lifecycle_authorized() || !dimension_lifecycle_valid_id($id) || empty($GLOBALS['transaction_level'])) return $result;
     $id = (int)$id;
+    $extension_signature = dimension_extension_signature();
+    if ($extension_signature === '') return $result;
     try {
         $level = db_query('SELECT @@SESSION.tx_isolation');
         $level = $level ? db_fetch_row($level) : false;
@@ -230,7 +242,7 @@ function dimension_reference_locked_recheck($id)
             if ($state === 'unknown' && db_error_no()) return $result;
         }
         // B06: shared attachments, audit, comments, references, reference lines and tags.
-        foreach (dimension_shared_record_observe($id, $columns) as $name=>$state) {
+        foreach (dimension_shared_record_observe($id, $columns, $tolerate_own) as $name=>$state) {
             $result['owners'][$name] = $state;
             if ($state === 'unknown' && db_error_no()) return $result;
         }
@@ -239,8 +251,15 @@ function dimension_reference_locked_recheck($id)
             $result['owners'][$name] = $state;
             if ($state === 'unknown' && db_error_no()) return $result;
         }
+        // B09: installed/inactive/unregistered extension code, schema drift and declared external writers.
+        foreach (dimension_extension_observe($id) as $name=>$state) {
+            $result['owners'][$name] = $state;
+            if ($state === 'unknown' && db_error_no()) return $result;
+        }
         $master = db_query('SELECT id FROM '.TB_PREF.'dimensions WHERE id='.$id.' FOR UPDATE');
         if (!$master || !db_num_rows($master)) return $result;
+        // The deployment must be the one the observers read: a registry write or code drop after the first read is unknown.
+        if (dimension_extension_signature() !== $extension_signature) $result['owners']['extensions'] = 'unknown';
     } catch (Exception $exception) {
         return $result;
     }

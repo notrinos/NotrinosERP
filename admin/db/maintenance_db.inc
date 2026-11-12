@@ -124,11 +124,11 @@ function write_extensions($extensions=null, $company = -1) {
 	$filename = $path_to_root . ($company==-1 ? '' : '/company/'.$company).'/installed_extensions.php';
 
 	// Check if the file is writable first.
-	if (!$zp = @fopen($filename, 'w')) {
-		display_error(sprintf(_("Cannot open the extension setup file '%s' for writing."), $filename));
-		return false;
-	}
-	else {
+	$write_registry = function () use ($filename, $msg) {
+		if (!$zp = @fopen($filename, 'w')) {
+			display_error(sprintf(_("Cannot open the extension setup file '%s' for writing."), $filename));
+			return false;
+		}
 		if (!fwrite($zp, $msg)) {
 			display_error(sprintf(_("Cannot write to the extensions setup file '%s'."), $filename));
 			fclose($zp);
@@ -137,7 +137,19 @@ function write_extensions($extensions=null, $company = -1) {
 		// Close file
 		fclose($zp);
 		cache_invalidate($filename);
+		return true;
+	};
+	// DIM-LFC-001 B09: the registry decides which extension code runs, so a company registry write joins the
+	// Dimension lifecycle fence (exclusive sys_prefs version row, shared while a Dimension recheck is deciding).
+	if ($company >= 0 && !empty($GLOBALS['db'])) {
+		require_once($path_to_root.'/dimensions/includes/dimension_extension_authority.inc');
+		if (!dimension_extension_fence_write($company, $write_registry)) {
+			display_error(_('The extension list could not be saved because a Dimension lifecycle operation is in progress or the company database is unavailable. Retry in a moment.'));
+			return false;
+		}
 	}
+	elseif (!$write_registry())
+		return false;
 	return true;
 }
 

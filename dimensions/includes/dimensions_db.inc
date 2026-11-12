@@ -19,6 +19,8 @@ function add_dimension($reference, $name, $type_, $date_, $due_date, $memo_) {
 	$sql = "INSERT INTO ".TB_PREF."dimensions (reference, name, type_, date_, due_date) VALUES (".db_escape($reference).", ".db_escape($name).", ".db_escape($type_).", '".date2sql($date_)."', '".date2sql($due_date)."')";
 	db_query($sql, 'could not add dimension');
 	$id = db_insert_id();
+	// C01: a key left behind by a deleted Dimension (retained reference and audit rows) is never recycled onto a new master.
+	if (dimension_lifecycle_key_retained($id)) { cancel_transaction(); return false; }
 
 	add_comments(ST_DIMENSION, $id, $date_, $memo_);
 
@@ -33,22 +35,26 @@ function update_dimension($id, $name, $type_, $date_, $due_date, $memo_) {
 	if (!dimension_lifecycle_authorized() || !dimension_lifecycle_valid_id($id)
 		|| !in_array($type_, array(1,2,'1','2'), true) || !begin_transaction()) return false;
 	try {
+		// A non-locking peek only chooses the lock order; the decision itself is taken on locked current reads.
+		$peek = db_query("SELECT type_ FROM ".TB_PREF."dimensions WHERE id=".db_escape($id), 'could not read Dimension');
+		$peeked = $peek ? db_fetch($peek) : false;
+		if (!$peeked) return dimension_lifecycle_deny();
+		if ((int)$peeked['type_'] !== (int)$type_) {
+			// C01: an axis can only be reassigned while every owner family reports the Dimension unused. The recheck
+			// takes the owner locks first and the master lock last, the same order every writer uses.
+			if (!dimension_lifecycle_locked_unused($id, dimension_lifecycle_reassign_retained_evidence())) return dimension_lifecycle_deny();
+		}
 		$existing = db_query("SELECT * FROM ".TB_PREF."dimensions WHERE id=".db_escape($id)." FOR UPDATE", 'could not lock Dimension');
 		$before = $existing ? db_fetch($existing) : false;
-		if (!$before) { cancel_transaction(); return false; }
-		if ((int)$before['type_'] !== (int)$type_) {
-			// Retained payload/session/extension ownership and all writer fences are
-			// not yet closed under DIM-LFC-001B. Preserve identity even if GL is empty.
-			cancel_transaction();
-			return false;
-		}
+		// The axis must still be the one the decision was taken on; any change after the peek is a stale decision.
+		if (!$before || (int)$before['type_'] !== (int)$peeked['type_']) return dimension_lifecycle_deny();
 
 		$sql = "UPDATE ".TB_PREF."dimensions SET name=".db_escape($name).", type_ = ".db_escape($type_).", date_='".date2sql($date_)."', due_date='".date2sql($due_date)."' WHERE id = ".db_escape($id);
 
 		if (!db_query($sql, 'could not update dimension')) { cancel_transaction(); return false; }
 
 		update_comments(ST_DIMENSION, $id, null, $memo_);
-		if (!dimension_lifecycle_audit($id, 'updated', $before['reference'])) { cancel_transaction(); return false; }
+		if (!dimension_lifecycle_audit($id, (int)$before['type_'] !== (int)$type_ ? 'axis reassigned' : 'updated', $before['reference'])) { cancel_transaction(); return false; }
 
 		if (!commit_transaction()) return false;
 
@@ -59,12 +65,35 @@ function update_dimension($id, $name, $type_, $date_, $due_date, $memo_) {
 	}
 }
 
-/** Keep deletion closed until every owner and historical inverse is fenced. */
+/**
+ * C01: delete one truly unused Dimension master.
+ *
+ * Inside one transaction the B10 locked, current-read recheck must report every owner family (scalar, retained
+ * payload, protected HRM and payroll, shared, approval, session, extension) unused; used, unknown, a missing master,
+ * a stale lock, a timeout or a deadlock all deny and roll back. Only the master row is deleted, then audited as
+ * "deleted" in the same transaction (an audit failure rolls everything back). Nothing cascades: the reference
+ * allocation and audit rows stay, so the number and history are never reused, remapped or erased; own comments, tags
+ * and attachments block until their own pages remove them. add_dimension() refuses a recycled key.
+ *
+ * @param int|string $id Exact positive native Dimension identity
+ * @return bool True only when the row was deleted and audited
+ */
 function delete_dimension($id) {
-	if (!dimension_lifecycle_authorized()) return false;
-	// A scalar scan cannot prove absence of retained carts, protected payroll
-	// custody or external/inactive extension references. No cascade is safe.
-	return false;
+	$GLOBALS['dimension_lifecycle_last_denial'] = array('state'=>'unknown', 'owners'=>array());
+	if (!dimension_lifecycle_authorized() || !dimension_lifecycle_valid_id($id) || !begin_transaction()) return false;
+	try {
+		if (!dimension_lifecycle_locked_unused($id, dimension_lifecycle_delete_retained_evidence())) return dimension_lifecycle_deny();
+		$master = db_query("SELECT reference FROM ".TB_PREF."dimensions WHERE id=".db_escape($id)." FOR UPDATE", 'could not lock Dimension');
+		$row = $master ? db_fetch($master) : false;
+		if (!$row) return dimension_lifecycle_deny();
+		if (!db_query("DELETE FROM ".TB_PREF."dimensions WHERE id=".db_escape($id), 'could not delete dimension')
+			|| db_num_affected_rows() !== 1
+			|| !dimension_lifecycle_audit($id, 'deleted', $row['reference'])) { cancel_transaction(); return false; }
+		return commit_transaction();
+	} catch (Exception $exception) {
+		cancel_transaction();
+		return false;
+	}
 }
 
 function get_dimension($id, $allow_null=false) {

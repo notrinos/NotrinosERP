@@ -168,7 +168,7 @@ function dimension_shared_record_identity_predicate($table, $id)
  *
  * @return string used, unused or unknown
  */
-function dimension_shared_record_store_state($table, $discriminator, $columns, $id)
+function dimension_shared_record_store_state($table, $discriminator, $columns, $id, $tolerate_own = false)
 {
     if (!dimension_reference_recheck_schema($columns, array(), true) || !isset($columns[$discriminator])) return 'unknown';
     $identity = dimension_shared_record_identity_predicate($table, $id);
@@ -176,7 +176,9 @@ function dimension_shared_record_store_state($table, $discriminator, $columns, $
     if ($identity !== null) {
         $rows = db_query('SELECT 1 FROM '.TB_PREF.$table.' WHERE '.$identity.' LIMIT 1 LOCK IN SHARE MODE');
         if (!$rows) return 'unknown';
-        if (db_num_rows($rows)) return 'used';
+        // C01: the Dimension's own retained evidence is tolerated only when the caller names the store; the scan of
+        // every other retained payload below still runs.
+        if (db_num_rows($rows) && !$tolerate_own) return 'used';
     }
     $rows = db_query('SELECT `'.$discriminator.'`, custom_data FROM '.TB_PREF.$table.' LOCK IN SHARE MODE');
     if (!$rows) return 'unknown';
@@ -194,14 +196,14 @@ function dimension_shared_record_store_state($table, $discriminator, $columns, $
  *
  * @return string used, unused or unknown
  */
-function dimension_shared_record_keyed_state($table, $columns, $id)
+function dimension_shared_record_keyed_state($table, $columns, $id, $tolerate_own = false)
 {
     foreach (array('type', 'id') as $column) if (!isset($columns[$column])) return 'unknown';
     $identity = dimension_shared_record_identity_predicate($table, $id);
     if (!is_string($identity)) return 'unknown';
     $rows = db_query('SELECT 1 FROM '.TB_PREF.$table.' WHERE '.$identity.' LIMIT 1 LOCK IN SHARE MODE');
     if (!$rows) return 'unknown';
-    return db_num_rows($rows) ? 'used' : 'unused';
+    return db_num_rows($rows) && !$tolerate_own ? 'used' : 'unused';
 }
 
 /**
@@ -212,7 +214,7 @@ function dimension_shared_record_keyed_state($table, $columns, $id)
  *
  * @return string used, unused or unknown
  */
-function dimension_shared_record_tag_state($columns_associations, $columns_tags, $id)
+function dimension_shared_record_tag_state($columns_associations, $columns_tags, $id, $tolerate_own = false)
 {
     if (!isset($columns_associations['record_id'], $columns_associations['tag_id'])
         || !isset($columns_tags['id'], $columns_tags['type']) || !defined('TAG_DIMENSION')) return 'unknown';
@@ -225,7 +227,7 @@ function dimension_shared_record_tag_state($columns_associations, $columns_tags,
         $canonical = (string)$row[0] === (string)$id;
         if ($row[1] === null) { $state = 'unknown'; continue; }
         if ((int)$row[1] !== (int)TAG_DIMENSION) continue;
-        if ($canonical) return 'used';
+        if ($canonical) { if (!$tolerate_own) return 'used'; continue; }
         $state = 'unknown';
     }
     return $state;
@@ -237,9 +239,11 @@ function dimension_shared_record_tag_state($columns_associations, $columns_tags,
  *
  * @param int|string $id Exact positive native Dimension identity
  * @param array $columns Live schema map from dimension_reference_recheck_columns()
+ * @param string[] $tolerate_own Shared owners whose rows bound to the Dimension's own identity are retained by the
+ *        caller (C01): they are read under the same locks but do not make the owner used. Foreign payloads still do.
  * @return array owner => used|unused|unknown; never any payload
  */
-function dimension_shared_record_observe($id, $columns)
+function dimension_shared_record_observe($id, $columns, $tolerate_own = array())
 {
     $states = array();
     foreach (dimension_shared_record_owner_names() as $name) $states[$name] = 'unknown';
@@ -249,12 +253,12 @@ function dimension_shared_record_observe($id, $columns)
         foreach (dimension_shared_record_owner_names() as $name) {
             if ($name === 'tag_associations') {
                 $states[$name] = isset($columns['tag_associations'], $columns['tags'])
-                    ? dimension_shared_record_tag_state($columns['tag_associations'], $columns['tags'], $id) : 'unknown';
+                    ? dimension_shared_record_tag_state($columns['tag_associations'], $columns['tags'], $id, in_array($name, $tolerate_own, true)) : 'unknown';
             } elseif (isset(dimension_shared_record_stores()[$name])) {
                 $stores = dimension_shared_record_stores();
-                $states[$name] = isset($columns[$name]) ? dimension_shared_record_store_state($name, $stores[$name], $columns[$name], $id) : 'unknown';
+                $states[$name] = isset($columns[$name]) ? dimension_shared_record_store_state($name, $stores[$name], $columns[$name], $id, in_array($name, $tolerate_own, true)) : 'unknown';
             } else {
-                $states[$name] = isset($columns[$name]) ? dimension_shared_record_keyed_state($name, $columns[$name], $id) : 'unknown';
+                $states[$name] = isset($columns[$name]) ? dimension_shared_record_keyed_state($name, $columns[$name], $id, in_array($name, $tolerate_own, true)) : 'unknown';
             }
             if ($states[$name] === 'unknown' && db_error_no()) return $states;
         }

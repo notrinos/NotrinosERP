@@ -46,7 +46,10 @@ function dimension_session_draft_allowed_classes()
 {
     return array('items_cart'=>true, 'gl_item'=>true, 'line_item'=>true, 'purch_order'=>true, 'po_line_details'=>true,
         'supp_trans'=>true, 'grn_item'=>true, 'gl_codes'=>true, 'cart'=>true, 'line_details'=>true,
-        'allocation'=>true, 'allocation_item'=>true);
+        'allocation'=>true, 'allocation_item'=>true,
+        // B09: the reviewed Trade Finance allocation (its digest is locked by dimension_extension_reviews()) adds no
+        // property to the parent allocation; the walker reads every member by name, so a Dimension-like one is still seen.
+        'tf_allocation'=>true);
 }
 
 /**
