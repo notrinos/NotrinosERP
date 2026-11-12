@@ -406,8 +406,8 @@ function dimension_resolution_normalize_source($value, $source_kind)
 function dimension_resolution_resolve_axis($axis, $sources, $options = array())
 {
 	$result = array('ok' => false, 'axis' => (int)$axis, 'value' => 0, 'mode' => 'inherit',
-		'origin' => '', 'persisted' => false, 'provenance' => array(), 'errors' => array(),
-		'codes' => array());
+		'origin' => '', 'persisted' => false, 'policy_version' => 0, 'basis' => '',
+		'provenance' => array(), 'errors' => array(), 'codes' => array());
 	if (!dimension_resolution_axis_valid($axis)) {
 		$result['codes'][] = 'invalid_axis';
 		$result['errors'][] = _('A Dimension axis must be category 1 or 2.');
@@ -453,8 +453,11 @@ function dimension_resolution_resolve_axis($axis, $sources, $options = array())
 			return $result;
 		}
 		$intent = $normalized['intent'];
+		// The winning intent's policy evidence travels with the decision so a durable revision can be
+		// persisted with the exact published version and registered Not Applicable basis (DIM-FND-006).
 		$entry = array('source' => $source_kind, 'mode' => $intent['mode'], 'id' => $intent['id'],
-			'persisted' => $intent['persisted'], 'decision' => 'skipped');
+			'persisted' => $intent['persisted'], 'policy_version' => (int)$intent['policy_version'],
+			'basis' => (string)$intent['basis'], 'decision' => 'skipped');
 		if ($intent['mode'] === 'selected' || $intent['mode'] === 'unassigned'
 			|| $intent['mode'] === 'not_applicable') {
 			$entry['decision'] = 'winner';
@@ -480,6 +483,8 @@ function dimension_resolution_resolve_axis($axis, $sources, $options = array())
 	$result['mode'] = $winner['mode'];
 	$result['origin'] = $winner['source'];
 	$result['persisted'] = !empty($winner['persisted']);
+	$result['policy_version'] = isset($winner['policy_version']) ? (int)$winner['policy_version'] : 0;
+	$result['basis'] = isset($winner['basis']) ? (string)$winner['basis'] : '';
 	return $result;
 }
 

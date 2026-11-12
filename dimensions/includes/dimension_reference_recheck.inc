@@ -41,6 +41,11 @@
  * collapse onto a core Dimension), payslip custom_data, payroll reversal
  * evidence and the PAY-GLB native receipts. ST_PAYROLL_PERIOD approval drafts
  * are classified inside the approval observer by the same authority.
+ *
+ * DIM-FND-006 adds the durable source classification revisions: any stored
+ * revision naming the master (header or line, either axis) reports used, a
+ * verified-absent companion schema cannot hold evidence and reports unused, and
+ * a partial or unreadable schema reports unknown. No revision payload is read.
  */
 require_once __DIR__.'/dimension_lifecycle_db.inc';
 require_once __DIR__.'/dimension_reference_registry.inc';
@@ -49,6 +54,7 @@ require_once __DIR__.'/dimension_master_payload_guard.inc';
 require_once __DIR__.'/dimension_shared_record_authority.inc';
 require_once __DIR__.'/dimension_session_draft_authority.inc';
 require_once __DIR__.'/dimension_extension_authority.inc';
+require_once __DIR__.'/dimension_source_revision.inc';
 
 /**
  * Return the ordinary owners the B02 matrix registers for reconciliation:
@@ -248,6 +254,11 @@ function dimension_reference_locked_recheck($id, $tolerate_own = array())
         }
         // B08: durable session draft registration of every live session, and the actor's own live carts.
         foreach (dimension_session_draft_observe($id) as $name=>$state) {
+            $result['owners'][$name] = $state;
+            if ($state === 'unknown' && db_error_no()) return $result;
+        }
+        // DIM-FND-006: durable source classification revisions bound to the master.
+        foreach (dimension_source_revision_observe($id) as $name=>$state) {
             $result['owners'][$name] = $state;
             if ($state === 'unknown' && db_error_no()) return $result;
         }

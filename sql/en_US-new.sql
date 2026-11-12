@@ -988,6 +988,83 @@ CREATE TABLE `0_dimension_category_policy_rules` (
 
 -- Data of table `0_dimension_category_policy_rules` --
 
+-- Structure of table `0_dimension_source_revisions` --
+
+DROP TABLE IF EXISTS `0_dimension_source_revisions`;
+
+CREATE TABLE `0_dimension_source_revisions` (
+	`source_revision_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`source_identity_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`source_family` varchar(32) NOT NULL,
+	`trans_type` int(11) NOT NULL,
+	`document_key` varchar(128) NOT NULL,
+	`line_kind` varchar(24) NOT NULL,
+	`line_key` varchar(128) NOT NULL,
+	`revision_no` int(10) unsigned NOT NULL,
+	`predecessor_revision_id` bigint(20) unsigned DEFAULT NULL,
+	`draft_binding_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	`dimension_id` int(11) NOT NULL DEFAULT '0',
+	`dimension2_id` int(11) NOT NULL DEFAULT '0',
+	`mode1` varchar(24) NOT NULL DEFAULT '',
+	`mode2` varchar(24) NOT NULL DEFAULT '',
+	`origin1` varchar(64) NOT NULL DEFAULT '',
+	`origin2` varchar(64) NOT NULL DEFAULT '',
+	`basis1` varchar(40) NOT NULL DEFAULT '',
+	`basis2` varchar(40) NOT NULL DEFAULT '',
+	`policy1_version` int(11) NOT NULL DEFAULT '0',
+	`policy2_version` int(11) NOT NULL DEFAULT '0',
+	`effective_date` date NOT NULL,
+	`override_reason` varchar(255) NOT NULL DEFAULT '',
+	`line_quantity` decimal(24,8) NOT NULL DEFAULT '0.00000000',
+	`resolution_payload` longtext NOT NULL,
+	`payload_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`actor_id` int(10) unsigned NOT NULL DEFAULT '0',
+	`created_at` datetime NOT NULL,
+	PRIMARY KEY (`source_revision_id`),
+	UNIQUE KEY `dimension_source_identity_revision` (`source_identity_sha256`,`revision_no`),
+	UNIQUE KEY `dimension_source_digest` (`payload_sha256`),
+	UNIQUE KEY `dimension_source_draft_binding` (`draft_binding_sha256`),
+	KEY `dimension_source_predecessor` (`predecessor_revision_id`),
+	KEY `dimension_source_axis1` (`dimension_id`),
+	KEY `dimension_source_axis2` (`dimension2_id`),
+	KEY `dimension_source_document` (`source_family`,`trans_type`,`document_key`),
+	CONSTRAINT `0_dimension_source_revision_parent` FOREIGN KEY (`predecessor_revision_id`) REFERENCES `0_dimension_source_revisions` (`source_revision_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_source_revisions` --
+
+-- Structure of table `0_dimension_posting_links` --
+
+DROP TABLE IF EXISTS `0_dimension_posting_links`;
+
+CREATE TABLE `0_dimension_posting_links` (
+	`posting_link_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`source_revision_id` bigint(20) unsigned NOT NULL,
+	`source_identity_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`effect_key` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`posting_family` varchar(32) NOT NULL,
+	`gl_type` int(11) NOT NULL,
+	`gl_number` int(11) NOT NULL,
+	`gl_counter` int(11) NOT NULL,
+	`account` varchar(15) NOT NULL,
+	`contribution_base` decimal(24,8) NOT NULL,
+	`quantity_base` decimal(24,8) NOT NULL DEFAULT '0.00000000',
+	`base_currency` char(3) NOT NULL,
+	`predecessor_link_id` bigint(20) unsigned DEFAULT NULL,
+	`revision_payload_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`payload_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`created_at` datetime NOT NULL,
+	PRIMARY KEY (`posting_link_id`),
+	UNIQUE KEY `dimension_link_effect_source_row` (`effect_key`,`source_revision_id`,`gl_counter`),
+	KEY `dimension_link_gl_row` (`gl_counter`),
+	KEY `dimension_link_source` (`source_revision_id`),
+	KEY `dimension_link_predecessor` (`predecessor_link_id`),
+	CONSTRAINT `0_dimension_posting_link_revision` FOREIGN KEY (`source_revision_id`) REFERENCES `0_dimension_source_revisions` (`source_revision_id`) ON DELETE RESTRICT,
+	CONSTRAINT `0_dimension_posting_link_predecessor` FOREIGN KEY (`predecessor_link_id`) REFERENCES `0_dimension_posting_links` (`posting_link_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_posting_links` --
+
 -- Structure of table `0_employees` --
 
 DROP TABLE IF EXISTS `0_employees`;

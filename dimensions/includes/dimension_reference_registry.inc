@@ -19,6 +19,7 @@ function dimension_reference_owners() {
         'stock_category'=>array('dflt_dim1','dflt_dim2'), 'warranty_provision_log'=>$pair,
         'supp_invoice_items'=>$pair, 'suppliers'=>$pair, 'purch_requisitions'=>$pair,
         'purch_rfq'=>$pair, 'purch_agreements'=>$pair,
+        'dimension_source_revisions'=>$pair,
         'hrm_pay_gl_001_gl_posting_lines'=>array('core_dimension_id','core_dimension2_id'));
     $owners = array();
     foreach ($tables as $table=>$columns)
@@ -28,6 +29,7 @@ function dimension_reference_owners() {
     $owners['tags'] = array('kind'=>'domain_adapter','reason'=>'TAG_DIMENSION association and ST_DIMENSION comments/references/attachments');
     $owners['payroll_custody'] = array('kind'=>'domain_adapter','reason'=>'Governed allocation axes, mapping/projection JSON, native-v1 and immutable payroll evidence');
     $owners['retained_payloads'] = array('kind'=>'domain_adapter','reason'=>'Domain audit, saved source/custom_data, serialized carts, session drafts and future source snapshots');
+    $owners['source_revisions'] = array('kind'=>'domain_adapter','reason'=>'Durable DIM-FND-006 source classification revisions and their posting lineage');
     $owners['extensions'] = array('kind'=>'domain_adapter','reason'=>'Installed and company hooks, inactive extension references, external deployment ownership');
     return $owners;
 }
