@@ -11,8 +11,36 @@
 ***********************************************************************/
 
 require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+require_once __DIR__.'/../../../dimensions/includes/dimension_document_classification.inc';
 
-function add_bank_trans($type, $trans_no, $bank_act, $ref, $date_, $amount, $person_type_id, $person_id, $currency='', $err_msg='', $rate=0) {
+/**
+ * Insert one bank ledger row for a payment, deposit, transfer or journal bank line.
+ *
+ * `$classification` is the optional DIM-GL-001 declaration produced by
+ * dimension_document_classification_row()/dimension_document_classification_line(): the exact pair
+ * for a single-classified document or line, an explicit `mixed` marker when the document lines
+ * disagree, or explicit `unassigned`. When it is supplied the row persists the declaration together
+ * with `dimension_id`/`dimension2_id`, and the ordinary financial fence admits the pair exactly like
+ * every other source owner. `null` keeps the characterized legacy adapter result byte-for-byte for
+ * source families whose task has not converted them yet (customer/supplier payment wrappers): the
+ * columns are omitted, the fence still reconciles them as 0/0, and no classification is inferred
+ * from the last GL line. The amount is converted to the bank currency exactly as before.
+ *
+ * @param int $type Stored transaction type
+ * @param int $trans_no Stored transaction number
+ * @param mixed $bank_act Bank account id
+ * @param string $ref Document reference
+ * @param mixed $date_ Display date
+ * @param float $amount Amount in $currency
+ * @param mixed $person_type_id Native person type, or null
+ * @param mixed $person_id Native person id
+ * @param string $currency Currency of $amount
+ * @param string $err_msg Native error message
+ * @param float $rate Explicit exchange rate, or 0 to read the document rate
+ * @param array|null $classification Retained document/line declaration
+ * @return mixed Inserted bank row identity
+ */
+function add_bank_trans($type, $trans_no, $bank_act, $ref, $date_, $amount, $person_type_id, $person_id, $currency='', $err_msg='', $rate=0, $classification=null) {
 
 	// convert $amount to the bank's currency
 	if ($currency != '') {
@@ -27,12 +55,34 @@ function add_bank_trans($type, $trans_no, $bank_act, $ref, $date_, $amount, $per
 		$amount_bank = $amount;
 	$amount_bank = round2($amount_bank, user_price_dec());
 
-	$sql = "INSERT INTO ".TB_PREF."bank_trans (type, trans_no, bank_act, ref, trans_date, amount, person_type_id, person_id) VALUES ($type, $trans_no, '$bank_act', ".db_escape($ref).", '".date2sql($date_)."',".db_escape($amount_bank).", ".db_escape($person_type_id).", ". db_escape($person_id).")";
+	$columns = 'type, trans_no, bank_act, ref, trans_date, amount, person_type_id, person_id';
+	$values = "$type, $trans_no, '$bank_act', ".db_escape($ref).", '".date2sql($date_)."',".db_escape($amount_bank).", ".db_escape($person_type_id).", ". db_escape($person_id);
+	$next = array('dimension_id' => 0, 'dimension2_id' => 0);
+	if ($classification !== null) {
+		if (!is_array($classification) || !array_key_exists('dimension_id', $classification)
+			|| !array_key_exists('dimension2_id', $classification)
+			|| !array_key_exists('state', $classification)
+			|| !array_key_exists('custom_data', $classification))
+			dimension_financial_reference_failure();
+		$declared = dimension_document_classification_read($classification['custom_data'],
+			$classification['dimension_id'], $classification['dimension2_id']);
+		if (!$declared['ok'] || !$declared['trusted'] || $declared['state'] !== $classification['state'])
+			dimension_financial_reference_failure();
+		$columns .= ', dimension_id, dimension2_id, custom_data';
+		// Retained JSON is escaped byte-exactly: db_escape() HTML-encodes quotes, which would
+		// corrupt the declaration and break the fence's exact payload re-read.
+		$values .= ', '.$declared['pair']['dimension_id'].', '.$declared['pair']['dimension2_id']
+			.", '".db_escape_function($classification['custom_data'])."'";
+		$next = array('dimension_id' => $declared['pair']['dimension_id'],
+			'dimension2_id' => $declared['pair']['dimension2_id'],
+			'custom_data' => $classification['custom_data']);
+	}
+	$sql = "INSERT INTO ".TB_PREF."bank_trans (".$columns.") VALUES (".$values.")";
 
 	if (empty($err_msg))
 		$err_msg = 'The bank transaction could not be inserted';
 
-    dimension_financial_reference_write('bank_trans',null,array('dimension_id'=>0,'dimension2_id'=>0),
+    dimension_financial_reference_write('bank_trans',null,$next,
         function($admitted) use ($sql) {return db_query($sql)?db_insert_id():false;});
 }
 

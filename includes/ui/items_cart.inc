@@ -12,6 +12,7 @@
 include_once($path_to_root.'/includes/prefs/sysprefs.inc');
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');
 include_once($path_to_root.'/taxes/db/tax_types_entity.inc');
+require_once __DIR__.'/../../dimensions/includes/dimension_document_classification.inc';
 
 class items_cart {
 	var $trans_type;
@@ -334,9 +335,12 @@ class items_cart {
 			$is_bank_to = is_bank_account($gl->code_id);
 			if ($is_bank_to && (get_bank_account_currency($is_bank_to) == $this->currency)) { // do not register exchange variations in bank trans
 				if (!isset($bank_trans[$is_bank_to]))
-					$bank_trans[$is_bank_to] = 0;
+					$bank_trans[$is_bank_to] = array('amount' => 0, 'lines' => array());
 
-				$bank_trans[$is_bank_to] += $gl->amount;
+				$bank_trans[$is_bank_to]['amount'] += $gl->amount;
+				// DIM-GL-001: the source row declares the exact lines it aggregates, never the last
+				// cart line and never an omitted pair.
+				$bank_trans[$is_bank_to]['lines'][] = $gl;
 			}
 			elseif ($gl->person_id) {
 				$home_currency = get_company_currency();
@@ -353,8 +357,9 @@ class items_cart {
 			add_gl_trans($this->trans_type, $this->order_id, $this->tran_date, get_company_pref($total_gl>0 ? 'rounding_db_act' : 'rounding_cr_act'), 0, 0, _('Exchange rate roundings'), -$total_gl);
 
 		// update bank ledger if used
-		foreach($bank_trans as $bank_id => $amount)
-			add_bank_trans($this->trans_type, $this->order_id, $bank_id, $this->reference, $this->tran_date, $amount, 0, '', $this->currency, 'Cannot insert a destination bank transaction');
+		foreach($bank_trans as $bank_id => $bank)
+			add_bank_trans($this->trans_type, $this->order_id, $bank_id, $this->reference, $this->tran_date, $bank['amount'], 0, '', $this->currency, 'Cannot insert a destination bank transaction', 0,
+				dimension_document_classification_row(dimension_document_classification_summary($bank['lines'])));
 
 		// add AP/AR for journal transaction
 		if ($this->trans_type == ST_JOURNAL) {

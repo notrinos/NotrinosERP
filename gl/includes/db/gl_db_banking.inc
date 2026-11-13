@@ -174,11 +174,15 @@ function add_exchange_variation_all($date, $memo) {
 	return array($b_num, $je);
 }
 
+require_once __DIR__.'/../../../dimensions/includes/dimension_document_classification.inc';
+
 function add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $memo_, $dim1, $dim2, $charge=0, $target_amount=0) {
 	global $Refs, $SysPrefs;
 
 	begin_transaction();
-	$args = func_get_args(); if (count($args) < 8) $args[] = 0;
+	$args = func_get_args();
+	// Trailing defaults stay optional for extension callers: charge and target_amount default to 0.
+	while (count($args) < 10) $args[] = 0;
 	$args = (object)array_combine(array('from_account', 'to_account', 'date_', 'amount', 'ref', 'memo_', 'dimension_id', 'dimension2_id', 'charge', 'target_amount'), $args);
 	$args->trans_no = 0;
 	hook_db_prewrite($args, ST_BANKTRANSFER);
@@ -195,13 +199,21 @@ function add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $m
 
 	$from_gl_account = get_bank_gl_account($from_account);
 	$to_gl_account = get_bank_gl_account($to_account);
-	
+
+	// DIM-GL-001: a transfer is one explicit classification selected on the page. It applies to both
+	// bank movements and to the bank-charge GL leg the page also selected it for; the automatic
+	// exchange-variance journal legs below remain explicit-unassigned control legs. The two bank
+	// source rows therefore retain the same declaration instead of omitting their axes.
+	$classification = dimension_document_classification_line($dim1, $dim2);
+	if ($classification === false)
+		dimension_financial_reference_failure();
+
 	$total = 0;
 	// do the source account postings
 	$total += add_gl_trans($trans_type, $trans_no, $date_, $from_gl_account, $dim1, $dim2, $person_id,
 		-($amount + $charge), $currency);
 
-	add_bank_trans($trans_type, $trans_no, $from_account, $ref, $date_, -($amount + $charge), PT_MISC, $person_id, $currency, 'Cannot insert a source bank transaction');
+	add_bank_trans($trans_type, $trans_no, $from_account, $ref, $date_, -($amount + $charge), PT_MISC, $person_id, $currency, 'Cannot insert a source bank transaction', 0, $classification);
 	if ($SysPrefs->auto_currency_revaluation()) {
 		$trans_no1 = get_next_trans_no(ST_JOURNAL);
 		add_exchange_variation($trans_no1, $date_, $from_account, $from_gl_account, $currency, PT_MISC, $person_id);
@@ -225,7 +237,7 @@ function add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $m
 	else	// in this case those are exchange variances between bank and home rates
 		add_gl_trans($trans_type, $trans_no, $date_, get_company_pref('exchange_diff_act'), $dim1, $dim2, _('Exchange Variance'), -$total);
 	
-	add_bank_trans($trans_type, $trans_no, $to_account, $ref, $date_, $to_amount, PT_MISC, $person_id, $to_currency, 'Cannot insert a destination bank transaction');
+	add_bank_trans($trans_type, $trans_no, $to_account, $ref, $date_, $to_amount, PT_MISC, $person_id, $to_currency, 'Cannot insert a destination bank transaction', 0, $classification);
 
 	if ($SysPrefs->auto_currency_revaluation()) {
 		$currency = get_bank_account_currency($to_account);
@@ -312,6 +324,14 @@ function update_bank_transfer($trans_no, $from_account, $to_account, $date_, $am
 *  	$person_detail_id - customer branch id or not used
 *  	$settled_amount - settled amount in AR/AP (if applicable) in customer/supplier currency (always non-negative number)
 *	returns an array of (inserted trans type, trans no)
+*
+*	DIM-GL-001: the document header is derived from the exact per-line classifications, never from
+*	the last cart line. A homogeneous document declares its single pair on the bank balancing GL leg
+*	and on the source bank row; a mixed document declares `mixed` on the source bank row and leaves
+*	the balancing leg explicitly unassigned, because the whole bank amount cannot honestly be
+*	attributed to either line's pair. Each destination bank row (a deposit line posted to another
+*	bank account) declares its own line pair. Customer/supplier settlement rows and automatic
+*	exchange-variation legs stay the owning adapter/control legs they already were.
 *	FIXME -revise code for update case
 */
 function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $date_, $person_type_id, $person_id, $person_detail_id,	$ref, $memo_, $use_transaction=true, $settled_amount=null) {
@@ -328,7 +348,13 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 	if ($use_transaction)
 		begin_transaction();
 
-	$args = func_get_args(); if (count($args) < 11) $args[] = true;
+	$args = func_get_args();
+	// Trailing defaults stay optional for extension callers: use_transaction defaults to true and
+	// settled_amount to null, exactly like the declared signature.
+	if (count($args) >= 10 && count($args) < 12) {
+		if (count($args) < 11) $args[] = true;
+		$args[] = null;
+	}
 	$args = (object)array_combine(array('trans_type', 'trans_no', 'from_account', 'items', 'date_', 'person_type_id', 'person_id', 'person_detail_id', 'ref', 'memo_', 'use_transaction', 'settled_amount'),
 		$args);
 	hook_db_prewrite($args, $trans_type);
@@ -347,6 +373,13 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 
 	// the gl items are already inversed/negated for type 2 (deposit)
 	$total_amount = $items->gl_items_total();
+
+	// DIM-GL-001: one exact document-level declaration, computed before any source row is written.
+	// A heterogeneous line set is recorded as mixed; it never inherits the last line's axes.
+	$header_classification = dimension_document_classification_row(
+		dimension_document_classification_summary($items->gl_items));
+	if ($header_classification === false)
+		dimension_financial_reference_failure();
 
 	if ($person_type_id == PT_CUSTOMER) {
 		// we need to add a customer transaction record
@@ -393,7 +426,7 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 	}
 	// do the source account postings
 
-	add_bank_trans($trans_type, $trans_no, $from_account, $ref, $date_, -$total_amount, $person_type_id, $person_id, $currency, 'Cannot insert a source bank transaction');
+	add_bank_trans($trans_type, $trans_no, $from_account, $ref, $date_, -$total_amount, $person_type_id, $person_id, $currency, 'Cannot insert a source bank transaction', 0, $header_classification);
 	$total = 0;
 	foreach ($items->gl_items as $gl_item) {
 		$is_bank_to = is_bank_account($gl_item->code_id);
@@ -406,7 +439,12 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 		$total += add_gl_trans($trans_type, $trans_no, $date_, $gl_item->code_id, $gl_item->dimension_id, $gl_item->dimension2_id, $gl_item->reference, $gl_item->amount, $currency, $person_type_id, $person_id);
 
 		if ($is_bank_to) {
-			add_bank_trans($trans_type, $trans_no, $is_bank_to, $ref, $date_, $gl_item->amount, $person_type_id, $person_id, $currency, 'Cannot insert a destination bank transaction');
+			// DIM-GL-001: this bank row is the exact line it was posted from, not a document total.
+			$line_classification = dimension_document_classification_line($gl_item->dimension_id,
+				$gl_item->dimension2_id);
+			if ($line_classification === false)
+				dimension_financial_reference_failure();
+			add_bank_trans($trans_type, $trans_no, $is_bank_to, $ref, $date_, $gl_item->amount, $person_type_id, $person_id, $currency, 'Cannot insert a destination bank transaction', 0, $line_classification);
 			if ($do_exchange_variance)
 				add_exchange_variation($trans_no1, $date_, $is_bank_to, $gl_item->code_id, $currency, $person_type_id, $person_id);
 		}
@@ -419,7 +457,7 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 	}
 
 	// do the source account postings
-	add_gl_trans($trans_type, $trans_no, $date_, $bank_gl_account, $gl_item->dimension_id, $gl_item->dimension2_id, $memo_, -$total, null, $person_type_id, $person_id);
+	add_gl_trans($trans_type, $trans_no, $date_, $bank_gl_account, $header_classification['dimension_id'], $header_classification['dimension2_id'], $memo_, -$total, null, $person_type_id, $person_id);
 
 	if ($do_exchange_variance)
 		add_exchange_variation($trans_no1, $date_, $from_account, $bank_gl_account, $currency, $person_type_id, $person_id);

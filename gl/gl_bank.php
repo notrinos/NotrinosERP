@@ -249,6 +249,19 @@ function check_trans() {
 	if (!db_has_currency_rates(get_bank_account_currency($_POST['bank_account']), $_POST['date_'], true))
 		$input_error = 1;
 
+	// DIM-GL-001 / DIM-FND-004: the bank payment/deposit cart is a complete economic page adapter.
+	// Every user-entered line must be a valid new-event classification at submission time, before an
+	// approval draft is created or the shared writer runs. Mixed line sets stay legal; each line is
+	// judged on its own pair and the document-level state is derived by the writer, never by a
+	// whole-amount default.
+	$classification = dimension_validation_gl_cart($_SESSION['pay_items']->gl_items, 'new_event');
+	if (!$classification['ok']) {
+		foreach ($classification['errors'] as $classification_error)
+			display_error($classification_error);
+		set_focus('code_id');
+		$input_error = 1;
+	}
+
 	if (isset($_POST['settled_amount']) && in_array(get_post('PayType'), array(PT_SUPPLIER, PT_CUSTOMER)) && (input_num('settled_amount') <= 0)) {
 		display_error(_('Settled amount have to be positive number.'));
 		set_focus('person_id');

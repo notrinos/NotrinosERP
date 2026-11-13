@@ -221,6 +221,22 @@ function check_valid_entries($trans_no) {
 		set_focus('ToBankAccount');
 		return false;
 	}
+	// DIM-GL-001 / DIM-FND-004: the transfer page is the owning economic adapter for its one explicit
+	// classification. Both bank GL accounts the selected pair will post to must accept it as a new
+	// event, so a required/account/value-pair or lifecycle refusal is reported before any write.
+	$from_classification = dimension_validation_classification(get_post('dimension_id', 0),
+		get_post('dimension2_id', 0), 'new_event',
+		array('account' => get_bank_gl_account($_POST['FromBankAccount'])));
+	$to_classification = dimension_validation_classification(get_post('dimension_id', 0),
+		get_post('dimension2_id', 0), 'new_event',
+		array('account' => get_bank_gl_account($_POST['ToBankAccount'])));
+	if (!$from_classification['ok'] || !$to_classification['ok']) {
+		foreach (array_unique(array_merge($from_classification['errors'], $to_classification['errors']))
+			as $classification_error)
+			display_error($classification_error);
+		set_focus(!$from_classification['ok'] ? 'dimension_id' : 'dimension2_id');
+		return false;
+	}
 	if (isset($_POST['target_amount']) && !check_num('target_amount', 0)) {
 		display_error(_('The entered amount is invalid or less than zero.'));
 		set_focus('target_amount');
