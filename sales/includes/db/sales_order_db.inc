@@ -99,7 +99,7 @@ function add_sales_order(&$order) {
 				$line->quantity,
 				$line->discount_percent, '".db_escape_function(isset($line_payloads[$line_index])?$line_payloads[$line_index]:'{}')."')";
 		db_query($sql, 'order Details Cannot be Added');
-		if ($inheritance) $line->id = db_insert_id();
+		$line->id = db_insert_id();
 
 		// Now mark quotation line as processed
 		if ($order->trans_type == ST_SALESORDER && $line->src_id)
@@ -434,6 +434,7 @@ function read_sales_order($order_no, &$order, $trans_type) {
 		}
 	}
 
+	sales_classification_load_order($order, $order->trans_type, $order_no);
 	return true;
 }
 

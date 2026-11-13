@@ -1,6 +1,7 @@
 <?php
 /** Current ordinary Sales order source custody through the existing shared core. */
 require_once __DIR__.'/sales_agreement_order_db.inc';
+require_once __DIR__.'/sales_classification_db.inc';
 
 /** Ordinary entry requires Sales order authority, without agreement-management rights. */
 function sales_order_source_context($portable=false)
@@ -83,8 +84,9 @@ function prepare_native_sales_order($cart)
 function collect_native_sales_order_data($snapshot)
 {
     $data=collect_sales_cart_data($snapshot['cart']);
+    $components=array($snapshot['source'],$snapshot['masters'],$snapshot['dimensions'],$snapshot['parents']);
     $data['native_sales_order']=array('version'=>1,'company_sha256'=>sales_order_source_context(true),
-        'source_sha256'=>hash('sha256',json_encode(array($snapshot['source'],$snapshot['masters'],$snapshot['dimensions'],$snapshot['parents']))),
+        'source_sha256'=>hash('sha256',json_encode($components)),
         'header_payload'=>$snapshot['header_payload'],'line_payloads'=>$snapshot['line_payloads'],'dimensions'=>$snapshot['dimensions']);return $data;
 }
 
@@ -108,7 +110,13 @@ function restore_native_sales_order_snapshot($data)
     if(!class_exists('Cart'))include_once($path_to_root.'/sales/includes/cart_class.inc');
     if(!function_exists('add_sales_order'))include_once($path_to_root.'/sales/includes/sales_db.inc');
     $cart=restore_sales_cart_from_data($data);$snapshot=prepare_native_sales_order($cart);
-    if(json_decode(json_encode(collect_native_sales_order_data($snapshot)),true)!==json_decode(json_encode($data),true))throw new RuntimeException('Native Sales intent or current source changed.');return $snapshot;
+    $expected=sales_classification_without_approval_envelope($data);
+    $actual=json_decode(json_encode(collect_native_sales_order_data($snapshot)),true);
+    $expected=json_decode(json_encode($expected),true);
+    if($actual!==$expected){
+        throw new RuntimeException('Native Sales intent or current source changed.');
+    }
+    return $snapshot;
 }
 
 /** Request-local admission/receipt, released by the existing outer transaction manager. */
@@ -129,15 +137,24 @@ function submit_native_sales_order($cart)
 {
     if(!class_exists('ApprovalWorkflow') || !ApprovalWorkflow::isRegistered(ST_SALESORDER))return false;
     try{
-        if(!begin_transaction())return false;$snapshot=prepare_native_sales_order($cart);$context=sales_order_source_context();$data=collect_native_sales_order_data($snapshot);
+        if(!begin_transaction())return false;$snapshot=prepare_native_sales_order($cart);
+        $classification=sales_classification_capture_cart($cart);
+        // Re-read the native intent with the resolved source pair so the retained header/line payloads
+        // describe the same decision that was sealed above.
+        $snapshot=prepare_native_sales_order($cart);
+        $snapshot['classification']=$classification;
+        $context=sales_order_source_context();$data=collect_native_sales_order_data($snapshot);
         $actor=$_SESSION['wa_current_user'];$service=new ApprovalWorkflow($actor->access,$actor->user);
         if($service->isApprovalRequired(ST_SALESORDER,$cart->get_items_total(),true)){
             $result=$service->submit(ST_SALESORDER,$data,$cart->get_items_total(),array('summary'=>sprintf(_('Sales Order to %s'),$cart->customer_name),
                 'date'=>$cart->document_date,'customer'=>$cart->customer_id,'branch'=>$cart->Branch,'currency'=>$cart->customer_currency,'person_type'=>PT_CUSTOMER,'person_id'=>$cart->customer_id,'loc_code'=>$cart->Location,
-                'native_sales_order_reference'=>$cart->reference),true);
-            if(!is_array($result) || !in_array($result['status'],array('pending','auto_approved'),true))throw new RuntimeException('Native Sales order submission failed.');
+                'native_sales_order_reference'=>$cart->reference,
+                'dimension_snapshot'=>sales_classification_approval_request($classification)),true);
+            if(!is_array($result) || !in_array($result['status'],array('pending','auto_approved'),true))
+                throw new RuntimeException('Native Sales order submission failed.');
             $published=get_approval_draft_for_update($result['draft_id']);
-            if(!$published || $service->decodeStoredDraftData($published['draft_data'])!==json_decode(json_encode($data),true)
+            $published_data=$published?$service->decodeStoredDraftData($published['draft_data']):null;
+            if(!$published || sales_classification_without_approval_envelope($published_data)!==json_decode(json_encode($data),true)
                 || (int)$published['reserved_trans_no']!==(int)$result['trans_no'] || $published['reference']!==$result['reference'])throw new RuntimeException('Published native Sales intent changed.');
             if($result['status']==='pending'){
                 if((int)$published['status']!==APPROVAL_STATUS_PENDING || !empty($published['approved_trans_no']))throw new RuntimeException('Pending Sales publication changed.');
@@ -182,11 +199,15 @@ function write_native_sales_order($snapshot,$draft_id=0)
     $actor=$_SESSION['wa_current_user'];$service=new ApprovalWorkflow($actor->access,$actor->user);$context=sales_order_source_context();$number=0;
     if($draft_id){
         $draft=get_approval_draft_for_update($draft_id);$permit=native_sales_order_permit();$data=$draft?$service->decodeStoredDraftData($draft['draft_data']):null;
+        $business_data=sales_classification_without_approval_envelope($data);
+        $actual_data=collect_native_sales_order_data($snapshot);
         $human=$draft && has_user_approved_draft($draft_id,$actor->user,(int)$draft['current_level']);
         $automatic=$draft && $permit && !empty($permit['auto']) && $permit['context']===$context && $permit['data']===$data && empty($data['agreement_id']) && has_user_approved_draft($draft_id,0,(int)$draft['current_level']);
         if(!$draft || (int)$draft['trans_type']!==ST_SALESORDER || (int)$draft['status']!==APPROVAL_STATUS_APPROVED || !empty($draft['approved_trans_no'])
             || (int)$draft['reserved_trans_no']<=0 || (!$human && !$automatic) || !native_sales_order_envelope_authorized($data)
-            || json_decode(json_encode(collect_native_sales_order_data($snapshot)),true)!==$data)throw new RuntimeException('Actual Sales order core decision is unavailable.');
+            || sales_classification_without_intent_carriers(json_decode(json_encode($actual_data),true))
+                !==sales_classification_without_intent_carriers($business_data))
+            throw new RuntimeException('Actual Sales order core decision is unavailable.');
         $number=(int)$draft['reserved_trans_no'];$cart->reference=$draft['reference'];
     }elseif($service->isApprovalRequired(ST_SALESORDER,$cart->get_items_total(),true))throw new RuntimeException('Sales order core approval is required.');
     $intent=collect_sales_cart_data($cart);$fields=agreement_sales_order_header_intent($cart);
@@ -208,7 +229,14 @@ function verify_native_sales_order_effect($snapshot,$intent,$fields,$number,$dec
     if(!$decoded){foreach(array('reference','Comments') as $field)$intent[$field]=html_entity_decode($intent[$field],ENT_QUOTES);
     foreach($intent['line_items'] as $index=>$line)foreach(array('stock_id','item_description') as $field)$intent['line_items'][$index][$field]=html_entity_decode($line[$field],ENT_QUOTES);}
     foreach($actual['line_items'] as $index=>$line)$actual['line_items'][$index]['id']=$intent['line_items'][$index]['id'];
-    if(json_decode(json_encode($actual),true)!==json_decode(json_encode($intent),true))throw new RuntimeException('Reviewed native Sales cart changed.');
+    $compare=function($value){
+        if(!is_array($value))return $value;
+        unset($value['classification_revision_id'],$value['classification_lineage_state']);
+        if(isset($value['line_items'])&&is_array($value['line_items']))foreach($value['line_items'] as $index=>$line)
+            if(is_array($line))unset($value['line_items'][$index]['classification_revision_id'],$value['line_items'][$index]['classification_lineage_state']);
+        return $value;
+    };
+    if(json_decode(json_encode($compare($actual)),true)!==json_decode(json_encode($compare($intent)),true))throw new RuntimeException('Reviewed native Sales cart changed.');
     verify_agreement_sales_order_header($fields,$number);verify_agreement_sales_order_masters($snapshot);
     $header=sales_order_dimension_rows('sales_orders',$number,ST_SALESORDER);$lines=sales_order_dimension_rows('sales_order_details',$number,ST_SALESORDER);
     $payload=json_encode(get_discount_custom_data_for_save(json_decode($snapshot['header_payload'],true),$cart));

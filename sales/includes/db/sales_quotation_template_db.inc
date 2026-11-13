@@ -26,6 +26,7 @@
  */
 
 require_once __DIR__ . '/sales_dimension_custody_db.inc';
+require_once __DIR__ . '/sales_classification_db.inc';
 
 // ============================================================================
 // QUOTATION TEMPLATE CRUD
@@ -46,7 +47,7 @@ require_once __DIR__ . '/sales_dimension_custody_db.inc';
  */
 function add_quotation_template($name, $description = '', $validity_days = 30,
 	$terms_and_conditions = '', $notes = '', $sales_type = 0,
-	$default_payment_terms = 0, $default_ship_via = 0)
+	$default_payment_terms = 0, $default_ship_via = 0, $classification_intents = null)
 {
 	$sql = "INSERT INTO " . TB_PREF . "sales_quotation_templates
 		(name, description, validity_days, terms_and_conditions, notes,
@@ -65,6 +66,9 @@ function add_quotation_template($name, $description = '', $validity_days = 30,
 	// The native birth writes no metadata: the stored default must stay NULL.
 	return sales_dimension_custody_write('sales_quotation_templates', null, array('custom_data' => null), function() use ($sql) {
 		return db_query($sql, "Could not add quotation template") ? db_insert_id() : false;
+	}, false, function($admitted, $template_id) use ($classification_intents) {
+		sales_classification_capture_template($template_id, $classification_intents);
+		return true;
 	});
 }
 
@@ -85,7 +89,8 @@ function add_quotation_template($name, $description = '', $validity_days = 30,
  */
 function update_quotation_template($id, $name, $description = '', $validity_days = 30,
 	$terms_and_conditions = '', $notes = '', $sales_type = 0,
-	$default_payment_terms = 0, $default_ship_via = 0, $inactive = 0)
+	$default_payment_terms = 0, $default_ship_via = 0, $inactive = 0,
+	$classification_intents = null)
 {
 	$sql = "UPDATE " . TB_PREF . "sales_quotation_templates SET
 		name = " . db_escape($name) . ",
@@ -101,6 +106,10 @@ function update_quotation_template($id, $name, $description = '', $validity_days
 
 	return sales_dimension_custody_write('sales_quotation_templates', $id, array(), function() use ($sql) {
 		return db_query($sql, "Could not update quotation template") ? true : false;
+	}, false, function($admitted, $result) use ($id,$classification_intents) {
+		if ($classification_intents !== null)
+			sales_classification_capture_template($id, $classification_intents);
+		return true;
 	}) ? true : false;
 }
 
@@ -162,7 +171,8 @@ function get_quotation_templates($include_inactive = false)
  * @return int New line ID.
  */
 function add_quotation_template_line($template_id, $line_type = 'product', $stock_id = '',
-	$description = '', $quantity = 1, $discount_percent = 0, $is_optional = 0, $sort_order = 0)
+	$description = '', $quantity = 1, $discount_percent = 0, $is_optional = 0, $sort_order = 0,
+	$classification_intents = null)
 {
 	$sql = "INSERT INTO " . TB_PREF . "sales_quotation_template_lines
 		(template_id, line_type, stock_id, description, quantity, discount_percent,
@@ -177,12 +187,17 @@ function add_quotation_template_line($template_id, $line_type = 'product', $stoc
 			db_escape((int)$is_optional) . ", " .
 			db_escape((int)$sort_order) . ")";
 
+	$line = array('id' => 0, 'stock_id' => $stock_id, 'quantity' => $quantity);
 	return sales_dimension_custody_write('sales_quotation_template_lines', null, array('custom_data' => null), function() use ($sql, $template_id) {
 		// The parent is held for the birth; a line cannot be born under an absent template.
 		$rows = db_query('SELECT id FROM ' . TB_PREF . 'sales_quotation_templates WHERE id=' . (int)$template_id . ' FOR UPDATE');
 		if (!$rows || db_num_rows($rows) !== 1)
 			return false;
 		return db_query($sql, "Could not add template line") ? db_insert_id() : false;
+	}, false, function($admitted, $line_id) use ($template_id,$line,$classification_intents) {
+		$line['id'] = $line_id;
+		sales_classification_capture_template($template_id, null, $line, $classification_intents);
+		return true;
 	});
 }
 
@@ -200,7 +215,7 @@ function add_quotation_template_line($template_id, $line_type = 'product', $stoc
  * @return bool
  */
 function update_quotation_template_line($id, $line_type, $stock_id, $description,
-	$quantity, $discount_percent, $is_optional, $sort_order)
+	$quantity, $discount_percent, $is_optional, $sort_order, $classification_intents = null)
 {
 	$sql = "UPDATE " . TB_PREF . "sales_quotation_template_lines SET
 		line_type = " . db_escape($line_type) . ",
@@ -214,6 +229,17 @@ function update_quotation_template_line($id, $line_type, $stock_id, $description
 
 	return sales_dimension_custody_write('sales_quotation_template_lines', $id, array(), function() use ($sql) {
 		return db_query($sql, "Could not update template line") ? true : false;
+	}, false, function($admitted, $result) use ($id,$stock_id,$quantity,$classification_intents) {
+		if ($classification_intents === null)
+			return true;
+		$rows = db_query('SELECT template_id FROM '.TB_PREF.'sales_quotation_template_lines WHERE id='.(int)$id);
+		$row = $rows ? db_fetch_assoc($rows) : false;
+		if (!$row)
+			throw new DimensionFinancialReferenceWriteException(_('The quotation template line is unavailable.'));
+		sales_classification_capture_template((int)$row['template_id'], null,
+			array('id' => (int)$id, 'stock_id' => $stock_id, 'quantity' => $quantity),
+			$classification_intents);
+		return true;
 	}) ? true : false;
 }
 
@@ -278,6 +304,7 @@ function apply_template_to_cart(&$cart, $template_id)
 	$cart->template_id = (int)$template_id;
 	if (!empty($template['terms_and_conditions']))
 		$cart->terms_and_conditions = $template['terms_and_conditions'];
+	sales_classification_apply_template_header($cart, $template_id);
 
 	$lines = get_quotation_template_lines($template_id);
 	while ($line = db_fetch($lines)) {
@@ -311,12 +338,17 @@ function apply_template_to_cart(&$cart, $template_id)
 				'units'           => $line['units'],
 				'sort_order'      => $line['sort_order'],
 				'template_line_id'=> $line['id'],
+				'template_id'     => (int)$template_id,
 			);
 		} else {
 			// Add required product to cart line items
+			$first_line = count($cart->line_items);
 			add_to_order($cart, $line['stock_id'], $line['quantity'], $price,
 				$discount,
 				$line['description'] ? $line['description'] : '');
+			for ($index = $first_line; $index < count($cart->line_items); $index++)
+				sales_classification_apply_template_line($cart->line_items[$index],
+					$template_id, $line['id']);
 		}
 	}
 

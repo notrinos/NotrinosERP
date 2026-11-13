@@ -78,9 +78,13 @@ function get_customer_details_to_order(&$order, $customer_id, $branch_id) {
 
 	$order->credit = $myrow['cur_credit'];
 
-	if ($order->trans_type != ST_SALESORDER && $order->trans_type != ST_SALESQUOTE) {
-		$order->dimension_id = $myrow['dimension_id'];
-		$order->dimension2_id = $myrow['dimension2_id'];
+	$order->dimension_id = $myrow['dimension_id'];
+	$order->dimension2_id = $myrow['dimension2_id'];
+	if (in_array($order->trans_type, array(ST_SALESORDER, ST_SALESQUOTE), true)
+		&& $order->classification_intents === null) {
+		$order->classification_intents = array(
+			1 => dimension_resolution_inherit('customer_default')['intent'],
+			2 => dimension_resolution_inherit('customer_default')['intent']);
 	}
 	$result = get_branch_to_order($customer_id, $branch_id);
 
@@ -292,10 +296,19 @@ function display_order_header(&$order, $editable, $date_text) {
 		hidden('branch_id', $order->Branch);
 		hidden('sales_type', $order->sales_type);
 		hidden('salesman_code', $order->salesman);
-		if ($order->trans_type != ST_SALESORDER  && $order->trans_type != ST_SALESQUOTE) {
+		if ($order->trans_type != ST_SALESORDER && $order->trans_type != ST_SALESQUOTE) {
 			hidden('dimension_id', $order->dimension_id);
 			hidden('dimension2_id', $order->dimension2_id);
-		}	
+		} else {
+			label_row(dimension_category_policy_label(1).':',
+				$order->dimension_id ? get_dimension_string($order->dimension_id) :
+				($order->classification_lineage_state === 'legacy_unspecified'
+					? _('Legacy — intent unavailable') : _('Inherited / unassigned')));
+			label_row(dimension_category_policy_label(2).':',
+				$order->dimension2_id ? get_dimension_string($order->dimension2_id) :
+				($order->classification_lineage_state === 'legacy_unspecified'
+					? _('Legacy — intent unavailable') : _('Inherited / unassigned')));
+		}
 	}
 	else {
 		customer_list_row(_('Customer:'), 'customer_id', null, false, true, false, true);
@@ -465,7 +478,27 @@ function display_order_header(&$order, $editable, $date_text) {
 				dimensions_list_row(_('Dimension').' 2:', 'dimension2_id', null, true, ' ', false, 2, false);
 			else
 				hidden('dimension2_id', 0);
-		}	
+		} else {
+			$dim = (int)get_company_pref('use_dimension');
+			if ($dim > 0) {
+				dimensions_list_row(dimension_category_policy_label(1).':', 'dimension_id',
+					$order->dimension_id, true, _('Inherit customer default'), false, 1, false);
+				check_row(_('Leave this category explicitly unassigned'),
+					'_classification_unassigned_1', sales_classification_carrier_values($order)['unassigned'][1]);
+			} else {
+				hidden('dimension_id', 0);
+			}
+			if ($dim > 1) {
+				dimensions_list_row(dimension_category_policy_label(2).':', 'dimension2_id',
+					$order->dimension2_id, true, _('Inherit customer default'), false, 2, false);
+				check_row(_('Leave this category explicitly unassigned'),
+					'_classification_unassigned_2', sales_classification_carrier_values($order)['unassigned'][2]);
+			} else {
+				hidden('dimension2_id', 0);
+			}
+			if ($order->classification_lineage_state === 'legacy_unspecified')
+				display_note(_('This saved document has no durable classification lineage. Review the category selections before saving; no intent will be inferred from current customer or item defaults.'));
+		}
 	}
 	else {
 		label_row($date_text, $order->document_date);
@@ -486,6 +519,46 @@ function display_order_header(&$order, $editable, $date_text) {
 }
 
 //--------------------------------------------------------------------------------
+
+/**
+ * Render the explicit line override controls for an order or quotation.
+ *
+ * A zero selector means inherit the header. The checkbox is the only way to record an explicit
+ * blank, so a changed item/customer default can never silently replace that decision.
+ *
+ * @param object $order Sales cart
+ * @param int $line_no Cart line index, or -1 for a new line
+ * @param int $column_span Number of table columns covered by this section
+ * @return void
+ */
+function sales_order_line_classification_controls(&$order, $line_no, $column_span) {
+	$carrier = $line_no >= 0 && isset($order->line_items[$line_no])
+		? $order->line_items[$line_no] : null;
+	$values = sales_classification_carrier_values($carrier);
+	$dim = (int)get_company_pref('use_dimension');
+	if ($dim < 1)
+		return;
+	start_row();
+	label_cell(_('Line tracking'), 'colspan=2');
+	echo '<td colspan="'.max(1, (int)$column_span - 2).'">';
+	echo '<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">';
+	echo '<label>'.htmlspecialchars(dimension_category_policy_label(1), ENT_QUOTES, 'UTF-8').' ';
+	echo dimensions_list('line_dimension_id', get_post('line_dimension_id', $values['ids'][1]),
+		true, _('Inherit header'), false, false, 1, false).' ';
+	echo '<input type="checkbox" name="_line_classification_unassigned_1" value="1"'
+		.(get_post('_line_classification_unassigned_1', $values['unassigned'][1]) ? ' checked' : '').'> ';
+	echo htmlspecialchars(_('Explicitly unassigned'), ENT_QUOTES, 'UTF-8').'</label>';
+	if ($dim > 1) {
+		echo '<label>'.htmlspecialchars(dimension_category_policy_label(2), ENT_QUOTES, 'UTF-8').' ';
+		echo dimensions_list('line_dimension2_id', get_post('line_dimension2_id', $values['ids'][2]),
+			true, _('Inherit header'), false, false, 2, false).' ';
+		echo '<input type="checkbox" name="_line_classification_unassigned_2" value="1"'
+			.(get_post('_line_classification_unassigned_2', $values['unassigned'][2]) ? ' checked' : '').'> ';
+		echo htmlspecialchars(_('Explicitly unassigned'), ENT_QUOTES, 'UTF-8').'</label>';
+	}
+	echo '</div></td>';
+	end_row();
+}
 
 function sales_order_item_controls(&$order, &$rowcounter, $line_no=-1) {
 	global $Ajax;
@@ -569,6 +642,10 @@ function sales_order_item_controls(&$order, &$rowcounter, $line_no=-1) {
 		submit_cells('AddItem', _('Add Item'), "colspan=2 align='center'", _('Add new item to document'), true);
 
 	end_row();
+	if (in_array($order->trans_type, array(ST_SALESORDER, ST_SALESQUOTE), true)) {
+		$column_span = 8 + (($order->trans_no != 0 || count($order->line_items) > 0) ? 1 : 0);
+		sales_order_line_classification_controls($order, $line_no, $column_span);
+	}
 }
 
 //--------------------------------------------------------------------------------

@@ -244,13 +244,19 @@ if ((isset($_POST['ADD_AGREEMENT']) || isset($_POST['UPDATE_AGREEMENT'])) && can
 	$dimension_id  = (int)get_post('dimension_id');
 	$dimension2_id = (int)get_post('dimension2_id');
 	$reference     = trim(get_post('reference'));
+	$classification_intents = sales_classification_intents_from_values(
+		$dimension_id, $dimension2_id, 0, 0, 'agreement_header');
+	if ($classification_intents === false) {
+		display_error(_('The agreement category selections are invalid.'));
+		$classification_intents = null;
+	}
 
-	if (isset($_POST['ADD_AGREEMENT'])) {
+	if (isset($_POST['ADD_AGREEMENT']) && $classification_intents !== null) {
 		$selected_id = add_sales_agreement(
 			$agreement_type, $debtor_no, $branch_code, $date_start, $date_end,
 			$currency, $payment_terms, $auto_renew, $renewal_period_months,
 			$terms_and_conditions, $notes, $dimension_id, $dimension2_id,
-			$reference, $salesman_id
+			$reference, $salesman_id, null, $classification_intents
 		);
 
 		if ($selected_id) {
@@ -259,12 +265,12 @@ if ((isset($_POST['ADD_AGREEMENT']) || isset($_POST['UPDATE_AGREEMENT'])) && can
 		} else {
 			display_error(_('The sales agreement could not be created.'));
 		}
-	} else {
+	} elseif ($classification_intents !== null) {
 		if (update_sales_agreement(
 			$selected_id, $agreement_type, $debtor_no, $branch_code, $date_start, $date_end,
 			$currency, $payment_terms, $auto_renew, $renewal_period_months,
 			$terms_and_conditions, $notes, $dimension_id, $dimension2_id,
-			$reference, $salesman_id
+			$reference, $salesman_id, null, $classification_intents
 		)) {
 			display_notification(_('Sales agreement has been updated.'));
 		} else {
@@ -275,7 +281,13 @@ if ((isset($_POST['ADD_AGREEMENT']) || isset($_POST['UPDATE_AGREEMENT'])) && can
 
 // ---- Add line ----
 if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_sales_agreement_line($selected_id)) {
-	$line_id = add_sales_agreement_line(
+	$line_classification_intents = sales_classification_intents_from_values(
+		get_post('line_dimension_id', 0), get_post('line_dimension2_id', 0),
+		get_post('_line_classification_unassigned_1', 0),
+		get_post('_line_classification_unassigned_2', 0), 'agreement_line');
+	if ($line_classification_intents === false)
+		display_error(_('A line category cannot be both selected and explicitly unassigned.'));
+	$line_id = $line_classification_intents === false ? false : add_sales_agreement_line(
 		$selected_id,
 		get_post('line_stock_id'),
 		input_num('line_committed_qty'),
@@ -283,7 +295,9 @@ if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_sales_agreement_lin
 		input_num('line_discount_percent'),
 		trim(get_post('line_description')),
 		input_num('line_min_qty', 0),
-		get_post('line_price_valid_until') !== '' ? date2sql(get_post('line_price_valid_until')) : null
+		get_post('line_price_valid_until') !== '' ? date2sql(get_post('line_price_valid_until')) : null,
+		null,
+		$line_classification_intents
 	);
 
 	if ($line_id) {
@@ -303,7 +317,15 @@ if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_sales_agreement_lin
 // ---- Update existing line ----
 $update_line_id = find_submit('UpdateLine');
 if ($update_line_id > 0 && $selected_id > 0 && can_save_sales_agreement_line_update($selected_id, $update_line_id)) {
-	$updated = update_sales_agreement_line(
+	$line_classification_intents = sales_classification_intents_from_values(
+		get_post('edit_dimension_id_'.$update_line_id, 0),
+		get_post('edit_dimension2_id_'.$update_line_id, 0),
+		get_post('_edit_line_classification_unassigned_1_'.$update_line_id, 0),
+		get_post('_edit_line_classification_unassigned_2_'.$update_line_id, 0),
+		'agreement_line');
+	if ($line_classification_intents === false)
+		display_error(_('A line category cannot be both selected and explicitly unassigned.'));
+	$updated = $line_classification_intents === false ? false : update_sales_agreement_line(
 		$update_line_id,
 		get_post('edit_stock_' . $update_line_id),
 		input_num('edit_committed_qty_' . $update_line_id),
@@ -313,7 +335,9 @@ if ($update_line_id > 0 && $selected_id > 0 && can_save_sales_agreement_line_upd
 		input_num('edit_min_qty_' . $update_line_id, 0),
 		get_post('edit_price_valid_until_' . $update_line_id) !== ''
 			? date2sql(get_post('edit_price_valid_until_' . $update_line_id))
-			: null
+			: null,
+		null,
+		$line_classification_intents
 	);
 
 	if ($updated) {
@@ -484,8 +508,10 @@ if ($editable) {
 	text_row(_('Renewal Period (Months):'), 'renewal_period_months',
 		get_post('renewal_period_months'), 6, 6);
 	text_row(_('Reference:'), 'reference', get_post('reference'), 20, 60);
-	dimensions_list_row(_('Dimension:'), 'dimension_id', get_post('dimension_id'), true);
-	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', get_post('dimension2_id'), true);
+	dimensions_list_row(dimension_category_policy_label(1).':', 'dimension_id',
+		get_post('dimension_id'), true, _('Explicitly unassigned'));
+	dimensions_list_row(dimension_category_policy_label(2).':', 'dimension2_id',
+		get_post('dimension2_id'), true, _('Explicitly unassigned'));
 	textarea_row(_('Terms and Conditions:'), 'terms_and_conditions',
 		get_post('terms_and_conditions'), 35, 4);
 	textarea_row(_('Notes:'), 'notes', get_post('notes'), 35, 4);
@@ -554,6 +580,7 @@ if ($agreement) {
 		_('Item'), _('Description'), _('Committed Qty'), _('Min Qty / Order'),
 		_('Unit Price'), _('Discount %'), _('Remaining'), _('Ordered'),
 		_('Delivered'), _('Invoiced'), _('Price Valid Until'),
+		dimension_category_policy_label(1), dimension_category_policy_label(2),
 	);
 	if ($editable) $th[] = '';
 	table_header($th);
@@ -561,6 +588,13 @@ if ($agreement) {
 	$k = 0;
 	$agreement_lines = get_sales_agreement_lines($selected_id);
 	while ($line = db_fetch($agreement_lines)) {
+		$line = sales_classification_load_agreement_line($line, $selected_id);
+		$line_values = array('ids' => array(1 => 0, 2 => 0),
+			'unassigned' => array(1 => 0, 2 => 0));
+		if (!empty($line['classification_intents'])) {
+			$carrier = (object)array('classification_intents' => $line['classification_intents']);
+			$line_values = sales_classification_carrier_values($carrier);
+		}
 		$remaining_qty     = max(0, (float)$line['committed_qty'] - (float)$line['ordered_qty']);
 		$effective_price   = round(
 			(float)$line['unit_price'] * (1 - ((float)$line['discount_percent'] / 100)),
@@ -595,6 +629,16 @@ if ($agreement) {
 			echo '<td><input type="text" name="edit_price_valid_until_' . $line['id'] . '" value="'
 				. ($line['price_valid_until'] ? sql2date($line['price_valid_until']) : '')
 				. '" size="10"></td>';
+			echo '<td>'.dimensions_list('edit_dimension_id_'.$line['id'], $line_values['ids'][1],
+				true, _('Inherit'), false, false, 1, false)
+				.'<label><input type="checkbox" name="_edit_line_classification_unassigned_1_'.$line['id']
+				.'" value="1"'.($line_values['unassigned'][1] ? ' checked' : '').'> '
+				.htmlspecialchars(_('Unassigned'), ENT_QUOTES, 'UTF-8').'</label></td>';
+			echo '<td>'.dimensions_list('edit_dimension2_id_'.$line['id'], $line_values['ids'][2],
+				true, _('Inherit'), false, false, 2, false)
+				.'<label><input type="checkbox" name="_edit_line_classification_unassigned_2_'.$line['id']
+				.'" value="1"'.($line_values['unassigned'][2] ? ' checked' : '').'> '
+				.htmlspecialchars(_('Unassigned'), ENT_QUOTES, 'UTF-8').'</label></td>';
 			echo '<td nowrap>';
 			echo '<input type="hidden" name="edit_stock_' . $line['id'] . '" value="'
 				. htmlspecialchars($line['stock_id'], ENT_QUOTES, 'UTF-8') . '">';
@@ -619,6 +663,12 @@ if ($agreement) {
 			label_cell(render_sales_agreement_line_progress(
 				(float)$line['invoiced_qty'],  (float)$line['committed_qty'], $line['stock_id'], '#fd7e14'));
 			label_cell($line['price_valid_until'] ? sql2date($line['price_valid_until']) : '-');
+			label_cell($line_values['unassigned'][1]
+				? _('Explicitly unassigned')
+				: ($line_values['ids'][1] ? get_dimension_string($line_values['ids'][1]) : _('Inherit')));
+			label_cell($line_values['unassigned'][2]
+				? _('Explicitly unassigned')
+				: ($line_values['ids'][2] ? get_dimension_string($line_values['ids'][2]) : _('Inherit')));
 		}
 
 		$k++;
@@ -626,7 +676,7 @@ if ($agreement) {
 	}
 
 	if ($k == 0) {
-		$colspan = $editable ? 12 : 11;
+		$colspan = $editable ? 14 : 13;
 		label_row('', _('No agreement lines have been added yet.'), "colspan=$colspan align='center'");
 	}
 
@@ -646,6 +696,26 @@ if ($agreement) {
 		amount_row(_('Unit Price:'), 'line_unit_price');
 		amount_row(_('Discount Percent:'), 'line_discount_percent');
 		date_row(_('Price Valid Until:'), 'line_price_valid_until');
+		if ((int)get_company_pref('use_dimension') > 0) {
+			start_row();
+			label_cell(dimension_category_policy_label(1).':');
+			echo '<td>'.dimensions_list('line_dimension_id', get_post('line_dimension_id', 0),
+				true, _('Inherit header'), false, false, 1, false)
+				.' <label><input type="checkbox" name="_line_classification_unassigned_1" value="1"'
+				.(get_post('_line_classification_unassigned_1', 0) ? ' checked' : '').'> '
+				.htmlspecialchars(_('Explicitly unassigned'), ENT_QUOTES, 'UTF-8').'</label></td>';
+			end_row();
+		}
+		if ((int)get_company_pref('use_dimension') > 1) {
+			start_row();
+			label_cell(dimension_category_policy_label(2).':');
+			echo '<td>'.dimensions_list('line_dimension2_id', get_post('line_dimension2_id', 0),
+				true, _('Inherit header'), false, false, 2, false)
+				.' <label><input type="checkbox" name="_line_classification_unassigned_2" value="1"'
+				.(get_post('_line_classification_unassigned_2', 0) ? ' checked' : '').'> '
+				.htmlspecialchars(_('Explicitly unassigned'), ENT_QUOTES, 'UTF-8').'</label></td>';
+			end_row();
+		}
 		end_table(1);
 		submit_center('AddLine', _('Add Line'), true, '', 'default');
 	}

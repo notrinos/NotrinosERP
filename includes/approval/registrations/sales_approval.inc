@@ -172,8 +172,17 @@ function restore_sales_cart_from_data($data)
 	$cart->salesman          = isset($data['salesman']) ? $data['salesman'] : 0;
 	$cart->phone             = isset($data['phone']) ? $data['phone'] : '';
 	$cart->email             = isset($data['email']) ? $data['email'] : '';
-	$cart->dimension_id      = isset($data['dimension_id']) ? $data['dimension_id'] : 0;
-	$cart->dimension2_id     = isset($data['dimension2_id']) ? $data['dimension2_id'] : 0;
+	$cart->dimension_id      = isset($data['dimension_id']) ? $data['dimension_id']
+		: (isset($data['dimension']) ? $data['dimension'] : 0);
+	$cart->dimension2_id     = isset($data['dimension2_id']) ? $data['dimension2_id']
+		: (isset($data['dimension2']) ? $data['dimension2'] : 0);
+	$cart->classification_intents = isset($data['classification_intents']) ? $data['classification_intents'] : null;
+	$cart->classification_draft_token = isset($data['classification_draft_token']) ? $data['classification_draft_token'] : null;
+	$cart->classification_draft_revisions = isset($data['classification_draft_revisions']) && is_array($data['classification_draft_revisions'])
+		? $data['classification_draft_revisions'] : array();
+	$cart->classification_revision_id = isset($data['classification_revision_id']) ? (int)$data['classification_revision_id'] : 0;
+	$cart->classification_lineage_state = isset($data['classification_lineage_state']) ? $data['classification_lineage_state'] : 'legacy_unspecified';
+	$cart->classification_source = isset($data['classification_source']) ? $data['classification_source'] : null;
 	$cart->pos               = isset($data['pos']) ? $data['pos'] : null;
 	$cart->cash_account      = isset($data['cash_account']) ? $data['cash_account'] : '';
 	$cart->account_name      = isset($data['account_name']) ? $data['account_name'] : '';
@@ -218,6 +227,14 @@ function restore_sales_cart_from_data($data)
 			);
             $restored=$cart->line_items[count($cart->line_items)-1];
             foreach(array('qty_dispatched','qty_old') as $field)if(isset($line_data[$field]))$restored->$field=$line_data[$field];
+			if (isset($line_data['item_description']))
+				$restored->item_description = $line_data['item_description'];
+			foreach(array('dimension_id','dimension2_id') as $field)
+				if (array_key_exists($field, $line_data)) $restored->$field = (int)$line_data[$field];
+			foreach(array('classification_intents','classification_token','draft_line_key',
+				'classification_draft_revision_id','classification_revision_id',
+				'classification_lineage_state','classification_source') as $field)
+				if (array_key_exists($field, $line_data)) $restored->$field = $line_data[$field];
 		}
 	}
 

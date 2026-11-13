@@ -13,6 +13,7 @@
 include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/hooks.inc');
 require_once __DIR__.'/sales_agreement_lifecycle_db.inc';
+require_once __DIR__.'/sales_classification_db.inc';
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -246,11 +247,12 @@ function generate_sales_agreement_reference()
  */
 function add_sales_agreement($agreement_type, $debtor_no, $branch_code, $date_start, $date_end,
 	$currency, $payment_terms, $auto_renew, $renewal_period_months,
-	$terms_and_conditions, $notes, $dimension_id, $dimension2_id, $reference = '', $salesman_id = 0, $custom_data = null)
+	$terms_and_conditions, $notes, $dimension_id, $dimension2_id, $reference = '', $salesman_id = 0,
+	$custom_data = null, $classification_intents = null)
 {
     $next=array('dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id);
     $next['custom_data']=sales_agreement_dimension_payload($custom_data);
-    return sales_agreement_dimension_write('sales_agreements',null,$next,function($admitted) use ($agreement_type,$debtor_no,$branch_code,$date_start,$date_end,$currency,$payment_terms,$auto_renew,$renewal_period_months,$terms_and_conditions,$notes,$dimension_id,$dimension2_id,$reference,$salesman_id,$custom_data) {
+    return sales_agreement_dimension_write('sales_agreements',null,$next,function($admitted) use ($agreement_type,$debtor_no,$branch_code,$date_start,$date_end,$currency,$payment_terms,$auto_renew,$renewal_period_months,$terms_and_conditions,$notes,$dimension_id,$dimension2_id,$reference,$salesman_id,$custom_data,$classification_intents) {
     $dimension_id=$admitted['dimension_id'];$dimension2_id=$admitted['dimension2_id'];
 	global $_SESSION;
 
@@ -296,6 +298,13 @@ function add_sales_agreement($agreement_type, $debtor_no, $branch_code, $date_st
 
 	if(!db_query($sql))return false;
 	$agreement_id = db_insert_id();
+	if ($classification_intents === null)
+		$classification_intents = sales_classification_intents_from_values(
+			$dimension_id, $dimension2_id, 0, 0, 'agreement_header');
+	if ($classification_intents === false)
+		throw new DimensionFinancialReferenceWriteException(_('The agreement classification selection is invalid.'));
+	sales_classification_capture_agreement(ST_SALESAGREEMENT, $agreement_id,
+		$classification_intents);
     if($generate_reference && !db_query('UPDATE '.TB_PREF.'sales_agreements SET reference='.db_escape('SA-'.str_pad($agreement_id,4,'0',STR_PAD_LEFT)).' WHERE id='.(int)$agreement_id))return false;
 
 	hook_invoke_all('sales_agreement_before_save', $agreement_id);
@@ -328,11 +337,12 @@ function add_sales_agreement($agreement_type, $debtor_no, $branch_code, $date_st
  */
 function update_sales_agreement($id, $agreement_type, $debtor_no, $branch_code, $date_start, $date_end,
 	$currency, $payment_terms, $auto_renew, $renewal_period_months,
-	$terms_and_conditions, $notes, $dimension_id, $dimension2_id, $reference = '', $salesman_id = 0, $custom_data = null)
+	$terms_and_conditions, $notes, $dimension_id, $dimension2_id, $reference = '', $salesman_id = 0,
+	$custom_data = null, $classification_intents = null)
 {
     $next=array('dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id);
     if(func_num_args()>=17)$next['custom_data']=sales_agreement_dimension_payload($custom_data);
-    return sales_agreement_dimension_write('sales_agreements',$id,$next,function($admitted) use ($id,$agreement_type,$debtor_no,$branch_code,$date_start,$date_end,$currency,$payment_terms,$auto_renew,$renewal_period_months,$terms_and_conditions,$notes,$dimension_id,$dimension2_id,$reference,$salesman_id,$custom_data) {
+    return sales_agreement_dimension_write('sales_agreements',$id,$next,function($admitted) use ($id,$agreement_type,$debtor_no,$branch_code,$date_start,$date_end,$currency,$payment_terms,$auto_renew,$renewal_period_months,$terms_and_conditions,$notes,$dimension_id,$dimension2_id,$reference,$salesman_id,$custom_data,$classification_intents) {
     $dimension_id=$admitted['dimension_id'];$dimension2_id=$admitted['dimension2_id'];
 	$agreement = get_sales_agreement($id);
 	if (!$agreement || !is_sales_agreement_editable_status($agreement['status']))
@@ -363,6 +373,18 @@ function update_sales_agreement($id, $agreement_type, $debtor_no, $branch_code, 
 		  AND status = 'draft'";
 
 	if(!db_query($sql))return false;
+	if ($classification_intents === null)
+		$classification_intents = sales_classification_intents_from_values(
+			$dimension_id, $dimension2_id, 0, 0, 'agreement_header');
+	if ($classification_intents === false)
+		throw new DimensionFinancialReferenceWriteException(_('The agreement classification selection is invalid.'));
+	sales_classification_capture_agreement(ST_SALESAGREEMENT, $id, $classification_intents);
+	$line_rows = db_query('SELECT id,stock_id,committed_qty FROM '.TB_PREF
+		.'sales_agreement_lines WHERE agreement_id='.(int)$id.' ORDER BY id');
+	if (!$line_rows)
+		throw new DimensionFinancialReferenceWriteException(_('The agreement lines cannot be read.'));
+	while ($line_row = db_fetch_assoc($line_rows))
+		sales_classification_capture_agreement(ST_SALESAGREEMENT, $id, null, $line_row, null);
 
 	hook_invoke_all('sales_agreement_before_save', $id);
 
@@ -543,11 +565,12 @@ function cancel_sales_agreement($id, $reason)
  * @return int  New line ID, or 0 on failure.
  */
 function add_sales_agreement_line($agreement_id, $stock_id, $committed_qty, $unit_price,
-	$discount_percent, $description = '', $min_qty_per_order = 0, $price_valid_until = null, $custom_data = null)
+	$discount_percent, $description = '', $min_qty_per_order = 0, $price_valid_until = null,
+	$custom_data = null, $classification_intents = null)
 {
     $next=array('agreement_id'=>$agreement_id);
     $next['custom_data']=sales_agreement_dimension_payload($custom_data);
-    return sales_agreement_dimension_write('sales_agreement_lines',null,$next,function($admitted) use ($agreement_id,$stock_id,$committed_qty,$unit_price,$discount_percent,$description,$min_qty_per_order,$price_valid_until,$custom_data) {
+    return sales_agreement_dimension_write('sales_agreement_lines',null,$next,function($admitted) use ($agreement_id,$stock_id,$committed_qty,$unit_price,$discount_percent,$description,$min_qty_per_order,$price_valid_until,$custom_data,$classification_intents) {
 	$agreement = get_sales_agreement($agreement_id);
 	if (!$agreement
 		|| !is_sales_agreement_editable_status($agreement['status'])
@@ -583,6 +606,13 @@ function add_sales_agreement_line($agreement_id, $stock_id, $committed_qty, $uni
 	if(!db_query($sql))return false;
 
 	$line_id = db_insert_id();
+	if ($classification_intents === null)
+		$classification_intents = array(
+			1 => dimension_resolution_inherit('sales_agreement_line')['intent'],
+			2 => dimension_resolution_inherit('sales_agreement_line')['intent']);
+	sales_classification_capture_agreement(ST_SALESAGREEMENT, $agreement_id, null,
+		array('id' => $line_id, 'stock_id' => $stock_id, 'committed_qty' => $committed_qty),
+		$classification_intents);
 
 	// Update agreement committed total
 	update_agreement_committed_total($agreement_id);
@@ -606,11 +636,12 @@ function add_sales_agreement_line($agreement_id, $stock_id, $committed_qty, $uni
  * @return bool
  */
 function update_sales_agreement_line($line_id, $stock_id, $committed_qty, $unit_price,
-	$discount_percent, $description = '', $min_qty_per_order = 0, $price_valid_until = null, $custom_data = null)
+	$discount_percent, $description = '', $min_qty_per_order = 0, $price_valid_until = null,
+	$custom_data = null, $classification_intents = null)
 {
     $next=array();
     if(func_num_args()>=9)$next['custom_data']=sales_agreement_dimension_payload($custom_data);
-    return sales_agreement_dimension_write('sales_agreement_lines',$line_id,$next,function($admitted) use ($line_id,$stock_id,$committed_qty,$unit_price,$discount_percent,$description,$min_qty_per_order,$price_valid_until,$custom_data) {
+    return sales_agreement_dimension_write('sales_agreement_lines',$line_id,$next,function($admitted) use ($line_id,$stock_id,$committed_qty,$unit_price,$discount_percent,$description,$min_qty_per_order,$price_valid_until,$custom_data,$classification_intents) {
 	$line = get_sales_agreement_line($line_id);
 	if (!$line)
 		return false;
@@ -645,6 +676,13 @@ function update_sales_agreement_line($line_id, $stock_id, $committed_qty, $unit_
 		WHERE id = " . db_escape($line_id);
 
 	if(!db_query($sql))return false;
+	if ($classification_intents === null)
+		$classification_intents = array(
+			1 => dimension_resolution_inherit('sales_agreement_line')['intent'],
+			2 => dimension_resolution_inherit('sales_agreement_line')['intent']);
+	sales_classification_capture_agreement(ST_SALESAGREEMENT, $agreement_id, null,
+		array('id' => $line_id, 'stock_id' => $stock_id, 'committed_qty' => $committed_qty),
+		$classification_intents);
 
 	if ($agreement_id)
 		update_agreement_committed_total($agreement_id);

@@ -96,16 +96,21 @@ function can_process_line()
 // ============================================================================
 
 if ($Mode == 'ADD_ITEM' && can_process_template()) {
-	$id = add_quotation_template(
-		get_post('tpl_name'),
-		get_post('tpl_description'),
-		(int)get_post('tpl_validity_days', 30),
-		get_post('tpl_terms'),
-		get_post('tpl_notes'),
-		(int)get_post('tpl_sales_type', 0),
-		(int)get_post('tpl_payment_terms', 0),
-		(int)get_post('tpl_ship_via', 0)
-	);
+	$tpl_classification_intents = sales_classification_intents_from_values(
+		get_post('tpl_dimension_id', 0), get_post('tpl_dimension2_id', 0),
+		get_post('_tpl_classification_unassigned_1', 0),
+		get_post('_tpl_classification_unassigned_2', 0), 'template_header');
+	$id = false;
+	if ($tpl_classification_intents === false) {
+		display_error(_('A template category cannot be both selected and explicitly unassigned.'));
+	} else {
+		$id = add_quotation_template(
+			get_post('tpl_name'), get_post('tpl_description'),
+			(int)get_post('tpl_validity_days', 30), get_post('tpl_terms'),
+			get_post('tpl_notes'), (int)get_post('tpl_sales_type', 0),
+			(int)get_post('tpl_payment_terms', 0), (int)get_post('tpl_ship_via', 0),
+			$tpl_classification_intents);
+	}
 	if ($id) {
 		display_notification(_('New quotation template has been added.'));
 		$selected_id = $id;
@@ -115,18 +120,21 @@ if ($Mode == 'ADD_ITEM' && can_process_template()) {
 	}
 }
 elseif ($Mode == 'UPDATE_ITEM' && can_process_template()) {
-	$updated = update_quotation_template(
-		$selected_id,
-		get_post('tpl_name'),
-		get_post('tpl_description'),
-		(int)get_post('tpl_validity_days', 30),
-		get_post('tpl_terms'),
-		get_post('tpl_notes'),
-		(int)get_post('tpl_sales_type', 0),
-		(int)get_post('tpl_payment_terms', 0),
-		(int)get_post('tpl_ship_via', 0),
-		check_value('tpl_inactive') ? 1 : 0
-	);
+	$tpl_classification_intents = sales_classification_intents_from_values(
+		get_post('tpl_dimension_id', 0), get_post('tpl_dimension2_id', 0),
+		get_post('_tpl_classification_unassigned_1', 0),
+		get_post('_tpl_classification_unassigned_2', 0), 'template_header');
+	$updated = false;
+	if ($tpl_classification_intents === false) {
+		display_error(_('A template category cannot be both selected and explicitly unassigned.'));
+	} else {
+		$updated = update_quotation_template(
+			$selected_id, get_post('tpl_name'), get_post('tpl_description'),
+			(int)get_post('tpl_validity_days', 30), get_post('tpl_terms'),
+			get_post('tpl_notes'), (int)get_post('tpl_sales_type', 0),
+			(int)get_post('tpl_payment_terms', 0), (int)get_post('tpl_ship_via', 0),
+			check_value('tpl_inactive') ? 1 : 0, $tpl_classification_intents);
+	}
 	if ($updated)
 		display_notification(_('Quotation template has been updated.'));
 	else
@@ -171,8 +179,18 @@ if ($selected_id != -1) {
 		if (can_process_line()) {
 			$line_type = get_post('line_line_type', 'product');
 			$is_optional = ($line_type === 'optional') ? 1 : (int)check_value('line_is_optional');
+			$line_classification_intents = sales_classification_intents_from_values(
+				get_post('line_dimension_id', 0), get_post('line_dimension2_id', 0),
+				get_post('_line_classification_unassigned_1', 0),
+				get_post('_line_classification_unassigned_2', 0), 'template_line');
+			if ($line_classification_intents === false) {
+				display_error(_('A template line category cannot be both selected and explicitly unassigned.'));
+				$line_classification_intents = null;
+			}
 
-			if ($edit_line_id != -1) {
+			if ($line_classification_intents === null) {
+				// The validation branch above already rendered the actionable refusal.
+			} elseif ($edit_line_id != -1) {
 				if (update_quotation_template_line(
 					$edit_line_id,
 					$line_type,
@@ -181,7 +199,8 @@ if ($selected_id != -1) {
 					input_num('line_quantity', 1),
 					input_num('line_discount', 0),
 					$is_optional,
-					(int)get_post('line_sort_order', 0)
+					(int)get_post('line_sort_order', 0),
+					$line_classification_intents
 				))
 					display_notification(_('Template line has been updated.'));
 				else
@@ -195,7 +214,8 @@ if ($selected_id != -1) {
 					input_num('line_quantity', 1),
 					input_num('line_discount', 0),
 					$is_optional,
-					(int)get_post('line_sort_order', 0)
+					(int)get_post('line_sort_order', 0),
+					$line_classification_intents
 				))
 					display_notification(_('Template line has been added.'));
 				else
@@ -258,6 +278,14 @@ if ($selected_id != -1) {
 	$_POST['tpl_payment_terms'] = $row['default_payment_terms'];
 	$_POST['tpl_ship_via']      = $row['default_ship_via'];
 	$_POST['tpl_inactive']      = $row['inactive'];
+	$tpl_intents = sales_classification_load_template_header($selected_id);
+	$tpl_values = $tpl_intents === null
+		? array('ids'=>array(1=>0,2=>0),'unassigned'=>array(1=>0,2=>0))
+		: sales_classification_carrier_values((object)array('classification_intents'=>$tpl_intents));
+	$_POST['tpl_dimension_id'] = $tpl_values['ids'][1];
+	$_POST['tpl_dimension2_id'] = $tpl_values['ids'][2];
+	$_POST['_tpl_classification_unassigned_1'] = $tpl_values['unassigned'][1];
+	$_POST['_tpl_classification_unassigned_2'] = $tpl_values['unassigned'][2];
 }
 
 text_row(_('Template Name') . ':', 'tpl_name', null, 60, 100);
@@ -266,6 +294,19 @@ amount_row(_('Default Validity (days)') . ':', 'tpl_validity_days', get_post('tp
 sales_types_list_row(_('Default Sales Type (0 = inherit from order)') . ':', 'tpl_sales_type', get_post('tpl_sales_type', 0), true);
 payment_terms_list_row(_('Default Payment Terms (0 = inherit)') . ':', 'tpl_payment_terms', get_post('tpl_payment_terms', 0), true);
 shippers_list_row(_('Default Shipper (0 = inherit)') . ':', 'tpl_ship_via', get_post('tpl_ship_via', 0), true);
+$template_dimension_axes = (int)get_company_pref('use_dimension');
+if ($template_dimension_axes > 0) {
+	dimensions_list_row(dimension_category_policy_label(1).':', 'tpl_dimension_id',
+		get_post('tpl_dimension_id', 0), true, _('Explicitly unassigned'), false, 1, false);
+	check_row(_('Explicitly unassigned'), '_tpl_classification_unassigned_1',
+		get_post('_tpl_classification_unassigned_1', 0));
+	if ($template_dimension_axes > 1) {
+		dimensions_list_row(dimension_category_policy_label(2).':', 'tpl_dimension2_id',
+			get_post('tpl_dimension2_id', 0), true, _('Explicitly unassigned'), false, 2, false);
+		check_row(_('Explicitly unassigned'), '_tpl_classification_unassigned_2',
+			get_post('_tpl_classification_unassigned_2', 0));
+	}
+}
 
 textarea_row(_('Terms & Conditions') . ':', 'tpl_terms', get_post('tpl_terms'), 60, 4);
 textarea_row(_('Internal Notes') . ':', 'tpl_notes', get_post('tpl_notes'), 60, 3);
@@ -290,12 +331,17 @@ if ($selected_id != -1) {
 	start_form();
 	hidden('selected_id', $selected_id);
 	start_table(TABLESTYLE, "width='100%'");
-	$th = array(_('#'), _('Type'), _('Stock ID'), _('Description'), _('Qty'), _('Disc %'), _('Optional'), '', '');
+	$th = array(_('#'), _('Type'), _('Stock ID'), _('Description'), _('Qty'), _('Disc %'), _('Optional'),
+		dimension_category_policy_label(1), dimension_category_policy_label(2), '', '');
 	table_header($th);
 
 	$lines_result = get_quotation_template_lines($selected_id);
 	$k = 0;
 	while ($line = db_fetch($lines_result)) {
+		$line_intents = sales_classification_load_template_line($selected_id, $line['id']);
+		$line_values = $line_intents === null
+			? array('ids'=>array(1=>0,2=>0),'unassigned'=>array(1=>0,2=>0))
+			: sales_classification_carrier_values((object)array('classification_intents'=>$line_intents));
 		alt_table_row_color($k);
 
 		label_cell($line['sort_order']);
@@ -305,6 +351,10 @@ if ($selected_id != -1) {
 		qty_cell($line['quantity'], false, user_qty_dec());
 		percent_cell($line['discount_percent']);
 		label_cell($line['is_optional'] ? _('Yes') : _('No'));
+		label_cell($line_values['unassigned'][1] ? _('Explicitly unassigned')
+			: ($line_values['ids'][1] ? get_dimension_string($line_values['ids'][1]) : _('Inherit')));
+		label_cell($line_values['unassigned'][2] ? _('Explicitly unassigned')
+			: ($line_values['ids'][2] ? get_dimension_string($line_values['ids'][2]) : _('Inherit')));
 		edit_button_cell('EditLine' . $line['id'], _('Edit'));
 		delete_button_cell('DeleteLine' . $line['id'], _('Delete'));
 		end_row();
@@ -312,7 +362,7 @@ if ($selected_id != -1) {
 
 	if (db_num_rows($lines_result) === 0) {
 		start_row();
-		label_cell(_('No lines defined yet. Use the form below to add product lines.'), 'colspan=9 align=center');
+		label_cell(_('No lines defined yet. Use the form below to add product lines.'), 'colspan=11 align=center');
 		end_row();
 	}
 
@@ -349,6 +399,14 @@ if ($selected_id != -1) {
 			$_POST['line_discount']    = $edit_row['discount_percent'];
 			$_POST['line_is_optional'] = $edit_row['is_optional'];
 			$_POST['line_sort_order']  = $edit_row['sort_order'];
+			$edit_intents = sales_classification_load_template_line($selected_id, $editing_line_id);
+			$edit_values = $edit_intents === null
+				? array('ids'=>array(1=>0,2=>0),'unassigned'=>array(1=>0,2=>0))
+				: sales_classification_carrier_values((object)array('classification_intents'=>$edit_intents));
+			$_POST['line_dimension_id'] = $edit_values['ids'][1];
+			$_POST['line_dimension2_id'] = $edit_values['ids'][2];
+			$_POST['_line_classification_unassigned_1'] = $edit_values['unassigned'][1];
+			$_POST['_line_classification_unassigned_2'] = $edit_values['unassigned'][2];
 		}
 	}
 
@@ -358,6 +416,19 @@ if ($selected_id != -1) {
 	amount_row(_('Quantity') . ':', 'line_quantity', get_post('line_quantity', 1), null, null, user_qty_dec());
 	amount_row(_('Discount %') . ':', 'line_discount', get_post('line_discount', 0), null, null, 2);
 	amount_row(_('Sort Order') . ':', 'line_sort_order', get_post('line_sort_order', 0), null, null, 0);
+	$line_dimension_axes = (int)get_company_pref('use_dimension');
+	if ($line_dimension_axes > 0) {
+		dimensions_list_row(dimension_category_policy_label(1).':', 'line_dimension_id',
+			get_post('line_dimension_id', 0), true, _('Inherit header'), false, 1, false);
+		check_row(_('Explicitly unassigned'), '_line_classification_unassigned_1',
+			get_post('_line_classification_unassigned_1', 0));
+		if ($line_dimension_axes > 1) {
+			dimensions_list_row(dimension_category_policy_label(2).':', 'line_dimension2_id',
+				get_post('line_dimension2_id', 0), true, _('Inherit header'), false, 2, false);
+			check_row(_('Explicitly unassigned'), '_line_classification_unassigned_2',
+				get_post('_line_classification_unassigned_2', 0));
+		}
+	}
 
 	end_table(1);
 

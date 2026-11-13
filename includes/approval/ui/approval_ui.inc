@@ -249,6 +249,14 @@ function collect_sales_cart_data($cart, $legacy = false)
 		'price_factor'       => isset($cart->price_factor) ? $cart->price_factor : 1,
 		'dimension_id'       => isset($cart->dimension_id) ? $cart->dimension_id : 0,
 		'dimension2_id'      => isset($cart->dimension2_id) ? $cart->dimension2_id : 0,
+		'dimension'          => isset($cart->dimension_id) ? $cart->dimension_id : 0,
+		'dimension2'         => isset($cart->dimension2_id) ? $cart->dimension2_id : 0,
+		'classification_intents' => isset($cart->classification_intents) ? $cart->classification_intents : null,
+		'classification_draft_token' => isset($cart->classification_draft_token) ? $cart->classification_draft_token : null,
+		'classification_draft_revisions' => isset($cart->classification_draft_revisions) ? $cart->classification_draft_revisions : array(),
+		'classification_revision_id' => isset($cart->classification_revision_id) ? (int)$cart->classification_revision_id : 0,
+		'classification_lineage_state' => isset($cart->classification_lineage_state) ? $cart->classification_lineage_state : 'legacy_unspecified',
+		'classification_source' => isset($cart->classification_source) ? $cart->classification_source : null,
 		'pos'                => isset($cart->pos) ? $cart->pos : null,
 		'cash_account'       => isset($cart->cash_account) ? $cart->cash_account : '',
 		'account_name'       => isset($cart->account_name) ? $cart->account_name : '',
@@ -269,6 +277,8 @@ function collect_sales_cart_data($cart, $legacy = false)
 		foreach ($cart->line_items as $key => $line) {
 			$data['line_items'][$key] = array(
 				'id'                => isset($line->id) ? $line->id : 0,
+				'dimension_id'      => isset($line->dimension_id) ? (int)$line->dimension_id : 0,
+				'dimension2_id'     => isset($line->dimension2_id) ? (int)$line->dimension2_id : 0,
 				'stock_id'          => $line->stock_id,
 				'item_description'  => $line->item_description,
 				'units'             => isset($line->units) ? $line->units : '',
@@ -285,6 +295,13 @@ function collect_sales_cart_data($cart, $legacy = false)
 				'qty_old'           => isset($line->qty_old) ? $line->qty_old : 0,
 				'standard_cost'     => isset($line->standard_cost) ? $line->standard_cost : 0,
 				'descr_editable'    => isset($line->descr_editable) ? $line->descr_editable : 0,
+				'classification_intents' => isset($line->classification_intents) ? $line->classification_intents : null,
+				'classification_token' => isset($line->classification_token) ? $line->classification_token : '',
+				'draft_line_key' => isset($line->draft_line_key) ? $line->draft_line_key : '',
+				'classification_draft_revision_id' => isset($line->classification_draft_revision_id) ? (int)$line->classification_draft_revision_id : 0,
+				'classification_revision_id' => isset($line->classification_revision_id) ? (int)$line->classification_revision_id : 0,
+				'classification_lineage_state' => isset($line->classification_lineage_state) ? $line->classification_lineage_state : 'legacy_unspecified',
+				'classification_source' => isset($line->classification_source) ? $line->classification_source : null,
 			);
 		}
 	}

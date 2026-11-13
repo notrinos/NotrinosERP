@@ -391,6 +391,15 @@ function copy_to_cart() {
 	if ($cart->trans_type!=ST_SALESORDER && $cart->trans_type!=ST_SALESQUOTE) {
 		$cart->dimension_id = $_POST['dimension_id'];
 		$cart->dimension2_id = $_POST['dimension2_id'];
+	} else {
+		$cart->dimension_id = isset($_POST['dimension_id']) ? (int)$_POST['dimension_id'] : 0;
+		$cart->dimension2_id = isset($_POST['dimension2_id']) ? (int)$_POST['dimension2_id'] : 0;
+		$intents = sales_classification_intents_from_values(
+			$cart->dimension_id, $cart->dimension2_id,
+			get_post('_classification_unassigned_1', 0),
+			get_post('_classification_unassigned_2', 0), 'sales_header');
+		if ($intents !== false)
+			$cart->classification_intents = $intents;
 	}
 	$cart->ex_rate = input_num('_ex_rate', null);
 
@@ -454,6 +463,12 @@ function copy_from_cart() {
 	if ($cart->trans_type!=ST_SALESORDER && $cart->trans_type!=ST_SALESQUOTE) {
 		$_POST['dimension_id'] = $cart->dimension_id;
 		$_POST['dimension2_id'] = $cart->dimension2_id;
+	} else {
+		$values = sales_classification_carrier_values($cart);
+		$_POST['dimension_id'] = $values['ids'][1];
+		$_POST['dimension2_id'] = $values['ids'][2];
+		$_POST['_classification_unassigned_1'] = $values['unassigned'][1];
+		$_POST['_classification_unassigned_2'] = $values['unassigned'][2];
 	}
 	$_POST['cart_id'] = $cart->cart_id;
 	$_POST['_ex_rate'] = $cart->ex_rate;
@@ -752,9 +767,39 @@ function check_item_data() {
 
 //--------------------------------------------------------------------------------
 
+/**
+ * Apply the line-level category controls to the selected/new cart line.
+ *
+ * @param object $line Cart line
+ * @return bool True when the submitted pair is valid
+ */
+function apply_sales_line_classification_post($line)
+{
+	if (!is_object($line))
+		return false;
+	$intents = sales_classification_intents_from_values(
+		get_post('line_dimension_id', 0),
+		get_post('line_dimension2_id', 0),
+		get_post('_line_classification_unassigned_1', 0),
+		get_post('_line_classification_unassigned_2', 0),
+		'sales_line');
+	if ($intents === false) {
+		display_error(_('A line category cannot be both selected and explicitly unassigned.'));
+		return false;
+	}
+	$line->classification_intents = $intents;
+	return true;
+}
+
+//--------------------------------------------------------------------------------
+
 function handle_update_item() {
-	if ($_POST['UpdateItem'] != '' && check_item_data())
-		$_SESSION['Items']->update_cart_item($_POST['LineNo'], input_num('qty'), input_num('price'), input_num('Disc') / 100, $_POST['item_description'] );
+	if ($_POST['UpdateItem'] != '' && check_item_data()) {
+		$line_no = (int)$_POST['LineNo'];
+		if (!apply_sales_line_classification_post($_SESSION['Items']->line_items[$line_no]))
+			return;
+		$_SESSION['Items']->update_cart_item($line_no, input_num('qty'), input_num('price'), input_num('Disc') / 100, $_POST['item_description']);
+	}
 	
 	page_modified();
 	line_start_focus();
@@ -778,7 +823,20 @@ function handle_new_item() {
 	if (!check_item_data())
 		return;
 	
+	$line_intents = sales_classification_intents_from_values(
+		get_post('line_dimension_id', 0),
+		get_post('line_dimension2_id', 0),
+		get_post('_line_classification_unassigned_1', 0),
+		get_post('_line_classification_unassigned_2', 0),
+		'sales_line');
+	if ($line_intents === false) {
+		display_error(_('A line category cannot be both selected and explicitly unassigned.'));
+		return;
+	}
+	$first_new = count($_SESSION['Items']->line_items);
 	add_to_order($_SESSION['Items'], get_post('stock_id'), input_num('qty'), input_num('price'), input_num('Disc') / 100, get_post('stock_id_text'));
+	for ($index = $first_new; $index < count($_SESSION['Items']->line_items); $index++)
+		$_SESSION['Items']->line_items[$index]->classification_intents = $line_intents;
 
 	unset($_POST['_stock_id_edit'], $_POST['stock_id']);
 	page_modified();

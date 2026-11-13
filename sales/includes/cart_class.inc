@@ -20,6 +20,7 @@ iv)  a delivery note
 
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');
 include_once($path_to_root.'/taxes/tax_calc.inc');
+include_once($path_to_root.'/sales/includes/db/sales_classification_db.inc');
 
 class Cart {
 	public $trans_type; // invoice, order, quotation, delivery note ...
@@ -72,6 +73,12 @@ class Cart {
 	public $dimension2_id;
 	// DIM-FND-005 explicit ADR-02 modes for this request; null is a legacy document.
 	public $classification_intents = null;
+	// DIM-SAL-001 durable identity of an unsaved source and its captured revisions.
+	public $classification_draft_token = null;
+	public $classification_draft_revisions = array();
+	public $classification_revision_id = 0;
+	public $classification_lineage_state = 'legacy_unspecified';
+	public $classification_source = null;
 	public $payment;
 	public $payment_terms = array('cash_sale' => false, 'days_before_due' => 0); // cached payment terms
 	public $credit;
@@ -128,6 +135,7 @@ class Cart {
 			$this->trans_type = ST_SALESORDER;
 		$this->dimension_id = 0;
 		$this->dimension2_id = 0;
+		$this->classification_lineage_state = 'new';
 		$this->pos = sales_points_entity::find_with_details(user_pos());
 		$this->read($type, $trans_no, $prepare_child);
 		$this->cart_id = uniqid('');
@@ -322,6 +330,7 @@ class Cart {
         foreach($original->line_items as $index=>$line)$original->line_items[$index]=clone $line;
         try {
 		begin_transaction(); // prevents partial database changes in case of direct delivery/invoice
+		$classification_source = in_array($this->trans_type, array(ST_SALESORDER, ST_SALESQUOTE), true);
 		if ($this->reference != 'auto' && $this->trans_no == 0 && !is_new_reference($this->reference, $this->trans_type)) {
 			if (!empty($SysPrefs->prefs['ref_no_auto_increase']))
 				$this->reference = $Refs->get_next($this->trans_type, null, array('date' => Today()));
@@ -330,6 +339,10 @@ class Cart {
 				return -1;
 			}
 		}
+		if ($classification_source && $this->trans_no == 0
+			&& (empty($this->classification_draft_revisions)
+				|| !isset($this->classification_draft_revisions['document_key'])))
+			sales_classification_capture_cart($this);
 		if (count($this->src_docs) == 0 && ($this->trans_type == ST_SALESINVOICE || $this->trans_type == ST_CUSTDELIVERY) && !$this->is_prepaid()) {
 			// this is direct document - first add parent
 			$ref = $this->reference;
@@ -377,6 +390,12 @@ class Cart {
 		}
 
         $failed = $ret === false || (is_numeric($ret) && $ret <= 0);
+		if (!$failed && $classification_source) {
+			$was_new = $original->trans_no == 0;
+			if ($was_new ? !sales_classification_bind_cart($this, $ret)
+				: !sales_classification_capture_cart($this, $ret, true))
+				$failed = true;
+		}
         if ($failed || !commit_transaction()) {
             cancel_transaction();
             foreach (get_object_vars($original) as $field=>$value) $this->$field = $value;
@@ -705,9 +724,13 @@ class Cart {
 			return false;
 
 		$opt = $this->optional_items[$opt_index];
-		$line_no = count($this->line_items);
+		$first_line = count($this->line_items);
 		add_to_order($this, $opt['stock_id'], $opt['quantity'], $opt['price'],
 			$opt['discount_percent'], $opt['description']);
+		if (isset($opt['template_id'], $opt['template_line_id']))
+			for ($index = $first_line; $index < count($this->line_items); $index++)
+				sales_classification_apply_template_line($this->line_items[$index],
+					$opt['template_id'], $opt['template_line_id']);
 
 		unset($this->optional_items[$opt_index]);
 		$this->optional_items = array_values($this->optional_items); // re-index
@@ -858,6 +881,8 @@ class Cart {
 
 class line_details {
 	public $id;
+	public $dimension_id = 0;
+	public $dimension2_id = 0;
 	public $stock_id;
 	public $item_description;
 	public $units;
@@ -898,12 +923,22 @@ class line_details {
 	public $qty_done;
 	public $qty_dispatched;
 	public $qty_old = 0;
+	// DIM-SAL-001 line override and stable draft/final source identity.
+	public $classification_intents = null;
+	public $classification_token;
+	public $draft_line_key = '';
+	public $classification_draft_revision_id = 0;
+	public $classification_revision_id = 0;
+	public $classification_lineage_state = 'new';
+	public $classification_source = null;
 
 
 	function __construct($stock_id, $qty, $prc, $disc_percent, $qty_done, $standard_cost, $description, $id=0, $src_no=0, $src_id=0) {
 	/* Constructor function to add a new LineDetail object with passed params */
 
 		$this->id = $id;
+		$this->dimension_id = 0;
+		$this->dimension2_id = 0;
 		$this->src_no = $src_no;
 		$this->src_id = $src_id;
 		$item_row = stock_master_entity::find($stock_id);
@@ -927,6 +962,8 @@ class line_details {
 		$this->discount_percent = $disc_percent;
 		$this->qty_done = $qty_done;
 		$this->standard_cost = $standard_cost;
+		$this->classification_token = 'line_'.hash('sha256', uniqid('', true).mt_rand());
+		$this->classification_lineage_state = 'new';
 		$this->valid = true;
 	}
 

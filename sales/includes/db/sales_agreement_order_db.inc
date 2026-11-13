@@ -56,7 +56,7 @@ function prepare_agreement_sales_order($identity,$selections=array(),$order_date
     $cart->Comments=_('From Agreement: ').$a['reference'];
     $ordered=array();foreach($source['effects'] as $effect)if($effect['stk_code']!==null)
         $ordered[$effect['stk_code']]=(isset($ordered[$effect['stk_code']])?$ordered[$effect['stk_code']]:0)+(float)$effect['quantity'];
-    $selected=$selections;$items=array();$payloads=array();
+    $selected=$selections;$items=array();$payloads=array();$line_map=array();
     foreach($source['lines'] as $line){
         $key=(int)$line['id'];$requested=isset($selections[$key])?$selections[$key]:null;unset($selected[$key]);
         if($requested!==null && (!is_numeric($requested) || !is_finite((float)$requested) || (float)$requested<0))throw new RuntimeException('Sales agreement quantity is invalid.');
@@ -69,8 +69,10 @@ function prepare_agreement_sales_order($identity,$selections=array(),$order_date
         if(!$current || count($current)!==1)throw new RuntimeException('Sales agreement item is unavailable.');$items[]=$current[0];
         $index=count($cart->line_items);$cart->add_to_cart($index,$line['stock_id'],$qty,$line['unit_price'],(float)$line['discount_percent']/100,0,0,$line['description']!==''?$line['description']:$current[0]['description']);
         $payloads[$index]=$line['custom_data']===null || $line['custom_data']===''?'{}':$line['custom_data'];
+        $line_map[(int)$line['id']]=$index;
     }
     if($selected || !$cart->line_items)throw new RuntimeException('No current Sales agreement lines can be ordered.');
+    sales_classification_apply_agreement_conversion($cart,$source,$line_map);
     $tax=agreement_sales_order_tax(false);$cart->get_trans_total();
     $algorithm=empty($tax['algorithm'])?null:$tax['algorithm'][0]['value'];
     if((string)get_company_pref('tax_algorithm')!==(string)$algorithm || $tax!==agreement_sales_order_tax(true))throw new RuntimeException('Sales tax snapshot changed; retry a fresh command.');
@@ -245,7 +247,9 @@ function write_agreement_sales_order($snapshot,$draft_id=0)
     $actual=collect_sales_cart_data($cart);if($actual['reference']!==html_entity_decode($resolved_reference,ENT_QUOTES))throw new RuntimeException('Sales agreement native reference changed.');$actual['reference']=$intent['reference'];
     $intent['Comments']=html_entity_decode($intent['Comments'],ENT_QUOTES);foreach($intent['line_items'] as $index=>$line){$intent['line_items'][$index]['stock_id']=html_entity_decode($line['stock_id'],ENT_QUOTES);$intent['line_items'][$index]['item_description']=html_entity_decode($line['item_description'],ENT_QUOTES);}$actual['trans_no']=$intent['trans_no'];
     foreach($actual['line_items'] as $key=>$line)$actual['line_items'][$key]['id']=$intent['line_items'][$key]['id'];
-    if(json_decode(json_encode($actual),true)!==json_decode(json_encode($intent),true))throw new RuntimeException('Sales agreement native cart changed.');
+    if(sales_classification_without_volatile_metadata(json_decode(json_encode($actual),true))
+        !==sales_classification_without_volatile_metadata(json_decode(json_encode($intent),true)))
+        throw new RuntimeException('Sales agreement native cart changed.');
     $headers=sales_order_dimension_rows('sales_orders',$result,ST_SALESORDER);$lines=sales_order_dimension_rows('sales_order_details',$result,ST_SALESORDER);
     $expected_payload=json_encode(get_discount_custom_data_for_save(json_decode($snapshot['header_payload'],true),$cart));
     if(!$headers || count($headers)!==1 || count($lines)!==count($intent['line_items']) || $headers[0]['custom_data']!==$expected_payload

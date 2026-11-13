@@ -38,18 +38,28 @@ function sales_dimension_custody_sources()
  *                          writes metadata must pass array('custom_data'=>null)
  * @param callable $persist Native SQL; must return a truthy result
  * @param bool     $remove  Native DELETE of a proven-unused row
+ * @param callable|null $finalize Optional atomic finalizer receiving admitted data and native result
  * @return mixed Native result, or false when refused/rolled back
  */
-function sales_dimension_custody_write($owner, $key, $next, $persist, $remove = false)
+function sales_dimension_custody_write($owner, $key, $next, $persist, $remove = false, $finalize = null)
 {
 	$sources = sales_dimension_custody_sources();
 	if (!isset($sources[$owner]) || !is_array($next) || !is_callable($persist)
+		|| ($finalize !== null && !is_callable($finalize))
 		|| array_diff(array_keys($next), array('custom_data')))
 		return false;
 
-	return dimension_master_metadata_write($owner, $key, $next, function($admitted) use ($persist) {
-		return call_user_func($persist);
+	$result = dimension_master_metadata_write($owner, $key, $next, function($admitted) use ($persist,$finalize) {
+		$result = call_user_func($persist);
+		if ($result === false || ($result !== null && !$result))
+			return false;
+		if ($finalize !== null && !call_user_func($finalize, $admitted, $result))
+			return false;
+		if ($finalize !== null && $result !== true && $result !== false)
+			db_preserve_insert_id($result);
+		return $result;
 	}, $remove);
+	return $result;
 }
 
 /**
