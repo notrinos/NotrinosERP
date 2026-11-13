@@ -175,11 +175,19 @@ function restore_purchase_order_from_data($data)
 	$po->tax_overrides    = isset($data['tax_overrides']) ? $data['tax_overrides'] : array();
 	$po->prep_amount      = isset($data['prep_amount']) ? (float)$data['prep_amount'] : 0;
 	$po->fixed_asset      = isset($data['fixed_asset']) ? $data['fixed_asset'] : false;
+	// DIM-PUR-002: restore the sealed classification carriers exactly; a legacy payload still
+	// restores nothing and stays visibly legacy.
+	foreach (array('classification_intents','classification_draft_token',
+		'classification_draft_revisions','classification_revision_id',
+		'classification_lineage_state','classification_source',
+		'dimension_id','dimension2_id') as $field)
+		if (array_key_exists($field, $data))
+			$po->$field = $data[$field];
 
 	// Restore line items
 	if (!empty($data['line_items'])) {
 		foreach ($data['line_items'] as $line_data) {
-			$po->add_to_order(
+			$added = $po->add_to_order(
 				count($po->line_items),
 				$line_data['stock_id'],
 				$line_data['quantity'],
@@ -190,6 +198,15 @@ function restore_purchase_order_from_data($data)
 				isset($line_data['qty_inv']) ? $line_data['qty_inv'] : 0,
 				isset($line_data['qty_received']) ? $line_data['qty_received'] : 0
 			);
+			if (!$added)
+				continue;
+			$restored_line = $po->line_items[count($po->line_items) - 1];
+			foreach (array('classification_intents','classification_token','draft_line_key',
+				'classification_draft_revision_id','classification_revision_id',
+				'classification_lineage_state','classification_source',
+				'dimension_id','dimension2_id') as $field)
+				if (array_key_exists($field, $line_data))
+					$restored_line->$field = $line_data[$field];
 		}
 	}
 

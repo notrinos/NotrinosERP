@@ -592,13 +592,14 @@ function get_purch_rfqs($status = '', $date_from = '', $date_to = '', $rfq_type 
  * @param string|null $created_date
  * @param mixed       $custom_data
  * @param string|null $error_message
+ * @param array|null  $classification_intents DIM-PUR-002 explicit header intent
  * @return int|false
  */
 function add_purch_rfq($rfq_type, $description, $deadline_date, $requisition_id,
 	$notes = '', $terms_and_conditions = '', $delivery_location = '',
 	$required_delivery_date = null, $evaluation_criteria = '', $validity_date = null,
 	$dimension_id = 0, $dimension2_id = 0, $reference = '', $created_date = null,
-	$custom_data = array(), &$error_message = null)
+	$custom_data = array(), &$error_message = null, $classification_intents = null)
 {
 	try {
 		if (!begin_transaction()) return false;
@@ -650,7 +651,7 @@ function add_purch_rfq($rfq_type, $description, $deadline_date, $requisition_id,
 		$encoded = encode_purch_rfq_custom_data($hook_data['custom_data']);
 		if ($encoded === null && !in_array($hook_data['custom_data'], array(null, '', array()), true)) { cancel_transaction(); return false; }
 		$next = array('dimension_id'=>$hook_data['dimension_id'], 'dimension2_id'=>$hook_data['dimension2_id'], 'custom_data'=>$encoded);
-		$result = dimension_ordinary_master_write('purch_rfq', null, $next, function($admitted) use ($hook_data) {
+		$result = dimension_ordinary_master_write('purch_rfq', null, $next, function($admitted) use ($hook_data, $classification_intents) {
 			$hook_data['dimension_id'] = $admitted['dimension_id'];
 			$hook_data['dimension2_id'] = $admitted['dimension2_id'];
 
@@ -701,6 +702,11 @@ function add_purch_rfq($rfq_type, $description, $deadline_date, $requisition_id,
 				WHERE id = " . (int)$rfq_id;
 			if (!db_query($sql)) return false;
 
+			// DIM-PUR-002: the exact header decision belongs to this writer transaction. Capture
+			// before the insert identity is published so a later query cannot discard it.
+			if (function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready())
+				purchasing_classification_capture_document(ST_PURCHRFQ, $rfq_id,
+					$classification_intents);
 			if (!db_preserve_insert_id($rfq_id)) return false;
 			return $rfq_id;
 		});
@@ -730,13 +736,14 @@ function add_purch_rfq($rfq_type, $description, $deadline_date, $requisition_id,
  * @param string|null $created_date
  * @param mixed       $custom_data
  * @param string|null $error_message
+ * @param array|null  $classification_intents DIM-PUR-002 explicit header intent
  * @return bool
  */
 function update_purch_rfq($rfq_id, $rfq_type, $description, $deadline_date, $requisition_id,
 	$notes = '', $terms_and_conditions = '', $delivery_location = '',
 	$required_delivery_date = null, $evaluation_criteria = '', $validity_date = null,
 	$dimension_id = 0, $dimension2_id = 0, $reference = '', $created_date = null,
-	$custom_data = null, &$error_message = null)
+	$custom_data = null, &$error_message = null, $classification_intents = null)
 {
 	try {
 		if (!begin_transaction()) return false;
@@ -797,7 +804,7 @@ function update_purch_rfq($rfq_id, $rfq_type, $description, $deadline_date, $req
 		$encoded = encode_purch_rfq_custom_data($hook_data['custom_data']);
 		if ($encoded === null && !in_array($hook_data['custom_data'], array(null, '', array()), true)) { cancel_transaction(); return false; }
 		$next = array('dimension_id'=>$hook_data['dimension_id'], 'dimension2_id'=>$hook_data['dimension2_id'], 'custom_data'=>$encoded);
-		$result = dimension_ordinary_master_write('purch_rfq', $rfq_id, $next, function($admitted) use ($hook_data, $rfq_id) {
+		$result = dimension_ordinary_master_write('purch_rfq', $rfq_id, $next, function($admitted) use ($hook_data, $rfq_id, $classification_intents) {
 			$hook_data['dimension_id'] = $admitted['dimension_id'];
 			$hook_data['dimension2_id'] = $admitted['dimension2_id'];
 
@@ -819,6 +826,12 @@ function update_purch_rfq($rfq_id, $rfq_type, $description, $deadline_date, $req
 				custom_data = " . sql_purch_rfq_custom_data($hook_data['custom_data']) . "
 				WHERE id = " . (int)$rfq_id;
 			if (!db_query($sql)) return false;
+			// DIM-PUR-002: capture only an explicit decision or the first decision of a legacy RFQ.
+			if (function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready()
+				&& ($classification_intents !== null
+					|| !purchasing_classification_current_header_revision_id(ST_PURCHRFQ, $rfq_id)))
+				purchasing_classification_capture_document(ST_PURCHRFQ, $rfq_id,
+					$classification_intents);
 
 			return true;
 		});
@@ -893,15 +906,17 @@ function get_next_purch_rfq_item_sort_order($rfq_id)
  * @param int         $sort_order
  * @param mixed       $custom_data
  * @param string|null $error_message
+ * @param array|null  $classification_intents DIM-PUR-002 explicit line intent
  * @return int|false
  */
 function add_rfq_item($rfq_id, $stock_id, $quantity, $target_price, $specifications = '',
-	$description = '', $unit_of_measure = '', $sort_order = 0, $custom_data = array(), &$error_message = null)
+	$description = '', $unit_of_measure = '', $sort_order = 0, $custom_data = array(), &$error_message = null,
+	$classification_intents = null)
 {
 	$encoded = encode_purch_rfq_custom_data($custom_data);
 	if ($encoded === null && !in_array($custom_data, array(null, '', array()), true)) return false;
 	return dimension_rfq_child_write('purch_rfq_items', null,
-		array('rfq_id'=>$rfq_id, 'custom_data'=>$encoded), function($admitted) use ($rfq_id, $stock_id, $quantity, $target_price, $specifications, $description, $unit_of_measure, $sort_order, $custom_data, &$error_message) {
+		array('rfq_id'=>$rfq_id, 'custom_data'=>$encoded), function($admitted) use ($rfq_id, $stock_id, $quantity, $target_price, $specifications, $description, $unit_of_measure, $sort_order, $custom_data, $classification_intents, &$error_message) {
 
 		$error_message = '';
 		$stock_id = trim((string)$stock_id);
@@ -955,7 +970,13 @@ function add_rfq_item($rfq_id, $stock_id, $quantity, $target_price, $specificati
 		)";
 		if (!db_query($sql)) return false;
 
-		return db_insert_id();
+		$item_id = (int)db_insert_id();
+		// DIM-PUR-002: capture the line decision in this same native command.
+		if ($item_id > 0 && function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready())
+			purchasing_classification_capture_document_line(ST_PURCHRFQ, (int)$rfq_id,
+				array('id' => $item_id, 'stock_id' => $stock_id, 'quantity' => $quantity),
+				$classification_intents);
+		return $item_id;
 	});
 }
 
@@ -972,10 +993,12 @@ function add_rfq_item($rfq_id, $stock_id, $quantity, $target_price, $specificati
  * @param int         $sort_order
  * @param mixed       $custom_data
  * @param string|null $error_message
+ * @param array|null  $classification_intents DIM-PUR-002 explicit line intent
  * @return bool
  */
 function update_rfq_item($item_id, $stock_id, $quantity, $target_price, $specifications = '',
-	$description = '', $unit_of_measure = '', $sort_order = 0, $custom_data = null, &$error_message = null)
+	$description = '', $unit_of_measure = '', $sort_order = 0, $custom_data = null, &$error_message = null,
+	$classification_intents = null)
 {
 	$next = array();
 	if ($custom_data !== null) {
@@ -983,7 +1006,7 @@ function update_rfq_item($item_id, $stock_id, $quantity, $target_price, $specifi
 		if ($next['custom_data'] === null && !in_array($custom_data, array('', array()), true)) return false;
 	}
 	return dimension_rfq_child_write('purch_rfq_items', $item_id, $next,
-		function($admitted) use ($item_id, $stock_id, $quantity, $target_price, $specifications, $description, $unit_of_measure, $sort_order, $custom_data, &$error_message) {
+		function($admitted) use ($item_id, $stock_id, $quantity, $target_price, $specifications, $description, $unit_of_measure, $sort_order, $custom_data, $classification_intents, &$error_message) {
 
 		$error_message = '';
 		$stock_id = trim((string)$stock_id);
@@ -1023,7 +1046,17 @@ function update_rfq_item($item_id, $stock_id, $quantity, $target_price, $specifi
 			sort_order = " . (int)$sort_order . ",
 			custom_data = " . sql_purch_rfq_custom_data($custom_data) . "
 			WHERE id = " . (int)$item_id;
-		return (bool)db_query($sql);
+		if (!db_query($sql)) return false;
+		// DIM-PUR-002: capture only an explicit decision or the first decision of a legacy line.
+		if (function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready()
+			&& ($classification_intents !== null
+				|| !purchasing_classification_current_line_revision_id(ST_PURCHRFQ,
+					(int)$item_row['rfq_id'], $item_id)))
+			purchasing_classification_capture_document_line(ST_PURCHRFQ,
+				(int)$item_row['rfq_id'],
+				array('id' => $item_id, 'stock_id' => $stock_id, 'quantity' => $quantity),
+				$classification_intents);
+		return true;
 	});
 }
 

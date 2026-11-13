@@ -1,6 +1,7 @@
 <?php
 /** Immutable requisition source commands through the existing native PO workflow. */
 require_once __DIR__.'/purch_requisition_po_completion_db.inc';
+require_once __DIR__.'/purchasing_classification_db.inc';
 
 /** Read current source rows under the owning transaction rather than an MVCC snapshot. */
 function read_requisition_purchase_rows($query) {
@@ -118,6 +119,7 @@ function prepare_requisition_purchase_order($id, $supplier_id, $line_ids = array
  $cart->Location = $location[0]['loc_code']; $cart->delivery_address = $location[0]['location_name'];
  $cart->Comments = sprintf(_('Created from Purchase Requisition %s'), $header['reference']);
  $cart->requisition_id = (int)$id; get_supplier_details_to_order($cart, (int)$supplier_id, true); $cart->reference = 'auto';
+ $classification_lines = array();
  foreach ($lines as $line) {
   $quantity = round((float)$line['quantity'] - (float)$line['qty_ordered'], get_qty_dec($line['stock_id']));
   $price = (float)$line['estimated_unit_price'];
@@ -137,7 +139,10 @@ function prepare_requisition_purchase_order($id, $supplier_id, $line_ids = array
   $item = $cart->line_items[count($cart->line_items)-1];
   $item->item_description = !$line['stock_editable'] && $line['supplier_description'] !== null && $line['supplier_description'] !== '' ? $line['supplier_description'] : $description;
   $item->descr_editable = $line['stock_editable']; $item->units = $units; $item->tax_type = $line['stock_tax']; $item->tax_type_name = $line['stock_tax_name'];
+  $classification_lines[(int)$line['id']] = count($cart->line_items) - 1;
  }
+ // DIM-PUR-002: carry the exact requisition header/line intent into the conversion cart.
+ function_exists('purchasing_classification_apply_conversion') && purchasing_classification_apply_conversion($cart, ST_PURCHREQUISITION, (int)$id, $classification_lines);
  if (!$cart->order_has_items() || count($lines) !== count($used)) throw new RuntimeException('Requisition selected lines are unavailable.');
  $tax = array(); if (!$cart->tax_included) {
   $tax = read_agreement_purchase_tax_configuration(false);

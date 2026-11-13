@@ -498,12 +498,13 @@ function submit_purchase_agreement($agreement_id)
  * @param string $reference
  * @param int    $buyer_id
  * @param mixed  $custom_data
+ * @param array|null $classification_intents DIM-PUR-002 explicit header intent
  * @return int|false
  */
 function add_purch_agreement($agreement_type, $supplier_id, $date_start, $date_end, $currency,
 	$payment_terms = 0, $delivery_location = '', $auto_renew = 0, $renewal_period_months = 12,
 	$terms_and_conditions = '', $notes = '', $rfq_id = 0, $dimension_id = 0, $dimension2_id = 0,
-	$reference = '', $buyer_id = 0, $custom_data = array())
+	$reference = '', $buyer_id = 0, $custom_data = array(), $classification_intents = null)
 {
 	$context = purch_agreement_dimension_context();
 	if (!$context) return false;
@@ -535,7 +536,7 @@ function add_purch_agreement($agreement_type, $supplier_id, $date_start, $date_e
 
 	$next = array('dimension_id'=>$hook_data['dimension_id'], 'dimension2_id'=>$hook_data['dimension2_id'],
 		'custom_data'=>encode_purch_agreement_custom_data($hook_data['custom_data']));
-	return purch_agreement_dimension_write('purch_agreements', null, $next, function($admitted) use ($hook_data) {
+	return purch_agreement_dimension_write('purch_agreements', null, $next, function($admitted) use ($hook_data, $classification_intents) {
 		$sql = "INSERT INTO " . TB_PREF . "purch_agreements (
 			reference,
 			agreement_type,
@@ -589,6 +590,11 @@ function add_purch_agreement($agreement_type, $supplier_id, $date_start, $date_e
 			WHERE id = " . (int)$agreement_id;
 		if (!db_query($sql, 'could not update purchase agreement reference')) return false;
 
+		// DIM-PUR-002: the exact header decision belongs to this writer transaction.
+		if (function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready())
+			purchasing_classification_capture_document(ST_PURCHAGREEMENT, $agreement_id,
+				$classification_intents);
+
 		return $agreement_id;
 
 	});
@@ -615,12 +621,13 @@ function add_purch_agreement($agreement_type, $supplier_id, $date_start, $date_e
  * @param string $reference
  * @param int    $buyer_id
  * @param mixed  $custom_data
+ * @param array|null $classification_intents DIM-PUR-002 explicit header intent
  * @return bool
  */
 function update_purch_agreement($agreement_id, $agreement_type, $supplier_id, $date_start, $date_end, $currency,
 	$payment_terms = 0, $delivery_location = '', $auto_renew = 0, $renewal_period_months = 12,
 	$terms_and_conditions = '', $notes = '', $rfq_id = 0, $dimension_id = 0, $dimension2_id = 0,
-	$reference = '', $buyer_id = 0, $custom_data = array())
+	$reference = '', $buyer_id = 0, $custom_data = array(), $classification_intents = null)
 {
 	$context = purch_agreement_dimension_context();
 	if (!$context || !dimension_writer_reference_id($agreement_id)) return false;
@@ -656,7 +663,7 @@ function update_purch_agreement($agreement_id, $agreement_type, $supplier_id, $d
 
 	$next = array('dimension_id'=>$hook_data['dimension_id'], 'dimension2_id'=>$hook_data['dimension2_id'],
 		'custom_data'=>encode_purch_agreement_custom_data($hook_data['custom_data']));
-	return purch_agreement_dimension_write('purch_agreements', $agreement_id, $next, function($admitted) use ($hook_data, $agreement_id) {
+	return purch_agreement_dimension_write('purch_agreements', $agreement_id, $next, function($admitted) use ($hook_data, $agreement_id, $classification_intents) {
 		$sql = "UPDATE " . TB_PREF . "purch_agreements SET
 			agreement_type = " . db_escape($hook_data['agreement_type']) . ",
 			supplier_id = " . (int)$hook_data['supplier_id'] . ",
@@ -680,6 +687,13 @@ function update_purch_agreement($agreement_id, $agreement_type, $supplier_id, $d
 
 		update_purch_agreement_total_committed($agreement_id);
 		update_agreement_fulfillment($agreement_id);
+
+		// DIM-PUR-002: capture only an explicit decision or the first decision of a legacy agreement.
+		if (function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready()
+			&& ($classification_intents !== null
+				|| !purchasing_classification_current_header_revision_id(ST_PURCHAGREEMENT, $agreement_id)))
+			purchasing_classification_capture_document(ST_PURCHAGREEMENT, $agreement_id,
+				$classification_intents);
 
 		return true;
 
@@ -826,12 +840,14 @@ function get_purchase_agreement_item($stock_id)
  * @param float  $min_qty_per_order
  * @param string $price_valid_until
  * @param mixed  $custom_data
+ * @param array|null $classification_intents DIM-PUR-002 explicit line intent
  * @return int|false
  */
 function add_agreement_line($agreement_id, $stock_id, $committed_qty, $unit_price, $discount = 0,
-	$description = '', $min_qty_per_order = 0, $price_valid_until = null, $custom_data = array())
+	$description = '', $min_qty_per_order = 0, $price_valid_until = null, $custom_data = array(),
+	$classification_intents = null)
 {
-	return purch_agreement_dimension_write('purch_agreement_lines', null, array('agreement_id'=>$agreement_id, 'custom_data'=>encode_purch_agreement_custom_data($custom_data)), function($admitted) use ($agreement_id, $stock_id, $committed_qty, $unit_price, $discount, $description, $min_qty_per_order, $price_valid_until, $custom_data) {
+	return purch_agreement_dimension_write('purch_agreement_lines', null, array('agreement_id'=>$agreement_id, 'custom_data'=>encode_purch_agreement_custom_data($custom_data)), function($admitted) use ($agreement_id, $stock_id, $committed_qty, $unit_price, $discount, $description, $min_qty_per_order, $price_valid_until, $custom_data, $classification_intents) {
 		$agreement = get_editable_purch_agreement($agreement_id);
 		$item = get_purchase_agreement_item($stock_id);
 		if (!$agreement
@@ -876,6 +892,12 @@ function add_agreement_line($agreement_id, $stock_id, $committed_qty, $unit_pric
 		update_purch_agreement_total_committed($agreement_id);
 		update_agreement_fulfillment($agreement_id);
 
+		// DIM-PUR-002: the line decision is part of the same writer transaction.
+		if (function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready())
+			purchasing_classification_capture_document_line(ST_PURCHAGREEMENT, (int)$agreement_id,
+				array('id' => $line_id, 'stock_id' => $stock_id, 'quantity' => $committed_qty),
+				$classification_intents);
+
 		return $line_id;
 
 	}, false);
@@ -893,10 +915,12 @@ function add_agreement_line($agreement_id, $stock_id, $committed_qty, $unit_pric
  * @param float  $min_qty_per_order
  * @param string $price_valid_until
  * @param mixed  $custom_data
+ * @param array|null $classification_intents DIM-PUR-002 explicit line intent
  * @return bool
  */
 function update_agreement_line($line_id, $stock_id, $committed_qty, $unit_price, $discount = 0,
-	$description = '', $min_qty_per_order = 0, $price_valid_until = null, $custom_data = array())
+	$description = '', $min_qty_per_order = 0, $price_valid_until = null, $custom_data = array(),
+	$classification_intents = null)
 {
 	if (!purch_agreement_dimension_context() || !dimension_writer_reference_id($line_id)) return false;
 	if (func_num_args() < 9) {
@@ -904,7 +928,7 @@ function update_agreement_line($line_id, $stock_id, $committed_qty, $unit_price,
 		if (!$current) return false;
 		$custom_data = $current['custom_data'];
 	}
-	return purch_agreement_dimension_write('purch_agreement_lines', $line_id, array('custom_data'=>encode_purch_agreement_custom_data($custom_data)), function($admitted) use ($line_id, $stock_id, $committed_qty, $unit_price, $discount, $description, $min_qty_per_order, $price_valid_until, $custom_data) {
+	return purch_agreement_dimension_write('purch_agreement_lines', $line_id, array('custom_data'=>encode_purch_agreement_custom_data($custom_data)), function($admitted) use ($line_id, $stock_id, $committed_qty, $unit_price, $discount, $description, $min_qty_per_order, $price_valid_until, $custom_data, $classification_intents) {
 		$line = get_purch_agreement_line($line_id);
 		if (!$line)
 			return false;
@@ -940,6 +964,16 @@ function update_agreement_line($line_id, $stock_id, $committed_qty, $unit_price,
 
 		update_purch_agreement_total_committed((int)$line['agreement_id']);
 		update_agreement_fulfillment((int)$line['agreement_id']);
+
+		// DIM-PUR-002: capture an explicit decision, or the first decision of a legacy line.
+		if (function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready()
+			&& ($classification_intents !== null
+				|| !purchasing_classification_current_line_revision_id(ST_PURCHAGREEMENT,
+					(int)$line['agreement_id'], $line_id)))
+			purchasing_classification_capture_document_line(ST_PURCHAGREEMENT,
+				(int)$line['agreement_id'],
+				array('id' => $line_id, 'stock_id' => $stock_id, 'quantity' => $committed_qty),
+				$classification_intents);
 
 		return true;
 

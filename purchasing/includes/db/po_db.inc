@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__.'/purchase_document_dimension_db.inc';
+require_once __DIR__.'/purchasing_classification_db.inc';
 include_once($path_to_root . '/purchasing/includes/db/purch_orders_entity.inc');
 
 /** Load native supplier defaults; an owning source conversion can request a current locking read. */
@@ -215,6 +216,13 @@ function add_po(&$po_obj, $approval_draft_id = 0, $preserve_approved_intent = fa
 			|| purchase_order_creation_context($working_order) !== $creation_context
 			|| ($preserve_approved_intent && purchase_order_creation_cart_state($working_order) !== $approved_intent))
 			throw new RuntimeException('Purchase order admission changed.');
+		// DIM-PUR-002: capture the exact classified draft source before any native row exists.
+		// An install that has not applied the accepted companion upgrade keeps its legacy behavior.
+		$classification_captured = false;
+		if ($working_order->trans_type == ST_PURCHORDER && function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready()) {
+			purchasing_classification_capture_cart($working_order);
+			$classification_captured = true;
+		}
 		/*Insert to purchase order header record */
 		$native_total = $working_order->get_trans_total();
 		if ($approved_total !== null && (!is_numeric($approved_total) || !is_finite((float)$approved_total)
@@ -285,6 +293,10 @@ function add_po(&$po_obj, $approval_draft_id = 0, $preserve_approved_intent = fa
 			$working_order->line_items[$line_no]->po_detail_rec = db_insert_id();
 			$created_line_ids[] = $working_order->line_items[$line_no]->po_detail_rec;
 		}
+		// Bind every pending classification revision once to the final native header/line identity.
+		if ($classification_captured
+			&& !purchasing_classification_bind_cart($working_order, $working_order->order_no))
+			throw new RuntimeException('Purchase order classification could not be bound.');
 
 		$Refs->save(ST_PURCHORDER, $working_order->order_no, $working_order->reference);
 
@@ -548,10 +560,29 @@ function update_po(&$po_obj) {
 			}
 			if (!db_query($sql, 'One of the purchase order detail records could not be updated'))
 				return reject_purchase_order_update();
-			if (!$id)
-				$created_line_ids[] = (int)db_insert_id();
-			$saved_lines[] = array($po_line, $id ? $id : (int)db_insert_id(),
+			$new_id = 0;
+			if (!$id) {
+				$new_id = (int)db_insert_id();
+				$created_line_ids[] = $new_id;
+			}
+			$saved_lines[] = array($po_line, $id ? $id : $new_id,
 				$id ? $existing[$id]['quantity_received'] : 0, $id ? $existing[$id]['qty_invoiced'] : 0);
+		}
+		// DIM-PUR-002: amended documents append only the revisions whose intent actually changed.
+		// Capture through a private carrier so an aborted save never publishes a generated identity
+		// into the caller's cart.
+		if ($po_obj->trans_type == ST_PURCHORDER && function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready()) {
+			$classification_cart = clone $po_obj;
+			$classification_cart->line_items = array();
+			foreach ($saved_lines as $saved) {
+				$classification_line = clone $saved[0];
+				$classification_line->po_detail_rec = (int)$saved[1];
+				$classification_cart->line_items[] = $classification_line;
+			}
+			purchasing_classification_capture_cart($classification_cart, $po_obj->order_no, true);
+			foreach (array('classification_draft_revisions','classification_revision_id',
+				'classification_lineage_state','classification_source','dimension','dimension2') as $field)
+				$po_obj->$field = $classification_cart->$field;
 		}
 
 		reallocate_payments($po_obj->order_no, ST_PURCHORDER, $po_obj->orig_order_date, $po_obj->get_trans_total(), $po_obj->prepayments, $po_obj->supplier_id);
@@ -620,6 +651,8 @@ function read_po_header($order_no, &$order) {
 		$order->alloc = $myrow['alloc'];
 		$order->prep_amount = $myrow['prep_amount'];
 		$order->prepayments = get_payments_for($order_no, ST_PURCHORDER, $myrow['supplier_id']);
+		// DIM-PUR-002: reload the durable header classification; never re-derive it from a default.
+		purchasing_classification_load_header($order, ST_PURCHORDER, $order_no);
 
 		return true;
 	}
@@ -654,6 +687,8 @@ function read_po_items($order_no, &$order, $open_items_only=false) {
 			if ($order->add_to_order($order->lines_on_order, $myrow['item_code'], $myrow['quantity_ordered'], $myrow['description'], $myrow['unit_price'], $units, sql2date($myrow['delivery_date']), $myrow['qty_invoiced'], $myrow['quantity_received']))
 				$order->line_items[$order->lines_on_order-1]->po_detail_rec = $myrow['po_detail_item'];
 		} /* line po from purchase order details */
+		// DIM-PUR-002: attach each persisted line classification and its lineage state.
+		purchasing_classification_load_lines($order, ST_PURCHORDER, $order_no);
 	} //end of checks on returned data set
 }
 

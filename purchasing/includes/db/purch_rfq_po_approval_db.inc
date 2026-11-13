@@ -1,5 +1,6 @@
 <?php
 /** Immutable RFQ source conversion through the existing purchase-order workflow. */
+require_once __DIR__.'/purchasing_classification_db.inc';
 
 /** Read current locked RFQ rows in deterministic source order. */
 function read_rfq_purchase_rows($query) {
@@ -67,6 +68,7 @@ function prepare_rfq_purchase_order($rfq_id, $vendor_id, $line_ids = array(), $o
 	$cart->reference = 'auto'; $cart->rfq_id = (int)$rfq_id;
 	$cart->dimension = (int)$header['dimension_id']; $cart->dimension2 = (int)$header['dimension2_id'];
 	$awards = get_purch_rfq_award_map($header['custom_data']); $used = array();
+	$classification_lines = array();
 	foreach ($lines as $line) {
 		$id = (int)$line['id'];
 		if ($selected && !isset($selected[$id])) continue;
@@ -83,7 +85,10 @@ function prepare_rfq_purchase_order($rfq_id, $vendor_id, $line_ids = array(), $o
 		$item->tax_type = $line['stock_tax']; $item->tax_type_name = $line['stock_tax_name'];
 		if (!$item->descr_editable && $line['supplier_description'] !== null && $line['supplier_description'] !== '') $item->item_description = $line['supplier_description'];
 		$used[] = $id;
+		$classification_lines[$id] = count($cart->line_items) - 1;
 	}
+	// DIM-PUR-002: the awarded RFQ's exact header/line intent becomes the conversion source.
+	function_exists('purchasing_classification_apply_conversion') && purchasing_classification_apply_conversion($cart, ST_PURCHRFQ, (int)$rfq_id, $classification_lines);
 	if (!$cart->order_has_items() || ($selected && count($selected) !== count($used))) throw new RuntimeException('RFQ selected lines are unavailable.');
 	$tax = array();
 	if (!$cart->tax_included) {

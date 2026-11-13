@@ -272,9 +272,19 @@ function submit_or_post_purchase_document($cart, $context = array()) {
 		if ($governed && !ApprovalWorkflow::isRegistered($type))
 			throw new RuntimeException('Purchase approval registration is unavailable.');
 		$required = $governed && $approval->isApprovalRequired($type, $amount, true);
+		$dimension_snapshot = null;
+		if ($required && $type == ST_PURCHORDER && purchasing_classification_schema_ready()) {
+			// DIM-PUR-002: seal the exact header/line intent this submission already resolved.
+			$classification = purchasing_classification_capture_cart($working);
+			$dimension_snapshot = purchasing_classification_approval_request($classification);
+			if ($dimension_snapshot === null)
+				throw new RuntimeException('Purchase order classification envelope is unavailable.');
+		}
 		if ($required) {
 			$data = collect_purchase_order_data($working);
 			if ($data === false) throw new RuntimeException('Purchase approval envelope is unavailable.');
+			if ($dimension_snapshot !== null)
+				$context['dimension_snapshot'] = $dimension_snapshot;
 			$result = $approval->submit($type, $data, $amount, $context, true);
 			if (!in_array($result['status'], array('pending','auto_approved'), true))
 				throw new RuntimeException('Purchase approval submission failed.');

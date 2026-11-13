@@ -67,6 +67,14 @@ if (isset($_GET['New']))
 	$selected_id = 0;
 
 if (isset($_POST['save_template']) && can_save_purchase_template_header()) {
+	$template_header_intents = purchasing_classification_intents_from_values(
+		get_post('template_dimension_id', 0), get_post('template_dimension2_id', 0),
+		get_post('_template_unassigned_1', 0), get_post('_template_unassigned_2', 0),
+		'template_header');
+	if ($template_header_intents === false) {
+		display_error(_('A header category cannot be both selected and explicitly unassigned.'));
+		$selected_id = 0;
+	} else {
 	$selected_id = add_purch_template(
 		trim(get_post('template_name')),
 		trim(get_post('template_description')),
@@ -75,7 +83,8 @@ if (isset($_POST['save_template']) && can_save_purchase_template_header()) {
 		get_post('template_payment_terms') == ALL_TEXT ? 0 : (int)get_post('template_payment_terms'),
 		trim(get_post('template_notes')),
 		check_value('template_inactive') ? 1 : 0,
-		array('created_by_ui' => 1)
+		array('created_by_ui' => 1),
+		$template_header_intents
 	);
 	if (!$selected_id) {
 		display_error(_('The purchase order template could not be created.'));
@@ -84,11 +93,16 @@ if (isset($_POST['save_template']) && can_save_purchase_template_header()) {
 		display_notification(_('Purchase order template has been created.'));
 		meta_forward($_SERVER['PHP_SELF'], 'template_id=' . $selected_id . '&sel_app=AP');
 	}
+	}
 }
 
 if (isset($_POST['update_template']) && $selected_id > 0 && can_save_purchase_template_header()) {
+	$template_header_intents = purchasing_classification_intents_from_values(
+		get_post('template_dimension_id', 0), get_post('template_dimension2_id', 0),
+		get_post('_template_unassigned_1', 0), get_post('_template_unassigned_2', 0),
+		'template_header');
 	// Metadata is omitted so retained Dimension references survive routine saves.
-	$updated = update_purch_template(
+	$updated = $template_header_intents === false ? false : update_purch_template(
 		$selected_id,
 		trim(get_post('template_name')),
 		trim(get_post('template_description')),
@@ -96,9 +110,13 @@ if (isset($_POST['update_template']) && $selected_id > 0 && can_save_purchase_te
 		get_post('template_delivery_location') == ALL_TEXT ? '' : get_post('template_delivery_location'),
 		get_post('template_payment_terms') == ALL_TEXT ? 0 : (int)get_post('template_payment_terms'),
 		trim(get_post('template_notes')),
-		check_value('template_inactive') ? 1 : 0
+		check_value('template_inactive') ? 1 : 0,
+		null,
+		$template_header_intents
 	);
-	if ($updated)
+	if ($template_header_intents === false)
+		display_error(_('A header category cannot be both selected and explicitly unassigned.'));
+	elseif ($updated)
 		display_notification(_('Purchase order template has been updated.'));
 	else
 		display_error(_('The purchase order template could not be updated.'));
@@ -114,13 +132,20 @@ if (isset($_POST['delete_template']) && $selected_id > 0) {
 }
 
 if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_purchase_template_line()) {
-	if (add_template_line(
+	$template_line_intents = purchasing_classification_intents_from_values(
+		get_post('line_dimension_id', 0), get_post('line_dimension2_id', 0),
+		get_post('_line_classification_unassigned_1', 0),
+		get_post('_line_classification_unassigned_2', 0), 'template_line');
+	if ($template_line_intents === false) {
+		display_error(_('A line category cannot be both selected and explicitly unassigned.'));
+	} elseif (add_template_line(
 		$selected_id,
 		trim(get_post('line_stock_id')),
 		trim(get_post('line_description')),
 		input_num('line_default_quantity'),
 		(int)input_num('line_sort_order'),
-		array('created_by_ui' => 1)
+		array('created_by_ui' => 1),
+		$template_line_intents
 	))
 		display_notification(_('Template line has been added.'));
 	else
@@ -133,15 +158,21 @@ if ($update_line_id > 0 && $selected_id > 0) {
 	if (!$line) {
 		display_error(_('The selected template line no longer exists. Refresh and try again.'));
 	} elseif (can_save_purchase_template_line('edit_stock_' . $update_line_id, 'edit_quantity_' . $update_line_id)) {
+		$edit_line_intents = purchasing_classification_intents_from_values(
+			get_post('edit_dimension_' . $update_line_id, 0),
+			get_post('edit_dimension2_' . $update_line_id, 0),
+			get_post('_edit_unassigned_1_' . $update_line_id, 0),
+			get_post('_edit_unassigned_2_' . $update_line_id, 0), 'template_line');
 		// Metadata is omitted (null) so retained Dimension references survive routine saves.
-		if (update_template_line(
+		if ($edit_line_intents !== false && update_template_line(
 			$update_line_id,
 			trim(get_post('edit_stock_' . $update_line_id)),
 			trim(get_post('edit_description_' . $update_line_id)),
 			input_num('edit_quantity_' . $update_line_id),
 			(int)input_num('edit_sort_' . $update_line_id),
 			null,
-			$selected_id
+			$selected_id,
+			$edit_line_intents
 		))
 			display_notification(_('Template line has been updated.'));
 		else
@@ -171,6 +202,13 @@ if ($template) {
 	$_POST['template_payment_terms'] = $template['default_payment_terms'];
 	$_POST['template_notes'] = $template['notes'];
 	$_POST['template_inactive'] = $template['inactive'];
+	$template_header_values = purchasing_classification_carrier_values(
+		array('classification_intents' => purchasing_classification_load_header_intents(ST_PURCHTEMPLATE,
+			(int)$template['id'])));
+	$_POST['template_dimension_id'] = $template_header_values['ids'][1];
+	$_POST['template_dimension2_id'] = $template_header_values['ids'][2];
+	$_POST['_template_unassigned_1'] = $template_header_values['unassigned'][1];
+	$_POST['_template_unassigned_2'] = $template_header_values['unassigned'][2];
 } else {
 	if (!isset($_POST['template_supplier_id']))
 		$_POST['template_supplier_id'] = 0;
@@ -208,6 +246,18 @@ table_section(2);
 payment_terms_list_row(_('Payment Terms:'), 'template_payment_terms', get_post('template_payment_terms'));
 check_row(_('Inactive:'), 'template_inactive', get_post('template_inactive'));
 textarea_row(_('Notes:'), 'template_notes', get_post('template_notes'), 40, 4);
+if ((int)get_company_pref('use_dimension') > 0) {
+	dimensions_list_row(dimension_category_policy_label(1).':', 'template_dimension_id',
+		get_post('template_dimension_id', 0), true, _('Inherit supplier default'), false, 1, false);
+	check_row(_('Leave this category explicitly unassigned'), '_template_unassigned_1',
+		get_post('_template_unassigned_1', 0));
+}
+if ((int)get_company_pref('use_dimension') > 1) {
+	dimensions_list_row(dimension_category_policy_label(2).':', 'template_dimension2_id',
+		get_post('template_dimension2_id', 0), true, _('Inherit supplier default'), false, 2, false);
+	check_row(_('Leave this category explicitly unassigned'), '_template_unassigned_2',
+		get_post('_template_unassigned_2', 0));
+}
 end_outer_table(1);
 
 if ($selected_id > 0)
@@ -238,6 +288,29 @@ if ($selected_id > 0) {
 		echo '</td>';
 		echo '<td><input type="submit" class="inputsubmit" name="DeleteLine' . $line['id'] . '" value="' . _('Delete') . '"></td>';
 		end_row();
+		if ((int)get_company_pref('use_dimension') > 0) {
+			$line_values = purchasing_classification_carrier_values(array('classification_intents' =>
+				purchasing_classification_load_line_intents(ST_PURCHTEMPLATE, $selected_id, (int)$line['id'])));
+			start_row();
+			label_cell(_('Line tracking'), 'colspan=2');
+			echo '<td colspan="5"><div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">';
+			echo '<label>'.htmlspecialchars(dimension_category_policy_label(1), ENT_QUOTES, 'UTF-8').' ';
+			echo dimensions_list('edit_dimension_' . $line['id'], $line_values['ids'][1], true,
+				_('Inherit header'), false, false, 1, false).' ';
+			echo '<input type="checkbox" name="_edit_unassigned_1_' . $line['id'] . '" value="1"'
+				.($line_values['unassigned'][1] ? ' checked' : '').'> '
+				.htmlspecialchars(_('Explicitly unassigned'), ENT_QUOTES, 'UTF-8').'</label>';
+			if ((int)get_company_pref('use_dimension') > 1) {
+				echo '<label>'.htmlspecialchars(dimension_category_policy_label(2), ENT_QUOTES, 'UTF-8').' ';
+				echo dimensions_list('edit_dimension2_' . $line['id'], $line_values['ids'][2], true,
+					_('Inherit header'), false, false, 2, false).' ';
+				echo '<input type="checkbox" name="_edit_unassigned_2_' . $line['id'] . '" value="1"'
+					.($line_values['unassigned'][2] ? ' checked' : '').'> '
+					.htmlspecialchars(_('Explicitly unassigned'), ENT_QUOTES, 'UTF-8').'</label>';
+			}
+			echo '</div></td>';
+			end_row();
+		}
 		$line_count++;
 	}
 	if ($line_count == 0)
@@ -253,6 +326,18 @@ if ($selected_id > 0) {
 	text_row(_('Description:'), 'line_description', null, 40, 255);
 	qty_row(_('Default Quantity:'), 'line_default_quantity', null);
 	text_row(_('Sort Order:'), 'line_sort_order', get_post('line_sort_order', 10), 8, 8);
+	if ((int)get_company_pref('use_dimension') > 0) {
+		dimensions_list_row(dimension_category_policy_label(1).':', 'line_dimension_id', 0,
+			true, _('Inherit header'), false, 1, false);
+		check_row(_('Leave this category explicitly unassigned'),
+			'_line_classification_unassigned_1', 0);
+	}
+	if ((int)get_company_pref('use_dimension') > 1) {
+		dimensions_list_row(dimension_category_policy_label(2).':', 'line_dimension2_id', 0,
+			true, _('Inherit header'), false, 2, false);
+		check_row(_('Leave this category explicitly unassigned'),
+			'_line_classification_unassigned_2', 0);
+	}
 	end_table(1);
 	submit_center('AddLine', _('Add Line'));
 

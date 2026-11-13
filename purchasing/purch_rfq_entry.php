@@ -367,8 +367,13 @@ if ($rfq_header_save_failed && can_save_purchase_rfq_header()) {
 	$dimension2_id = get_post('dimension2_id');
 	$reference = trim(get_post('reference'));
 	$rfq_error_message = '';
-
-	if (isset($_POST['ADD_RFQ'])) {
+	// DIM-PUR-002: carry the explicit header decision (including an explicit blank) into the writer.
+	$header_intents = purchasing_classification_intents_from_values($dimension_id, $dimension2_id,
+		get_post('_classification_unassigned_1', 0), get_post('_classification_unassigned_2', 0),
+		'rfq_header');
+	if ($header_intents === false) {
+		display_error(_('A header category cannot be both selected and explicitly unassigned.'));
+	} elseif (isset($_POST['ADD_RFQ'])) {
 		$selected_id = add_purch_rfq(
 			$rfq_type,
 			$description,
@@ -385,7 +390,8 @@ if ($rfq_header_save_failed && can_save_purchase_rfq_header()) {
 			$reference,
 			$created_date,
 			array(),
-			$rfq_error_message
+			$rfq_error_message,
+			$header_intents
 		);
 
 		if ($selected_id) {
@@ -413,7 +419,8 @@ if ($rfq_header_save_failed && can_save_purchase_rfq_header()) {
 			$reference,
 			$created_date,
 			null,
-			$rfq_error_message
+			$rfq_error_message,
+			$header_intents
 		)) {
 			$rfq_header_save_failed = false;
 			display_notification(_('Purchase RFQ has been updated.'));
@@ -425,6 +432,12 @@ if ($rfq_header_save_failed && can_save_purchase_rfq_header()) {
 
 if (isset($_POST['AddRfqItem']) && $selected_id > 0 && can_save_purchase_rfq_item()) {
 	$item_error_message = '';
+	$item_intents = purchasing_classification_intents_from_values(
+		get_post('rfq_item_dimension_id', 0), get_post('rfq_item_dimension2_id', 0),
+		get_post('_rfq_item_unassigned_1', 0), get_post('_rfq_item_unassigned_2', 0), 'rfq_line');
+	if ($item_intents === false) {
+		display_error(_('An item category cannot be both selected and explicitly unassigned.'));
+	} else {
 	$item_id = add_rfq_item(
 		$selected_id,
 		get_post('rfq_item_stock_id'),
@@ -435,7 +448,8 @@ if (isset($_POST['AddRfqItem']) && $selected_id > 0 && can_save_purchase_rfq_ite
 		trim(get_post('rfq_item_uom')),
 		0,
 		array(),
-		$item_error_message
+		$item_error_message,
+		$item_intents
 	);
 
 	if ($item_id) {
@@ -443,6 +457,7 @@ if (isset($_POST['AddRfqItem']) && $selected_id > 0 && can_save_purchase_rfq_ite
 		$Ajax->activate('_page_body');
 	} else
 		display_error($item_error_message !== '' ? $item_error_message : _('The RFQ item could not be added.'));
+	}
 }
 
 $update_item_id = find_submit('UpdateRfqItem');
@@ -588,6 +603,11 @@ if ($rfq && !$rfq_header_save_failed) {
 	$_POST['evaluation_criteria'] = $rfq['evaluation_criteria'];
 	$_POST['dimension_id'] = $rfq['dimension_id'];
 	$_POST['dimension2_id'] = $rfq['dimension2_id'];
+	$stored_rfq_intents = purchasing_classification_load_header_intents(ST_PURCHRFQ, (int)$rfq['id']);
+	$stored_rfq_values = purchasing_classification_carrier_values(
+		array('classification_intents' => $stored_rfq_intents));
+	$_POST['_classification_unassigned_1'] = $stored_rfq_values['unassigned'][1];
+	$_POST['_classification_unassigned_2'] = $stored_rfq_values['unassigned'][2];
 	$_POST['reference'] = $rfq['reference'];
 	$_POST['linked_requisition_id'] = (int)$rfq['requisition_id'] > 0 ? $rfq['requisition_id'] : '';
 } else {
@@ -683,7 +703,11 @@ if ($editable) {
 
 	text_row(_('Linked Requisition ID:'), 'linked_requisition_id', get_post('linked_requisition_id'), 10, 10);
 	dimensions_list_row(_('Dimension:'), 'dimension_id', get_post('dimension_id'), true);
+	check_row(_('Leave this category explicitly unassigned'), '_classification_unassigned_1',
+		get_post('_classification_unassigned_1', 0));
 	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', get_post('dimension2_id'), true);
+	check_row(_('Leave this category explicitly unassigned'), '_classification_unassigned_2',
+		get_post('_classification_unassigned_2', 0));
 	textarea_row(_('Evaluation Criteria:'), 'evaluation_criteria', get_post('evaluation_criteria'), 35, 3);
 	textarea_row(_('Terms and Conditions:'), 'terms_and_conditions', get_post('terms_and_conditions'), 35, 4);
 	textarea_row(_('Notes:'), 'rfq_notes', get_post('rfq_notes'), 35, 4);
@@ -781,6 +805,18 @@ if ($rfq) {
 		amount_row(_('Target Price:'), 'rfq_item_target_price');
 		text_row(_('Unit of Measure:'), 'rfq_item_uom', null, 20, 20);
 		text_row(_('Specifications:'), 'rfq_item_specifications', null, 50, 255);
+		if ((int)get_company_pref('use_dimension') > 0) {
+			dimensions_list_row(dimension_category_policy_label(1).':', 'rfq_item_dimension_id', 0,
+				true, _('Inherit header'), false, 1, false);
+			check_row(_('Leave this category explicitly unassigned'),
+				'_rfq_item_unassigned_1', 0);
+		}
+		if ((int)get_company_pref('use_dimension') > 1) {
+			dimensions_list_row(dimension_category_policy_label(2).':', 'rfq_item_dimension2_id', 0,
+				true, _('Inherit header'), false, 2, false);
+			check_row(_('Leave this category explicitly unassigned'),
+				'_rfq_item_unassigned_2', 0);
+		}
 		end_table(1);
 		submit_center('AddRfqItem', _('Add RFQ Item'), true, '', 'default');
 	}

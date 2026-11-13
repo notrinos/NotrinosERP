@@ -1,6 +1,7 @@
 <?php
 /** Immutable procurement-plan supplier commands through the existing PO approval workflow. */
 require_once __DIR__ . "/purch_policy_dimension_db.inc";
+require_once __DIR__ . "/purchasing_classification_db.inc";
 
 /** Read current company rows, retaining driver types for exact source reconciliation. */
 function read_plan_purchase_rows($query) {
@@ -100,6 +101,7 @@ function prepare_plan_purchase_order($id, $supplier_id, $line_ids = array(), $or
  $cart->trans_type = ST_PURCHORDER; $cart->orig_order_date = $order_date; $cart->due_date = $order_date;
  $cart->Location = $location_id; $cart->Comments = sprintf(_('Created from Procurement Plan %s'), (int)$id);
  get_supplier_details_to_order($cart, $supplier_id, true); $cart->reference = 'auto';
+ $classification_lines = array();
  foreach ($lines as $line) {
   $quantity = (float)$line['suggested_order_qty']; $price = (float)$line['estimated_price'];
   if ($price <= 0) {
@@ -115,7 +117,10 @@ function prepare_plan_purchase_order($id, $supplier_id, $line_ids = array(), $or
   $item = $cart->line_items[count($cart->line_items)-1];
   $item->item_description = !$line['stock_editable'] && $line['supplier_description'] !== null && $line['supplier_description'] !== '' ? $line['supplier_description'] : $line['stock_description'];
   $item->descr_editable = $line['stock_editable']; $item->units = $line['stock_units']; $item->tax_type = $line['stock_tax']; $item->tax_type_name = $line['stock_tax_name'];
+  $classification_lines[(int)$line['id']] = count($cart->line_items) - 1;
  }
+ // DIM-PUR-002: a plan-generated PO records its source keys and resolves intent explicitly.
+ function_exists('purchasing_classification_apply_conversion') && purchasing_classification_apply_conversion($cart, ST_PROCUREMENTPLAN, (int)$id, $classification_lines);
  if (!$cart->order_has_items() || count($lines) !== count($used)) throw new RuntimeException('Plan selected lines are unavailable.');
  $tax = array(); if (!$cart->tax_included) {
   $tax = read_agreement_purchase_tax_configuration(false);

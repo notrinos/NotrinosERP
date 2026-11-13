@@ -36,6 +36,10 @@ function copy_from_cart() {
 	$_POST['cash_account'] = $cart->cash_account;
 	$_POST['dimension'] = $cart->dimension;
 	$_POST['dimension2'] = $cart->dimension2;
+	// DIM-PUR-002: expose the exact persisted header decision, including an explicit blank.
+	$classification_values = purchasing_classification_carrier_values($cart);
+	$_POST['_classification_unassigned_1'] = $classification_values['unassigned'][1];
+	$_POST['_classification_unassigned_2'] = $classification_values['unassigned'][2];
 	$_POST['requisition_id'] = isset($cart->requisition_id) ? (int)$cart->requisition_id : 0;
 	$_POST['rfq_id'] = isset($cart->rfq_id) ? (int)$cart->rfq_id : 0;
 	foreach($cart->tax_overrides as $id => $value)
@@ -60,6 +64,17 @@ function copy_to_cart() {
 	$cart->delivery_address = $_POST['delivery_address'];
 	$cart->dimension = @$_POST['dimension'];
 	$cart->dimension2 =  @$_POST['dimension2'];
+	// DIM-PUR-002: an explicit header decision is carried separately from the native scalar so a
+	// later source-default change cannot silently replace it.
+	if (isset($_POST['dimension']) || isset($_POST['dimension2'])
+		|| isset($_POST['_classification_unassigned_1']) || isset($_POST['_classification_unassigned_2'])) {
+		$intents = purchasing_classification_intents_from_values(
+			get_post('dimension', 0), get_post('dimension2', 0),
+			get_post('_classification_unassigned_1', 0), get_post('_classification_unassigned_2', 0),
+			'purchasing_header');
+		if ($intents !== false)
+			$cart->classification_intents = $intents;
+	}
 	$cart->requisition_id = isset($_POST['requisition_id']) ? (int)$_POST['requisition_id'] : (isset($cart->requisition_id) ? (int)$cart->requisition_id : 0);
 	$cart->rfq_id = isset($_POST['rfq_id']) ? (int)$_POST['rfq_id'] : (isset($cart->rfq_id) ? (int)$cart->rfq_id : 0);
 	$cart->prep_amount = input_num('prep_amount', 0);
@@ -174,6 +189,8 @@ function display_po_header(&$order) {
 	global $Ajax, $Refs;
 
 	$editable = ($order->order_no == 0);
+	// DIM-PUR-002: the exact persisted header decision (including an explicit blank).
+	$classification_values = purchasing_classification_carrier_values($order);
 
 	if ($order->trans_type == ST_PURCHORDER && $editable && list_updated('purch_template_id')) {
 		$order->purch_template_id = (int)get_post('purch_template_id');
@@ -253,6 +270,14 @@ function display_po_header(&$order) {
 	if ($order->supplier_id != get_post('supplier_id', -1)) {
 		$old_supp = $order->supplier_id;
 		get_supplier_details_to_order($order, $_POST['supplier_id']); 
+		// DIM-PUR-002: a changed supplier default never replaces an explicit header decision.
+		foreach (array(1 => 'dimension', 2 => 'dimension2') as $axis => $field) {
+			if ($classification_values['ids'][$axis] > 0 || $classification_values['unassigned'][$axis]) {
+				$order->$field = $classification_values['unassigned'][$axis]
+					? 0 : $classification_values['ids'][$axis];
+				$_POST[$field] = $order->$field;
+			}
+		}
 		get_duedate_from_terms($order);
 		$_POST['due_date'] = $order->due_date;
 
@@ -355,10 +380,24 @@ function display_po_header(&$order) {
 
 	text_row(_("Supplier's Reference:"), 'supp_ref', null, 20, 60);
 
-	if (get_company_pref('use_dimension'))
-		dimensions_list_row(_('Dimension').':', 'dimension', null, true, _('Default'), false, 1);
-	if (get_company_pref('use_dimension') == 2)
-		dimensions_list_row(_('Dimension 2').':', 'dimension2', null, true, _('Default'), false, 2);
+	if (get_company_pref('use_dimension')) {
+		dimensions_list_row(dimension_category_policy_label(1).':', 'dimension',
+			$order->dimension, true, _('Inherit supplier default'), false, 1, false);
+		check_row(_('Leave this category explicitly unassigned'),
+			'_classification_unassigned_1', $classification_values['unassigned'][1]);
+	} else {
+		hidden('dimension', 0);
+	}
+	if (get_company_pref('use_dimension') == 2) {
+		dimensions_list_row(dimension_category_policy_label(2).':', 'dimension2',
+			$order->dimension2, true, _('Inherit supplier default'), false, 2, false);
+		check_row(_('Leave this category explicitly unassigned'),
+			'_classification_unassigned_2', $classification_values['unassigned'][2]);
+	} else {
+		hidden('dimension2', 0);
+	}
+	if ($order->classification_lineage_state === 'legacy_unspecified')
+		display_note(_('Legacy document: this saved document has no durable classification lineage. Review the category selections before saving; no intent will be inferred from current supplier or item defaults.'));
 	locations_list_row(_('Receive Into:'), 'StkLocation', null, false, true, $order->fixed_asset); 
 
 	if (!isset($_POST['StkLocation']) || $_POST['StkLocation'] == '' || isset($_POST['_StkLocation_update']) || !isset($_POST['delivery_address']) || $_POST['delivery_address'] == '') {
@@ -604,6 +643,46 @@ function display_po_summary(&$po, $is_self=false, $editable=false) {
 
 //--------------------------------------------------------------------------------
 
+/**
+ * Render the explicit line override controls for a purchase order line.
+ *
+ * A zero selector means inherit the header. The checkbox is the only way to record an explicit
+ * blank, so a changed item default can never silently replace that decision.
+ *
+ * @param purch_order $order Purchase order cart
+ * @param int $line_no Cart line index, or -1 for a new line
+ * @param int $column_span Number of table columns covered by this section
+ * @return void
+ */
+function purchasing_classification_line_controls(&$order, $line_no, $column_span) {
+	$carrier = $line_no >= 0 && isset($order->line_items[$line_no])
+		? $order->line_items[$line_no] : null;
+	$values = purchasing_classification_carrier_values($carrier);
+	$dim = (int)get_company_pref('use_dimension');
+	if ($dim < 1)
+		return;
+	start_row();
+	label_cell(_('Line tracking'), 'colspan=2');
+	echo '<td colspan="'.max(1, (int)$column_span - 2).'">';
+	echo '<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">';
+	echo '<label>'.htmlspecialchars(dimension_category_policy_label(1), ENT_QUOTES, 'UTF-8').' ';
+	echo dimensions_list('line_dimension_id', get_post('line_dimension_id', $values['ids'][1]),
+		true, _('Inherit header'), false, false, 1, false).' ';
+	echo '<input type="checkbox" name="_line_classification_unassigned_1" value="1"'
+		.(get_post('_line_classification_unassigned_1', $values['unassigned'][1]) ? ' checked' : '').'> ';
+	echo htmlspecialchars(_('Explicitly unassigned'), ENT_QUOTES, 'UTF-8').'</label>';
+	if ($dim > 1) {
+		echo '<label>'.htmlspecialchars(dimension_category_policy_label(2), ENT_QUOTES, 'UTF-8').' ';
+		echo dimensions_list('line_dimension2_id', get_post('line_dimension2_id', $values['ids'][2]),
+			true, _('Inherit header'), false, false, 2, false).' ';
+		echo '<input type="checkbox" name="_line_classification_unassigned_2" value="1"'
+			.(get_post('_line_classification_unassigned_2', $values['unassigned'][2]) ? ' checked' : '').'> ';
+		echo htmlspecialchars(_('Explicitly unassigned'), ENT_QUOTES, 'UTF-8').'</label>';
+	}
+	echo '</div></td>';
+	end_row();
+}
+
 function po_item_controls(&$order, &$rowcounter, $line_no=-1) {
 	global $Ajax, $SysPrefs;
 
@@ -726,6 +805,9 @@ function po_item_controls(&$order, &$rowcounter, $line_no=-1) {
 		$column_count--;
 	if (count($order->line_items))
 		$column_count++;
+
+	if ($order->trans_type == ST_PURCHORDER)
+		purchasing_classification_line_controls($order, $line_no, $column_count);
 
 	if (get_post('stock_id'))
 		display_vendor_price_comparison_hint($order, get_post('stock_id'), input_num('qty', 0), $column_count);

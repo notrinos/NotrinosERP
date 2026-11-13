@@ -361,6 +361,13 @@ function collect_purchase_order_data($po)
 		'prep_amount'       => isset($po->prep_amount) ? $po->prep_amount : 0,
 		'fixed_asset'       => isset($po->fixed_asset) ? $po->fixed_asset : false,
 	);
+	// DIM-PUR-002: the sealed classification carriers and the stable draft identities that the
+	// approval restoration maps back onto the reconstructed cart.
+	foreach (array('classification_intents','classification_draft_token',
+		'classification_draft_revisions','classification_revision_id',
+		'classification_lineage_state','classification_source') as $field)
+		if (isset($po->$field))
+			$data[$field] = $po->$field;
 	if (isset($po->direct_finance_binding))
 		$data['direct_finance_binding'] = $po->direct_finance_binding;
 	if (isset($po->approval_gross_amount))
@@ -388,6 +395,20 @@ function collect_purchase_order_data($po)
 				'standard_cost'    => isset($line->standard_cost) ? $line->standard_cost : 0,
 				'descr_editable'   => isset($line->descr_editable) ? $line->descr_editable : 0,
 			);
+			// DIM-PUR-002: line intent, stable token and conversion origin travel with the draft so
+			// approval restores the exact decision instead of recalculating a current default. The
+			// random draft token is published only with the pending revision it belongs to, so a
+			// conversion envelope that was not sealed remains deterministic across prepare calls.
+			foreach (array('classification_intents','classification_draft_revision_id',
+				'classification_revision_id','classification_lineage_state',
+				'classification_source','dimension_id','dimension2_id') as $field)
+				if (isset($line->$field))
+					$data['line_items'][$key][$field] = $line->$field;
+			if (!empty($line->draft_line_key)) {
+				$data['line_items'][$key]['draft_line_key'] = $line->draft_line_key;
+				$data['line_items'][$key]['classification_token'] =
+					isset($line->classification_token) ? $line->classification_token : '';
+			}
 		}
 	}
 

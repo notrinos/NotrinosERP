@@ -107,6 +107,18 @@ function write_purch_requisition_line($operation, $key, $data)
                                     }
                                 }
                                 if (!db_query('UPDATE '.TB_PREF.'purch_requisitions SET total_estimated=(SELECT COALESCE(SUM(quantity*estimated_unit_price),0) FROM '.TB_PREF.'purch_requisition_lines WHERE requisition_id='.$parent.') WHERE id='.$parent)) return false;
+                                // DIM-PUR-002: line classification is part of the same native command.
+                                $intents = array_key_exists('classification_intents', $data)
+                                    ? $data['classification_intents'] : null;
+                                if ($operation !== 'delete' && function_exists('purchasing_classification_schema_ready')
+                                    && purchasing_classification_schema_ready()
+                                    && ($intents !== null
+                                        || !purchasing_classification_current_line_revision_id(ST_PURCHREQUISITION,
+                                            $parent, $line_id)))
+                                    purchasing_classification_capture_document_line(ST_PURCHREQUISITION,
+                                        $parent, array('id' => $line_id, 'stock_id' => $data['stock_id'],
+                                            'quantity' => $data['quantity']), $intents);
+                                // Publishing the insert identity must be the final action.
                                 if ($operation === 'add' && !db_preserve_insert_id($line_id)) return false;
                                 return $operation === 'add' ? $line_id : true;
                             }, true, $operation === 'delete');

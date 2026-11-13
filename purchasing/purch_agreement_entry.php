@@ -305,8 +305,13 @@ if ((isset($_POST['ADD_AGREEMENT']) || isset($_POST['UPDATE_AGREEMENT'])) && can
 	$dimension2_id = (int)get_post('dimension2_id');
 	$reference = trim(get_post('reference'));
 	$buyer_id = get_purchase_agreement_buyer_user_id(get_post('buyer_id'));
-
-	if (isset($_POST['ADD_AGREEMENT'])) {
+	// DIM-PUR-002: carry the explicit header decision (including an explicit blank) into the writer.
+	$header_intents = purchasing_classification_intents_from_values($dimension_id, $dimension2_id,
+		get_post('_classification_unassigned_1', 0), get_post('_classification_unassigned_2', 0),
+		'agreement_header');
+	if ($header_intents === false) {
+		display_error(_('A header category cannot be both selected and explicitly unassigned.'));
+	} elseif (isset($_POST['ADD_AGREEMENT'])) {
 		$selected_id = add_purch_agreement(
 			$agreement_type,
 			$supplier_id,
@@ -323,7 +328,9 @@ if ((isset($_POST['ADD_AGREEMENT']) || isset($_POST['UPDATE_AGREEMENT'])) && can
 			$dimension_id,
 			$dimension2_id,
 			$reference,
-			$buyer_id
+			$buyer_id,
+			array(),
+			$header_intents
 		);
 
 		if ($selected_id) {
@@ -333,6 +340,7 @@ if ((isset($_POST['ADD_AGREEMENT']) || isset($_POST['UPDATE_AGREEMENT'])) && can
 			display_error(_('The purchase agreement could not be created.'));
 		}
 	} else {
+		$current_agreement = get_purch_agreement($selected_id);
 		if (update_purch_agreement(
 			$selected_id,
 			$agreement_type,
@@ -350,7 +358,9 @@ if ((isset($_POST['ADD_AGREEMENT']) || isset($_POST['UPDATE_AGREEMENT'])) && can
 			$dimension_id,
 			$dimension2_id,
 			$reference,
-			$buyer_id
+			$buyer_id,
+			$current_agreement ? $current_agreement['custom_data'] : null,
+			$header_intents
 		)) {
 			display_notification(_('Purchase agreement has been updated.'));
 		} else {
@@ -360,6 +370,13 @@ if ((isset($_POST['ADD_AGREEMENT']) || isset($_POST['UPDATE_AGREEMENT'])) && can
 }
 
 if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_purchase_agreement_line($selected_id)) {
+	$line_intents = purchasing_classification_intents_from_values(
+		get_post('line_dimension_id', 0), get_post('line_dimension2_id', 0),
+		get_post('_line_classification_unassigned_1', 0),
+		get_post('_line_classification_unassigned_2', 0), 'agreement_line');
+	if ($line_intents === false) {
+		display_error(_('A line category cannot be both selected and explicitly unassigned.'));
+	} else {
 	$line_id = add_agreement_line(
 		$selected_id,
 		get_post('line_stock_id'),
@@ -368,13 +385,16 @@ if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_purchase_agreement_
 		input_num('line_discount_percent'),
 		trim(get_post('line_description')),
 		input_num('line_min_qty'),
-		get_post('line_price_valid_until') !== '' ? date2sql(get_post('line_price_valid_until')) : null
+		get_post('line_price_valid_until') !== '' ? date2sql(get_post('line_price_valid_until')) : null,
+		array(),
+		$line_intents
 	);
 
 	if ($line_id)
 		display_notification(_('Agreement line has been added.'));
 	else
 		display_error(_('The agreement line could not be added. Ensure the item is not already on this agreement.'));
+	}
 }
 
 $update_line_id = find_submit('UpdateLine');
@@ -496,6 +516,12 @@ if ($agreement) {
 	$_POST['rfq_id'] = $agreement['rfq_id'];
 	$_POST['dimension_id'] = $agreement['dimension_id'];
 	$_POST['dimension2_id'] = $agreement['dimension2_id'];
+	$stored_agreement_intents = purchasing_classification_load_header_intents(ST_PURCHAGREEMENT,
+		(int)$agreement['id']);
+	$stored_agreement_values = purchasing_classification_carrier_values(
+		array('classification_intents' => $stored_agreement_intents));
+	$_POST['_classification_unassigned_1'] = $stored_agreement_values['unassigned'][1];
+	$_POST['_classification_unassigned_2'] = $stored_agreement_values['unassigned'][2];
 	$_POST['reference'] = $agreement['reference'];
 	$_POST['buyer_id'] = get_purchase_agreement_buyer_selector_value($agreement['buyer_id']);
 } else {
@@ -563,7 +589,11 @@ if ($editable) {
 	text_row(_('Reference:'), 'reference', get_post('reference'), 20, 60);
 	text_row(_('Linked RFQ ID:'), 'rfq_id', get_post('rfq_id'), 10, 10);
 	dimensions_list_row(_('Dimension:'), 'dimension_id', get_post('dimension_id'), true);
+	check_row(_('Leave this category explicitly unassigned'), '_classification_unassigned_1',
+		get_post('_classification_unassigned_1', 0));
 	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', get_post('dimension2_id'), true);
+	check_row(_('Leave this category explicitly unassigned'), '_classification_unassigned_2',
+		get_post('_classification_unassigned_2', 0));
 	textarea_row(_('Terms and Conditions:'), 'terms_and_conditions', get_post('terms_and_conditions'), 35, 5);
 	textarea_row(_('Notes:'), 'notes', get_post('notes'), 35, 4);
 } else {
@@ -683,6 +713,18 @@ if ($agreement) {
 		amount_row(_('Unit Price:'), 'line_unit_price');
 		amount_row(_('Discount Percent:'), 'line_discount_percent');
 		date_row(_('Price Valid Until:'), 'line_price_valid_until');
+		if ((int)get_company_pref('use_dimension') > 0) {
+			dimensions_list_row(dimension_category_policy_label(1).':', 'line_dimension_id', 0,
+				true, _('Inherit header'), false, 1, false);
+			check_row(_('Leave this category explicitly unassigned'),
+				'_line_classification_unassigned_1', 0);
+		}
+		if ((int)get_company_pref('use_dimension') > 1) {
+			dimensions_list_row(dimension_category_policy_label(2).':', 'line_dimension2_id', 0,
+				true, _('Inherit header'), false, 2, false);
+			check_row(_('Leave this category explicitly unassigned'),
+				'_line_classification_unassigned_2', 0);
+		}
 		end_table(1);
 		submit_center('AddLine', _('Add Line'), true, '', 'default nonajax');
 	}

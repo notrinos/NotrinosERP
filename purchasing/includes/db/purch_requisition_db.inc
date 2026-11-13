@@ -429,14 +429,16 @@ function get_purch_requisitions($requester_id = 0, $status = '', $date_from = ''
  * @param string|null $request_date
  * @param int         $material_request_id
  * @param mixed       $custom_data
+ * @param array|null  $classification_intents DIM-PUR-002 explicit header intent
  * @return int
  */
 function add_purch_requisition($requester_id, $department_id, $required_date, $purpose, $location,
 	$priority = 'normal', $notes = '', $dimension_id = 0, $dimension2_id = 0,
-	$reference = '', $request_date = null, $material_request_id = 0, $custom_data = array())
+	$reference = '', $request_date = null, $material_request_id = 0, $custom_data = array(),
+	$classification_intents = null)
 {
 	require_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_header_db.inc';
-	return write_purch_requisition_header('add', null, array('requester_id'=>$requester_id,'department_id'=>$department_id,'required_date'=>$required_date,'purpose'=>$purpose,'location'=>$location,'priority'=>$priority,'notes'=>$notes,'dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id,'reference'=>$reference,'request_date'=>$request_date,'material_request_id'=>$material_request_id,'custom_data'=>$custom_data));
+	return write_purch_requisition_header('add', null, array('requester_id'=>$requester_id,'department_id'=>$department_id,'required_date'=>$required_date,'purpose'=>$purpose,'location'=>$location,'priority'=>$priority,'notes'=>$notes,'dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id,'reference'=>$reference,'request_date'=>$request_date,'material_request_id'=>$material_request_id,'custom_data'=>$custom_data,'classification_intents'=>$classification_intents));
 }
 
 /**
@@ -479,14 +481,15 @@ function can_save_requisition_line_values($quantity, $estimated_price, &$error_m
  * @param string      $reference
  * @param string|null $request_date
  * @param mixed       $custom_data
+ * @param array|null  $classification_intents DIM-PUR-002 explicit header intent
  * @return bool
  */
 function update_purch_requisition($requisition_id, $department_id, $required_date, $purpose, $location,
 	$priority = 'normal', $notes = '', $dimension_id = 0, $dimension2_id = 0,
-	$reference = '', $request_date = null, $custom_data = null)
+	$reference = '', $request_date = null, $custom_data = null, $classification_intents = null)
 {
 	require_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_header_db.inc';
-	return write_purch_requisition_header('update', $requisition_id, array('department_id'=>$department_id,'required_date'=>$required_date,'purpose'=>$purpose,'location'=>$location,'priority'=>$priority,'notes'=>$notes,'dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id,'reference'=>$reference,'request_date'=>$request_date,'custom_data'=>$custom_data));
+	return write_purch_requisition_header('update', $requisition_id, array('department_id'=>$department_id,'required_date'=>$required_date,'purpose'=>$purpose,'location'=>$location,'priority'=>$priority,'notes'=>$notes,'dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id,'reference'=>$reference,'request_date'=>$request_date,'custom_data'=>$custom_data,'classification_intents'=>$classification_intents));
 }
 
 /**
@@ -514,14 +517,16 @@ function delete_purch_requisition($requisition_id)
  * @param string      $notes
  * @param mixed       $custom_data
  * @param string|null $error_message
+ * @param array|null  $classification_intents DIM-PUR-002 explicit line intent
  * @return int|false
  */
 function add_requisition_line($requisition_id, $stock_id, $quantity, $estimated_price, $preferred_supplier_id,
-	$description = '', $unit_of_measure = '', $notes = '', $custom_data = array(), &$error_message = null)
+	$description = '', $unit_of_measure = '', $notes = '', $custom_data = array(), &$error_message = null,
+	$classification_intents = null)
 {
 	require_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_line_db.inc';
 	$error_message = null;
-	$result = write_purch_requisition_line('add', $requisition_id, array('stock_id'=>$stock_id,'quantity'=>$quantity,'estimated_unit_price'=>$estimated_price,'preferred_supplier_id'=>$preferred_supplier_id,'description'=>$description,'unit_of_measure'=>$unit_of_measure,'notes'=>$notes,'custom_data'=>$custom_data));
+	$result = write_purch_requisition_line('add', $requisition_id, array('stock_id'=>$stock_id,'quantity'=>$quantity,'estimated_unit_price'=>$estimated_price,'preferred_supplier_id'=>$preferred_supplier_id,'description'=>$description,'unit_of_measure'=>$unit_of_measure,'notes'=>$notes,'custom_data'=>$custom_data,'classification_intents'=>$classification_intents));
 	if (!$result) $error_message = _('The purchase requisition line could not be added. Reload the requisition and check its status, item and classifications.');
 	return $result;
 }
@@ -538,13 +543,15 @@ function add_requisition_line($requisition_id, $stock_id, $quantity, $estimated_
  * @param string      $unit_of_measure
  * @param string      $notes
  * @param mixed       $custom_data
+ * @param array|null  $classification_intents DIM-PUR-002 explicit line intent
  * @return bool
  */
 function update_requisition_line($line_id, $stock_id, $quantity, $estimated_price, $preferred_supplier_id,
-	$description = '', $unit_of_measure = '', $notes = '', $custom_data = null)
+	$description = '', $unit_of_measure = '', $notes = '', $custom_data = null,
+	$classification_intents = null)
 {
 	require_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_line_db.inc';
-	$result = write_purch_requisition_line('update', $line_id, array('stock_id'=>$stock_id,'quantity'=>$quantity,'estimated_unit_price'=>$estimated_price,'preferred_supplier_id'=>$preferred_supplier_id,'description'=>$description,'unit_of_measure'=>$unit_of_measure,'notes'=>$notes,'custom_data'=>$custom_data));
+	$result = write_purch_requisition_line('update', $line_id, array('stock_id'=>$stock_id,'quantity'=>$quantity,'estimated_unit_price'=>$estimated_price,'preferred_supplier_id'=>$preferred_supplier_id,'description'=>$description,'unit_of_measure'=>$unit_of_measure,'notes'=>$notes,'custom_data'=>$custom_data,'classification_intents'=>$classification_intents));
 	return $result;
 }
 

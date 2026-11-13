@@ -39,6 +39,12 @@ class purch_order {
 		$dimension2;
 	// DIM-FND-005 explicit ADR-02 modes for this request; null is a legacy document.
 	var $classification_intents = null;
+	// DIM-PUR-002 durable source custody for the cart, its lines and any conversion origin.
+	var $classification_draft_token = null;
+	var $classification_draft_revisions = array();
+	var $classification_revision_id = 0;
+	var $classification_lineage_state = 'legacy_unspecified';
+	var $classification_source = null;
 
 	var $reference;
 	var $tax_overrides = array();		// array of taxes manually inserted during sales invoice entry (direct invoice)
@@ -61,6 +67,8 @@ class purch_order {
 		/*Constructor function initialises a new purchase order object */
 		$this->line_items = array();
 		$this->lines_on_order = $this->order_no = $this->supplier_id = 0;
+		$this->classification_draft_revisions = array();
+		$this->classification_lineage_state = 'new';
 		$user = isset($_SESSION['wa_current_user']) ? $_SESSION['wa_current_user'] : null;
 		if (is_object($user) && isset($user->cur_con)
 			&& isset($db_connections[$user->cur_con]['tbpref'])) {
@@ -220,10 +228,21 @@ class po_line_details {
 	var $standard_cost;
 	var $descr_editable;
 
+	// DIM-PUR-002 line classification intent, stable identity and conversion lineage.
+	var $classification_intents = null;
+	var $classification_token;
+	var $draft_line_key = '';
+	var $classification_draft_revision_id = 0;
+	var $classification_revision_id = 0;
+	var $classification_lineage_state = 'new';
+	var $classification_source = null;
+
 	function __construct($line_no, $stock_item, $item_descr, $qty, $prc, $uom, $req_del_date, $qty_inv, $qty_recd, $grn_item_id=0) {
 
 		/* Constructor function to add a new LineDetail object with passed params */
 		$this->line_no = $line_no;
+		$this->classification_token = 'line_'.substr(hash('sha256', uniqid('', true).mt_rand()), 0, 48);
+		$this->classification_lineage_state = 'new';
 		$this->stock_id = $stock_item;
 		$item_row = stock_master_entity::find($stock_item);
 		if (!$item_row) 

@@ -146,8 +146,13 @@ if ((isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) && can_save_purc
 	$reference = trim(get_post('reference'));
 	$dimension_id = get_post('dimension_id', null);
 	$dimension2_id = get_post('dimension2_id', null);
-
-	if (isset($_POST['ADD_ITEM'])) {
+	// DIM-PUR-002: carry the explicit header decision (including an explicit blank) into the writer.
+	$header_intents = purchasing_classification_intents_from_values($dimension_id, $dimension2_id,
+		get_post('_classification_unassigned_1', 0), get_post('_classification_unassigned_2', 0),
+		'requisition_header');
+	if ($header_intents === false) {
+		display_error(_('A header category cannot be both selected and explicitly unassigned.'));
+	} elseif (isset($_POST['ADD_ITEM'])) {
 		$selected_id = add_purch_requisition(
 			$requester_id,
 			$department_id,
@@ -159,7 +164,10 @@ if ((isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) && can_save_purc
 			$dimension_id,
 			$dimension2_id,
 			$reference,
-			$request_date
+			$request_date,
+			0,
+			array(),
+			$header_intents
 		);
 
 		if ($selected_id) {
@@ -180,7 +188,9 @@ if ((isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) && can_save_purc
 			$dimension_id,
 			$dimension2_id,
 			$reference,
-			$request_date
+			$request_date,
+			null,
+			$header_intents
 		)) {
 			display_notification(_('Purchase requisition has been updated.'));
 		} else {
@@ -192,6 +202,13 @@ if ((isset($_POST['ADD_ITEM']) || isset($_POST['UPDATE_ITEM'])) && can_save_purc
 if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_purchase_requisition_line()) {
 	$preferred_supplier_id = get_post('line_preferred_supplier_id') == ALL_TEXT ? 0 : (int)get_post('line_preferred_supplier_id');
 	$line_error_message = '';
+	$line_intents = purchasing_classification_intents_from_values(
+		get_post('line_dimension_id', 0), get_post('line_dimension2_id', 0),
+		get_post('_line_classification_unassigned_1', 0),
+		get_post('_line_classification_unassigned_2', 0), 'requisition_line');
+	if ($line_intents === false) {
+		display_error(_('A line category cannot be both selected and explicitly unassigned.'));
+	} else {
 	$line_id = add_requisition_line(
 		$selected_id,
 		get_post('line_stock_id'),
@@ -202,7 +219,8 @@ if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_purchase_requisitio
 		trim(get_post('line_unit_of_measure')),
 		trim(get_post('line_notes')),
 		array(),
-		$line_error_message
+		$line_error_message,
+		$line_intents
 	);
 
 	if ($line_id) {
@@ -211,6 +229,7 @@ if (isset($_POST['AddLine']) && $selected_id > 0 && can_save_purchase_requisitio
 		display_error($line_error_message !== ''
 			? $line_error_message
 			: _('The purchase requisition line could not be added.'));
+	}
 	}
 }
 
@@ -330,6 +349,12 @@ if ($requisition) {
 	$_POST['reference'] = $requisition['reference'];
 	$_POST['dimension_id'] = $requisition['dimension_id'];
 	$_POST['dimension2_id'] = $requisition['dimension2_id'];
+	// DIM-PUR-002: reload the durable header decision (including an explicit blank).
+	$stored_header_intents = purchasing_classification_load_header_intents(ST_PURCHREQUISITION, $selected_id);
+	$stored_header_values = purchasing_classification_carrier_values(
+		array('classification_intents' => $stored_header_intents));
+	$_POST['_classification_unassigned_1'] = $stored_header_values['unassigned'][1];
+	$_POST['_classification_unassigned_2'] = $stored_header_values['unassigned'][2];
 } else {
 	if (!isset($_POST['request_date']))
 		$_POST['request_date'] = Today();
@@ -385,7 +410,11 @@ if ($editable) {
 	table_section(2);
 	text_row(_('Reference:'), 'reference', get_post('reference'), 20, 60);
 	dimensions_list_row(_('Dimension:'), 'dimension_id', get_post('dimension_id'), true);
+	check_row(_('Leave this category explicitly unassigned'), '_classification_unassigned_1',
+		get_post('_classification_unassigned_1', 0));
 	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', get_post('dimension2_id'), true);
+	check_row(_('Leave this category explicitly unassigned'), '_classification_unassigned_2',
+		get_post('_classification_unassigned_2', 0));
 	text_row(_('Purpose:'), 'purpose', get_post('purpose'), 50, 255);
 	textarea_row(_('Notes:'), 'notes', get_post('notes'), 35, 5);
 } else {
@@ -483,6 +512,18 @@ if ($requisition) {
 		supplier_list_row(_('Preferred Supplier:'), 'line_preferred_supplier_id', null, true, false, true);
 		text_row(_('Unit of Measure:'), 'line_unit_of_measure', null, 20, 20);
 		text_row(_('Notes:'), 'line_notes', null, 40, 255);
+		if ((int)get_company_pref('use_dimension') > 0) {
+			dimensions_list_row(dimension_category_policy_label(1).':', 'line_dimension_id', 0,
+				true, _('Inherit header'), false, 1, false);
+			check_row(_('Leave this category explicitly unassigned'),
+				'_line_classification_unassigned_1', 0);
+		}
+		if ((int)get_company_pref('use_dimension') > 1) {
+			dimensions_list_row(dimension_category_policy_label(2).':', 'line_dimension2_id', 0,
+				true, _('Inherit header'), false, 2, false);
+			check_row(_('Leave this category explicitly unassigned'),
+				'_line_classification_unassigned_2', 0);
+		}
 		end_table(1);
 		submit_center('AddLine', _('Add Line'), true, '', 'default');
 	}

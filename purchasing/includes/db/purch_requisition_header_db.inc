@@ -1,6 +1,14 @@
 <?php
 /** Atomic native requisition header commands; no approval or deletion certificate. */
 require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+// require_once __DIR__.'/purchasing_classification_db.inc';
+require_once __DIR__.'/../../../dimensions/includes/dimension_source_revision.inc';
+require_once __DIR__.'/../../../dimensions/includes/dimension_category_policy.inc';
+if (!defined('ST_PURCHTEMPLATE')) define('ST_PURCHTEMPLATE', 66);
+foreach (array('ST_PURCHORDER' => 18, 'ST_PURCHREQUISITION' => 58, 'ST_PURCHRFQ' => 59,
+	'ST_PURCHAGREEMENT' => 60, 'ST_PROCUREMENTPLAN' => 61) as $dbg_type => $dbg_value)
+	if (!defined($dbg_type))
+		define($dbg_type, $dbg_value);
 
 /** Bind an operation to its actual actor, selected connection and DB handle. */
 function purch_requisition_header_context()
@@ -200,6 +208,14 @@ function write_purch_requisition_header($operation, $key, $data)
                         foreach ($expected_parent[0] as $field=>$value)
                             if (($value === null) !== ($pairs[0][$field] === null) || (string)$value !== (string)$pairs[0][$field]) return false;
                     }
+                    $classification_ready = function_exists('purchasing_classification_schema_ready')
+                        && purchasing_classification_schema_ready();
+                    if ($classification_ready)
+                        purchasing_classification_capture_document(ST_PURCHREQUISITION, $id,
+                            array_key_exists('classification_intents', $data)
+                                ? $data['classification_intents'] : null);
+                    // Publishing the insert identity must be the final action: any later query would
+                    // discard the caller-visible preserved identity.
                     if (!db_preserve_insert_id($id)) return false;
                     return $id;
                 }
@@ -210,7 +226,16 @@ function write_purch_requisition_header($operation, $key, $data)
                 if (!db_query('UPDATE '.TB_PREF.'wh_material_requests SET warehouse_loc_code='.db_escape($data['location'])
                     .', request_date='.db_escape($data['request_date']).', required_date='.($data['required_date'] ? db_escape($data['required_date']) : 'NULL')
                     .', reference='.db_escape($data['reference']).', memo='.db_escape($data['notes']).', updated_at=NOW() WHERE request_id='.$source)) return false;
-                return db_query('UPDATE '.TB_PREF.'wh_material_request_lines SET required_date='.($data['required_date'] ? db_escape($data['required_date']) : 'NULL').' WHERE request_id='.$source);
+                if (!db_query('UPDATE '.TB_PREF.'wh_material_request_lines SET required_date='.($data['required_date'] ? db_escape($data['required_date']) : 'NULL').' WHERE request_id='.$source)) return false;
+                // DIM-PUR-002: a reviewed edit records the explicit decision, or the first decision
+                // of a legacy requisition; an unrelated edit never rewrites an existing decision.
+                $intents = array_key_exists('classification_intents', $data)
+                    ? $data['classification_intents'] : null;
+                if (function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready()
+                    && ($intents !== null
+                        || !purchasing_classification_current_header_revision_id(ST_PURCHREQUISITION, $identity)))
+                    purchasing_classification_capture_document(ST_PURCHREQUISITION, $identity, $intents);
+                return true;
             }, false, $operation === 'delete');
         if (!$result || purch_requisition_header_context() !== $context || !commit_transaction()) { cancel_transaction(); return false; }
         return $result;

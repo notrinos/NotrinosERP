@@ -1,5 +1,6 @@
 <?php
 /** Immutable agreement conversions through the existing purchasing approval registration. */
+require_once __DIR__.'/purchasing_classification_db.inc';
 
 /** Build a current locked agreement and native cart without consuming source or reservations. */
 function prepare_agreement_purchase_order($agreement_id, $line_selections = array(), $order_date = null) {
@@ -55,6 +56,7 @@ function prepare_agreement_purchase_order($agreement_id, $line_selections = arra
 	$line_query = 'SELECT line.*, COALESCE(line.description, item.description) AS line_description, item.units AS stock_units, item.description AS stock_description, item.editable AS stock_editable, item.tax_type_id AS stock_tax, tax.name AS stock_tax_name, purchase.supplier_description FROM '.TB_PREF.'purch_agreement_lines line LEFT JOIN '.TB_PREF.'stock_master item ON item.stock_id=line.stock_id LEFT JOIN '.TB_PREF.'item_tax_types tax ON tax.id=item.tax_type_id LEFT JOIN '.TB_PREF.'purch_data purchase ON purchase.stock_id=line.stock_id AND purchase.supplier_id='.(int)$agreement['supplier_id'].' WHERE line.agreement_id='.(int)$agreement_id.' ORDER BY line.id FOR UPDATE';
 	$agreement_lines = db_query($line_query, 'could not lock agreement lines');
 	$source_lines = array();
+	$classification_lines = array();
 	while ($agreement_line = db_fetch_assoc($agreement_lines)) {
 		$source_lines[] = $agreement_line;
 		if ($agreement_line['stock_description'] === null) throw new RuntimeException('Agreement item is unavailable.');
@@ -132,7 +134,11 @@ function prepare_agreement_purchase_order($agreement_id, $line_selections = arra
 		$item->tax_type_name = $agreement_line['stock_tax_name'];
 		if (!$item->descr_editable && $agreement_line['supplier_description'] !== null && $agreement_line['supplier_description'] !== '')
 			$item->item_description = $agreement_line['supplier_description'];
+		$classification_lines[$line_id] = count($purchase_order->line_items) - 1;
 	}
+	// DIM-PUR-002: the conversion carries the agreement's exact header/line intent, not a default.
+	function_exists('purchasing_classification_apply_conversion') && purchasing_classification_apply_conversion($purchase_order, ST_PURCHAGREEMENT, (int)$agreement_id,
+		$classification_lines);
 
 	$tax_configuration = array();
 	if (!$purchase_order->tax_included) {

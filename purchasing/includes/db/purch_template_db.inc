@@ -15,6 +15,7 @@ include_once($path_to_root . '/includes/hooks.inc');
 include_once($path_to_root . '/purchasing/includes/po_class.inc');
 include_once($path_to_root . '/purchasing/includes/db/po_db.inc');
 require_once __DIR__ . '/purch_policy_dimension_db.inc';
+require_once __DIR__ . '/purchasing_classification_db.inc';
 
 /**
  * Encode purchase template custom data for JSON storage.
@@ -150,9 +151,10 @@ function get_purch_template_options($supplier_id = 0)
  * @param string $notes
  * @param int    $inactive
  * @param mixed  $custom_data
+ * @param array|null $header_intents DIM-PUR-002 explicit header intent
  * @return int
  */
-function add_purch_template($name, $description, $supplier_id, $location, $payment_terms, $notes = '', $inactive = 0, $custom_data = array())
+function add_purch_template($name, $description, $supplier_id, $location, $payment_terms, $notes = '', $inactive = 0, $custom_data = array(), $header_intents = null)
 {
 	$encoded = encode_purch_template_custom_data($custom_data);
 	if ($encoded === null && $custom_data !== null && $custom_data !== '' && $custom_data !== array())
@@ -170,8 +172,14 @@ function add_purch_template($name, $description, $supplier_id, $location, $payme
 			" . sql_purch_template_custom_data($encoded) . ")";
 
 	// A fresh reference must be open on its axis; the stored bytes must equal the admitted payload.
-	return purch_policy_dimension_write('purch_order_templates', null, array('custom_data' => $encoded), function() use ($sql) {
-		return db_query($sql, 'could not add purchase template') ? db_insert_id() : false;
+	return purch_policy_dimension_write('purch_order_templates', null, array('custom_data' => $encoded), function() use ($sql, $header_intents) {
+		if (!db_query($sql, 'could not add purchase template'))
+			return false;
+		$template_id = (int)db_insert_id();
+		// DIM-PUR-002: the durable source decision is part of this same writer transaction.
+		if ($template_id > 0 && function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready())
+			purchasing_classification_capture_template($template_id, $header_intents);
+		return $template_id;
 	});
 }
 
@@ -187,9 +195,10 @@ function add_purch_template($name, $description, $supplier_id, $location, $payme
  * @param string $notes
  * @param int    $inactive
  * @param mixed  $custom_data Null (default) keeps the stored metadata byte-exactly; any other value replaces it
+ * @param array|null $header_intents DIM-PUR-002 explicit header intent
  * @return bool
  */
-function update_purch_template($template_id, $name, $description, $supplier_id, $location, $payment_terms, $notes = '', $inactive = 0, $custom_data = null)
+function update_purch_template($template_id, $name, $description, $supplier_id, $location, $payment_terms, $notes = '', $inactive = 0, $custom_data = null, $header_intents = null)
 {
 	$has_custom_data = $custom_data !== null;
 	$encoded = $has_custom_data ? encode_purch_template_custom_data($custom_data) : null;
@@ -207,8 +216,16 @@ function update_purch_template($template_id, $name, $description, $supplier_id, 
 		custom_data = " . sql_purch_template_custom_data($encoded) : "") . "
 		WHERE id = " . (int)$template_id;
 
-	return purch_policy_dimension_write('purch_order_templates', $template_id, $has_custom_data ? array('custom_data' => $encoded) : array(), function() use ($sql) {
-		return db_query($sql, 'could not update purchase template') ? true : false;
+	return purch_policy_dimension_write('purch_order_templates', $template_id, $has_custom_data ? array('custom_data' => $encoded) : array(), function() use ($sql, $template_id, $header_intents) {
+		if (!db_query($sql, 'could not update purchase template'))
+			return false;
+		// Capture only an explicit decision, or the first decision of a legacy template. An
+		// unrelated edit never rewrites a previously captured decision.
+		if (function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready()
+			&& ($header_intents !== null
+				|| !purchasing_classification_current_header_revision_id(ST_PURCHTEMPLATE, $template_id)))
+			purchasing_classification_capture_template($template_id, $header_intents);
+		return true;
 	});
 }
 
@@ -233,9 +250,10 @@ function delete_purch_template($template_id)
  * @param float  $default_qty
  * @param int    $sort
  * @param mixed  $custom_data
+ * @param array|null $line_intents DIM-PUR-002 explicit line intent
  * @return int
  */
-function add_template_line($template_id, $stock_id, $description, $default_qty, $sort, $custom_data = array())
+function add_template_line($template_id, $stock_id, $description, $default_qty, $sort, $custom_data = array(), $line_intents = null)
 {
 	$encoded = encode_purch_template_custom_data($custom_data);
 	if ($encoded === null && $custom_data !== null && $custom_data !== '' && $custom_data !== array())
@@ -250,11 +268,19 @@ function add_template_line($template_id, $stock_id, $description, $default_qty, 
 			" . db_escape((int)$sort) . ",
 			" . sql_purch_template_custom_data($encoded) . ")";
 
-	return purch_policy_dimension_write('purch_order_template_lines', null, array('custom_data' => $encoded), function() use ($sql, $template_id) {
+	return purch_policy_dimension_write('purch_order_template_lines', null, array('custom_data' => $encoded), function() use ($sql, $template_id, $stock_id, $default_qty, $line_intents) {
 		$rows = db_query('SELECT id FROM ' . TB_PREF . 'purch_order_templates WHERE id=' . (int)$template_id . ' FOR UPDATE');
 		if (!$rows || db_num_rows($rows) !== 1)
 			return false;
-		return db_query($sql, 'could not add purchase template line') ? db_insert_id() : false;
+		if (!db_query($sql, 'could not add purchase template line'))
+			return false;
+		$line_id = (int)db_insert_id();
+		// DIM-PUR-002: the line decision is appended in this same transaction.
+		if ($line_id > 0 && function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready())
+			purchasing_classification_capture_template_line($template_id,
+				array('id' => $line_id, 'stock_id' => $stock_id, 'default_quantity' => $default_qty),
+				$line_intents);
+		return $line_id;
 	});
 }
 
@@ -267,14 +293,23 @@ function add_template_line($template_id, $stock_id, $description, $default_qty, 
  * @param float  $default_qty
  * @param int    $sort
  * @param mixed  $custom_data Null (default) keeps the stored metadata byte-exactly; any other value replaces it
+ * @param int|array|null $template_id_or_intents Parent template id (legacy 7th argument) or intent array
+ * @param array|null $line_intents DIM-PUR-002 explicit line intent
  * @return bool
  */
-function update_template_line($line_id, $stock_id, $description, $default_qty, $sort, $custom_data = null)
+function update_template_line($line_id, $stock_id, $description, $default_qty, $sort, $custom_data = null, $template_id_or_intents = null, $line_intents = null)
 {
 	$has_custom_data = $custom_data !== null;
 	$encoded = $has_custom_data ? encode_purch_template_custom_data($custom_data) : null;
 	if ($has_custom_data && $encoded === null && $custom_data !== '' && $custom_data !== array())
 		return false;
+	// The legacy 7th positional argument is the parent template identity. Intent carriers are
+	// arrays, so both contracts remain unambiguous without changing an existing caller.
+	$template_id = 0;
+	if (is_array($template_id_or_intents))
+		$line_intents = $template_id_or_intents;
+	elseif ($template_id_or_intents !== null)
+		$template_id = (int)$template_id_or_intents;
 	$sql = "UPDATE " . TB_PREF . "purch_order_template_lines SET
 		stock_id = " . db_escape($stock_id) . ",
 		description = " . db_escape($description) . ",
@@ -284,21 +319,29 @@ function update_template_line($line_id, $stock_id, $description, $default_qty, $
 		custom_data = " . sql_purch_template_custom_data($encoded) : "") . "
 		WHERE id = " . (int)$line_id;
 
-	if ((int)func_num_args() >= 7) {
-		$template_id = (int)func_get_arg(6);
-		if ($template_id > 0)
-			$sql .= " AND template_id = " . $template_id;
-	}
+	if ($template_id > 0)
+		$sql .= " AND template_id = " . $template_id;
 
 	$scoped = 'SELECT id FROM ' . TB_PREF . 'purch_order_template_lines WHERE id=' . (int)$line_id
-		. (isset($template_id) && $template_id > 0 ? ' AND template_id=' . $template_id : '') . ' FOR UPDATE';
+		. ($template_id > 0 ? ' AND template_id=' . $template_id : '') . ' FOR UPDATE';
 
-	return purch_policy_dimension_write('purch_order_template_lines', $line_id, $has_custom_data ? array('custom_data' => $encoded) : array(), function() use ($sql, $scoped) {
+	return purch_policy_dimension_write('purch_order_template_lines', $line_id, $has_custom_data ? array('custom_data' => $encoded) : array(), function() use ($sql, $scoped, $line_id, $stock_id, $default_qty, $line_intents) {
 		// A mismatched parent id is refused instead of silently changing nothing.
 		$rows = db_query($scoped);
 		if (!$rows || db_num_rows($rows) !== 1)
 			return false;
-		return db_query($sql, 'could not update purchase template line') ? true : false;
+		if (!db_query($sql, 'could not update purchase template line'))
+			return false;
+		$rows = db_query('SELECT template_id FROM ' . TB_PREF . 'purch_order_template_lines WHERE id=' . (int)$line_id);
+		$row = $rows ? db_fetch_assoc($rows) : false;
+		if ($row && function_exists('purchasing_classification_schema_ready') && purchasing_classification_schema_ready()
+			&& ($line_intents !== null
+				|| !purchasing_classification_current_line_revision_id(ST_PURCHTEMPLATE,
+					(int)$row['template_id'], $line_id)))
+			purchasing_classification_capture_template_line((int)$row['template_id'],
+				array('id' => $line_id, 'stock_id' => $stock_id, 'default_quantity' => $default_qty),
+				$line_intents);
+		return true;
 	});
 }
 
@@ -418,6 +461,7 @@ function apply_template_to_po(&$purchase_order, $template_id)
 		$purchase_order->Comments = $template['notes'];
 
 	$template_lines = get_template_lines($template_id);
+	$classification_lines = array();
 	while ($template_line = db_fetch($template_lines)) {
 		$default_quantity = (float)$template_line['default_quantity'];
 		if ($default_quantity <= 0)
@@ -446,7 +490,11 @@ function apply_template_to_po(&$purchase_order, $template_id)
 			0,
 			0
 		);
+		$classification_lines[(int)$template_line['id']] = count($purchase_order->line_items) - 1;
 	}
+
+	// DIM-PUR-002: a saved template's exact header/line intent is copied into the order cart.
+	function_exists('purchasing_classification_apply_template') && purchasing_classification_apply_template($purchase_order, (int)$template_id, $classification_lines);
 
 	$hook_data = array(
 		'template_id' => (int)$template_id,

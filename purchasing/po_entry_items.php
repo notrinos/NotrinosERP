@@ -224,6 +224,7 @@ function load_purchase_order_from_agreement(&$purchase_order, $agreement_id) {
 	$purchase_order->Comments = sprintf(_('Created from Purchase Agreement %s'), $agreement['reference']);
 	$purchase_order->line_items = array();
 	$purchase_order->lines_on_order = 0;
+	$classification_lines = array();
 
 	$agreement_lines = get_agreement_lines((int)$agreement['id']);
 	while ($agreement_line = db_fetch($agreement_lines)) {
@@ -260,7 +261,12 @@ function load_purchase_order_from_agreement(&$purchase_order, $agreement_id) {
 			0,
 			0
 		);
+		$classification_lines[(int)$agreement_line['id']] = count($purchase_order->line_items) - 1;
 	}
+
+	// DIM-PUR-002: a direct agreement conversion applies the shared contract before add_po writes.
+	function_exists('purchasing_classification_apply_conversion') && purchasing_classification_apply_conversion($purchase_order, ST_PURCHAGREEMENT,
+		(int)$agreement['id'], $classification_lines);
 
 	return $purchase_order->order_has_items();
 }
@@ -351,6 +357,27 @@ function check_data() {
 
 //---------------------------------------------------------------------------------------------------
 
+/**
+ * Apply the posted explicit line classification to one purchase order line.
+ *
+ * @param object $line Purchase order line
+ * @return bool
+ */
+function apply_purchasing_line_classification_post($line) {
+	if (!is_object($line))
+		return false;
+	$intents = purchasing_classification_intents_from_values(
+		get_post('line_dimension_id', 0), get_post('line_dimension2_id', 0),
+		get_post('_line_classification_unassigned_1', 0),
+		get_post('_line_classification_unassigned_2', 0), 'purchasing_line');
+	if ($intents === false) {
+		display_error(_('A line category cannot be both selected and explicitly unassigned.'));
+		return false;
+	}
+	$line->classification_intents = $intents;
+	return true;
+}
+
 function handle_update_item() {
 	$allow_update = check_data(); 
 
@@ -362,6 +389,8 @@ function handle_update_item() {
 			return;
 		}
 	
+		if (!apply_purchasing_line_classification_post($_SESSION['PO']->line_items[$_POST['line_no']]))
+			return;
 		$_SESSION['PO']->update_order_item($_POST['line_no'], input_num('qty'), input_num('price'), @$_POST['req_del_date'], $_POST['item_description'] );
 		unset_form_variables();
 	}	
@@ -395,6 +424,12 @@ function handle_add_new_item() {
 					get_post('stock_id_text'), //$myrow['description'], 
 					input_num('price'), '', // $myrow['units'], (retrived in cart)
 					$_SESSION['PO']->trans_type == ST_PURCHORDER ? $_POST['req_del_date'] : '', 0, 0);
+				$added_line = $_SESSION['PO']->line_items[count($_SESSION['PO']->line_items) - 1];
+				if (!apply_purchasing_line_classification_post($added_line)) {
+					$_SESSION['PO']->remove_from_order(count($_SESSION['PO']->line_items) - 1);
+					line_start_focus();
+					return;
+				}
 
 				unset_form_variables();
 				$_POST['stock_id']	= '';
@@ -414,6 +449,16 @@ function can_commit() {
 		display_error(_('There is no supplier selected.'));
 		set_focus('supplier_id');
 		return false;
+	}
+	if ($_SESSION['PO']->trans_type == ST_PURCHORDER) {
+		foreach (array(1 => array('dimension', '_classification_unassigned_1'),
+			2 => array('dimension2', '_classification_unassigned_2')) as $axis => $fields) {
+			if ((int)get_post($fields[0], 0) > 0 && get_post($fields[1], 0)) {
+				display_error(_('A header category cannot be both selected and explicitly unassigned.'));
+				set_focus($fields[0]);
+				return false;
+			}
+		}
 	}
 	if (!is_date($_POST['OrderDate'])) {
 		display_error(_('The entered order date is invalid.'));
