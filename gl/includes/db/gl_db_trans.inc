@@ -45,6 +45,15 @@ function add_gl_trans($type, $trans_id, $date_, $account, $dimension, $dimension
             'amount' => $amount_in_home_currency));
         if (!$inverse['ok']) dimension_financial_reference_failure();
         $historical = $inverse['historical'];
+    } else {
+        // DIM-FND-007: every new-event caller reaches the same intrinsic identity/lifecycle
+        // admission. Economic requiredness/account/pair rules stay with the owning page adapter;
+        // there is no caller-controlled bypass at this legacy numeric API.
+        $posting_admission = dimension_posting_admission($dimension, $dimension2);
+        if (!$posting_admission['ok']) {
+            $GLOBALS['dimension_posting_last_failure'] = $posting_admission;
+            dimension_financial_reference_failure();
+        }
     }
 	if (isset($SysPrefs->use_audit_trail) && $SysPrefs->use_audit_trail) {
 		if ($memo_ == '' || $memo_ == null)
@@ -77,7 +86,16 @@ function add_gl_trans($type, $trans_id, $date_, $account, $dimension, $dimension
 		$err_msg = 'The GL transaction could not be inserted';
 
     dimension_financial_reference_write('gl_trans',null,array('dimension_id'=>$dimension,'dimension2_id'=>$dimension2),
-        function($admitted) use ($sql) {
+        function($admitted) use ($sql, $dimension, $dimension2, $inverse_of_counter) {
+            if ($inverse_of_counter === null) {
+                // Recheck after the fence has locked the current masters. A value closed or removed
+                // after the page/preflight decision is refused inside this posting transaction.
+                $current = dimension_posting_admission($dimension, $dimension2);
+                if (!$current['ok']) {
+                    $GLOBALS['dimension_posting_last_failure'] = $current;
+                    return false;
+                }
+            }
             return db_query($sql) ? db_insert_id() : false;
         }, false, $historical);
 	return $amount_in_home_currency;

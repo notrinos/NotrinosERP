@@ -31,9 +31,13 @@
  *    accepted by this contract;
  *  - a **reclassification** is refused until DIM-ALC-001 owns the explicit command.
  *
- * DIM-FND-007 wires these validators at every authoritative new-posting boundary. This slice applies
- * them at the GL journal entry page and the shared writer's exact-inverse leg; every other maintained
- * writer keeps its current behavior and remains characterized by DIM-FND-007.
+ * DIM-FND-007 wires the new-event identity/lifecycle validator into the shared GL writer, so every
+ * maintained shared GL writer caller is admitted at one authoritative boundary. The writer also
+ * receives automatic balancing, settlement, rounding and payroll-control legs, so the economic
+ * required/account/value-pair rules stay with each owning page adapter (the journal page owns the
+ * complete DIM-FND-004 cart preflight). The shared boundary never trusts zero as an invalid identity
+ * and never lets an unknown, wrong-axis, closed or disabled value through. Exact inverses keep using
+ * the linked historical authority; they are not re-admitted as new events.
  */
 require_once __DIR__.'/dimension_category_policy.inc';
 require_once __DIR__.'/dimension_reference_writer_fence.inc';
@@ -370,6 +374,91 @@ function dimension_validation_new_event($result, $options)
 					dimension_validation_axis_name($axis));
 			}
 		}
+	}
+	$result['ok'] = count($result['errors']) === 0;
+	return $result;
+}
+
+/**
+ * Admit one pair at the shared GL posting boundary.
+ *
+ * This is the DIM-FND-007 adapter used by the shared GL writer for every maintained caller. It enforces
+ * the intrinsic identity and lifecycle rules only: a canonical positive identity must exist on the
+ * named axis, that category must be enabled for new entries, and the value must be open. The legacy
+ * zero/blank form remains "no Dimension on this axis" and is never resolved to a default or a master
+ * identity.
+ *
+ * Economic requiredness, account rules and allowed value pairs are deliberately not applied here.
+ * The same writer also receives automatic balancing, settlement, rounding and protected payroll legs
+ * whose zero classification is not a user-entered economic event; the owning page adapter applies
+ * the complete DIM-FND-004 preflight before handing a user-classified cart to the writer. There is no
+ * caller-supplied skip flag: every call is checked, and a non-zero value can never bypass its master
+ * lifecycle state. The current policy version is reported for evidence but is not used to switch
+ * mandatory behavior on globally.
+ *
+ * @param mixed $dimension_id Axis-1 value as passed by the legacy numeric writer API
+ * @param mixed $dimension2_id Axis-2 value as passed by the legacy numeric writer API
+ * @return array ok, errors, codes, ids, states, policy_version and adapter
+ */
+function dimension_posting_admission($dimension_id, $dimension2_id)
+{
+	$result = array('ok' => false, 'adapter' => 'shared_gl_posting', 'errors' => array(),
+		'codes' => array(), 'ids' => array('dimension_id' => 0, 'dimension2_id' => 0),
+		'states' => array(), 'policy_version' => 0);
+	if (dimension_validation_context() === false) {
+		$result['codes'][] = 'missing_context';
+		$result['errors'][] = _('No authenticated company context is available, so the posting classification cannot be validated.');
+		return $result;
+	}
+	$ids = array('dimension_id' => dimension_validation_legacy_id($dimension_id),
+		'dimension2_id' => dimension_validation_legacy_id($dimension2_id));
+	if ($ids['dimension_id'] === false || $ids['dimension2_id'] === false) {
+		$result['codes'][] = 'invalid_reference';
+		$result['errors'][] = _('A posted Dimension reference must be a stored whole identity, 0 or a blank value.');
+		return $result;
+	}
+	$result['ids'] = $ids;
+	$policy = dimension_category_policy_current();
+	$result['policy_version'] = isset($policy['version']) ? (int)$policy['version'] : 0;
+	$enabled = (int)get_company_pref('use_dimension');
+	$masters = dimension_validation_masters(array_values($ids));
+	if ($masters === false) {
+		$result['codes'][] = 'unavailable';
+		$result['errors'][] = _('The stored Dimension values could not be read, so the posting is refused.');
+		return $result;
+	}
+	foreach (array(1 => 'dimension_id', 2 => 'dimension2_id') as $axis => $column) {
+		$identity = $ids[$column];
+		$name = dimension_validation_axis_name($axis);
+		if ($identity === 0) {
+			$result['states'][$axis] = 'unassigned';
+			continue;
+		}
+		if ($axis > $enabled) {
+			$result['states'][$axis] = 'disabled';
+			$result['codes'][] = 'disabled_axis';
+			$result['errors'][] = sprintf(_('%s is not enabled for new entries in this company.'), $name);
+			continue;
+		}
+		if (!isset($masters[$identity])) {
+			$result['states'][$axis] = 'deleted';
+			$result['codes'][] = 'missing';
+			$result['errors'][] = sprintf(_('%s value #%d does not exist. Choose an existing value or leave it blank.'), $name, $identity);
+			continue;
+		}
+		if ((int)$masters[$identity]['type_'] !== $axis) {
+			$result['states'][$axis] = 'wrong_axis';
+			$result['codes'][] = 'wrong_axis';
+			$result['errors'][] = sprintf(_('%s value #%d belongs to the other category.'), $name, $identity);
+			continue;
+		}
+		if ((int)$masters[$identity]['closed'] !== 0) {
+			$result['states'][$axis] = 'closed';
+			$result['codes'][] = 'closed';
+			$result['errors'][] = sprintf(_('%s value #%d is closed for new postings. Choose an open value.'), $name, $identity);
+			continue;
+		}
+		$result['states'][$axis] = 'open';
 	}
 	$result['ok'] = count($result['errors']) === 0;
 	return $result;
