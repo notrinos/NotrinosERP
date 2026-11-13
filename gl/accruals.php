@@ -14,6 +14,7 @@ $path_to_root = '..';
 
 include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/ui/items_cart.inc');
+include_once($path_to_root.'/gl/includes/accrual_schedule.inc');
 
 $js = get_js_open_window(800, 500);
 if (user_use_date_picker())
@@ -31,140 +32,80 @@ if (!isset($_POST['freq']))
 	$_POST['freq'] = 3;
 // If the import button was selected, we'll process the form here.  (If not, skip to actual content below.)
 if (isset($_POST['go']) || isset($_POST['show'])) {
-	$input_error = 0;
-	if (!is_date($_POST['date_'])) {
-		display_error(_('The entered date is invalid.'));
+	// DIM-GL-002: one shared planner validates the period split, the revenue/cost classification and
+	// the non-P&L accrued-balance control leg before the first period is written. The posting itself
+	// is one atomic command, so a refused or concurrent-closed value cannot leave a partial schedule.
+	$plan = accrual_schedule_plan(array(
+		'date_' => get_post('date_'),
+		'amount' => input_num('amount'),
+		'periods' => input_num('periods'),
+		'freq' => get_post('freq'),
+		'acc_act' => get_post('acc_act'),
+		'res_act' => get_post('res_act'),
+		'dimension_id' => get_post('dimension_id'),
+		'dimension2_id' => get_post('dimension2_id'),
+		'memo_' => get_post('memo_')));
+	if (!$plan['ok']) {
+		foreach ($plan['errors'] as $plan_error)
+			display_error($plan_error);
 		set_focus('date_');
-		$input_error = 1;
 	}
-	elseif (!is_date_in_fiscalyear($_POST['date_'])) {
-		display_error(_('The entered date is out of fiscal year or is closed for further data entry.'));
-		set_focus('date_');
-		$input_error = 1;
-	}
-	elseif (input_num('amount', 0) == 0.0) {
-		display_error(_('The amount can not be 0.'));
-		set_focus('amount');
-		$input_error = 1;
-	}
-	elseif (input_num('periods', 0) < 1) {
-		display_error(_('The periods must be greater than 0.'));
-		set_focus('periods');
-		$input_error = 1;
-	}
-	if ($input_error == 0) {
-		$periods = input_num('periods');
-		$per = $periods - 1;
-		$date = $date_ = get_post('date_');
-		$freq = get_post('freq');
-		if ($freq == 3 || $freq == 4) {
-			$date_ = begin_month($date_); // avoid skip on shorter months
-			$date  = end_month($date_); // avoid skip on shorter months
+	elseif (isset($_POST['go'])) {
+		$posted = accrual_schedule_post($plan);
+		if (!$posted['ok']) {
+			foreach ($posted['errors'] as $post_error)
+				display_error($post_error);
 		}
-		
-		$lastdate = ($freq == 1 ? add_days($date_, 7*$per) :
-			($freq == 2 ? add_days($date_, 14*$per) :
-			($freq == 3 ? end_month(add_months($date_, $per)) : 
-			end_month(add_months($date_, 3*$per)))));
-		if (!is_date_in_fiscalyears($lastdate, false)) {
-			display_error(_('Some of the period dates are outside the fiscal year or are closed for further data entry. Create a new fiscal year first!'));
-			set_focus('date_');
-			$input_error = 1;
+		else {
+			display_notification_centered(_('Revenue / Cost Accruals have been processed.'));
+			$_POST['date_'] = '';
+			$_POST['amount'] = '';
+			$_POST['periods'] = '';
 		}
-		if ($input_error == 0) {
-			$amount = input_num('amount');
-			$am = round2($amount / $periods, user_price_dec());
-			if ($am * $periods != $amount)
-				$am0 = $am + $amount - $am * $periods;
-			else
-				$am0 = $am;
-			if (get_post('memo_') != '')
-				$memo = $_POST['memo_'];
-			else
-				$memo = sprintf(_('Accruals for %s'), $amount);
-			if (isset($_POST['go']))
-				begin_transaction();
-			else {
-				start_table(TABLESTYLE);
-				$dim = get_company_pref('use_dimension');
+	}
+	else {
+		start_table(TABLESTYLE);
+		$dim = get_company_pref('use_dimension');
 
-				$first_cols = array(_('Date'), _('Account'));
-				if ($dim == 2)
-					$dim_cols = array(_('Dimension').' 1', _('Dimension').' 2');
-				elseif ($dim == 1)
-					$dim_cols = array(_('Dimension'));
-				else
-					$dim_cols = array();
+		$first_cols = array(_('Date'), _('Account'));
+		if ($dim == 2)
+			$dim_cols = array(_('Dimension').' 1', _('Dimension').' 2');
+		elseif ($dim == 1)
+			$dim_cols = array(_('Dimension'));
+		else
+			$dim_cols = array();
 
-				$remaining_cols = array(_('Debit'), _('Credit'), _('Memo'));
+		$remaining_cols = array(_('Debit'), _('Credit'), _('Memo'));
 
-				$th = array_merge($first_cols, $dim_cols, $remaining_cols);
-				table_header($th);
-				$k = 0;
-			}
-			for ($i = 0; $i < $periods; $i++) {
-				if ($i > 0) {
-					switch($freq) {
-						case 1:
-							$date = $date_ = add_days($date_, 7);
-							break;
-						case 2:
-							$date = $date_ = add_days($date_, 14);
-							break;
-						case 3:
-							$date_ = add_months($date_, 1);
-							$date = end_month($date_);
-							break;
-						case 4:
-							$date_ = add_months($date_, 3);
-							$date = end_month($date_);
-							break;
-					}
-					$am0 = $am;
-				}
-				if (isset($_POST['go'])) {
-					$cart = new items_cart(ST_JOURNAL);
-					$cart->memo_ = $memo;
-					$cart->reference = $Refs->get_next(ST_JOURNAL, null, $date);
-					$cart->tran_date = $cart->doc_date = $cart->event_date = $date;
-					$cart->add_gl_item(get_post('acc_act'), 0, 0, -$am0, $cart->reference);
-					$cart->add_gl_item(get_post('res_act'), get_post('dimension_id'), get_post('dimension2_id'), $am0, $cart->reference);
-					write_journal_entries($cart);
-					$cart->clear_items();
-				}
-				else {
-					alt_table_row_color($k);
-					label_cell($date);
-					label_cell($_POST['acc_act'].' '.get_gl_account_name($_POST['acc_act']));
-					if ($dim > 0)
-						label_cell('');
-					if ($dim > 1)
-						label_cell('');
-					display_debit_or_credit_cells($am0 * -1);
-					label_cell($memo);
-					alt_table_row_color($k);
-					label_cell($date);
-					label_cell($_POST['res_act'].' '.get_gl_account_name($_POST['res_act']));
-					if ($dim > 0)
-						label_cell(get_dimension_string($_POST['dimension_id'], true));
-					if ($dim > 1)
-						label_cell(get_dimension_string($_POST['dimension2_id'], true));
-					display_debit_or_credit_cells($am0);
-					label_cell($memo);
-				}
-			}
-			if (isset($_POST['go'])) {
-				commit_transaction();
-				display_notification_centered(_('Revenue / Cost Accruals have been processed.'));
-				$_POST['date_'] = '';
-				$_POST['amount'] = '';
-				$_POST['periods'] = '';
-			}
-			else {
-				end_table(1);
-				display_notification_centered(_('Showing GL Transactions.'));
-			}
+		$th = array_merge($first_cols, $dim_cols, $remaining_cols);
+		table_header($th);
+		$k = 0;
+		$acc_act = $plan['accounts']['acc_act'];
+		$res_act = $plan['accounts']['res_act'];
+		$dimension_id = $plan['classification']['economic']['values'][1];
+		$dimension2_id = $plan['classification']['economic']['values'][2];
+		foreach ($plan['periods'] as $period) {
+			alt_table_row_color($k);
+			label_cell($period['date']);
+			label_cell($acc_act.' '.get_gl_account_name($acc_act));
+			if ($dim > 0)
+				label_cell('');
+			if ($dim > 1)
+				label_cell('');
+			display_debit_or_credit_cells($period['amount'] * -1);
+			label_cell($plan['memo']);
+			alt_table_row_color($k);
+			label_cell($period['date']);
+			label_cell($res_act.' '.get_gl_account_name($res_act));
+			if ($dim > 0)
+				label_cell(get_dimension_string($dimension_id, true));
+			if ($dim > 1)
+				label_cell(get_dimension_string($dimension2_id, true));
+			display_debit_or_credit_cells($period['amount']);
+			label_cell($plan['memo']);
 		}
+		end_table(1);
+		display_notification_centered(_('Showing GL Transactions.'));
 	}
 }
 

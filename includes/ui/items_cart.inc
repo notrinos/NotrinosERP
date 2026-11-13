@@ -318,7 +318,17 @@ class items_cart {
 	function write_gl($check_balance = true) {
 		$delta = $this->gl_items_total();
 		if ($check_balance && floatcmp($delta, 0) !=0) {
-			$this->add_gl_item(get_company_pref($delta>0 ? 'rounding_db_act' : 'rounding_cr_act'), 0, 0, -$delta, '');
+			// DIM-GL-002: a rounding difference is an automatic leg. It posts only to a company's
+			// declared rounding account, falling back to the installed exchange-difference account
+			// when the optional legacy rounding preferences are absent; a blank account is refused by
+			// the writer instead of silently posting to no account.
+			$rounding_account = get_company_pref($delta>0 ? 'rounding_db_act' : 'rounding_cr_act');
+			if ($rounding_account === null || $rounding_account === '' || $rounding_account === false)
+				$rounding_account = get_company_pref('exchange_diff_act');
+			$this->add_gl_item($rounding_account, 0, 0, -$delta, '');
+			$rounding_index = count($this->gl_items) - 1;
+			if ($rounding_index >= 0)
+				$this->gl_items[$rounding_index]->derived_role = 'rounding';
 			error_log(sprintf( _('Rounding error %s encountered for trans_type:%s,trans_no:%s'), $delta, $this->trans_type, $this->order_id));
 		}
 
@@ -329,7 +339,8 @@ class items_cart {
 				$gl->date = $this->tran_date;
 
 			$total_gl += add_gl_trans($this->trans_type, $this->order_id, $gl->date, $gl->code_id, $gl->dimension_id, $gl->dimension2_id, 
-				$gl->reference, $gl->amount, $this->currency, $gl->person_type_id, $gl->person_id, '', $this->rate);
+				$gl->reference, $gl->amount, $this->currency, $gl->person_type_id, $gl->person_id, '', $this->rate, null,
+				isset($gl->derived_role) ? $gl->derived_role : null);
 
 			// post to first found bank account using given gl acount code.
 			$is_bank_to = is_bank_account($gl->code_id);
@@ -353,8 +364,12 @@ class items_cart {
 			}
 		}
 		// post currency roundings if any
-		if ($check_balance && floatcmp($total_gl, 0))
-			add_gl_trans($this->trans_type, $this->order_id, $this->tran_date, get_company_pref($total_gl>0 ? 'rounding_db_act' : 'rounding_cr_act'), 0, 0, _('Exchange rate roundings'), -$total_gl);
+		if ($check_balance && floatcmp($total_gl, 0)) {
+			$rounding_account = get_company_pref($total_gl>0 ? 'rounding_db_act' : 'rounding_cr_act');
+			if ($rounding_account === null || $rounding_account === '' || $rounding_account === false)
+				$rounding_account = get_company_pref('exchange_diff_act');
+			add_gl_trans($this->trans_type, $this->order_id, $this->tran_date, $rounding_account, 0, 0, _('Exchange rate roundings'), -$total_gl, null, null, null, '', 0, null, 'rounding');
+		}
 
 		// update bank ledger if used
 		foreach($bank_trans as $bank_id => $bank)
@@ -456,6 +471,9 @@ class gl_item {
 	var $person_name;
 	var $branch_id;
 	var $date;
+	// DIM-GL-002: the reviewed derived role of an automatic line (rounding, control, ...). A null
+	// role is the ordinary economic line path; the writer owns the per-account policy decision.
+	var $derived_role = null;
 
 	function __construct($code_id=null, $dimension_id=0, $dimension2_id=0, $amount=0, $memo='', $act_descr=null, $person_id=null, $date=null) {
 		//echo "adding $index, $code_id, $dimension_id, $amount, $reference<br>";

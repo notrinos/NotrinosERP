@@ -13,14 +13,20 @@
 include_once($path_to_root . '/taxes/db/tax_types_entity.inc');
 require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
 require_once __DIR__.'/../../../dimensions/includes/dimension_validation_contract.inc';
+require_once __DIR__.'/../../../dimensions/includes/dimension_derived_posting_policy.inc';
 
 /*
 *	Base function for adding a GL transaction
 *	$date_ is display date (non-sql)
 *	$amount is in $currency currency
 *	if $currency is not set, then defaults to no conversion
+*
+*	$derived_role is the DIM-GL-002 reviewed role of an automatic/derived line. A source-recorded
+*	line keeps the exact pair its document/template recorded; an automatic control, rounding or
+*	exchange-variance leg must be explicitly unassigned on an account the per-account policy admits.
+*	A null role is the ordinary economic line path and is unchanged.
 */
-function add_gl_trans($type, $trans_id, $date_, $account, $dimension, $dimension2, $memo_, $amount, $currency=null, $person_type_id=null, $person_id=null, $err_msg='', $rate=0, $inverse_of_counter=null) {
+function add_gl_trans($type, $trans_id, $date_, $account, $dimension, $dimension2, $memo_, $amount, $currency=null, $person_type_id=null, $person_id=null, $err_msg='', $rate=0, $inverse_of_counter=null, $derived_role=null) {
 	global $SysPrefs;
 
 	$date = date2sql($date_);
@@ -35,6 +41,19 @@ function add_gl_trans($type, $trans_id, $date_, $account, $dimension, $dimension
     $dimension = dimension_writer_reference_id($dimension);
     $dimension2 = dimension_writer_reference_id($dimension2);
     if ($dimension === false || $dimension2 === false) dimension_financial_reference_failure();
+    // DIM-GL-002: a derived line declares its reviewed role and per-account policy before any SQL.
+    // The declaration never weakens the identity/lifecycle admission below: an automatic leg is
+    // admitted with an explicit blank on both axes only on a non-P&L control or a declared
+    // rounding/exchange-difference account, and a source-recorded line keeps its exact pair.
+    if ($derived_role !== null) {
+        if ($inverse_of_counter !== null) dimension_financial_reference_failure();
+        $derived = dimension_derived_posting_declaration($derived_role, $account, $dimension,
+            $dimension2);
+        if (!$derived['ok']) {
+            $GLOBALS['dimension_derived_posting_last_failure'] = $derived;
+            dimension_financial_reference_failure();
+        }
+    }
     // DIM-FND-004 exact inverse policy: the shared contract locks the original row and proves the
     // account, both axes and the exactly negated base amount. Only its returned historical pair may
     // admit a closed, disabled or deleted value; a caller cannot supply a skip flag or identity list.
@@ -123,7 +142,7 @@ function add_gl_balance($type, $trans_id, $date_, $amount, $person_type_id=null,
 
 	if ($amount != 0.0) {
 		error_log(sprintf( _('Rounding error %s encountered for trans_type:%s,trans_no:%s'), $amount, $type, $trans_id));
-		return add_gl_trans($type, $trans_id, $date_, get_company_pref('exchange_diff_act'), 0, 0, '', $amount, null, $person_type_id, $person_id, 'The balanced GL transaction could not be inserted');
+		return add_gl_trans($type, $trans_id, $date_, get_company_pref('exchange_diff_act'), 0, 0, '', $amount, null, $person_type_id, $person_id, 'The balanced GL transaction could not be inserted', 0, null, 'rounding');
 	}
 	
 	return 0;

@@ -13,6 +13,7 @@ include_once($path_to_root . '/admin/db/voiding_db.inc');
 include_once($path_to_root . '/includes/types.inc');
 include_once($path_to_root . '/taxes/db/tax_types_entity.inc');
 include_once($path_to_root . '/taxes/db/tax_groups_db.inc');
+include_once($path_to_root . '/dimensions/includes/dimension_derived_posting_policy.inc');
 
 //--------------------------------------------------------------------------------------
 
@@ -571,8 +572,6 @@ function display_quick_entries(&$cart, $id, $base, $type, $descr='') {
 	else {
 		if ($type == QE_DEPOSIT)
 			$base = -$base;
-		if ($type != QE_SUPPINV && $type != QE_JOURNAL)	// only one quick entry on journal/bank transaction
-			$cart->clear_items();
 
 		// as for now tax_group is passed only in QE_SUPPINV
 		$qe_lines = quickentry_calculate($base, $id, @$cart->tax_group_id, $cart->tran_date);
@@ -586,11 +585,35 @@ function display_quick_entries(&$cart, $id, $base, $type, $descr='') {
 			display_error(_('Cannot post to GL account used by more than one tax type.'));
 			return 0;
 		}
-		foreach($qe_lines as $qe_line) {
+		// DIM-GL-002: a quick-entry template is a stored source of intent. Every expanded line is
+		// resolved and validated before the cart is touched, so a closed/disabled/required template
+		// value is refused with its exact line and the existing cart is never partially replaced.
+		// The stored pair is the only source: an explicit blank never falls back to a default.
+		$resolved_lines = array();
+		foreach ($qe_lines as $index => $qe_line) {
+			$resolved = dimension_derived_posting_resolve('template_line', $qe_line['code'],
+				$qe_line['dim1'], $qe_line['dim2'], 'quick_entry_template', true);
+			if (!$resolved['ok']) {
+				foreach ($resolved['errors'] as $error)
+					display_error(sprintf(_('Quick Entry line %d (%s): %s'), $index + 1, $qe_line['code'], $error));
+				set_focus('totamount');
+				return 0;
+			}
+			$qe_line['dimension_resolution'] = $resolved;
+			$resolved_lines[] = $qe_line;
+		}
+		if ($type != QE_SUPPINV && $type != QE_JOURNAL)	// only one quick entry on journal/bank transaction
+			$cart->clear_items();
+
+		foreach($resolved_lines as $qe_line) {
 			if ($descr != '')
 				$qe_line['descr'] .= ': '.$descr;
-			if ($type != QE_SUPPINV)
+			if ($type != QE_SUPPINV) {
 				$cart->add_gl_item($qe_line['code'], $qe_line['dim1'], $qe_line['dim2'], $qe_line['amount'], $qe_line['descr']);
+				$line_index = count($cart->gl_items) - 1;
+				if ($line_index >= 0)
+					$cart->gl_items[$line_index]->derived_role = 'template_line';
+			}
 			else {
 				$acc_name = get_gl_account_name($qe_line['code']);
 				$cart->add_gl_codes_to_trans($qe_line['code'], $acc_name, $qe_line['dim1'], $qe_line['dim2'], $qe_line['amount'], $qe_line['descr']);
@@ -715,7 +738,8 @@ function quickentry_calculate($base, $id, $taxgroup=null, $date=null) {
 			'dim1' => $qe_line['dimension_id'], 
 			'dim2' => $qe_line['dimension2_id'], 
 			'amount' => $part, 
-			'descr' => $qe_line['memo']
+			'descr' => $qe_line['memo'],
+			'derived_role' => 'template_line'
 		);
 	}
 	return $gl_entries;

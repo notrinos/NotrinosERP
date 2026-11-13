@@ -45,8 +45,10 @@ function add_exchange_variation($trans_no, $date_, $acc_id, $account, $currency,
 
 		if ($person_type_id == null)
 			$person_type_id = PT_MISC;
-		add_gl_trans(ST_JOURNAL, $trans_no, $date_, $account, 0, 0, _('Exchange Variance'), -$diff, null, $person_type_id, $person_id);
-		add_gl_trans(ST_JOURNAL, $trans_no, $date_, get_company_pref('exchange_diff_act'), 0, 0, _('Exchange Variance'), $diff, null, $person_type_id, $person_id);
+		// DIM-GL-002: the bank control leg is a non-P&L control (explicitly unassigned only on a
+		// balance-sheet account); the exchange-difference leg is the declared FX account.
+		add_gl_trans(ST_JOURNAL, $trans_no, $date_, $account, 0, 0, _('Exchange Variance'), -$diff, null, $person_type_id, $person_id, '', 0, null, 'non_pnl_control');
+		add_gl_trans(ST_JOURNAL, $trans_no, $date_, get_company_pref('exchange_diff_act'), 0, 0, _('Exchange Variance'), $diff, null, $person_type_id, $person_id, '', 0, null, 'fx_variance');
 
 		if ($memo)
 			add_comments(ST_JOURNAL, $trans_no, $date_, $memo);
@@ -73,8 +75,10 @@ function add_cust_supp_revaluation($ledger_act, $ex_act, $date, $amount, $person
 	$Refs->save(ST_JOURNAL, $trans_no, $ref);
 	add_audit_trail(ST_JOURNAL, $trans_no, $date);
 
-	add_gl_trans(ST_JOURNAL, $trans_no, $date, $ledger_act, 0, 0, _('Exchange Variance'), $amount, null, $person_type_id, $person_id);
-	add_gl_trans(ST_JOURNAL, $trans_no, $date, $ex_act, 0, 0, _('Exchange Variance'), -$amount, null, $person_type_id, $person_id);
+	// DIM-GL-002: the AR/AP ledger leg is a non-P&L control and the exchange-difference leg is the
+	// declared FX account; both are explicitly unassigned automatic legs, never an economic pair.
+	add_gl_trans(ST_JOURNAL, $trans_no, $date, $ledger_act, 0, 0, _('Exchange Variance'), $amount, null, $person_type_id, $person_id, '', 0, null, 'non_pnl_control');
+	add_gl_trans(ST_JOURNAL, $trans_no, $date, $ex_act, 0, 0, _('Exchange Variance'), -$amount, null, $person_type_id, $person_id, '', 0, null, 'fx_variance');
 	add_comments(ST_JOURNAL, $trans_no, $date, $memo);
 	commit_transaction();
 }
@@ -204,6 +208,9 @@ function add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $m
 	// bank movements and to the bank-charge GL leg the page also selected it for; the automatic
 	// exchange-variance journal legs below remain explicit-unassigned control legs. The two bank
 	// source rows therefore retain the same declaration instead of omitting their axes.
+	// DIM-GL-002 makes the per-leg policy explicit: the two bank movements and the charge leg are
+	// source-recorded pairs, while the automatic exchange-difference balancing leg is an
+	// explicit-unassigned FX exception and never copies the page pair.
 	$classification = dimension_document_classification_line($dim1, $dim2);
 	if ($classification === false)
 		dimension_financial_reference_failure();
@@ -211,7 +218,7 @@ function add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $m
 	$total = 0;
 	// do the source account postings
 	$total += add_gl_trans($trans_type, $trans_no, $date_, $from_gl_account, $dim1, $dim2, $person_id,
-		-($amount + $charge), $currency);
+		-($amount + $charge), $currency, null, null, '', 0, null, 'document_pair');
 
 	add_bank_trans($trans_type, $trans_no, $from_account, $ref, $date_, -($amount + $charge), PT_MISC, $person_id, $currency, 'Cannot insert a source bank transaction', 0, $classification);
 	if ($SysPrefs->auto_currency_revaluation()) {
@@ -221,7 +228,7 @@ function add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $m
 	if ($charge != 0) {
 		/* Now Debit bank charge account with charges */
 		$charge_act = get_bank_charge_account($from_account);
-		$total += add_gl_trans($trans_type, $trans_no, $date_, $charge_act, $dim1, $dim2, $person_id, $charge, $currency);
+		$total += add_gl_trans($trans_type, $trans_no, $date_, $charge_act, $dim1, $dim2, $person_id, $charge, $currency, null, null, '', 0, null, 'charge_line');
 	}
 
 	// provide backward compatibility for extension modules (target amount can be not passed)
@@ -229,13 +236,13 @@ function add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $m
 	$to_amount = $target_amount ? $target_amount : $amount;
 
 	// do the destination account postings
-	$total += add_gl_trans($trans_type, $trans_no, $date_, $to_gl_account, $dim1, $dim2, $person_id, $to_amount, $to_currency);
+	$total += add_gl_trans($trans_type, $trans_no, $date_, $to_gl_account, $dim1, $dim2, $person_id, $to_amount, $to_currency, null, null, '', 0, null, 'document_pair');
 		
 	// Post a balance post if $total != 0
 	if ($currency == $to_currency)
 		add_gl_balance($trans_type, $trans_no, $date_, -$total);
 	else	// in this case those are exchange variances between bank and home rates
-		add_gl_trans($trans_type, $trans_no, $date_, get_company_pref('exchange_diff_act'), $dim1, $dim2, _('Exchange Variance'), -$total);
+		add_gl_trans($trans_type, $trans_no, $date_, get_company_pref('exchange_diff_act'), 0, 0, _('Exchange Variance'), -$total, null, null, null, '', 0, null, 'fx_variance');
 	
 	add_bank_trans($trans_type, $trans_no, $to_account, $ref, $date_, $to_amount, PT_MISC, $person_id, $to_currency, 'Cannot insert a destination bank transaction', 0, $classification);
 
@@ -436,7 +443,7 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 			display_db_error('invalid payment entered. Cannot pay to another bank account', '');
 
 		// do the destination account postings
-		$total += add_gl_trans($trans_type, $trans_no, $date_, $gl_item->code_id, $gl_item->dimension_id, $gl_item->dimension2_id, $gl_item->reference, $gl_item->amount, $currency, $person_type_id, $person_id);
+		$total += add_gl_trans($trans_type, $trans_no, $date_, $gl_item->code_id, $gl_item->dimension_id, $gl_item->dimension2_id, $gl_item->reference, $gl_item->amount, $currency, $person_type_id, $person_id, '', 0, null, 'document_line');
 
 		if ($is_bank_to) {
 			// DIM-GL-001: this bank row is the exact line it was posted from, not a document total.
@@ -457,7 +464,7 @@ function write_bank_transaction($trans_type, $trans_no, $from_account, $items, $
 	}
 
 	// do the source account postings
-	add_gl_trans($trans_type, $trans_no, $date_, $bank_gl_account, $header_classification['dimension_id'], $header_classification['dimension2_id'], $memo_, -$total, null, $person_type_id, $person_id);
+	add_gl_trans($trans_type, $trans_no, $date_, $bank_gl_account, $header_classification['dimension_id'], $header_classification['dimension2_id'], $memo_, -$total, null, $person_type_id, $person_id, '', 0, null, 'document_header');
 
 	if ($do_exchange_variance)
 		add_exchange_variation($trans_no1, $date_, $from_account, $bank_gl_account, $currency, $person_type_id, $person_id);
