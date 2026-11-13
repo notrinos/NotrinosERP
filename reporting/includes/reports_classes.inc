@@ -11,6 +11,7 @@
 ***********************************************************************/
 
 require_once(dirname(__DIR__).'/includes/report_selection.inc');
+require_once(dirname(__DIR__).'/includes/report_access_scope.inc');
 
 // Standard report classess
 define('RC_CUSTOMER', 0);
@@ -74,6 +75,17 @@ class BoxReports {
 			if (!isset($this->ar_reports[$class_id]))
 				continue; // e.g. no dimensions
 
+			// DIM-APR-002: the report center is not an authorization boundary.
+			// A report link and its parameter form appear only when the current
+			// principal currently holds that report's declared area.
+			$accessible_reports = array();
+			foreach($this->ar_reports[$class_id] as $rep_id => $report) {
+				if (report_access_can_open_report($report->id))
+					$accessible_reports[$rep_id] = $report;
+			}
+			if (count($accessible_reports) === 0)
+				continue;
+
 			$acc = access_string($name);
 			$st_classes .= "<a href='"
 				.$_SERVER['PHP_SELF']."?Class=$class_id'"
@@ -83,9 +95,11 @@ class BoxReports {
 			$style = $class_id == $cur_class ? '' : "style='display:none'";
 			$st_reports .= "<div class='report-class-list repclass' id='TAB_".$class_id."' $style>"
 				."<div class='report-class-title'>"._('Reports For Class: ')."&nbsp;$name</div>\n";
-			foreach($this->ar_reports[$class_id] as $rep_id => $report) {
+			foreach($accessible_reports as $rep_id => $report) {
 				$acc = access_string($report->name);
-				$is_selected = @$_REQUEST['REP_ID'] == $report->id;
+				$requested_report = isset($_REQUEST['REP_ID']) && is_scalar($_REQUEST['REP_ID'])
+					? (string)$_REQUEST['REP_ID'] : '';
+				$is_selected = $requested_report !== '' && $requested_report === (string)$report->id;
 				$st_reports .= "<a class='report-link".($is_selected ? ' is-active' : '')."'"
 					." href='".$_SERVER['PHP_SELF']."?Class=$class_id&REP_ID=$report->id'"
 					." id='".$id = default_focus()."'"
@@ -94,7 +108,7 @@ class BoxReports {
 				if ($is_selected)
 					$Ajax->activate($id);
 
-				if (isset($_REQUEST['REP_ID']) && $_REQUEST['REP_ID'] == $report->id) {
+				if ($is_selected) {
 					// parameters form
 					$action = $_SERVER['PHP_SELF'];
 					$st_params = "<form method='POST' action='$action' target='_blank' class='report-params-form'>\n";
@@ -151,8 +165,8 @@ class BoxReports {
 				if (($id == 102 || $id == 202) && $cnt == 3)
 					$_POST['PARAM_'.$cnt] = 1;
 				
-				if (isset($_COOKIE['select'][$id][report_selection_key($id, $cnt)]))
-					$_POST['PARAM_'.$cnt] = $_COOKIE['select'][$id][report_selection_key($id, $cnt)];
+				if (isset($_COOKIE['select'][$id][report_access_selection_key($id, $cnt)]))
+					$_POST['PARAM_'.$cnt] = $_COOKIE['select'][$id][report_access_selection_key($id, $cnt)];
 				$ctrl = $this->get_ctrl('PARAM_'.$cnt, $type);
 			}
 			if ($ctrl != '')  {

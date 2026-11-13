@@ -598,6 +598,18 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 		}
 	}
 
+	// DIM-APR-002: a native report script is a report entry point too, not only
+	// a file reached through prn_redirect.php. Enforce its declared area before
+	// the report reads any parameter or aggregate. prn_redirect.php/lists keep
+	// SA_OPEN and are gated by the central report registry instead.
+	if (isset($page_security) && is_string($page_security) && $page_security !== ''
+		&& $page_security !== 'SA_OPEN'
+		&& isset($_SERVER['SCRIPT_FILENAME'])) {
+		include_once($path_to_root.'/reporting/includes/report_access_scope.inc');
+		if (report_access_request_is_report_script($_SERVER['SCRIPT_FILENAME']))
+			report_access_enforce_report_script($_SERVER['SCRIPT_FILENAME'], $page_security);
+	}
+
 	// Check for extension changes after SysPrefs are loaded from DB,
 	// so init() has access to use_manufacturing, use_fixed_assets, use_hrm etc.
 	$installed_extensions_signature = md5(serialize($installed_extensions));

@@ -13,6 +13,7 @@
 $widget = new Widget();
 $widget->setTitle(_('Tracking P&L by category'));
 $widget->Start();
-if ($widget->checkSecurity('SA_DIMTRANSVIEW'))
+if ($widget->checkSecurity('SA_DIMTRANSVIEW')
+	&& $widget->checkFinancialAggregate('dimension_tracking_pl'))
 	display_dimension_financial_ranking(10, false);
 $widget->End();

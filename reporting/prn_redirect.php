@@ -19,14 +19,19 @@ $page_security = 'SA_OPEN';	// this level is later overriden in rep file
 include_once($path_to_root . '/includes/session.inc');
 include_once($path_to_root . '/reporting/includes/report_artifact_security.inc');
 include_once($path_to_root . '/reporting/includes/report_selection.inc');
+include_once($path_to_root . '/reporting/includes/report_access_scope.inc');
 
-if (user_save_report_selections() > 0 && isset($_POST['REP_ID'])) {	// save parameters from Report Center
-	for($i=0; $i<12; $i++) {
-		if (isset($_POST['PARAM_'.$i]) && !is_array($_POST['PARAM_'.$i])) {
-			$rep = $_POST['REP_ID'];
-			// DIM-LFC-002/AT-12: never replay a saved native Dimension ID into another company/user.
-			setcookie("select[".(int)$rep."][".report_selection_key($rep, $i)."]", $_POST['PARAM_'.$i], time()+60*60*24*user_save_report_selections()); // days from user_save_report_selections()
-		}	
+if (user_save_report_selections() > 0 && isset($_POST['REP_ID']) && is_scalar($_POST['REP_ID'])) {	// save parameters from Report Center
+	$saved_rep = preg_replace('/[^a-z_0-9]/i', '', (string)$_POST['REP_ID']);
+	// DIM-APR-002: only a currently authorized report may write a saved selection,
+	// and its key is bound to the live grant fingerprint below.
+	if ($saved_rep !== '' && report_access_can_open_report($saved_rep)) {
+		for($i=0; $i<12; $i++) {
+			if (isset($_POST['PARAM_'.$i]) && !is_array($_POST['PARAM_'.$i])) {
+				// DIM-LFC-002/AT-12: never replay a saved native Dimension ID into another company/user.
+				setcookie("select[".(int)$saved_rep."][".report_access_selection_key($saved_rep, $i)."]", $_POST['PARAM_'.$i], time()+60*60*24*user_save_report_selections()); // days from user_save_report_selections()
+			}
+		}
 	}
 }	
 
@@ -67,19 +72,35 @@ if (isset($_GET['xls']) || isset($_GET['xml']) || isset($_GET['unique'])) {
 
 if (!isset($_POST['REP_ID'])) {	// print link clicked
 	$def_pars = array(0, 0, '', '', 0, '', '', '', 0, 0, 0, 0); //default values
-	$rep = $_POST['REP_ID'] = $_GET['REP_ID'];
+	$rep = $_POST['REP_ID'] = isset($_GET['REP_ID']) ? $_GET['REP_ID'] : '';
 	for($i=0; $i<12; $i++) {
 		$_POST['PARAM_'.$i] = isset($_GET['PARAM_'.$i]) ? $_GET['PARAM_'.$i]
 			: (isset($def_pars[$i]) ? $def_pars[$i] : '');
 	}
 }
 
-$rep = preg_replace('/[^a-z_0-9]/i', '', $_POST['REP_ID']);
+$rep = isset($_POST['REP_ID']) && is_scalar($_POST['REP_ID'])
+	? preg_replace('/[^a-z_0-9]/i', '', (string)$_POST['REP_ID']) : '';
+if ($rep === '')
+	report_access_emit_bad_request('missing_report_id');
+
+// DIM-APR-002: a report parameter is a scalar filter, never an array that can
+// smuggle a second value past the report's own parser.
+foreach ($_POST as $post_key => $post_value) {
+	if (strpos((string)$post_key, 'PARAM_') === 0 && !is_scalar($post_value))
+		report_access_emit_bad_request('non_scalar_parameter');
+}
 
 $rep_file = find_custom_file('/reporting/rep'.$rep.'.php');
 
-if ($rep_file)
+if ($rep_file) {
+	// The central gate runs before the report file is included and therefore
+	// before any report parameter, company lookup, source read or aggregation.
+	$scope = report_access_gate_redirect($rep, $_POST, $rep_file);
+	if (empty($scope['allowed']))
+		report_access_emit_denial($scope);
 	require($rep_file);
+}
 else
 	display_error("Cannot find report file '$rep'");
 exit();

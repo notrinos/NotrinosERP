@@ -5,7 +5,13 @@
  * Metadata remains in the authenticated session and files remain outside the
  * web document tree. This is a containment layer for the existing renderer,
  * not a durable report-job or artifact framework.
+ *
+ * DIM-APR-002 binds each grant to the live report authorization scope: the
+ * actor, active company/connection and the current role/area fingerprint. A
+ * permission revocation, role change or company switch invalidates outstanding
+ * grants before the file is served.
  */
+require_once dirname(__FILE__).'/report_access_scope.inc';
 
 define('REPORT_ARTIFACT_TTL_SECONDS', 180);
 define('REPORT_ARTIFACT_MAX_ACTIVE', 5);
@@ -17,8 +23,8 @@ define('REPORT_ARTIFACT_MAX_BYTES', 26214400);
  * @return int
  */
 function report_artifact_actor_id() {
-	return isset($_SESSION['wa_current_user']->user)
-		? (int)$_SESSION['wa_current_user']->user : 0;
+	$principal = report_access_principal();
+	return $principal['actor_id'];
 }
 
 /**
@@ -27,6 +33,9 @@ function report_artifact_actor_id() {
  * @return int
  */
 function report_artifact_company_id() {
+	$principal = report_access_principal();
+	if ($principal['company_id'] >= 0)
+		return $principal['company_id'];
 	return isset($_SESSION['wa_current_user']->company)
 		? (int)$_SESSION['wa_current_user']->company : -1;
 }
@@ -77,36 +86,15 @@ function report_artifact_log($outcome, $report_id, $purpose, $bytes = 0) {
  * Verify that the actor still has the bound report permission in current DB state.
  *
  * @param string $security_area
+ * @param string|int|null $report_id
  * @return bool
  */
-function report_artifact_has_fresh_permission($security_area) {
-	global $security_areas;
-
-	$actor_id = report_artifact_actor_id();
-	if ($actor_id <= 0 || !isset($_SESSION['wa_current_user'])
-		|| !$_SESSION['wa_current_user']->logged_in()) {
-		return false;
-	}
-	if (!is_string($security_area) || $security_area === ''
-		|| !isset($security_areas[$security_area])) {
-		return false;
-	}
-	if (!$_SESSION['wa_current_user']->can_access_page($security_area))
-		return false;
-
-	$user = get_user($actor_id);
-	if (!$user || !empty($user['inactive'])
-		|| (int)$user['role_id'] !== (int)$_SESSION['wa_current_user']->access) {
-		return false;
-	}
-	$role = get_security_role((int)$user['role_id']);
-	if (!$role || !empty($role['inactive']))
-		return false;
-
-	$code = (int)$security_areas[$security_area][0];
-	$section = $code & ~0xff;
-	return in_array((string)$code, array_map('strval', $role['areas']), true)
-		&& in_array((string)$section, array_map('strval', $role['sections']), true);
+function report_artifact_has_fresh_permission($security_area, $report_id = null) {
+	$options = array();
+	if ($report_id !== null)
+		$options['report_id'] = $report_id;
+	$scope = report_access_check($security_area, 'artifact', $options);
+	return !empty($scope['allowed']);
 }
 
 /**
@@ -173,13 +161,20 @@ function report_artifact_register($path, $filename, $mime_type, $report_id, $sec
 	);
 	$purpose = preg_replace('/[^a-z0-9_]/', '', strtolower((string)$purpose));
 
+	$permission_scope = report_access_check($security_area, 'artifact', array('report_id' => $report_id));
 	if ($real_path === false || $real_directory === false
 		|| strpos($real_path, $real_directory . DIRECTORY_SEPARATOR) !== 0
 		|| !isset($allowed_mimes[$mime_type])
 		|| strtolower(pathinfo($real_path, PATHINFO_EXTENSION)) !== $allowed_mimes[$mime_type]
 		|| !in_array($purpose, array('interactive_report_download', 'ajax_report_download'), true)
-		|| !report_artifact_has_fresh_permission($security_area)) {
+		|| empty($permission_scope['allowed'])) {
 		report_artifact_log('registration_denied', $report_id, $purpose);
+		return false;
+	}
+	$permission_fingerprint = $permission_scope['fingerprint'];
+	if ($permission_fingerprint === '') {
+		@unlink($real_path);
+		report_artifact_log('registration_denied_fingerprint', $report_id, $purpose);
 		return false;
 	}
 
@@ -216,6 +211,7 @@ function report_artifact_register($path, $filename, $mime_type, $report_id, $sec
 		'report_id' => preg_replace('/[^a-z0-9_]/', '', strtolower((string)$report_id)),
 		'purpose' => $purpose,
 		'security_area' => $security_area,
+		'permission_fingerprint' => $permission_fingerprint,
 		'filename' => report_artifact_safe_filename($filename, $allowed_mimes[$mime_type]),
 		'mime_type' => $mime_type,
 		'path' => $real_path,
@@ -263,13 +259,19 @@ function report_artifact_consume($token) {
 
 	$grant = $_SESSION['report_artifact_grants'][$token];
 	unset($_SESSION['report_artifact_grants'][$token]);
+	$permission_scope = false;
+	if (is_array($grant) && isset($grant['security_area'], $grant['permission_fingerprint']))
+		$permission_scope = report_access_check($grant['security_area'], 'artifact',
+			array('report_id' => isset($grant['report_id']) ? $grant['report_id'] : null));
 	$valid = is_array($grant)
 		&& isset($grant['actor_id'], $grant['company_id'], $grant['expires_at'], $grant['path'],
-			$grant['bytes'], $grant['sha256'], $grant['security_area'], $grant['purpose'])
+			$grant['bytes'], $grant['sha256'], $grant['security_area'], $grant['purpose'],
+			$grant['permission_fingerprint'])
 		&& (int)$grant['actor_id'] === report_artifact_actor_id()
 		&& (int)$grant['company_id'] === report_artifact_company_id()
 		&& (int)$grant['expires_at'] >= time()
-		&& report_artifact_has_fresh_permission($grant['security_area'])
+		&& is_array($permission_scope) && !empty($permission_scope['allowed'])
+		&& $grant['permission_fingerprint'] === $permission_scope['fingerprint']
 		&& is_file($grant['path'])
 		&& (int)@filesize($grant['path']) === (int)$grant['bytes']
 		&& hash_file('sha256', $grant['path']) === $grant['sha256'];
@@ -287,4 +289,35 @@ function report_artifact_consume($token) {
 
 	report_artifact_log('download_granted', $grant['report_id'], $grant['purpose'], $grant['bytes']);
 	return $grant;
+}
+
+/**
+ * Revoke every outstanding report artifact grant and remove its private file.
+ *
+ * Called when the live principal/company/role fingerprint changes. It never
+ * touches a path outside the private report artifact directory.
+ *
+ * @param string $reason Minimized reason for the security log
+ * @return int Number of grant files removed
+ */
+function report_artifact_revoke_all($reason = 'principal_scope_changed') {
+	$removed = 0;
+	if (!isset($_SESSION['report_artifact_grants']) || !is_array($_SESSION['report_artifact_grants'])) {
+		$_SESSION['report_artifact_grants'] = array();
+		return $removed;
+	}
+	$directory = realpath(report_artifact_private_directory());
+	$install_directory = $directory === false ? false : realpath(dirname($directory));
+	foreach ($_SESSION['report_artifact_grants'] as $token => $grant) {
+		if (!is_array($grant) || !isset($grant['path']) || !is_string($grant['path']))
+			continue;
+		$path = realpath($grant['path']);
+		if ($path !== false && $install_directory !== false
+			&& strpos($path, $install_directory.DIRECTORY_SEPARATOR) === 0
+			&& is_file($path) && @unlink($path))
+			$removed++;
+	}
+	$_SESSION['report_artifact_grants'] = array();
+	report_artifact_log('revoked_all', 'all', $reason, 0);
+	return $removed;
 }

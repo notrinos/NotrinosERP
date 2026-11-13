@@ -10,6 +10,9 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+// DIM-APR-002: the dashboard is a workspace, not an authorization bypass.
+require_once dirname(dirname(__DIR__)).'/reporting/includes/report_access_scope.inc';
+
 define('DA_CUSTOMER', 'orders');
 define('DA_SUPPLIER', 'AP');
 define('DA_INVENTORY', 'stock');
@@ -72,6 +75,19 @@ class Dashboard {
 			$cur_app = $_GET['application'];
 		else
 			$cur_app = user_startup_tab();
+
+		// DIM-APR-002: both request spellings select the same workspace, so both
+		// must pass the same application-access check before any widget runs.
+		if (isset($_SESSION['App']) && is_object($_SESSION['App'])
+			&& method_exists($_SESSION['App'], 'get_application')) {
+			$selected_app = $_SESSION['App']->get_application($cur_app);
+			if (!$selected_app || !$_SESSION['wa_current_user']->check_application_access($selected_app)) {
+				echo "<div class = 'widgets_container'><div class = 'err_msg'>"
+					.htmlspecialchars(_('The selected dashboard is not available to your account.'),
+						ENT_QUOTES, 'UTF-8').'</div></div>';
+				return;
+			}
+		}
 
 		echo "<div class='widgets_container'>";
 		foreach($this->ar_dashboards as $dashboard_id => $name) {
@@ -142,6 +158,25 @@ class Widget {
 			return false;
 		}
 		return true;
+	}
+
+	/**
+	 * Authorize one financial workspace aggregate before the first query.
+	 *
+	 * DIM-APR-002: a Dimension view grant alone is not a financial report grant.
+	 * The required areas are checked against the current role state, and a
+	 * denied/disabled/unknown aggregate renders an explicit state instead of a
+	 * hidden total.
+	 *
+	 * @param string $aggregate Reviewed aggregate identity
+	 * @return bool
+	 */
+	function checkFinancialAggregate($aggregate) {
+		$scope = report_access_aggregate_scope($aggregate);
+		if (!empty($scope['allowed']))
+			return true;
+		report_access_render_aggregate_state($scope);
+		return false;
 	}
 
 	function Start() {
@@ -510,6 +545,10 @@ function dashboard_count_dimensions_type2() {
  * @return string
  */
 function dashboard_dimensions_total_balance_text() {
+	$scope = report_access_aggregate_scope('dimension_balance_sheet_net');
+	if (empty($scope['allowed']))
+		return report_access_aggregate_state_text($scope);
+
 	$begin = date2sql(begin_fiscalyear());
 	$today = date2sql(Today());
 	$sql = "SELECT COALESCE(SUM(t.amount), 0)
@@ -531,6 +570,10 @@ function dashboard_dimensions_total_balance_text() {
  * @return string
  */
 function dashboard_dimensions_total_result_text() {
+	$scope = report_access_aggregate_scope('dimension_company_result');
+	if (empty($scope['allowed']))
+		return report_access_aggregate_state_text($scope);
+
 	$begin = date2sql(begin_fiscalyear());
 	$today = date2sql(Today());
 	$sql = "SELECT COALESCE(SUM(-t.amount), 0)
@@ -925,6 +968,11 @@ function dimension_top($today, $limit=10, $axis=1, $metric='result', $dimension_
 
 /** Render the same signed fiscal P&L rows/coverage in table and chart widgets. */
 function display_dimension_financial_ranking($limit=10, $chart=false) {
+	$scope = report_access_aggregate_scope('dimension_tracking_pl');
+	if (empty($scope['allowed'])) {
+		report_access_render_aggregate_state($scope);
+		return false;
+	}
 	display_note(_('Fiscal YTD posted P&L in company base currency. Revenue is credit-positive; costs are debit-positive; result = revenue - costs. Each axis is a separate view; do not add axes together.'));
 	for ($axis=1; $axis<=2; $axis++) {
 		display_heading(sprintf(_('Category %s - signed P&L result ranking'), $axis));
