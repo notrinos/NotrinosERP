@@ -12,6 +12,7 @@
 require_once __DIR__.'/purchase_document_dimension_db.inc';
 require_once __DIR__.'/../../../dimensions/includes/dimension_resolution.inc';
 require_once __DIR__.'/purchasing_receipt_invoice_classification_db.inc';
+require_once __DIR__.'/purchasing_credit_payment_classification_db.inc';
 include_once($path_to_root.'/purchasing/includes/db/invoice_items_db.inc');
 include_once($path_to_root.'/admin/db/attachments_db.inc');
 
@@ -214,9 +215,11 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 	// before any row is written, so price variance, GRN clearing and expense carry the pair the
 	// order authorized and a later supplier/item default change cannot re-attribute them. An
 	// unsnapshotted source keeps the characterized E10 behavior (plan === null); a refusal leaves
-	// nothing written. Credit notes are not governed here (DIM-PUR-004).
+	// nothing written. DIM-PUR-004: a credit note is the inverse of its source bill line and resolves
+	// from that line's revision (never from a current default); a legacy or standalone credit keeps E10.
 	try {
-		$classification_plan = purchasing_receipt_plan($supp_trans, (int)$trans_type);
+		$classification_plan = (int)$trans_type === ST_SUPPCREDIT
+			? purchasing_credit_plan($supp_trans) : purchasing_receipt_plan($supp_trans, (int)$trans_type);
 	} catch (DimensionFinancialReferenceWriteException $classification_refusal) {
 		display_error($classification_refusal->getMessage());
 		return false;
@@ -279,7 +282,12 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 		move_trans_attachments($trans_type, $trans_no, $invoice_id);
 
 	$supp_trans->trans_no = $invoice_id;
-	purchasing_receipt_record_header($trans_type, $invoice_id, $classification_plan);
+	if ($trans_type == ST_SUPPCREDIT)
+		purchasing_credit_record_header($invoice_id, $classification_plan, array('items' => $invoice_items_total,
+			'tax' => $tax_total, 'discount' => $supp_trans->ov_discount),
+			array('currency' => $supp_trans->currency, 'rate' => $ex_rate));
+	else
+		purchasing_receipt_record_header($trans_type, $invoice_id, $classification_plan);
 
 	$total = 0;
 
@@ -324,7 +332,10 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 		$total += add_gl_trans_supplier($trans_type, $invoice_id, $date_, $entered_gl_code->gl_code, $entered_gl_code->gl_dim, $entered_gl_code->gl_dim2, $entered_gl_code->amount, $supp_trans->supplier_id, '', 0, $memo_);
 
 		$gl_detail_id = add_supp_invoice_gl_item($trans_type, $invoice_id, $entered_gl_code->gl_code, $entered_gl_code->amount, $memo_, $entered_gl_code->gl_dim, $entered_gl_code->gl_dim2);
-		purchasing_receipt_record_gl_line($entered_gl_code, $invoice_id, $gl_index, $gl_detail_id, $classification_plan);
+		if ($trans_type == ST_SUPPCREDIT)
+			purchasing_credit_record_gl_line($entered_gl_code, $invoice_id, $gl_index, $gl_detail_id, $classification_plan);
+		else
+			purchasing_receipt_record_gl_line($entered_gl_code, $invoice_id, $gl_index, $gl_detail_id, $classification_plan);
 
 		// store tax details if the gl account is a tax account
 		if ($trans_type == ST_SUPPCREDIT)
@@ -372,7 +383,10 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 		}
 		if ($trans_type == ST_SUPPCREDIT) {
 			$iv_act = (is_inventory_item($entered_grn->item_code) ? $stock_gl_code['inventory_account'] : ($supplier['purchase_account'] ? $supplier['purchase_account'] : $stock_gl_code['cogs_account']));
-			$total += add_gl_trans_supplier($trans_type, $invoice_id, $date_, $iv_act, $dim, $dim2, $taxfree_line, $supp_trans->supplier_id);
+			// DIM-PUR-004: $taxfree_line is the positive credited value (it is computed before the credit
+			// quantity is negated), so the stock/expense leg of a credit must post its negation. Posted
+			// positive it left a rounding plug of twice the line value on an unclassified row.
+			$total += add_gl_trans_supplier($trans_type, $invoice_id, $date_, $iv_act, $dim, $dim2, -$taxfree_line, $supp_trans->supplier_id);
 		}
 		else {
 			// -------------- if price changed since po received.
@@ -433,7 +447,10 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 		update_purchase_value($entered_grn->item_code, $entered_grn->chg_price * $ex_rate);
 		$grn_detail_id = add_supp_invoice_item($trans_type, $invoice_id, $entered_grn->item_code, $entered_grn->item_description, 0, 	$entered_grn->chg_price, $line_tax/$entered_grn->this_quantity_inv, $entered_grn->this_quantity_inv, $entered_grn->id, $entered_grn->po_detail_item, '',
 			$planned_pair !== null ? $planned_pair[1] : 0, $planned_pair !== null ? $planned_pair[2] : 0);
-		purchasing_receipt_record_line($entered_grn, $trans_type, $invoice_id, $line_no, $grn_detail_id, $classification_plan);
+		if ($trans_type == ST_SUPPCREDIT)
+			purchasing_credit_record_line($entered_grn, $invoice_id, $line_no, $grn_detail_id, $classification_plan);
+		else
+			purchasing_receipt_record_line($entered_grn, $trans_type, $invoice_id, $line_no, $grn_detail_id, $classification_plan);
 	} /* end of GRN postings */
 
 	/*Post a balance post if $total != 0 */

@@ -51,6 +51,8 @@ class supp_trans {
 	var $classification_intents = null;
 	// DIM-PUR-003 classification evidence the approver reviewed; execution must reproduce it.
 	var $classification_receipt_invoice = null;
+	// DIM-PUR-004 evidence that the header pair was reloaded from the recorded revision of a stored document.
+	var $classification_reload = null;
 
 	function __construct($trans_type, $trans_no=0) {
 		$this->trans_type = $trans_type;
@@ -69,6 +71,10 @@ class supp_trans {
 				$this->src_docs = find_src_invoices($this);
 			
 			read_supplier_details_to_trans($this, $this->supplier_id);
+			// DIM-PUR-004: the supplier master cannot prove how a stored document was classified;
+			// a recorded revision supplies the header pair (a legacy document is left unchanged).
+			if (function_exists('purchasing_credit_reload_classification'))
+				purchasing_credit_reload_classification($this);
 		}
 	}
 

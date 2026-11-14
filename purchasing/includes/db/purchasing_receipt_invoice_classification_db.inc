@@ -392,13 +392,22 @@ function purchasing_receipt_resolve_gl_line($gl_line, $enabled)
 /**
  * Resolve the classification of one receipt or bill from its parents, without any approval check.
  *
+ * The optional DIM-PUR-004 hooks let a supplier credit reuse this resolver without changing the
+ * receipt/bill behavior: `types` (accepted types), `parents` (callable returning the ordered parent
+ * descriptors of one bill-shaped line), `flow` (callable naming the flow) and `strict_lines` (a line
+ * with no snapshot of its own is legacy and never borrows the header snapshot).
+ *
  * @param object $doc Order cart being received (ST_SUPPRECEIVE) or supp_trans being billed
  * @param int $trans_type ST_SUPPRECEIVE or ST_SUPPINVOICE
+ * @param array $hooks Optional resolver hooks
  * @return array|null Plan, or null when the document keeps the legacy behavior
  */
-function purchasing_receipt_resolve_plan($doc, $trans_type)
+function purchasing_receipt_resolve_plan($doc, $trans_type, $hooks = array())
 {
-	if (!is_object($doc) || !purchasing_receipt_type_supported($trans_type) || !purchasing_receipt_schema_ready())
+	$accepted_types = isset($hooks['types']) && is_array($hooks['types'])
+		? $hooks['types'] : purchasing_receipt_supported_types();
+	if (!is_object($doc) || !in_array(dimension_source_revision_int($trans_type, 0), $accepted_types, true)
+		|| !purchasing_receipt_schema_ready())
 		return null;
 	$is_receipt = (int)$trans_type === ST_SUPPRECEIVE;
 	if ($is_receipt) {
@@ -433,9 +442,11 @@ function purchasing_receipt_resolve_plan($doc, $trans_type)
 		} else {
 			if (!isset($line->this_quantity_inv) || (float)$line->this_quantity_inv == 0)
 				continue;
-			$chain = purchasing_receipt_read_chain(array(
-				purchasing_receipt_grn_line_parent(isset($line->id) ? $line->id : 0),
-				purchasing_receipt_order_line_parent(isset($line->po_detail_item) ? $line->po_detail_item : 0)));
+			$chain = purchasing_receipt_read_chain(isset($hooks['parents'])
+				? call_user_func($hooks['parents'], $line, $doc)
+				: array(
+					purchasing_receipt_grn_line_parent(isset($line->id) ? $line->id : 0),
+					purchasing_receipt_order_line_parent(isset($line->po_detail_item) ? $line->po_detail_item : 0)));
 		}
 		if ($chain['parent'] !== false) {
 			$header_type = (int)$chain['parent']['trans_type'];
@@ -511,7 +522,8 @@ function purchasing_receipt_resolve_plan($doc, $trans_type)
 		$line = $source_lines[$index];
 		$override = purchasing_receipt_line_override($line);
 		$has_line_snapshot = $entry['snapshot']['state'] === 'available';
-		if (!$has_line_snapshot && $override === null && !count($usable_header[1]) && !count($usable_header[2])) {
+		if (!$has_line_snapshot && $override === null
+			&& (!empty($hooks['strict_lines']) || (!count($usable_header[1]) && !count($usable_header[2])))) {
 			$legacy_lines[] = $index;
 			continue;
 		}
@@ -557,7 +569,8 @@ function purchasing_receipt_resolve_plan($doc, $trans_type)
 		throw new DimensionFinancialReferenceWriteException(implode(' ', $header_pair['errors']));
 	$header_pair = purchasing_receipt_finalize_pair($header_pair, $enabled);
 	return array('contract' => 'purchasing-receipt-invoice-plan/1', 'trans_type' => (int)$trans_type,
-		'flow' => purchasing_receipt_flow($trans_type, $parents, count($entries)), 'effective_date' => $effective,
+		'flow' => isset($hooks['flow']) ? call_user_func($hooks['flow'], $doc, $trans_type, $parents, count($entries))
+			: purchasing_receipt_flow($trans_type, $parents, count($entries)), 'effective_date' => $effective,
 		'enabled_axes' => $enabled, 'parents' => array_values($parents),
 		'header' => array('axes' => $header_pair['axes'], 'policy_version' => (int)$header_pair['policy_version'],
 			'override' => $header_override, 'source' => $header_source['evidence']),

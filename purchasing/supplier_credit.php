@@ -209,6 +209,10 @@ function handle_commit_credit_note() {
 		return;
 
 	$invoice_no = add_supp_invoice($_SESSION['supp_trans']);
+	// DIM-PUR-004: a refused credit (for example a closed source classification) keeps the form and
+	// reports the refusal instead of forwarding to a success page.
+	if (!$invoice_no)
+		return;
 
 	$_SESSION['supp_trans']->clear_items();
 	unset($_SESSION['supp_trans']);

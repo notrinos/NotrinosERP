@@ -194,7 +194,14 @@ function check_inputs() {
 //----------------------------------------------------------------------------------------
 
 function handle_add_payment() {
-	$payment_id = write_supp_payment(0, $_POST['supplier_id'], $_POST['bank_account'], $_POST['DatePaid'], $_POST['ref'], input_num('amount'),	input_num('discount'), $_POST['memo_'], input_num('charge'), input_num('bank_amount', input_num('amount')), $_POST['dimension_id'], $_POST['dimension2_id']);
+	// DIM-PUR-004: a refused settlement classification keeps the form and reports the refusal.
+	try {
+		$payment_id = write_supp_payment(0, $_POST['supplier_id'], $_POST['bank_account'], $_POST['DatePaid'], $_POST['ref'], input_num('amount'),	input_num('discount'), $_POST['memo_'], input_num('charge'), input_num('bank_amount', input_num('amount')), $_POST['dimension_id'], $_POST['dimension2_id']);
+	}
+	catch (DimensionFinancialReferenceWriteException $classification_refusal) {
+		display_error($classification_refusal->getMessage());
+		return false;
+	}
 	new_doc_date($_POST['DatePaid']);
 
 	$_SESSION['alloc']->trans_no = $payment_id;
@@ -217,9 +224,11 @@ function handle_add_payment() {
 if (isset($_POST['ProcessSuppPayment'])) {
 	// First off  check for valid inputs
 	if (check_inputs() == true) {
-		handle_add_payment();
-		end_page();
-		exit;
+		// A refused settlement classification returns false and the form is shown again.
+		if (handle_add_payment() !== false) {
+			end_page();
+			exit;
+		}
 	}
 }
 

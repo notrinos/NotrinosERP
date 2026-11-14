@@ -10,9 +10,15 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+require_once __DIR__.'/purchasing_credit_payment_classification_db.inc';
+
 /** Post a native payment; an approved direct invoice can require exact native-effect custody. */
 function write_supp_payment($trans_no, $supplier_id, $bank_account, $date_, $ref, $supp_amount, $supp_discount, $memo_, $bank_charge=0, $bank_amount=0, $dimension=0, $dimension2=0, $preserve_approved_intent=false) {
 	global $Refs;
+
+	// DIM-PUR-004: the payment's own settlement classification is validated before the first native row.
+	// A company without the companion revision schema posts exactly as before (plan === null).
+	$classification_plan = purchasing_payment_plan($dimension, $dimension2, $date_);
 
 	begin_transaction();
 	$args = array_slice(func_get_args(), 0, 12);
@@ -47,6 +53,14 @@ function write_supp_payment($trans_no, $supplier_id, $bank_account, $date_, $ref
 
 	// Create a supp_trans entry for the supplier payment
 	$payment_id = write_supp_trans(ST_SUPPAYMENT, 0, $supplier_id, $date_, $date_, $ref, '', -$supp_amount, 0, -$supp_discount, '', $rate);
+	try {
+		purchasing_payment_record($payment_id, $classification_plan, array('amount' => $supp_amount,
+			'discount' => $supp_discount, 'charge' => $bank_charge, 'bank_amount' => $bank_amount));
+	}
+	catch (DimensionFinancialReferenceWriteException $exception) {
+		cancel_transaction();
+		throw $exception;
+	}
 
 	// Now debit creditors account with payment + discount
 	$total = 0;
