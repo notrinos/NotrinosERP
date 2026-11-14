@@ -18,6 +18,9 @@
 //
 // To find how various hooks are processed look into respective hook_* functions below.
 //
+// DIM-INT-001: seals the Dimension intent of a document around the document hooks (self-contained).
+require_once dirname(__FILE__).'/../dimensions/includes/dimension_integration_hook_guard.inc';
+
 class hooks {
 	var $module_name; // extension module name.
 	var $path = null;
@@ -366,14 +369,24 @@ function hook_invoke_last($method, &$data, $opts=null) {
 	Invoked before transaction is written to database.
 */
 function hook_db_prewrite(&$cart, $type) {
-	return hook_invoke_all('db_prewrite', $cart, $type);
+	// An extension may not change the Dimension classification the operator and the approval path decided.
+	$seal = dimension_integration_hook_active('db_prewrite') ? dimension_integration_hook_seal($cart) : null;
+	$result = hook_invoke_all('db_prewrite', $cart, $type);
+	if ($seal !== null)
+		dimension_integration_hook_enforce($cart, $seal, 'db_prewrite', $type);
+	return $result;
 }
 
 /*
 	Invoked after transaction has been written to database.
 */
 function hook_db_postwrite(&$cart, $type) {
-	return hook_invoke_all('db_postwrite', $cart, $type);
+	// The document is already written: an altered classification is restored and recorded, never thrown.
+	$seal = dimension_integration_hook_active('db_postwrite') ? dimension_integration_hook_seal($cart) : null;
+	$result = hook_invoke_all('db_postwrite', $cart, $type);
+	if ($seal !== null)
+		dimension_integration_hook_enforce($cart, $seal, 'db_postwrite', $type);
+	return $result;
 }
 /*
 	Invoked before transaction is voided

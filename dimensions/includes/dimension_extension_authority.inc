@@ -51,10 +51,10 @@ function dimension_extension_reviews()
     return array(
         'dummy_extension_store'=>array('digest'=>'b6b682429f04b55d4ba4ac9fbff9aa6d5c5eea129e4b622ae70b2b8a229f8270',
             'storage'=>'none', 'writers'=>'none', 'tables'=>array(), 'session_classes'=>array()),
-        'import_export_customer'=>array('digest'=>'79dc48d9ef34401dcb4b4d0ced207264621dc538474d72c0fb64f129a15c5d83',
+        'import_export_customer'=>array('digest'=>'8cfa31c9860811058b78159f871432f6828f45169b482ad4d15ad9a40d2a0b24',
             'storage'=>'none', 'writers'=>'core: add_customer/update_customer (B02 fenced debtors_master writer); crm contact helpers; raw UPDATE of non-Dimension debtors_master columns only',
             'tables'=>array(), 'session_classes'=>array()),
-        'import_export_item'=>array('digest'=>'5efa1cffaf55b4212b07d3cbfe05853172d29a6452777b4ff71a180280fb778f',
+        'import_export_item'=>array('digest'=>'1f3fc417373b78726ea79b61e3e333698f5b54f7d96618567368a9f6b9b8380c',
             'storage'=>'none', 'writers'=>'core: add_item/update_item, item_codes_entity, item price helpers; dimension_composite_metadata_write for purch_data and bom',
             'tables'=>array(), 'session_classes'=>array()),
         'reftest_a'=>array('digest'=>'dd16c8ef5f21927e01597b92e8e9d3dcd913ed9688fa4340d923a99869e13524',
