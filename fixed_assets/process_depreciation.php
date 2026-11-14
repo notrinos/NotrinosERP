@@ -54,6 +54,11 @@ function handle_submit() {
 	$gl_rows = compute_gl_rows_for_depreciation($item, $_POST['months'], $period);
 	$trans_no = process_fixed_asset_depreciation($_POST['stock_id'], $gl_rows, $_POST['refline'], $_POST['memo_']);
 
+	// DIM-FA-001: a refused classification (closed category, month already depreciated) is reported and
+	// nothing was saved; never forward as if the depreciation had posted.
+	if ($trans_no === false)
+		return;
+
 	meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no);
 }
 
@@ -101,11 +106,20 @@ function show_gl_rows() {
 	$period = get_company_pref('depreciation_period'); 
 	$gl_rows = compute_gl_rows_for_depreciation($item, $_POST['months'], $period);
 
-	foreach($gl_rows as $myrow) {
+	// DIM-FA-001: show the responsibility each month will post on (read-only plan; nothing is written).
+	$plan = fixed_asset_depreciation_plan($_POST['stock_id'], $gl_rows);
+	if (!$plan['ok'])
+		display_error(implode(' ', $plan['errors']));
+	elseif (!$plan['legacy'] && $plan['freeze'] !== null)
+		display_note(_('This asset has no recorded responsibility: its item default categories will be frozen as its responsibility at this first depreciation.'));
+
+	foreach($gl_rows as $index => $myrow) {
+		$pair_text = $plan['ok'] && !$plan['legacy'] && isset($plan['rows'][$index])
+			? ' ['.$plan['rows'][$index]['pair'][1].' / '.$plan['rows'][$index]['pair'][2].']' : '';
 		alt_table_row_color($k);
 		label_cell($item['stock_id']);
 		label_cell($myrow['date']);
-		label_cell($item['cogs_account'].' '.get_gl_account_name($item['cogs_account']));
+		label_cell($item['cogs_account'].' '.get_gl_account_name($item['cogs_account']).$pair_text);
 		amount_cell($myrow['value']);
 		label_cell('');
 		end_row();
@@ -113,7 +127,7 @@ function show_gl_rows() {
 		alt_table_row_color($k);
 		label_cell($item['stock_id']);
 		label_cell($myrow['date']);
-		label_cell($item['adjustment_account'].' '.get_gl_account_name($item['adjustment_account']));
+		label_cell($item['adjustment_account'].' '.get_gl_account_name($item['adjustment_account']).$pair_text);
 		label_cell('');
 		amount_cell($myrow['value']);
 		end_row();

@@ -9,7 +9,23 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__.'/db/fixed_asset_responsibility_db.inc';
 
+/**
+ * Post the depreciation of one fixed asset.
+ *
+ * DIM-FA-001: with the accepted companion schema every month carries the asset responsibility in
+ * force on its own date on BOTH legs (the expense and the accumulated-depreciation contra account),
+ * a month that is already depreciated is refused, and the journal is snapshotted once in the same
+ * transaction. Without the schema the legacy legs (contra leg on the item default, expense leg on
+ * 0/0) are posted exactly as before. A refused run changes nothing and returns false.
+ *
+ * @param string $stock_id Fixed asset code
+ * @param array $gl_rows compute_gl_rows_for_depreciation() rows
+ * @param mixed $refline Reference line
+ * @param string $memo_ Journal memo
+ * @return int|false Journal number, or false when the classification was refused
+ */
 function process_fixed_asset_depreciation($stock_id, $gl_rows, $refline, $memo_) {
 	global $Refs;
 
@@ -17,6 +33,18 @@ function process_fixed_asset_depreciation($stock_id, $gl_rows, $refline, $memo_)
 	$old_cost = $row['material_cost'];
 
 	begin_transaction();
+
+	try {
+	$plan = fixed_asset_depreciation_plan($stock_id, $gl_rows);
+	if (!$plan['ok']) {
+		cancel_transaction();
+		display_error(implode(' ', $plan['errors']));
+		return false;
+	}
+	if ($plan['freeze'] !== null) {
+		$asset = fixed_asset_responsibility_asset($stock_id);
+		fixed_asset_responsibility_freeze_default($asset['stock_id'], $plan['freeze']);
+	}
 
 	$date_ = Today();
 	if (!is_date_in_fiscalyear($date_))
@@ -30,11 +58,20 @@ function process_fixed_asset_depreciation($stock_id, $gl_rows, $refline, $memo_)
 	$cart->reference = $Refs->get_next(ST_JOURNAL, $refline, $cart->tran_date, $date_);
 
 	$value_of_change = 0;
-	foreach ($gl_rows as $row) {
+	foreach ($gl_rows as $index => $row) {
 		$value_of_change += round2($row['value'], user_price_dec());
 
-		$cart->add_gl_item($stock_gl_code['adjustment_account'], $stock_gl_code['dimension_id'], $stock_gl_code['dimension2_id'], -$row['value'], '', null, null, $row['date']);
-		$cart->add_gl_item($stock_gl_code['cogs_account'], 0, 0, $row['value'], '', null, null, $row['date']);
+		if ($plan['legacy']) {
+			$cart->add_gl_item($stock_gl_code['adjustment_account'], $stock_gl_code['dimension_id'], $stock_gl_code['dimension2_id'], -$row['value'], '', null, null, $row['date']);
+			$cart->add_gl_item($stock_gl_code['cogs_account'], 0, 0, $row['value'], '', null, null, $row['date']);
+		}
+		else {
+			// DIM-FA-001: both legs carry the responsibility in force on the month; the expense leg is no
+			// longer posted on 0/0 and the contra leg no longer follows the current item default.
+			$pair = $plan['rows'][$index]['pair'];
+			$cart->add_gl_item($stock_gl_code['adjustment_account'], $pair[1], $pair[2], -$row['value'], '', null, null, $row['date']);
+			$cart->add_gl_item($stock_gl_code['cogs_account'], $pair[1], $pair[2], $row['value'], '', null, null, $row['date']);
+		}
 	}
 
 	$new_cost = $old_cost - $value_of_change;
@@ -45,6 +82,12 @@ function process_fixed_asset_depreciation($stock_id, $gl_rows, $refline, $memo_)
 		$cart->memo_ = $memo_;
 
 	$trans_no = write_journal_entries($cart);
+	if ($trans_no === false) {
+		cancel_transaction();
+		return false;
+	}
+
+	fixed_asset_depreciation_record($stock_id, $trans_no, $cart->tran_date, $plan);
 
 	$sql = "UPDATE ".TB_PREF."stock_master SET depreciation_date='".date2sql($cart->tran_date)."', material_cost=".db_escape($new_cost)." WHERE stock_id=".db_escape($stock_id);
 	db_query($sql, 'The depreciation start date could not be updated');
@@ -52,6 +95,12 @@ function process_fixed_asset_depreciation($stock_id, $gl_rows, $refline, $memo_)
 	commit_transaction();
 
 	return $trans_no;
+	}
+	catch (DimensionFinancialReferenceWriteException $exception) {
+		cancel_transaction();
+		display_error($exception->getMessage());
+		return false;
+	}
 }
 
 function get_fixed_asset_move($stock_id, $tran_type) {

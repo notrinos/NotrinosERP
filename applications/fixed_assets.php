@@ -19,6 +19,7 @@ class AssetsApp extends application {
 		$this->add_lapp_function(0, _('Fixed Assets &Disposal'), 'inventory/adjustments.php?NewAdjustment=1&FixedAsset=1', 'SA_ASSETDISPOSAL', MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('Fixed Assets &Sale'), 'sales/sales_order_entry.php?NewInvoice=0&FixedAsset=1', 'SA_SALESINVOICE', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Process &Depreciation'), 'fixed_assets/process_depreciation.php', 'SA_DEPRECIATION', MENU_MAINTENANCE);
+		$this->add_rapp_function(0, _('Asset &Responsibility'), 'fixed_assets/asset_responsibility.php', 'SA_DEPRECIATION', MENU_MAINTENANCE);
 	// TODO: needs work
 		//$this->add_rapp_function(0, _('Fixed Assets &Revaluation'),
 	//		'inventory/cost_update.php?FixedAsset=1', 'SA_STANDARDCOST', MENU_MAINTENANCE);

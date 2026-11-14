@@ -41,6 +41,12 @@ if (!defined('INVENTORY_CLASSIFICATION_WARRANTY_ANCHOR'))
 	define('INVENTORY_CLASSIFICATION_WARRANTY_ANCHOR', 9054);
 if (!defined('INVENTORY_CLASSIFICATION_CONSIGNMENT_ANCHOR'))
 	define('INVENTORY_CLASSIFICATION_CONSIGNMENT_ANCHOR', 9055);
+// DIM-FA-001: revision anchors of the effective-dated asset responsibility and of the depreciation
+// register of one fixed asset (one identity per asset, one revision per responsibility/posting).
+if (!defined('INVENTORY_CLASSIFICATION_ASSET_RESPONSIBILITY_ANCHOR'))
+	define('INVENTORY_CLASSIFICATION_ASSET_RESPONSIBILITY_ANCHOR', 9056);
+if (!defined('INVENTORY_CLASSIFICATION_ASSET_DEPRECIATION_ANCHOR'))
+	define('INVENTORY_CLASSIFICATION_ASSET_DEPRECIATION_ANCHOR', 9057);
 
 /**
  * Transaction types that this adapter classifies.
@@ -56,7 +62,8 @@ function inventory_classification_supported_types()
 {
 	return array(ST_INVADJUST, ST_COSTUPDATE, ST_LOCTRANSFER, ST_JOURNAL, ST_WH_SCRAP, ST_WH_CYCLE_COUNT,
 		INVENTORY_CLASSIFICATION_WARRANTY_ANCHOR, INVENTORY_CLASSIFICATION_CONSIGNMENT_ANCHOR,
-		ST_WORKORDER, ST_MANUISSUE, ST_MANURECEIVE);
+		ST_WORKORDER, ST_MANUISSUE, ST_MANURECEIVE, INVENTORY_CLASSIFICATION_ASSET_RESPONSIBILITY_ANCHOR,
+		INVENTORY_CLASSIFICATION_ASSET_DEPRECIATION_ANCHOR);
 }
 
 /**
@@ -143,22 +150,40 @@ function inventory_classification_amount_text($amount)
 /**
  * Read one item's configured default pair. The caller decides whether this source is eligible.
  *
+ * DIM-FA-001: for a fixed asset and an event date, the asset's recorded responsibility in force on that
+ * date takes the place of the item default (still the weakest source, so an explicit decision and a
+ * preserved original pair outrank it). The result then carries `responsibility_revision`.
+ *
  * @param mixed $stock_id Item code
- * @return array axis => configured identity
+ * @param string|null $event_date Event date in the display format, or null for the plain item default
+ * @return array axis => configured identity (plus optional `responsibility_revision`)
  */
-function inventory_classification_item_defaults($stock_id)
+function inventory_classification_item_defaults($stock_id, $event_date = null)
 {
 	if (!is_string($stock_id) || $stock_id === '' || strlen($stock_id) > 20)
 		return array(1 => 0, 2 => 0);
-	$rows = db_query('SELECT dimension_id,dimension2_id FROM '.TB_PREF.'stock_master WHERE stock_id='
+	$rows = db_query('SELECT dimension_id,dimension2_id,mb_flag FROM '.TB_PREF.'stock_master WHERE stock_id='
 		.db_escape($stock_id));
 	if (!$rows)
 		throw new DimensionFinancialReferenceWriteException(
 			_('The inventory item classification defaults cannot be read.'));
 	$row = db_fetch_assoc($rows);
-	return $row ? array(
+	$defaults = $row ? array(
 		1 => (isset($row['dimension_id']) ? (int)$row['dimension_id'] : 0),
 		2 => (isset($row['dimension2_id']) ? (int)$row['dimension2_id'] : 0)) : array(1 => 0, 2 => 0);
+	if ($row && $event_date !== null && isset($row['mb_flag']) && $row['mb_flag'] === 'F'
+		&& inventory_classification_schema_ready()) {
+		require_once __DIR__.'/../../../fixed_assets/includes/db/fixed_asset_responsibility_db.inc';
+		$iso = date2sql($event_date);
+		if (dimension_source_revision_date($iso) !== false) {
+			$responsibility = fixed_asset_responsibility_at($stock_id, $iso);
+			if ($responsibility !== null) {
+				$defaults = array(1 => $responsibility[1], 2 => $responsibility[2],
+					'responsibility_revision' => $responsibility['revision_id']);
+			}
+		}
+	}
+	return $defaults;
 }
 
 /**
@@ -302,7 +327,8 @@ function inventory_classification_resolve_entry($trans_type, $header, $line, $ne
 	}
 	$posts = inventory_classification_posts_cost($trans_type);
 	$item = $line !== null && is_object($line) && $posts
-		? inventory_classification_item_defaults(isset($line->stock_id) ? $line->stock_id : '')
+		? inventory_classification_item_defaults(isset($line->stock_id) ? $line->stock_id : '',
+			isset($context['event_date']) ? $context['event_date'] : null)
 		: array(1 => 0, 2 => 0);
 	$sources = array(1 => array(), 2 => array());
 	foreach (array(1, 2) as $axis) {
@@ -387,6 +413,12 @@ function inventory_classification_resolve_entry($trans_type, $header, $line, $ne
 		$resolution['stock_id'] = (string)$line->stock_id;
 	if (isset($context['evidence']) && is_array($context['evidence']))
 		$resolution['evidence'] = $context['evidence'];
+	if (isset($item['responsibility_revision']) && $new_line && $posts) {
+		// DIM-FA-001: the weak default of this fixed asset event is its recorded responsibility.
+		if (!isset($resolution['evidence']))
+			$resolution['evidence'] = array();
+		$resolution['evidence']['asset_responsibility_revision'] = (int)$item['responsibility_revision'];
+	}
 	$result['ok'] = true;
 	$result['pair'] = $pair;
 	$result['axes'] = $pair['axes'];
@@ -593,7 +625,8 @@ function inventory_classification_capture($trans_type, $header, $items, $date_, 
 	if (dimension_source_revision_date($effective) === false)
 		throw new DimensionFinancialReferenceWriteException(_('The inventory source date is invalid.'));
 	$context = array('evidence' => is_array($evidence) ? $evidence : array(),
-		'original_by_line' => is_array($original_by_line) ? $original_by_line : array());
+		'original_by_line' => is_array($original_by_line) ? $original_by_line : array(),
+		'event_date' => $date_);
 	$sealed = isset($header->classification_draft_revisions) && is_array($header->classification_draft_revisions)
 		? $header->classification_draft_revisions : array();
 	$sealed_matches = !$draft && isset($sealed['document_key']) && $sealed['document_key'] === $draft_key;
