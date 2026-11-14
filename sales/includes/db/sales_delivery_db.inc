@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__.'/../../../dimensions/includes/dimension_resolution.inc';
+require_once __DIR__.'/sales_fulfillment_classification_db.inc';
 //-----------------------------------------------------------------------------
 // insert/update sales delivery
 //
@@ -34,6 +35,11 @@ function write_sales_delivery(&$delivery,$bo_policy) {
 // mark sales order for concurrency conflicts check
 	update_sales_order_version($delivery->src_docs);
 
+	// DIM-SAL-002: resolve every delivered line from its order-line snapshot before any row is
+	// written. A legacy order (no snapshot) keeps the characterized E08 behavior (plan === null).
+	$classification_plan = sales_fulfillment_plan($delivery, ST_CUSTDELIVERY);
+	sales_fulfillment_apply_header($delivery, $classification_plan);
+
 	$tax_total = 0;
 	$taxes = $delivery->get_taxes(); // all taxes with freight_tax
 
@@ -51,6 +57,7 @@ function write_sales_delivery(&$delivery,$bo_policy) {
 		$delivery->sales_type, $delivery->order_no,
 		$delivery->ship_via, $delivery->due_date, 0, 0, $delivery->dimension_id, 
 		$delivery->dimension2_id, $delivery->payment, $delivery->tax_included, $delivery->prep_amount);
+	sales_fulfillment_record_header($delivery, ST_CUSTDELIVERY, $delivery_no, $classification_plan);
 
 	if ($trans_no == 0)
 		$delivery->trans_no = array($delivery_no=>0);
@@ -86,11 +93,13 @@ function write_sales_delivery(&$delivery,$bo_policy) {
 		$delivery_line->standard_cost = get_unit_cost($delivery_line->stock_id);
 
 		/* add delivery details for all lines */
-		write_customer_trans_detail_item(ST_CUSTDELIVERY, $delivery_no, $delivery_line->stock_id,
+		$delivery_detail_id = write_customer_trans_detail_item(ST_CUSTDELIVERY, $delivery_no, $delivery_line->stock_id,
 			$delivery_line->item_description, $delivery_line->qty_dispatched,
 			$delivery_line->line_price(), $qty ? $line_tax/$qty : 0,
 			$delivery_line->discount_percent, $delivery_line->standard_cost, $delivery_line->src_id,
 			$trans_no ? $delivery_line->id : 0);
+		sales_fulfillment_record_line($delivery, ST_CUSTDELIVERY, $delivery_no, $line_no,
+			$delivery_detail_id, $classification_plan);
 
 	// Now update sales_order_details for the quantity delivered
 		if ($delivery_line->qty_old != $delivery_line->qty_dispatched)
@@ -113,15 +122,22 @@ function write_sales_delivery(&$delivery,$bo_policy) {
 
 			$stock_gl_code = get_stock_gl_code($delivery_line->stock_id);
 
-			// DIM-FND-005: one shared resolver. An unsnapshotted document keeps the
-			// characterized E08 equality/default adapter; an explicit intent (including
-			// Explicitly Unassigned) is honored and never falls through to a default.
-			$dim = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
-				$delivery->dimension_id, $customer['dimension_id'], $stock_gl_code['dimension_id'], 1,
-				dimension_resolution_document_intent($delivery, 1)));
-			$dim2 = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
-				$delivery->dimension2_id, $customer['dimension2_id'], $stock_gl_code['dimension2_id'], 2,
-				dimension_resolution_document_intent($delivery, 2)));
+			// DIM-SAL-002: a snapshotted source line posts with its immutable pair; revenue and COGS
+			// of one delivered line can therefore never diverge. DIM-FND-005 keeps the characterized
+			// E08 equality/default adapter only for a legacy (unsnapshotted) line, and honors an
+			// explicit intent (including Explicitly Unassigned) without falling through to a default.
+			$planned_pair = sales_fulfillment_line_pair($classification_plan, $line_no);
+			if ($planned_pair !== null) {
+				$dim = $planned_pair[1];
+				$dim2 = $planned_pair[2];
+			} else {
+				$dim = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
+					$delivery->dimension_id, $customer['dimension_id'], $stock_gl_code['dimension_id'], 1,
+					dimension_resolution_document_intent($delivery, 1)));
+				$dim2 = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
+					$delivery->dimension2_id, $customer['dimension2_id'], $stock_gl_code['dimension2_id'], 2,
+					dimension_resolution_document_intent($delivery, 2)));
+			}
 			if ($delivery->is_prepaid()) {
 				$sales_account = ($branch_data['sales_account'] != '' ? $branch_data['sales_account'] : $stock_gl_code['sales_account']);
 

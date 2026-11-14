@@ -338,8 +338,21 @@ if (isset($_POST['process_invoice']) && check_data()) {
 	if ($newinvoice) 
 		new_doc_date($_SESSION['Items']->document_date);
 
-	// --- Approval workflow check (new invoices only) ---
+	// DIM-SAL-002: the classification an approver reviews is the one the invoice will post with.
+	$fulfillment_refused = false;
 	if ($newinvoice) {
+		try {
+			$_SESSION['Items']->classification_fulfillment = sales_fulfillment_approval_evidence(
+				$_SESSION['Items'], ST_SALESINVOICE);
+		}
+		catch (DimensionFinancialReferenceWriteException $exception) {
+			$fulfillment_refused = true;
+			display_error($exception->getMessage());
+		}
+	}
+
+	// --- Approval workflow check (new invoices only) ---
+	if ($newinvoice && !$fulfillment_refused) {
 		$draft_data = collect_sales_cart_data($_SESSION['Items']);
 		$amount = $_SESSION['Items']->get_items_total();
 		$approval_result = approval_check_before_save(ST_SALESINVOICE, $draft_data, $amount, array(

@@ -21,6 +21,7 @@ iv)  a delivery note
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');
 include_once($path_to_root.'/taxes/tax_calc.inc');
 include_once($path_to_root.'/sales/includes/db/sales_classification_db.inc');
+include_once($path_to_root.'/sales/includes/db/sales_fulfillment_classification_db.inc');
 
 class Cart {
 	public $trans_type; // invoice, order, quotation, delivery note ...
@@ -79,6 +80,8 @@ class Cart {
 	public $classification_revision_id = 0;
 	public $classification_lineage_state = 'legacy_unspecified';
 	public $classification_source = null;
+	// DIM-SAL-002: delivery/invoice classification reviewed for approval (null when not governed).
+	public $classification_fulfillment = null;
 	public $payment;
 	public $payment_terms = array('cash_sale' => false, 'days_before_due' => 0); // cached payment terms
 	public $credit;
@@ -198,9 +201,18 @@ class Cart {
 		
 		if ($type == ST_CUSTDELIVERY) {
 			$this->order_no = key($this->trans_no);
-			$cust = debtors_master_entity::find($this->customer_id);
-			$this->dimension_id = $cust['dimension_id'];
-			$this->dimension2_id = $cust['dimension2_id'];
+			// DIM-SAL-002: a snapshotted order hands its saved header pair to the delivery; only a
+			// legacy order falls back to the customer's current defaults.
+			$source_header = sales_fulfillment_source_header_values($this);
+			if ($source_header !== false) {
+				$this->dimension_id = $source_header[1];
+				$this->dimension2_id = $source_header[2];
+			}
+			else {
+				$cust = debtors_master_entity::find($this->customer_id);
+				$this->dimension_id = $cust['dimension_id'];
+				$this->dimension2_id = $cust['dimension2_id'];
+			}
 		}
 		if ($type == ST_SALESINVOICE)
 			$this->due_date = get_invoice_duedate($this->payment, $this->document_date);

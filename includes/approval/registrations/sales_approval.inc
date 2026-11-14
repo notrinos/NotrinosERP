@@ -183,6 +183,8 @@ function restore_sales_cart_from_data($data)
 	$cart->classification_revision_id = isset($data['classification_revision_id']) ? (int)$data['classification_revision_id'] : 0;
 	$cart->classification_lineage_state = isset($data['classification_lineage_state']) ? $data['classification_lineage_state'] : 'legacy_unspecified';
 	$cart->classification_source = isset($data['classification_source']) ? $data['classification_source'] : null;
+	$cart->classification_fulfillment = isset($data['classification_fulfillment']) && is_array($data['classification_fulfillment'])
+		? $data['classification_fulfillment'] : null;
 	$cart->pos               = isset($data['pos']) ? $data['pos'] : null;
 	$cart->cash_account      = isset($data['cash_account']) ? $data['cash_account'] : '';
 	$cart->account_name      = isset($data['account_name']) ? $data['account_name'] : '';

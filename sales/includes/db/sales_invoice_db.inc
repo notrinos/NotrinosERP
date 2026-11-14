@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__.'/../../../dimensions/includes/dimension_resolution.inc';
+require_once __DIR__.'/sales_fulfillment_classification_db.inc';
 /*
 	Add or update Sales Invoice
 */
@@ -41,6 +42,13 @@ function write_sales_invoice(&$invoice) {
 	// offer price values without freight costs
 	$items_total = $invoice->get_items_total_dispatch();
 	$freight_tax = $invoice->get_shipping_tax();
+
+	// DIM-SAL-002: resolve every invoiced line from its delivery-line (or, for a prepayment
+	// invoice, order-line) snapshot before any row is written. Revenue therefore carries the pair
+	// that the delivery already used for COGS; this writer posts no COGS of its own. A legacy
+	// parent (no snapshot) keeps the characterized E08 behavior (plan === null).
+	$classification_plan = sales_fulfillment_plan($invoice, ST_SALESINVOICE);
+	sales_fulfillment_apply_header($invoice, $classification_plan);
 
 	if (!$invoice->is_prepaid())
 		update_customer_trans_version(get_parent_type(ST_SALESINVOICE), $invoice->src_docs);
@@ -100,6 +108,7 @@ function write_sales_invoice(&$invoice) {
 		$invoice->due_date, 0, 0, $invoice->dimension_id, 
 		$invoice->dimension2_id, $invoice->payment, $invoice->tax_included, $invoice->prep_amount); 
     $key=array('type'=>ST_SALESINVOICE,'trans_no'=>$invoice_no,'debtor_no'=>$invoice->customer_id);
+	sales_fulfillment_record_header($invoice, ST_SALESINVOICE, $invoice_no, $classification_plan);
     $current=dimension_financial_reference_row('debtor_trans',$key);
     if(!$current || dimension_master_payload_references($current['custom_data'])===false)
         dimension_financial_reference_failure();
@@ -128,11 +137,13 @@ function write_sales_invoice(&$invoice) {
 			$invoice_line->price * $qty, 0, $invoice->tax_included,
 			$invoice->tax_group_array) - $line_taxfree_price;
 
-		write_customer_trans_detail_item(ST_SALESINVOICE, $invoice_no, $invoice_line->stock_id,
+		$invoice_detail_id = write_customer_trans_detail_item(ST_SALESINVOICE, $invoice_no, $invoice_line->stock_id,
 			$invoice_line->item_description, $invoice_line->qty_dispatched,
 			$invoice_line->line_price(), $qty ? $line_tax/$qty : 0, $invoice_line->discount_percent,
 			$invoice_line->standard_cost, $invoice_line->src_id,
 			$trans_no ? $invoice_line->id : 0);
+		sales_fulfillment_record_line($invoice, ST_SALESINVOICE, $invoice_no, $line_no,
+			$invoice_detail_id, $classification_plan);
 
 		// Update delivery items for the quantity invoiced
 		if ($invoice_line->qty_old != $invoice_line->qty_dispatched) {
@@ -151,15 +162,22 @@ function write_sales_invoice(&$invoice) {
 				// else take the Item Sales Account
 				if (!$invoice->is_prepaid())
 					$sales_account = ($branch_data['sales_account'] != '' ? $branch_data['sales_account'] : $stock_gl_code['sales_account']);
-				// DIM-FND-005: one shared resolver. An unsnapshotted document keeps the
-				// characterized E08 equality/default adapter; an explicit intent (including
-				// Explicitly Unassigned) is honored and never falls through to a default.
-				$dim = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
-					$invoice->dimension_id, $customer['dimension_id'], $stock_gl_code['dimension_id'], 1,
-					dimension_resolution_document_intent($invoice, 1)));
-				$dim2 = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
-					$invoice->dimension2_id, $customer['dimension2_id'], $stock_gl_code['dimension2_id'], 2,
-					dimension_resolution_document_intent($invoice, 2)));
+				// DIM-SAL-002: a snapshotted source line posts revenue and discount with its immutable
+				// pair. DIM-FND-005 keeps the characterized E08 equality/default adapter only for a
+				// legacy (unsnapshotted) line; an explicit intent (including Explicitly Unassigned)
+				// is honored and never falls through to a default.
+				$planned_pair = sales_fulfillment_line_pair($classification_plan, $line_no);
+				if ($planned_pair !== null) {
+					$dim = $planned_pair[1];
+					$dim2 = $planned_pair[2];
+				} else {
+					$dim = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
+						$invoice->dimension_id, $customer['dimension_id'], $stock_gl_code['dimension_id'], 1,
+						dimension_resolution_document_intent($invoice, 1)));
+					$dim2 = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
+						$invoice->dimension2_id, $customer['dimension2_id'], $stock_gl_code['dimension2_id'], 2,
+						dimension_resolution_document_intent($invoice, 2)));
+				}
 				$total += add_gl_trans_customer(ST_SALESINVOICE, $invoice_no, $date_, $sales_account, $dim, $dim2,
 					-$line_taxfree_price*$prepaid_factor,
 					$invoice->customer_id, 'The sales price GL posting could not be inserted');

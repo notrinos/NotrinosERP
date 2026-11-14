@@ -291,6 +291,7 @@ function collect_sales_cart_data($cart, $legacy = false)
 		'classification_revision_id' => isset($cart->classification_revision_id) ? (int)$cart->classification_revision_id : 0,
 		'classification_lineage_state' => isset($cart->classification_lineage_state) ? $cart->classification_lineage_state : 'legacy_unspecified',
 		'classification_source' => isset($cart->classification_source) ? $cart->classification_source : null,
+		'classification_fulfillment' => isset($cart->classification_fulfillment) ? $cart->classification_fulfillment : null,
 		'pos'                => isset($cart->pos) ? $cart->pos : null,
 		'cash_account'       => isset($cart->cash_account) ? $cart->cash_account : '',
 		'account_name'       => isset($cart->account_name) ? $cart->account_name : '',
