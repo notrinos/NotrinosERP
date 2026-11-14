@@ -283,14 +283,21 @@ function sales_fulfillment_flow($doc, $trans_type, $parents)
 /**
  * Resolve the classification of one delivery/invoice from its parents, without any approval check.
  *
+ * The optional hooks let a sibling inverse adapter (DIM-SAL-003 credit notes) reuse exactly this
+ * resolution order with its own parent lookup: `types` (int[] replacing the supported types),
+ * `parent` (callable(line, prepaid) returning a parent descriptor or false) and `flow`
+ * (callable(doc, trans_type, parents) returning the flow name).
+ *
  * @param object $doc Sales cart being written
- * @param int $trans_type ST_CUSTDELIVERY or ST_SALESINVOICE
+ * @param int $trans_type ST_CUSTDELIVERY or ST_SALESINVOICE (or a hook-declared type)
+ * @param array $hooks Optional types, parent and flow hooks
  * @return array|null Plan, or null when the document keeps the legacy behavior
  */
-function sales_fulfillment_resolve_plan($doc, $trans_type)
+function sales_fulfillment_resolve_plan($doc, $trans_type, $hooks = array())
 {
-	if (!is_object($doc) || !sales_fulfillment_type_supported($trans_type)
-		|| !sales_fulfillment_schema_ready())
+	$type_allowed = isset($hooks['types']) && is_array($hooks['types'])
+		? in_array((int)$trans_type, $hooks['types'], true) : sales_fulfillment_type_supported($trans_type);
+	if (!is_object($doc) || !$type_allowed || !sales_fulfillment_schema_ready())
 		return null;
 	if (!isset($doc->line_items) || !is_array($doc->line_items))
 		throw new DimensionFinancialReferenceWriteException(
@@ -309,8 +316,11 @@ function sales_fulfillment_resolve_plan($doc, $trans_type)
 			throw new DimensionFinancialReferenceWriteException(_('A Sales classification line is invalid.'));
 		if ((float)$line->qty_dispatched == 0)
 			continue;
-		$parent = isset($line->src_id) ? sales_fulfillment_parent_line($trans_type, $line->src_id, $prepaid)
-			: false;
+		if (isset($hooks['parent']))
+			$parent = call_user_func($hooks['parent'], $line, $prepaid);
+		else
+			$parent = isset($line->src_id) ? sales_fulfillment_parent_line($trans_type, $line->src_id, $prepaid)
+				: false;
 		$snapshot = array('state' => 'none');
 		if ($parent !== false) {
 			$snapshot = sales_fulfillment_read_snapshot($parent['trans_type'], $parent['document_key'],
@@ -416,7 +426,8 @@ function sales_fulfillment_resolve_plan($doc, $trans_type)
 		throw new DimensionFinancialReferenceWriteException(implode(' ', $header_pair['errors']));
 	$header_pair = sales_fulfillment_finalize_pair($header_pair, $enabled);
 	return array('contract' => 'sales-fulfillment-plan/1', 'trans_type' => (int)$trans_type,
-		'flow' => sales_fulfillment_flow($doc, $trans_type, $parents), 'effective_date' => $effective,
+		'flow' => isset($hooks['flow']) ? (string)call_user_func($hooks['flow'], $doc, $trans_type, $parents)
+				: sales_fulfillment_flow($doc, $trans_type, $parents), 'effective_date' => $effective,
 		'enabled_axes' => $enabled, 'parents' => array_values($parents),
 		'header' => array('axes' => $header_pair['axes'], 'policy_version' => (int)$header_pair['policy_version'],
 			'override' => $header_override, 'source' => $header_source['evidence']),

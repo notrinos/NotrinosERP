@@ -227,14 +227,24 @@ if (get_post('AddPaymentItem') && can_process()) {
 
 	$new_pmt = !$_SESSION['alloc']->trans_no;
 	// To support Edit feature
-	$payment_no = write_customer_payment($_SESSION['alloc']->trans_no, $_POST['customer_id'], $_POST['BranchID'], $_POST['bank_account'], $_POST['DateBanked'], $_POST['ref'], input_num('amount'), input_num('discount'), $_POST['memo_'], input_num('charge'), input_num('bank_amount', input_num('amount')), $_POST['dimension_id'], $_POST['dimension2_id']);
+	try {
+		$payment_no = write_customer_payment($_SESSION['alloc']->trans_no, $_POST['customer_id'], $_POST['BranchID'], $_POST['bank_account'], $_POST['DateBanked'], $_POST['ref'], input_num('amount'), input_num('discount'), $_POST['memo_'], input_num('charge'), input_num('bank_amount', input_num('amount')), $_POST['dimension_id'], $_POST['dimension2_id']);
+	}
+	catch (DimensionFinancialReferenceWriteException $exception) {
+		// DIM-SAL-003: a refused classification saves nothing and keeps the page for correction.
+		cancel_transaction();
+		display_error($exception->getMessage());
+		$payment_no = false;
+	}
 
-	$_SESSION['alloc']->trans_no = $payment_no;
-	$_SESSION['alloc']->date_ = $_POST['DateBanked'];
-	$_SESSION['alloc']->write();
+	if ($payment_no !== false) {
+		$_SESSION['alloc']->trans_no = $payment_no;
+		$_SESSION['alloc']->date_ = $_POST['DateBanked'];
+		$_SESSION['alloc']->write();
 
-	unset($_SESSION['alloc']);
-	meta_forward($_SERVER['PHP_SELF'], $new_pmt ? 'AddedID='.$payment_no : 'UpdatedID='.$payment_no);
+		unset($_SESSION['alloc']);
+		meta_forward($_SERVER['PHP_SELF'], $new_pmt ? 'AddedID='.$payment_no : 'UpdatedID='.$payment_no);
+	}
 }
 
 //----------------------------------------------------------------------------------------------

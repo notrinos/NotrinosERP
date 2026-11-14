@@ -502,6 +502,24 @@ function execute_approved_sales_rma($draft_data, $reserved_trans_no, $draft_id)
 	if (!$rma_id)
 		return false;
 
+	// DIM-SAL-003: the source classification an approver reviewed must still be what a credit would
+	// reverse; an amended source is refused instead of authorizing an unreviewed return.
+	if (isset($draft_data['classification_sources']) && is_array($draft_data['classification_sources'])) {
+		$rma = get_sales_rma($rma_id);
+		$lines = array();
+		$lines_result = get_rma_lines($rma_id);
+		while ($line = db_fetch($lines_result))
+			$lines[] = $line;
+		try {
+			$current = sales_credit_rma_approval_evidence($rma, $lines);
+		}
+		catch (DimensionFinancialReferenceWriteException $exception) {
+			return false;
+		}
+		if (json_encode($current) !== json_encode($draft_data['classification_sources']))
+			return false;
+	}
+
 	if (authorize_rma($rma_id, _('Approved via workflow')))
 		return $rma_id;
 

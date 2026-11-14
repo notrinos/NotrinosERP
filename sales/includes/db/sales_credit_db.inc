@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__.'/../../../dimensions/includes/dimension_resolution.inc';
+require_once __DIR__.'/sales_credit_classification_db.inc';
 //----------------------------------------------------------------------------------------
 // if ($writeoff_acc==0) return goods into $cart->Location
 // if src_docs!=0 => credit invoice else credit note
@@ -40,6 +41,11 @@ function write_credit_note(&$credit_note, $write_off_acc) {
 	$branch_data = get_branch_accounts($credit_note->Branch);
 
 	add_new_exchange_rate(get_customer_currency($credit_note->customer_id), $credit_date, $credit_note->ex_rate);
+
+	// DIM-SAL-003: resolve every credited line from its source invoice-line snapshot before any row is
+	// written. A credit with no snapshotted source keeps the characterized E08 behavior (plan === null).
+	$classification_plan = sales_credit_plan($credit_note, $credit_type);
+	sales_fulfillment_apply_header($credit_note, $classification_plan);
 
 	$credit_note_total = $credit_note->get_items_total_dispatch();
 	$freight_tax = $credit_note->get_shipping_tax();
@@ -79,6 +85,7 @@ function write_credit_note(&$credit_note, $write_off_acc) {
 		$credit_note->sales_type, $credit_note->order_no, $credit_note->ship_via,
 		null, $alloc, 0, $credit_note->dimension_id, $credit_note->dimension2_id,
 		$credit_note->payment, $credit_note->tax_included); 
+	sales_credit_record_header($credit_note, $credit_no, $classification_plan);
 
 	if ($trans_no==0)
 		$credit_note->trans_no = array($credit_no=>0);
@@ -111,17 +118,18 @@ function write_credit_note(&$credit_note, $write_off_acc) {
 
 		$credit_line->standard_cost = get_unit_cost($credit_line->stock_id); 
 		
-		write_customer_trans_detail_item(ST_CUSTCREDIT, $credit_no, $credit_line->stock_id,
+		$credit_detail_id = write_customer_trans_detail_item(ST_CUSTCREDIT, $credit_no, $credit_line->stock_id,
 			$credit_line->item_description, $credit_line->qty_dispatched,
 			$credit_line->line_price(), $line_tax, $credit_line->discount_percent,
 			$credit_line->standard_cost, $credit_line->src_id, $trans_no==0 ? 0:  $credit_line->id);
+		sales_credit_record_line($credit_note, $credit_no, $line_no, $credit_detail_id, $classification_plan);
 
 		if ($credit_type == 'Return')
 			add_credit_movements_item($credit_note, $credit_line,
 				$credit_type, ($line_taxfree_price+$line_tax)*(1-$credit_line->discount_percent), $credit_invoice, $line_no);
 
 		$total += add_gl_trans_credit_costs($credit_note, $credit_line, $credit_no,
-			$credit_date, $credit_type, $write_off_acc, $branch_data);
+			$credit_date, $credit_type, $write_off_acc, $branch_data, $classification_plan, $line_no);
 	} /*end of credit_line loop */
 
 	// --- Serial/Batch return tracking integration ---
@@ -270,18 +278,32 @@ function add_credit_movements_item(&$credit_note, &$credit_line, $credit_type, $
 
 //----------------------------------------------------------------------------------------
 
-function add_gl_trans_credit_costs($order, $order_line, $credit_no, $date_, $credit_type, $write_off_gl_code, &$branch_data) {
+function add_gl_trans_credit_costs($order, $order_line, $credit_no, $date_, $credit_type, $write_off_gl_code, &$branch_data,
+	$classification_plan = null, $line_no = null) {
 	$stock_gl_codes = get_stock_gl_code($order_line->stock_id);
 	$customer = debtors_master_entity::find($order->customer_id);
-	// DIM-FND-005: one shared resolver. An unsnapshotted document keeps the characterized
-	// E08 equality/default adapter; an explicit intent (including Explicitly Unassigned) is
-	// honored and never falls through to a default.
-	$dim = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
-		$order->dimension_id, $customer['dimension_id'], $stock_gl_codes['dimension_id'], 1,
-		dimension_resolution_document_intent($order, 1)));
-	$dim2 = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
-		$order->dimension2_id, $customer['dimension2_id'], $stock_gl_codes['dimension2_id'], 2,
-		dimension_resolution_document_intent($order, 2)));
+	// DIM-SAL-003: a snapshotted source line is reversed with its recorded pair (revenue and discount with
+	// the invoice-line pair, COGS and stock with the delivery-line pair), never from a current default.
+	// DIM-FND-005 keeps the characterized E08 equality/default adapter only for a legacy (unsnapshotted)
+	// line; an explicit intent (including Explicitly Unassigned) is honored and never falls through.
+	$planned_pair = sales_fulfillment_line_pair($classification_plan, $line_no);
+	$planned_cogs_pair = sales_credit_cogs_pair($classification_plan, $line_no);
+	if ($planned_pair !== null) {
+		$dim = $planned_pair[1];
+		$dim2 = $planned_pair[2];
+		$cogs_dim = $planned_cogs_pair[1];
+		$cogs_dim2 = $planned_cogs_pair[2];
+	}
+	else {
+		$dim = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
+			$order->dimension_id, $customer['dimension_id'], $stock_gl_codes['dimension_id'], 1,
+			dimension_resolution_document_intent($order, 1)));
+		$dim2 = dimension_resolution_document_value(dimension_resolution_document_axis('sales',
+			$order->dimension2_id, $customer['dimension2_id'], $stock_gl_codes['dimension2_id'], 2,
+			dimension_resolution_document_intent($order, 2)));
+		$cogs_dim = $dim;
+		$cogs_dim2 = $dim2;
+	}
 
 	$total = 0;
 	/* insert gl_trans to credit stock and debit cost of sales at standard cost*/
@@ -291,7 +313,7 @@ function add_gl_trans_credit_costs($order, $order_line, $credit_no, $date_, $cre
 		/*first the cost of sales entry*/
 
 		$total += add_gl_trans_std_cost(ST_CUSTCREDIT, $credit_no, $date_, $stock_gl_codes['cogs_account'],
-			$dim, $dim2, '', -($unit_cost * $order_line->qty_dispatched),
+			$cogs_dim, $cogs_dim2, '', -($unit_cost * $order_line->qty_dispatched),
 			PT_CUSTOMER, $order->customer_id,
 			'The cost of sales GL posting could not be inserted');
 
@@ -303,7 +325,7 @@ function add_gl_trans_credit_costs($order, $order_line, $credit_no, $date_, $cre
 			$stock_entry_account = $stock_gl_code['inventory_account'];
 		}
 
-		$total += add_gl_trans_std_cost(ST_CUSTCREDIT, $credit_no, $date_, $stock_entry_account, $dim, $dim2,
+		$total += add_gl_trans_std_cost(ST_CUSTCREDIT, $credit_no, $date_, $stock_entry_account, $cogs_dim, $cogs_dim2,
 			'', ($unit_cost * $order_line->qty_dispatched),
 			PT_CUSTOMER, $order->customer_id,
 			'The stock side (or write off) of the cost of sales GL posting could not be inserted');

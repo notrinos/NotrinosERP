@@ -22,6 +22,7 @@ include_once($path_to_root.'/inventory/includes/inventory_db.inc');
 include_once($path_to_root.'/taxes/tax_calc.inc');
 include_once($path_to_root.'/sales/includes/db/sales_classification_db.inc');
 include_once($path_to_root.'/sales/includes/db/sales_fulfillment_classification_db.inc');
+include_once($path_to_root.'/sales/includes/db/sales_credit_classification_db.inc');
 
 class Cart {
 	public $trans_type; // invoice, order, quotation, delivery note ...
@@ -82,6 +83,8 @@ class Cart {
 	public $classification_source = null;
 	// DIM-SAL-002: delivery/invoice classification reviewed for approval (null when not governed).
 	public $classification_fulfillment = null;
+	// DIM-SAL-003: the RMA that produced a credit note (null for a credit entered on the page).
+	public $classification_rma = null;
 	public $payment;
 	public $payment_terms = array('cash_sale' => false, 'days_before_due' => 0); // cached payment terms
 	public $credit;
@@ -893,6 +896,8 @@ class Cart {
 
 class line_details {
 	public $id;
+	// DIM-SAL-003: source document line of an RMA credit line (a classification carrier only).
+	public $classification_source_line = null;
 	public $dimension_id = 0;
 	public $dimension2_id = 0;
 	public $stock_id;

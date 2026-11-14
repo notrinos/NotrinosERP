@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__ . '/sales_dimension_custody_db.inc';
+require_once __DIR__ . '/sales_credit_classification_db.inc';
 
 /**
  * Sales RMA (Returns Management) — Database Functions
@@ -582,8 +583,10 @@ function get_sales_rma_approval_draft_data($rma_id)
 		return false;
 
 	$lines = array();
+	$source_lines = array();
 	$lines_result = get_rma_lines($rma_id);
 	while ($line = db_fetch($lines_result)) {
+		$source_lines[] = $line;
 		$lines[] = array(
 			'stock_id' => $line['stock_id'],
 			'description' => $line['description'] ? $line['description'] : $line['item_name'],
@@ -593,7 +596,17 @@ function get_sales_rma_approval_draft_data($rma_id)
 		);
 	}
 
+	// DIM-SAL-003: the source classification an approver reviews is the one the credit will reverse.
+	try {
+		$classification_sources = sales_credit_rma_approval_evidence($rma, $source_lines);
+	}
+	catch (DimensionFinancialReferenceWriteException $exception) {
+		display_error($exception->getMessage());
+		return false;
+	}
+
 	return array(
+		'classification_sources' => $classification_sources,
 		'rma_id' => (int)$rma['id'],
 		'reference' => $rma['reference'],
 		'request_date' => sql2date($rma['request_date']),
@@ -892,7 +905,20 @@ function create_credit_from_rma($rma_id)
 	$fee_pct = (float)$rma['restocking_fee_percent'];
 	$tracking_post_keys = array();
 
-	foreach ($lines as $line) {
+	// DIM-SAL-003: link each returned line to the source line whose classification it reverses. The links
+	// are classification carriers only; quantity bookkeeping and allocation keep their legacy behavior.
+	// An ambiguous or unclassifiable link refuses the credit before anything is written.
+	try {
+		$source_links = sales_credit_rma_source_links($rma, $lines);
+	}
+	catch (DimensionFinancialReferenceWriteException $exception) {
+		return false;
+	}
+	if ($source_links !== null)
+		$cart->classification_rma = array('rma_id' => (int)$rma['id'], 'reference' => (string)$rma['reference'],
+			'source_type' => (int)$rma['source_type'], 'source_no' => (int)$rma['source_no']);
+
+	foreach ($lines as $line_index => $line) {
 		$cart_line_no = count($cart->line_items);
 		$cart->add_to_cart(
 			$cart_line_no,
@@ -904,6 +930,9 @@ function create_credit_from_rma($rma_id)
 			0,
 			$line['description']
 		);
+		if ($source_links !== null && isset($source_links[$line_index]))
+			$cart->line_items[$cart_line_no]->classification_source_line = array(
+				'trans_type' => $source_links[$line_index]['trans_type'], 'id' => $source_links[$line_index]['id']);
 
 		$tracking = resolve_rma_line_tracking_payload($line);
 		if ($tracking['serial_input'] !== '') {
@@ -921,7 +950,8 @@ function create_credit_from_rma($rma_id)
 	$credit_no = $cart->write(0);
 	foreach ($tracking_post_keys as $tracking_post_key)
 		unset($_POST[$tracking_post_key]);
-	if (!$credit_no || $credit_no == -1)
+	// Cart::write() reports a refusal (including a refused classification) as a negative number.
+	if (!$credit_no || $credit_no <= 0)
 		return false;
 
 	// Link credit note back to RMA and close it

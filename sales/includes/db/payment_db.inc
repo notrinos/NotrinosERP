@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__.'/sales_credit_classification_db.inc';
 
 /*
 	Write/update customer payment.
@@ -19,6 +20,10 @@
 */
 function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_account, $date_, $ref, $amount, $discount, $memo_, $charge=0, $bank_amount=0, $dim1=0, $dim2=0) {
 	global $Refs;
+
+	// DIM-SAL-003: the receipt's own settlement classification is validated before the first native row.
+	// A company without the companion revision schema posts exactly as before (plan === null).
+	$classification_plan = sales_receipt_plan($dim1, $dim2, $date_);
 
 	begin_transaction();
 	$args = func_get_args(); while (count($args) < 14) $args[] = 0;
@@ -43,6 +48,14 @@ function write_customer_payment($trans_no, $customer_id, $branch_id, $bank_accou
 
 	// do not use $rate here: global rate stored in exrate table is always used
 	$payment_no = write_customer_trans(ST_CUSTPAYMENT, $trans_no, $customer_id, $branch_id, $date_, $ref, $amount, $discount);
+	try {
+		sales_receipt_record($payment_no, $classification_plan,
+			array('amount' => $amount, 'discount' => $discount, 'charge' => $charge));
+	}
+	catch (DimensionFinancialReferenceWriteException $exception) {
+		cancel_transaction();
+		throw $exception;
+	}
 	$bank_gl_account = get_bank_gl_account($bank_account);
 
 	$total = 0;
