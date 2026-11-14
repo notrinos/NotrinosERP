@@ -29,6 +29,7 @@ include_once($path_to_root . '/crm/includes/db/crm_settings_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_leads_entity.inc');
 include_once($path_to_root . '/crm/includes/db/crm_activities_db.inc');
 include_once($path_to_root . '/crm/includes/db/crm_communication_db.inc');
+include_once($path_to_root . '/crm/includes/db/crm_conversion_classification_db.inc');
 include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
 
 $js = '';
@@ -68,10 +69,21 @@ if (isset($_POST['MarkWon']) && !$is_new) {
     if ($customer_id <= 0) {
         display_error(_('Please select a customer for the won opportunity.'));
     } else {
+        // DIM-CRM-001: the won customer is an explicit CRM link; a customer established by the lead
+        // conversion cannot be replaced and no category is copied from the customer.
+        $current_links = crm_opportunity_attribution_current($lead_id);
         begin_transaction();
-        crm_leads_entity::mark_won($lead_id, $customer_id);
-        commit_transaction();
-        display_notification(_('Opportunity marked as WON!'));
+        try {
+            $links = crm_opportunity_validate_links($lead_id, $customer_id, $current_links['customer_id'] == $customer_id ? $current_links['agreement_id'] : 0);
+            crm_leads_entity::mark_won($lead_id, $customer_id);
+            crm_opportunity_record_attribution($lead_id, 'opportunity_won', $links['customer_id'], $links['agreement_id'],
+                $opp['lead_source_id'], $opp['sales_team_id']);
+            commit_transaction();
+            display_notification(_('Opportunity marked as WON!'));
+        } catch (DimensionFinancialReferenceWriteException $exception) {
+            cancel_transaction();
+            display_error($exception->getMessage());
+        }
         $opp = crm_leads_entity::find_joined($lead_id);
     }
 }
@@ -104,6 +116,18 @@ if (isset($_POST['Save'])) {
         $input_error = 1;
     }
 
+    // DIM-CRM-001: explicit customer / Sales agreement links are validated before anything is saved.
+    $posted_agreement_id = (int)get_post('agreement_id', 0);
+    if ($input_error == 0) {
+        try {
+            crm_opportunity_validate_links($is_new ? 0 : $lead_id, (int)$_POST['customer_id'], $posted_agreement_id);
+        } catch (DimensionFinancialReferenceWriteException $exception) {
+            display_error($exception->getMessage());
+            set_focus('customer_id');
+            $input_error = 1;
+        }
+    }
+
     if ($input_error == 0) {
         $data = array(
             'title'              => $_POST['lead_name'],
@@ -129,6 +153,7 @@ if (isset($_POST['Save'])) {
             'is_opportunity'     => 1,
         );
 
+        begin_transaction();
         if ($is_new) {
             $data['lead_ref']   = crm_next_opportunity_ref();
             $data['created_by'] = $_SESSION['wa_current_user']->user;
@@ -140,7 +165,7 @@ if (isset($_POST['Save'])) {
             if ($data['stage_id'] > 0) {
                 crm_leads_entity::update_stage($lead_id, $data['stage_id']);
             }
-            display_notification(_('Opportunity has been created.'));
+            $saved_message = _('Opportunity has been created.');
         } else {
             crm_leads_entity::modify($lead_id, $data);
 
@@ -148,7 +173,7 @@ if (isset($_POST['Save'])) {
             if ($data['stage_id'] > 0 && $data['stage_id'] != $opp['stage_id']) {
                 crm_leads_entity::update_stage($lead_id, $data['stage_id']);
             }
-            display_notification(_('Opportunity has been updated.'));
+            $saved_message = _('Opportunity has been updated.');
         }
 
         // Tags
@@ -162,11 +187,26 @@ if (isset($_POST['Save'])) {
             crm_leads_entity::update_tags($lead_id, $tag_ids);
         }
 
-        if ($is_new) {
+        try {
+            crm_opportunity_record_attribution($lead_id, 'opportunity_link', (int)$data['linked_customer_id'], $posted_agreement_id,
+                $data['lead_source_id'], $data['sales_team_id']);
+            commit_transaction();
+            display_notification($saved_message);
+        } catch (DimensionFinancialReferenceWriteException $exception) {
+            cancel_transaction();
+            display_error($exception->getMessage());
+            // Nothing was saved: keep the posted values, do not reload a rolled-back identity.
+            $lead_id = $is_new ? 0 : $lead_id;
+            $attribution_failed = true;
+        }
+
+        if ($is_new && empty($attribution_failed)) {
             meta_forward($_SERVER['PHP_SELF'], 'LeadID=' . $lead_id . crm_sel_app_param());
         }
         // Reload data
-        $opp = crm_leads_entity::find_joined($lead_id);
+        if ($lead_id > 0) {
+            $opp = crm_leads_entity::find_joined($lead_id);
+        }
     }
 }
 
@@ -195,6 +235,8 @@ if (!$is_new && !isset($_POST['Save'])) {
     $_POST['expected_close']   = $opp['expected_close_date'] ? sql2date($opp['expected_close_date']) : '';
     $_POST['customer_id']      = $opp['linked_customer_id'];
     $_POST['notes']            = $opp['notes'];
+    $attribution_now           = crm_opportunity_attribution_current($lead_id);
+    $_POST['agreement_id']     = $attribution_now['customer_id'] == $opp['linked_customer_id'] ? $attribution_now['agreement_id'] : 0;
 }
 
 //--------------------------------------------------------------------------
@@ -277,6 +319,18 @@ while ($c = db_fetch($res)) {
     $cust_options[$c['debtor_no']] = $c['name'];
 }
 array_selector_row(_('Linked Customer:'), 'customer_id', null, $cust_options);
+
+// Linked Sales agreement (an explicit CRM link of the linked customer; no category is implied).
+$agreement_options = array(0 => _('-- None --'));
+$linked_customer_now = (int)get_post('customer_id', 0);
+if ($linked_customer_now > 0) {
+    $agreement_res = db_query("SELECT id, reference FROM " . TB_PREF . "sales_agreements WHERE debtor_no=" . db_escape($linked_customer_now)
+        . " AND inactive=0 AND status IN ('draft','confirmed','active') ORDER BY reference");
+    while ($agreement = db_fetch($agreement_res)) {
+        $agreement_options[$agreement['id']] = $agreement['reference'];
+    }
+}
+array_selector_row(_('Linked Sales Agreement:'), 'agreement_id', null, $agreement_options);
 
 end_table(1);
 echo "</div>";

@@ -52,6 +52,7 @@ class CrmApp extends application {
 		$this->add_lapp_function(1, _('&Pipeline View'),               'crm/inquiry/pipeline_view.php?',                      'SA_CRM_PIPELINE',     MENU_INQUIRY);
 		$this->add_lapp_function(1, _('&Lead Inquiry'),                'crm/inquiry/lead_inquiry.php?',                       'SA_CRM_PIPELINE',     MENU_INQUIRY);
 		$this->add_lapp_function(1, _('&Activity Inquiry'),            'crm/inquiry/activity_inquiry.php?',                   'SA_CRM_PIPELINE',     MENU_INQUIRY);
+		$this->add_lapp_function(1, _('Conversion &Follow-up'),        'crm/inquiry/conversion_follow_up.php?',               'SA_CRM_LEAD',         MENU_INQUIRY);
 		$this->add_lapp_function(1, _('C&ampaign Inquiry'),            'crm/inquiry/campaign_inquiry.php?',                   'SA_CRM_REPORT',       MENU_INQUIRY);
 
 		$this->add_rapp_function(1, _('Pipe&line Analysis'),           'crm/reporting/pipeline_analysis.php?',                'SA_CRM_REPORT',       MENU_REPORT);
