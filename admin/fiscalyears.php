@@ -20,6 +20,7 @@ include_once($path_to_root.'/admin/db/fiscal_years_entity.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/sales/includes/db/cust_trans_db.inc');
 include_once($path_to_root.'/admin/db/maintenance_db.inc');
+include_once($path_to_root.'/dimensions/includes/dimension_archive_retention.inc');
 $js = '';
 if (user_use_date_picker())
 	$js .= get_js_date_picker();
@@ -123,7 +124,7 @@ function display_fiscalyears() {
 	display_note(_('Warning: Deleting a fiscal year all transactions are removed and converted into relevant balances. This process is irreversible!'), 0, 1, "class='currentfg'");
 	start_table(TABLESTYLE);
 
-	$th = array(_('Fiscal Year Begin'), _('Fiscal Year End'), _('Closed'), '', '');
+	$th = array(_('Fiscal Year Begin'), _('Fiscal Year End'), _('Closed'), '', '', '');
 	table_header($th);
 
 	$k=0;
@@ -143,6 +144,10 @@ function display_fiscalyears() {
 		label_cell($to);
 		label_cell($closed_text);
 		edit_button_cell('Edit'.$myrow['id'], _('Edit'));
+		if ($myrow['closed'] != 0)
+			button_cell('Preview'.$myrow['id'], _('Preview'), _('Preview what deleting this fiscal year would destroy; nothing is changed'), ICON_VIEW);
+		else
+			label_cell('');
 		if ($myrow['id'] != $company_year) {
 			delete_button_cell('Delete'.$myrow['id'], _('Delete'));
 			submit_js_confirm('Delete'.$myrow['id'],
@@ -156,6 +161,84 @@ function display_fiscalyears() {
 	end_table();
 	end_form();
 	display_note(_('The marked fiscal year is the current fiscal year which cannot be deleted.'), 0, 0, "class='currentfg'");
+}
+
+//---------------------------------------------------------------------------------------------
+
+/**
+ * Fiscal year chosen for the read-only deletion preview, or 0.
+ *
+ * @return int
+ */
+function fiscalyear_preview_year() {
+	foreach ($_POST as $name => $value)
+		if (strpos($name, 'Preview') === 0 && ctype_digit(substr($name, 7)))
+			return (int)substr($name, 7);
+	if (isset($_POST['preview_year']) && ctype_digit((string)$_POST['preview_year']))
+		return (int)$_POST['preview_year'];
+	return 0;
+}
+
+/**
+ * Read-only impact preview of deleting one closed fiscal year, and authorized retrieval of an archive.
+ * Counts and states only; nothing is deleted, restored or rewritten here.
+ *
+ * @param int $year Fiscal year identity
+ * @return void
+ */
+function display_fiscalyear_preview($year) {
+	global $db_connections;
+
+	$row = fiscal_year_entity::find($year);
+	if (!$row) {
+		display_error(_('The selected fiscal year does not exist.'));
+		return;
+	}
+	$preview = dimension_archive_impact_preview($row['end']);
+	display_heading(sprintf(_('Deletion preview for fiscal year %s - %s'), sql2date($row['begin']), sql2date($row['end'])));
+	start_table(TABLESTYLE2);
+	label_row(_('Deletion allowed by retention rules:'), $preview['state'] === 'clear' ? _('Yes') : _('No - blocked'));
+	if (count($preview['blocking']))
+		label_row(_('Blocking records:'), implode(', ', $preview['blocking']));
+	label_row(_('General ledger rows destroyed:'), $preview['ledger']['rows']);
+	label_row(_('...of which carry a Dimension:'), $preview['ledger']['tagged_rows']);
+	label_row(_('Balance sheet ledger rows summarized without Dimensions:'), $preview['ledger']['balance_sheet_rows']);
+	label_row(_('...of which carry a Dimension (would be lost):'), $preview['ledger']['summarized_tagged_rows']);
+	label_row(_('Budget rows destroyed:'), $preview['budget']['rows']);
+	label_row(_('...of which carry a Dimension:'), $preview['budget']['tagged_rows']);
+	end_table();
+	display_note(_('A fiscal year whose history carries a Dimension, lineage or payroll reference cannot be deleted. A deletion also needs a backup that can be read back without restoring it.'), 0, 1);
+
+	if (dimension_archive_retrieval_authorized()) {
+		$names = dimension_archive_list_files();
+		if (count($names)) {
+			start_form();
+			hidden('preview_year', $year);
+			start_table(TABLESTYLE2);
+			array_selector_row(_('Archive:'), 'archive_name', null, array_combine($names, $names));
+			end_table(1);
+			submit_center('RetrieveArchive', _('Retrieve archived totals'), true, _('Read the archive without restoring it'), false);
+			end_form();
+		}
+		if (isset($_POST['RetrieveArchive'])) {
+			$found = dimension_archive_retrieve_authorized(get_post('archive_name'), $row['end'], $db_connections[user_company()]['tbpref']);
+			if ($found['state'] !== 'ok')
+				display_error(_('The archive could not be retrieved.'));
+			else {
+				start_table(TABLESTYLE);
+				table_header(array(_('History'), _('Rows'), _('First ID'), _('Last ID')));
+				foreach ($found['history'] as $store => $summary) {
+					start_row();
+					label_cell($store);
+					label_cell($summary['rows'], "align='right'");
+					label_cell($summary['first_id'], "align='right'");
+					label_cell($summary['last_id'], "align='right'");
+					end_row();
+				}
+				end_table(1);
+			}
+		}
+	}
 }
 
 //---------------------------------------------------------------------------------------------
@@ -219,6 +302,11 @@ if ($Mode == 'RESET')
 display_fiscalyears();
 
 echo '<br>';
+
+if (fiscalyear_preview_year() > 0) {
+	display_fiscalyear_preview(fiscalyear_preview_year());
+	echo '<br>';
+}
 
 display_fiscalyear_edit($selected_id);
 

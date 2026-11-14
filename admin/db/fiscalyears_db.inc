@@ -12,6 +12,7 @@
 require_once($path_to_root.'/includes/ui/items_cart.inc');
 require_once($path_to_root.'/admin/db/fiscal_years_entity.inc');
 require_once($path_to_root.'/dimensions/includes/dimension_retention_authority.inc');
+require_once($path_to_root.'/dimensions/includes/dimension_archive_retention.inc');
 
 /**
  * Validate that a stored unique_name resolves safely within the attachments directory.
@@ -208,6 +209,10 @@ function delete_attachments_and_comments($type_no, $trans_no) {
  * locks inside the purge transaction, before the first change. A Dimension's own
  * evidence (audit rows, comments, references) is never purged.
  *
+ * ARC-001: the purge also needs retained lineage and payroll history to be clear of the purged range, and a
+ * security backup that is proven retrievable without restore and equal to the live ledger and budget history
+ * before the transaction starts.
+ *
  * @param int $selected_id Fiscal year identity
  * @return bool False when the purge was refused; true when it ran
  */
@@ -217,12 +222,27 @@ function delete_this_fiscalyear($selected_id) {
 	$early = fiscal_year_entity::find($selected_id);
 	if (!$early || !dimension_retention_purge_admit($early['end'], false))
 		return false;
-	db_backup($db_connections[user_company()], 'Security backup before Fiscal Year Removal');
+	// ARC-001: retained lineage and payroll history must not refer to the purged range.
+	if (!dimension_archive_protected_admit($early['end'], false))
+		return false;
+	$archive_directory = dimension_archive_backup_directory();
+	if ($archive_directory === false) {
+		display_error(_('This fiscal year cannot be deleted because the company backup directory is not available. Nothing was changed.'));
+		return false;
+	}
+	$archive_file = db_backup($db_connections[user_company()], 'no', 'Security backup before Fiscal Year Removal', $archive_directory);
+	// ARC-001: the purge needs a backup whose original ledger and budget history is retrievable without restore.
+	if (!dimension_archive_admit_backup($archive_file, $early['end'], $db_connections[user_company()]['tbpref']))
+		return false;
 	begin_transaction();
 	$ref = _('Open Balance');
 	$myrow = fiscal_year_entity::find($selected_id);
 	$to = $myrow['end'];
 	if (!dimension_retention_purge_admit($to, true)) {
+		cancel_transaction();
+		return false;
+	}
+	if (!dimension_archive_protected_admit($to, true)) {
 		cancel_transaction();
 		return false;
 	}
