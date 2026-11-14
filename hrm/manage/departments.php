@@ -17,6 +17,7 @@ include_once($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/departments_entity.inc');
+include_once($path_to_root.'/hrm/includes/db/hrm_dimension_compatibility_diagnostics_db.inc');
 
 //--------------------------------------------------------------------------
 
@@ -177,6 +178,11 @@ label_row(_('Parent Department:'), combo_input('parent_department_id', get_post(
 text_row(_('Manager Employee ID:'), 'manager_employee_id', null, 20, 20);
 
 dimensions_list_row(_('Cost Center:'), 'cost_center_id', null, true, ' ', false, 1, false);
+
+// DIM-HRM-001: the legacy "Cost Center" name never silently stands for a differently labelled company category.
+$cost_center_category_note = hrm_dimension_compat_display_note(1);
+if ($cost_center_category_note !== '')
+	label_row('', htmlspecialchars($cost_center_category_note, ENT_QUOTES, 'UTF-8'));
 
 gl_all_accounts_list_row(_('Salary Expense Account:'), 'payroll_expense_account', null, true, false, _('Select an expense account'));
 

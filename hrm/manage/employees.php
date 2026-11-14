@@ -63,6 +63,7 @@ include_once($path_to_root.'/hrm/includes/db/lifecycle_probation_schedule_comman
 include_once($path_to_root.'/hrm/includes/db/lifecycle_probation_schedule_browser_db.inc');
 include_once($path_to_root.'/hrm/includes/db/lifecycle_hire_browser_db.inc');
 include_once($path_to_root.'/hrm/includes/hrm_ui.inc');
+include_once($path_to_root.'/hrm/includes/db/hrm_dimension_compatibility_diagnostics_db.inc');
 
 $new_employee = get_post('employee_id') == '' || get_post('cancel');
 
@@ -822,6 +823,10 @@ function tab_employment($employee_id, $new_employee) {
 		}
 		label_row(_('Cost Center:'), htmlspecialchars($stored_cost_center_label, ENT_QUOTES, 'UTF-8'));
 	}
+	// DIM-HRM-001: the legacy "Cost Center" name never silently stands for a differently labelled company category.
+	$cost_center_category_note = hrm_dimension_compat_display_note(1);
+	if ($cost_center_category_note !== '')
+		label_row('', htmlspecialchars($cost_center_category_note, ENT_QUOTES, 'UTF-8'));
 
 	table_section_title(_('Salary & Status'));
 
