@@ -11,6 +11,7 @@
 ***********************************************************************/
 
 include_once($path_to_root.'/includes/ui/items_cart.inc');
+include_once($path_to_root.'/hrm/includes/db/pay_native_classification_validation_db.inc');
 
 /**
  * HRM transaction cart.
@@ -79,6 +80,10 @@ class hrm_cart extends items_cart {
 	function write_gl($check_balance=true) {
 		$journal_id = 0;
 		$trans_no = $this->trans_no ? $this->trans_no : $this->order_id;
+
+		// DIM-PAY-002: admit every native classification before the first row is written; an invalid or closed target refuses the
+		// whole payroll cart and generated lines stay an explicit 0/0 (never an employee or department default).
+		pay_native_classification_cart_require($this->gl_items);
 
 		foreach ($this->gl_items as $line) {
 			$line_date = isset($line->date) && $line->date ? $line->date : $this->tran_date;

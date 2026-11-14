@@ -254,14 +254,13 @@ if(isset($_POST['Process'])) {
 //--------------------------------------------------------------------------
 
 function check_item_data() {
-	if(isset($_POST['dimension_id']) && $_POST['dimension_id'] != 0 && dimension_is_closed($_POST['dimension_id'])) {
-		display_error(_('Dimension is closed.'));
+	// DIM-PAY-002: a manually entered payslip line uses the shared new-event classification contract (axis, enabled, open, policy).
+	$classification_errors = pay_native_classification_manual_line_errors(get_post('code_id'),
+		isset($_POST['dimension_id']) ? $_POST['dimension_id'] : 0, isset($_POST['dimension2_id']) ? $_POST['dimension2_id'] : 0);
+	if(count($classification_errors)) {
+		foreach($classification_errors as $classification_error)
+			display_error($classification_error);
 		set_focus('dimension_id');
-		return false;
-	}
-	if(isset($_POST['dimension2_id']) && $_POST['dimension2_id'] != 0 && dimension_is_closed($_POST['dimension2_id'])) {
-		display_error(_('Dimension is closed.'));
-		set_focus('dimension2_id');
 		return false;
 	}
 	if(!(input_num('AmountDebit')!=0 ^ input_num('AmountCredit')!=0) ) {
