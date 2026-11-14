@@ -41,6 +41,7 @@
  */
 require_once __DIR__.'/dimension_category_policy.inc';
 require_once __DIR__.'/dimension_reference_writer_fence.inc';
+require_once __DIR__.'/dimension_tax_accounting.inc';
 
 /**
  * The command classes of ADR-04.
@@ -314,12 +315,23 @@ function dimension_validation_new_event($result, $options)
 		return $result;
 	}
 	$states = array();
+	$account = isset($options['account']) ? $options['account'] : null;
+	$tax_scope = null;
 	foreach (array(1 => 'dimension_id', 2 => 'dimension2_id') as $axis => $column) {
 		$identity = $result['ids'][$column];
 		$name = dimension_validation_axis_name($axis);
 		if ($identity === 0) {
 			$states[$axis] = 'unassigned';
 			if (!empty($policy['axes'][$axis]['required'])) {
+				// DIM-TAX-001: the global "required" rule judges economic lines. A balance-sheet tax
+				// control is derived from an already validated economic line, so it is exempt from this
+				// one rule only; unreadable or non-tax accounts stay fully judged.
+				if ($tax_scope === null)
+					$tax_scope = dimension_tax_accounting_required_scope($account);
+				if (!$tax_scope['judge_global_required']) {
+					$result['tax_control_exempt'] = true;
+					continue;
+				}
 				$result['codes'][] = 'required';
 				$result['errors'][] = sprintf(_('%s is required for new postings. Choose a value.'), $name);
 			}
@@ -358,7 +370,6 @@ function dimension_validation_new_event($result, $options)
 		$result['errors'][] = sprintf(_('The %s / %s value pair is not declared as allowed for new postings.'),
 			dimension_validation_axis_name(1), dimension_validation_axis_name(2));
 	}
-	$account = isset($options['account']) ? $options['account'] : null;
 	$account_type = dimension_validation_account_type($account);
 	if ($account_type !== '') {
 		foreach ($policy['rules'] as $rule) {
