@@ -241,12 +241,36 @@ function install_hooks($lang_code=null) {
 		}	
 	}
 }
+/**
+ * DIM-EXT-001 activation gate (read-only). True when the package may be activated; false (after an error
+ * message) when its Dimension posting parity is not accepted. Fails closed when the authority cannot load.
+ *
+ * @param string $ext Package name
+ * @return bool
+ */
+function dimension_extension_activation_allowed($ext) {
+	$authority = dirname(__DIR__).'/dimensions/includes/dimension_extension_posting_parity.inc';
+	if (!is_file($authority))
+		return true; // authority not deployed: nothing profiled, behavior unchanged
+	require_once $authority;
+	$gate = dimension_extension_parity_activation_gate($ext);
+	if ($gate['allowed'])
+		return true;
+	if (function_exists('display_error'))
+		display_error(sprintf(_("Package '%s' cannot be activated: its Dimension posting parity is not accepted (%s)."), $ext, $gate['code']));
+	return false;
+}
 /*
-	Non active hooks are not included in $Hooks array, so we can use special function to 
+	Non active hooks are not included in $Hooks array, so we can use special function to
 	activate.
 */
 function activate_hooks($ext, $comp, $on=true) {
 	global $Hooks;
+
+	// DIM-EXT-001: a package whose economic pages are copies of core pages cannot be activated until its
+	// Dimension posting parity is accepted. Deactivation is never gated.
+	if ($on && !dimension_extension_activation_allowed($ext))
+		return false;
 
 	$hooks = @$Hooks[$ext];
 	if (!$hooks) {

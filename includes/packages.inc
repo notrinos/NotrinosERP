@@ -962,6 +962,9 @@ function install_extension($pkg_name) {
 				'active' => @$pkg['DefaultStatus'] == 'active' ? true : false,
 				'path' => $pkg['InstallPath'],
 			);
+			// DIM-EXT-001: a package with unaccepted Dimension posting parity is installed inactive.
+			if ($ext['active'] && !dimension_extension_activation_allowed($pkg['Package']))
+				$ext['active'] = false;
 			if (isset($pkg['SqlScript']))
 				$ext['sql'] = $pkg['SqlScript'];
 
