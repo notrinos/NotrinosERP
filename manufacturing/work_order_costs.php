@@ -95,14 +95,22 @@ if (isset($_POST['process']) && can_process($wo_details) == true) {
 	$memo = $_POST['memo'];
 	$ref  = $_POST['ref'];
 
-	add_wo_costs_journal($_POST['selected_id'], input_num('costs'), $_POST['PaymentType'], $_POST['cr_acc'], $date, $_POST['dim1'], $_POST['dim2'], $memo, $ref);
-
-	meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$_POST['selected_id']);
+	// DIM-MFG-001: with the companion schema the cost posts on the pair frozen on the work order; the
+	// page no longer supplies the finished item's current default.
+	$cost_ready = manufacturing_cost_classification_ready();
+	try {
+		add_wo_costs_journal($_POST['selected_id'], input_num('costs'), $_POST['PaymentType'], $_POST['cr_acc'], $date,
+			$cost_ready ? null : $_POST['dim1'], $cost_ready ? null : $_POST['dim2'], $memo, $ref);
+		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$_POST['selected_id']);
+	} catch (DimensionFinancialReferenceWriteException $exception) {
+		display_error($exception->getMessage());
+	}
 }
 
 //-------------------------------------------------------------------------------------
 
 display_wo_details($_POST['selected_id']);
+display_wo_cost_classification($_POST['selected_id']);
 
 //-------------------------------------------------------------------------------------
 

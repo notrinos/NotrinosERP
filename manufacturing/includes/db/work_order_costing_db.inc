@@ -10,6 +10,8 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
+require_once __DIR__ . '/manufacturing_cost_classification_db.inc';
+
 function add_wo_costing($workorder_id, $cost_type, $trans_type, $trans_no, $factor=1) {
 	$sql = "INSERT INTO ".TB_PREF."wo_costing (workorder_id, cost_type, trans_type, trans_no, factor)
 		VALUES (".db_escape($workorder_id).","
@@ -89,10 +91,26 @@ function update_material_cost($stock_id, $qty, $unit_cost, $date) {
 
 		$cart->memo_ = sprintf(_("COGS changed from %s to %s for %d %s of '%s'"), $avg_cost, $unit_cost, $qty_delayed, $item['units'], $stock_id);
 
-		$cart->add_gl_item($item['cogs_account'], $item['dimension_id'], $item['dimension2_id'], -$diff);
+		// DIM-MFG-001: a negative-stock cost correction keeps its source lineage. The work order that
+		// triggers it publishes its frozen pair as the running context, which outranks the finished
+		// item's current default; an install without the companion schema keeps the legacy pair.
+		$cost_dim1 = $item['dimension_id'];
+		$cost_dim2 = $item['dimension2_id'];
+		$classified = inventory_classification_resolve_correction(ST_COSTUPDATE, $stock_id, null,
+			array('cost_source' => 'work_order_negative_stock', 'value_change' => inventory_classification_amount_text($diff)));
+		if ($classified !== null) {
+			if (!$classified['ok'])
+				throw new DimensionFinancialReferenceWriteException(implode(' ', $classified['errors']));
+			$cost_dim1 = (int)$classified['axes'][1]['value'];
+			$cost_dim2 = (int)$classified['axes'][2]['value'];
+		}
+
+		$cart->add_gl_item($item['cogs_account'], $cost_dim1, $cost_dim2, -$diff);
 		$cart->add_gl_item($item['inventory_account'], 0, 0, $diff);
 
-		write_journal_entries($cart);
+		if (write_journal_entries($cart) !== false && $classified !== null)
+			inventory_classification_record_correction(ST_COSTUPDATE, $cart->order_id, $cart->tran_date,
+				$classified, $qty_delayed);
 	}
 
 	if ($qty > 0 && ($qoh != -$qty))
@@ -106,7 +124,7 @@ function update_material_cost($stock_id, $qty, $unit_cost, $date) {
 /*
 	Create journal entry for WO related costs.
 */
-function add_wo_costs_journal($wo_id, $amount, $cost_type, $cr_acc, $date, $dim1=0, $dim2=0, $memo=null, $ref=null) {
+function add_wo_costs_journal($wo_id, $amount, $cost_type, $cr_acc, $date, $dim1=null, $dim2=null, $memo=null, $ref=null) {
 //-------- this should be done by single call to write_journal_entries() using items_cart()
 	global $Refs, $wo_cost_types;
 
@@ -115,6 +133,20 @@ function add_wo_costs_journal($wo_id, $amount, $cost_type, $cr_acc, $date, $dim1
 	$journal_id = get_next_trans_no(ST_JOURNAL);
 
 	$wo = get_work_order($wo_id);
+
+	// DIM-MFG-001: the journal posts on the pair frozen on the work order (a caller pair that differs is
+	// refused) and is snapshotted once before its first ledger row. No payroll labour is derived here.
+	try {
+		$cost_pair = manufacturing_cost_classification_cost_pair($wo_id, $wo['stock_id'], $date, $dim1, $dim2);
+		manufacturing_cost_classification_capture_event(ST_JOURNAL, $journal_id, $date, $cost_pair['object'], $wo_id,
+			array(array($wo['stock_id'], 1, array('cost_type' => (int)$cost_type, 'amount' => inventory_classification_amount_text($amount)))),
+			'work_order_cost_journal', array('cost_type' => (int)$cost_type));
+	} catch (DimensionFinancialReferenceWriteException $exception) {
+		cancel_transaction();
+		throw $exception;
+	}
+	$dim1 = $cost_pair[1];
+	$dim2 = $cost_pair[2];
 
 	if (!$ref) $ref = $Refs->get_next(ST_JOURNAL, null, $date);
 
@@ -158,10 +190,33 @@ function work_order_production_gl($woid, $stock_id, $quantity, $date_, $rcv_no) 
 	}
 	
 	$result = get_wo_requirements($woid);
+	$bom_rows = array();
+	while ($bom_row = db_fetch($result))
+		$bom_rows[] = $bom_row;
+
+	// DIM-MFG-001: bill-of-material consumption posts both legs on the pair frozen on the work order,
+	// snapshotted once under the production receipt identity before the first stock or ledger row. A
+	// refusal cancels the whole production; no companion schema keeps the legacy zero pair.
+	$cost_pair = array(1 => 0, 2 => 0);
+	try {
+		$wo = get_work_order($woid);
+		$cost_object = manufacturing_cost_classification_ensure_workorder($woid, $wo['stock_id'], $date_);
+		$cost_lines = array();
+		foreach ($bom_rows as $cost_row)
+			$cost_lines[] = array($cost_row['stock_id'], $cost_row['units_req'] * $quantity,
+				array('requirement' => (int)$cost_row['id']));
+		manufacturing_cost_classification_capture_event(ST_MANURECEIVE, $rcv_no, $date_, $cost_object, $woid, $cost_lines,
+			'work_order_bom_consumption', array('produced_quantity' => inventory_classification_amount_text($quantity)));
+		if ($cost_object !== null)
+			$cost_pair = array(1 => (int)$cost_object[1], 2 => (int)$cost_object[2]);
+	} catch (DimensionFinancialReferenceWriteException $exception) {
+		cancel_transaction();
+		throw $exception;
+	}
 
 	// credit all the components
 	$total_cost = 0;
-	while ($bom_item = db_fetch($result)) {
+	foreach ($bom_rows as $bom_item) {
 		if ($SysPrefs->loc_notification() == 1 && is_inventory_item($bom_item['stock_id'])) {
 			$line = new line_details($bom_item['stock_id'], $bom_item['units_req'] * $quantity, 0, 0, 0, 0, $bom_item['description']);
 			$loc = calculate_reorder_level($bom_item['loc_code'], $line, $st_ids, $st_names, $st_num, $st_reorder); 
@@ -215,11 +270,11 @@ function work_order_production_gl($woid, $stock_id, $quantity, $date_, $rcv_no) 
 
 		$memo = $date_.': '.$bom_item['units_req'].' * '.$bom_item['description'];
 
-		$total_cost += add_gl_trans_std_cost(ST_MANURECEIVE, $rcv_no, $date_, $ivaccount, 0, 0, $memo, -$bom_item['ComponentCost'] * $bom_item['units_req'] * $quantity);
+		$total_cost += add_gl_trans_std_cost(ST_MANURECEIVE, $rcv_no, $date_, $ivaccount, $cost_pair[1], $cost_pair[2], $memo, -$bom_item['ComponentCost'] * $bom_item['units_req'] * $quantity);
 	}
 
 	$wo = get_work_order($woid);
-	add_gl_trans_std_cost(ST_MANURECEIVE, $rcv_no, $date_, $wo['wip_account'], 0, 0, $memo, -$total_cost);
+	add_gl_trans_std_cost(ST_MANURECEIVE, $rcv_no, $date_, $wo['wip_account'], $cost_pair[1], $cost_pair[2], $memo, -$total_cost);
 	if ($SysPrefs->loc_notification() == 1 && count($st_ids) > 0)
 		send_reorder_email($loc, $st_ids, $st_names, $st_num, $st_reorder);
 }

@@ -10,15 +10,21 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__ . '/manufacturing_dimension_db.inc';
+require_once __DIR__ . '/manufacturing_cost_classification_db.inc';
 
 /*
 	Common entry procedure for all work order types
+
+	$classification (DIM-MFG-001) is the optional header carrier of the cost object: the explicit
+	category decision of the page or the restored sealed approval intent. Without it the finished
+	item's default classifies the new order once and the pair is frozen on the order.
 */
-function add_work_order($wo_ref, $loc_code, $units_reqd, $stock_id, $type, $date_, $required_by, $memo_, $costs, $cr_acc, $labour, $cr_lab_acc) {
+function add_work_order($wo_ref, $loc_code, $units_reqd, $stock_id, $type, $date_, $required_by, $memo_, $costs, $cr_acc, $labour, $cr_lab_acc, $classification = null) {
 	global $Refs;
 
 	begin_transaction();
-	$args = func_get_args();
+	// The hook payload keeps its twelve legacy fields; the optional classification carrier is not one of them.
+	$args = array_slice(func_get_args(), 0, 12);
 	$args = (object)array_combine(array('wo_ref', 'loc_code', 'units_reqd', 'stock_id', 'type', 'date_', 'required_by', 'memo_', 'costs', 'cr_acc', 'labour', 'cr_lab_acc'), $args);
 
 	$args->woid = 0;
@@ -40,6 +46,15 @@ function add_work_order($wo_ref, $loc_code, $units_reqd, $stock_id, $type, $date
 		return db_query($sql, 'could not add work order') ? db_insert_id() : false;
 	});
 
+	// DIM-MFG-001: freeze the cost object once. A refusal (closed category, requiredness, an
+	// unverifiable sealed draft) cancels the whole creation.
+	try {
+		manufacturing_cost_classification_capture_workorder($woid, $stock_id, $date_, $classification,
+			array('workorder_type' => (int)$type, 'location' => (string)$loc_code));
+	} catch (DimensionFinancialReferenceWriteException $exception) {
+		cancel_transaction();
+		throw $exception;
+	}
 
 	add_comments(ST_WORKORDER, $woid, $required_by, $memo_);
 
@@ -52,11 +67,15 @@ function add_work_order($wo_ref, $loc_code, $units_reqd, $stock_id, $type, $date
 	if ($type != WO_ADVANCED) {
 		$stockitem = stock_master_entity::find($stock_id);
 		release_work_order($woid, $date_, '');
+		// DIM-MFG-001: with the companion schema the journal posts on the frozen pair of the order,
+		// never on the item default of the moment (null = take the order's pair).
+		$cost_dim1 = manufacturing_cost_classification_ready() ? null : $stockitem['dimension_id'];
+		$cost_dim2 = manufacturing_cost_classification_ready() ? null : $stockitem['dimension2_id'];
 		if ($costs != 0)
-			add_wo_costs_journal($woid, $costs, WO_OVERHEAD, $cr_acc, $date_, $stockitem['dimension_id'], $stockitem['dimension2_id']);
+			add_wo_costs_journal($woid, $costs, WO_OVERHEAD, $cr_acc, $date_, $cost_dim1, $cost_dim2);
 
 		if ($labour != 0)
-			add_wo_costs_journal($woid, $labour, WO_LABOUR, $cr_lab_acc, $date_, $stockitem['dimension_id'], $stockitem['dimension2_id']);
+			add_wo_costs_journal($woid, $labour, WO_LABOUR, $cr_lab_acc, $date_, $cost_dim1, $cost_dim2);
 
 		if ($type == WO_UNASSEMBLY)
 			$units_reqd = -$units_reqd;

@@ -154,9 +154,18 @@ if ((isset($_POST['Process']) || isset($_POST['ProcessAndClose'])) && can_proces
 	if ($_POST['ProductionType'] == 0)
 		$_POST['quantity'] = -$_POST['quantity'];
 
-	$id = work_order_produce($_POST['selected_id'], $_POST['ref'], input_num('quantity'), $_POST['date_'], $_POST['memo_'], $close_wo);
+	// DIM-MFG-001: a refused work-order classification (closed category, unverifiable lineage) cancels
+	// the whole production and is reported instead of forwarding as if it had posted.
+	$classification_failed = false;
+	try {
+		$id = work_order_produce($_POST['selected_id'], $_POST['ref'], input_num('quantity'), $_POST['date_'], $_POST['memo_'], $close_wo);
+	} catch (DimensionFinancialReferenceWriteException $exception) {
+		display_error($exception->getMessage());
+		$classification_failed = true;
+	}
 
-	meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$_POST['selected_id'].'&date='.$_POST['date_'].get_sel_app_param('&'));
+	if (!$classification_failed)
+		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$_POST['selected_id'].'&date='.$_POST['date_'].get_sel_app_param('&'));
 }
 
 //-------------------------------------------------------------------------------------

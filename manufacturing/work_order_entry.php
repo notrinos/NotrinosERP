@@ -224,10 +224,34 @@ if (isset($_POST['ADD_ITEM']) && can_process()) {
 		'reference'   => $_POST['wo_ref'],
 	);
 	$wo_amount = input_num('Costs') + input_num('Labour');
-	$approval_result = approval_check_before_save(ST_WORKORDER, $draft_data, $wo_amount, array(
+	$approval_context = array(
 		'summary'  => sprintf(_('Work Order: %s - %s'), $_POST['wo_ref'], $_POST['stock_id']),
 		'loc_code' => $_POST['StockLocation'],
-	));
+	);
+	// DIM-MFG-001: the posted cost-object decision; a conflicting pair (selected and unassigned) is refused.
+	$wo_cost_failed = false;
+	$wo_classification = manufacturing_cost_classification_carrier_from_post();
+	if ($wo_classification === false) {
+		display_error(_('A category cannot be both selected and explicitly unassigned.'));
+		$wo_cost_failed = true;
+	}
+	// When the order will wait for approval, seal the reviewed cost-object pair as a pending draft
+	// revision before the payload is serialized, so the reviewed pair is the pair that is frozen.
+	if (!$wo_cost_failed) {
+		try {
+			if (get_approval_workflow_service()->isApprovalRequired(ST_WORKORDER, $wo_amount)) {
+				$wo_draft = manufacturing_cost_classification_draft($_POST['stock_id'], $_POST['date_'], $wo_classification,
+					array('workorder_type' => (int)$_POST['type'], 'location' => (string)$_POST['StockLocation']));
+				$draft_data = array_merge($draft_data, $wo_draft['payload']);
+				$approval_context = array_merge($approval_context, $wo_draft['context']);
+			}
+		} catch (DimensionFinancialReferenceWriteException $exception) {
+			display_error($exception->getMessage());
+			$wo_cost_failed = true;
+		}
+	}
+	if (!$wo_cost_failed) {
+	$approval_result = approval_check_before_save(ST_WORKORDER, $draft_data, $wo_amount, $approval_context);
 	if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
 		$id = isset($approval_result['trans_no']) ? $approval_result['trans_no'] : 0;
 		new_doc_date($_POST['date_']);
@@ -239,10 +263,11 @@ if (isset($_POST['ADD_ITEM']) && can_process()) {
 	// --- End approval check ---
 
 		try {
-		$id = add_work_order($_POST['wo_ref'], $_POST['StockLocation'], input_num('quantity'), $_POST['stock_id'],  $_POST['type'], $_POST['date_'], $_POST['RequDate'], $_POST['memo_'], input_num('Costs'), $_POST['cr_acc'], input_num('Labour'), $_POST['cr_lab_acc']);
+		$id = add_work_order($_POST['wo_ref'], $_POST['StockLocation'], input_num('quantity'), $_POST['stock_id'],  $_POST['type'], $_POST['date_'], $_POST['RequDate'], $_POST['memo_'], input_num('Costs'), $_POST['cr_acc'], input_num('Labour'), $_POST['cr_lab_acc'], $wo_classification);
 	} catch (DimensionFinancialReferenceWriteException $e) {
-		// The fence has already rolled the whole creation back.
-		display_error(_('The work order could not be created: its retained Dimension metadata could not be certified.'));
+		// The fence (or the classification capture) has already rolled the whole creation back.
+		display_error($e->getMessage() !== '' ? $e->getMessage()
+			: _('The work order could not be created: its retained Dimension metadata could not be certified.'));
 		$id = 0;
 	}
 
@@ -250,6 +275,7 @@ if (isset($_POST['ADD_ITEM']) && can_process()) {
 		new_doc_date($_POST['date_']);
 		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$id.'&type='.$_POST['type'].'&date='.$_POST['date_']);
 	}
+	} // end classification-admitted creation
 }
 
 //-------------------------------------------------------------------------------------
@@ -416,6 +442,27 @@ else {
 
 if (get_post('released'))
 	label_row(_('Released On:'),$_POST['released_date']);
+
+// DIM-MFG-001: the cost-object category decision of a NEW work order. "Inherit" classifies the order
+// once from the finished item's default and freezes the result; an explicit selection or an explicit
+// blank is kept exactly. An existing order shows its frozen pair and can no longer be re-coded here.
+if (get_company_pref('use_dimension') && manufacturing_cost_classification_ready()) {
+	if (isset($selected_id)) {
+		$frozen = manufacturing_cost_classification_workorder($selected_id);
+		label_row(_('Cost object categories:'), $frozen === null
+			? _('Not frozen yet (created before cost classification)') : (int)$frozen[1].' / '.(int)$frozen[2]);
+	}
+	else {
+		dimensions_list_row(dimension_category_policy_label(1).':', 'wo_dimension_id', null, true,
+			_('Inherit item default'), false, 1, false);
+		check_row(_('Leave this category explicitly unassigned'), '_wo_classification_unassigned_1');
+		if (get_company_pref('use_dimension') == 2) {
+			dimensions_list_row(dimension_category_policy_label(2).':', 'wo_dimension2_id', null, true,
+				_('Inherit item default'), false, 2, false);
+			check_row(_('Leave this category explicitly unassigned'), '_wo_classification_unassigned_2');
+		}
+	}
+}
 
 textarea_row(_('Memo:'), 'memo_', null, 40, 5);
 

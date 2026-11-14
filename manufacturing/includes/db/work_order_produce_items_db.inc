@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__ . '/../../../inventory/includes/db/traceability_dimension_db.inc';
+require_once __DIR__ . '/manufacturing_cost_classification_db.inc';
 
 /**
  * Normalize manual finished-serial input into a unique ordered list.
@@ -301,14 +302,46 @@ function work_order_produce($woid, $ref, $quantity, $date_, $memo, $close_wo) {
 
 		$total_cost = $o_cost + $m_cost + $l_cost;
 
-		add_gl_trans_std_cost(ST_WORKORDER, $woid, $date_, $product['wip_account'], 0, 0, $memo, -$total_cost);
+		// DIM-MFG-001: the completion (also a partial completion closed on demand, and an unassembly)
+		// releases WIP to finished inventory on the pair frozen on the work order. The event is
+		// snapshotted once under the work order identity with the material/labour/overhead split sealed
+		// as evidence; the order's pair is published as the running context so that the average-cost /
+		// negative-stock correction below inherits it instead of the finished item's current default.
+		$cost_pair = array(1 => 0, 2 => 0);
+		try {
+			$cost_object = manufacturing_cost_classification_ensure_workorder($woid, $product['stock_id'], $date_);
+			manufacturing_cost_classification_capture_event(ST_WORKORDER, $woid, $date_, $cost_object, $woid,
+				array(array($product['stock_id'], $product['units_issued']+$quantity, array(
+					'material_cost' => inventory_classification_amount_text($m_cost),
+					'labour_cost' => inventory_classification_amount_text($l_cost - get_gl_wo_cost($woid, WO_LABOUR)),
+					'journal_labour_cost' => inventory_classification_amount_text(get_gl_wo_cost($woid, WO_LABOUR)),
+					'overhead_cost' => inventory_classification_amount_text($o_cost),
+					'total_cost' => inventory_classification_amount_text($total_cost)))),
+				'work_order_completion', array('production' => (int)$id));
+			if ($cost_object !== null)
+				$cost_pair = array(1 => (int)$cost_object[1], 2 => (int)$cost_object[2]);
+		} catch (DimensionFinancialReferenceWriteException $exception) {
+			cancel_transaction();
+			throw $exception;
+		}
 
-		add_gl_trans_std_cost(ST_WORKORDER, $woid, $date_, $product['inventory_account'], 0, 0, $memo, $total_cost);
+		add_gl_trans_std_cost(ST_WORKORDER, $woid, $date_, $product['wip_account'], $cost_pair[1], $cost_pair[2], $memo, -$total_cost);
+
+		add_gl_trans_std_cost(ST_WORKORDER, $woid, $date_, $product['inventory_account'], $cost_pair[1], $cost_pair[2], $memo, $total_cost);
 
 		$unit_cost = $total_cost/($product['units_issued']+$quantity);
 
 		// first update material cost
-		update_material_cost($product['stock_id'], $product['units_issued']+$quantity, $unit_cost, $date_);
+		inventory_classification_context('push', array('type' => ST_WORKORDER, 'number' => (int)$woid,
+			'stock_id' => $product['stock_id'], 'axes' => array(1 => $cost_pair[1], 2 => $cost_pair[2])));
+		try {
+			update_material_cost($product['stock_id'], $product['units_issued']+$quantity, $unit_cost, $date_);
+		} catch (DimensionFinancialReferenceWriteException $exception) {
+			cancel_transaction();
+			throw $exception;
+		} finally {
+			inventory_classification_context('pop');
+		}
 
 		add_stock_move(ST_WORKORDER, $product['stock_id'], $woid, $product['loc_code'], $date_, $ref, $product['units_issued']+$quantity, $unit_cost);
 	}

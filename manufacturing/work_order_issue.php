@@ -109,11 +109,22 @@ function can_process() {
 if (isset($_POST['Process']) && can_process()) {
 
 	// if failed, returns a stockID
-	$failed_data = add_work_order_issue($_SESSION['issue_items']->order_id,
-		$_POST['ref'], $_POST['IssueType'], $_SESSION['issue_items']->line_items,
-		$_POST['Location'], $_POST['WorkCentre'], $_POST['date_'], $_POST['memo_']);
+	// DIM-MFG-001: a refused work-order classification cancels the whole issue and is reported.
+	$classification_failed = false;
+	$failed_data = null;
+	try {
+		$failed_data = add_work_order_issue($_SESSION['issue_items']->order_id,
+			$_POST['ref'], $_POST['IssueType'], $_SESSION['issue_items']->line_items,
+			$_POST['Location'], $_POST['WorkCentre'], $_POST['date_'], $_POST['memo_']);
+	} catch (DimensionFinancialReferenceWriteException $exception) {
+		display_error($exception->getMessage());
+		$classification_failed = true;
+	}
 
-	if ($failed_data != null)
+	if ($classification_failed) {
+		// nothing was posted; the entry stays on screen
+	}
+	elseif ($failed_data != null)
 		display_error(_('The process cannot be completed because there is an insufficient total quantity for a component.').'<br>'._('Component is :').$failed_data[0].'<br>'._('From location :').$failed_data[1] . '<br>');
 	else 
 		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$_SESSION['issue_items']->order_id.get_sel_app_param('&'));

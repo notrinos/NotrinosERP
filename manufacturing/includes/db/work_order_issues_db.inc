@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__ . '/manufacturing_dimension_db.inc';
+require_once __DIR__ . '/manufacturing_cost_classification_db.inc';
 
 //--------------------------------------------------------------------------------------
 
@@ -196,6 +197,25 @@ function add_work_order_issue($woid, $ref, $to_work_order, $items, $location, $w
 
 	$wo = get_work_order($woid);
 
+	// DIM-MFG-001: both ledger legs of every line post on the pair frozen on the work order. The event is
+	// snapshotted once, before the first stock or ledger row; a refusal (closed category, unreadable
+	// lineage) cancels the whole issue. Without the companion schema the legs keep their legacy pair.
+	$cost_pair = array(1 => 0, 2 => 0);
+	try {
+		$cost_object = manufacturing_cost_classification_ensure_workorder($woid, $wo['stock_id'], $date_);
+		$cost_lines = array();
+		foreach ($items as $cost_item)
+			$cost_lines[] = array($cost_item->stock_id, $cost_item->quantity,
+				array('direction' => $to_work_order ? 'return_to_stock' : 'issue_to_work_order'));
+		manufacturing_cost_classification_capture_event(ST_MANUISSUE, $number, $date_, $cost_object, $woid, $cost_lines,
+			'work_order_material_issue', array('location' => (string)$location, 'workcentre' => (int)$workcentre));
+		if ($cost_object !== null)
+			$cost_pair = array(1 => (int)$cost_object[1], 2 => (int)$cost_object[2]);
+	} catch (DimensionFinancialReferenceWriteException $exception) {
+		cancel_transaction();
+		throw $exception;
+	}
+
 	// Load tracking functions if available
 	$tracking_root = $path_to_root . '/inventory/includes/db';
 	$has_tracking = false;
@@ -362,14 +382,14 @@ function add_work_order_issue($woid, $ref, $to_work_order, $items, $location, $w
 		else
 			$ivaccount = $stockitem['cogs_account'];
 
-		$total_cost += add_gl_trans_std_cost(ST_MANUISSUE, $number, $date_, $ivaccount, 0, 0, $date_.': '._('Issue of').' '.$stockitem['description'], -$issue_cost);
+		$total_cost += add_gl_trans_std_cost(ST_MANUISSUE, $number, $date_, $ivaccount, $cost_pair[1], $cost_pair[2], $date_.': '._('Issue of').' '.$stockitem['description'], -$issue_cost);
 	}
 
 	$stockitem = stock_master_entity::find($wo['stock_id']);
 
 	$wip_account = $stockitem['wip_account'];
 
-	add_gl_trans_std_cost(ST_MANUISSUE, $number, $date_, $wip_account, 0, 0, $date_.': '._('Issue to').' '.$stockitem['description'], -$total_cost);
+	add_gl_trans_std_cost(ST_MANUISSUE, $number, $date_, $wip_account, $cost_pair[1], $cost_pair[2], $date_.': '._('Issue to').' '.$stockitem['description'], -$total_cost);
 
 	if ($memo_)
 		add_comments(ST_MANUISSUE, $number, $date_, $memo_);

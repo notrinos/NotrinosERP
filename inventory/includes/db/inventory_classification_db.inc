@@ -30,7 +30,7 @@ require_once __DIR__.'/../../../dimensions/includes/dimension_category_policy.in
 // admitted here without ever replacing an existing definition.
 foreach (array('ST_JOURNAL' => 0, 'ST_LOCTRANSFER' => 16, 'ST_INVADJUST' => 17,
 	'ST_COSTUPDATE' => 35, 'ST_CUSTDELIVERY' => 13, 'ST_WH_SCRAP' => 52, 'ST_WH_CYCLE_COUNT' => 54,
-	'ST_SUPPRECEIVE' => 25) as $inventory_classification_type => $inventory_classification_value)
+	'ST_SUPPRECEIVE' => 25, 'ST_WORKORDER' => 26, 'ST_MANUISSUE' => 28, 'ST_MANURECEIVE' => 29) as $inventory_classification_type => $inventory_classification_value)
 	if (!defined($inventory_classification_type))
 		define($inventory_classification_type, $inventory_classification_value);
 
@@ -55,7 +55,8 @@ if (!defined('INVENTORY_CLASSIFICATION_CONSIGNMENT_ANCHOR'))
 function inventory_classification_supported_types()
 {
 	return array(ST_INVADJUST, ST_COSTUPDATE, ST_LOCTRANSFER, ST_JOURNAL, ST_WH_SCRAP, ST_WH_CYCLE_COUNT,
-		INVENTORY_CLASSIFICATION_WARRANTY_ANCHOR, INVENTORY_CLASSIFICATION_CONSIGNMENT_ANCHOR);
+		INVENTORY_CLASSIFICATION_WARRANTY_ANCHOR, INVENTORY_CLASSIFICATION_CONSIGNMENT_ANCHOR,
+		ST_WORKORDER, ST_MANUISSUE, ST_MANURECEIVE);
 }
 
 /**
@@ -428,10 +429,11 @@ function inventory_classification_revision_equivalent($current, $fields)
  * @param array $resolution Resolved axes and source evidence
  * @param string $effective_date Canonical ISO date
  * @param string $line_quantity Canonical eight-decimal quantity
+ * @param string $family Reviewed source family (`inventory`, or `manufacturing` for a work-order cost object)
  * @return array ok, revision_id, revision, created, errors and codes
  */
 function inventory_classification_persist_revision($trans_type, $document_key, $line_kind, $line_key,
-	$resolution, $effective_date, $line_quantity)
+	$resolution, $effective_date, $line_quantity, $family = 'inventory')
 {
 	$result = array('ok' => false, 'revision_id' => 0, 'revision' => null,
 		'created' => false, 'errors' => array(), 'codes' => array());
@@ -442,14 +444,14 @@ function inventory_classification_persist_revision($trans_type, $document_key, $
 	}
 	$options = array('effective_date' => $effective_date, 'line_quantity' => $line_quantity,
 		'resolution' => $resolution);
-	$prepared = dimension_source_revision_prepare('inventory', $trans_type, $document_key, $line_kind,
+	$prepared = dimension_source_revision_prepare($family, $trans_type, $document_key, $line_kind,
 		$line_key, $resolution['axes'], $options);
 	if (!$prepared['ok']) {
 		$result['codes'] = $prepared['codes'];
 		$result['errors'] = $prepared['errors'];
 		return $result;
 	}
-	$current = dimension_source_revision_snapshot('inventory', $trans_type, $document_key,
+	$current = dimension_source_revision_snapshot($family, $trans_type, $document_key,
 		$line_kind, $line_key);
 	if (!in_array($current['state'], array('available', 'absent', 'unavailable'), true)) {
 		$result['codes'] = !empty($current['codes']) ? $current['codes'] : array('source_unreadable');
@@ -466,7 +468,7 @@ function inventory_classification_persist_revision($trans_type, $document_key, $
 	}
 	if ($current['state'] === 'available') {
 		$options['predecessor_revision_id'] = (int)$current['revision']['source_revision_id'];
-		$prepared = dimension_source_revision_prepare('inventory', $trans_type, $document_key, $line_kind,
+		$prepared = dimension_source_revision_prepare($family, $trans_type, $document_key, $line_kind,
 			$line_key, $resolution['axes'], $options);
 		if (!$prepared['ok']) {
 			$result['codes'] = $prepared['codes'];
@@ -523,15 +525,16 @@ function inventory_classification_ensure_draft_identity($header, $items)
  * @param string $line_kind header or line
  * @param string $line_key Final line key
  * @param string $line_quantity Canonical quantity
+ * @param string $family Reviewed source family of the sealed draft
  * @return array ok, revision_id, axes, errors
  */
 function inventory_classification_bind_draft($draft_id, $trans_type, $document_key, $line_kind,
-	$line_key, $line_quantity)
+	$line_key, $line_quantity, $family = 'inventory')
 {
 	$result = array('ok' => false, 'revision_id' => 0, 'axes' => array(), 'errors' => array());
 	$draft = dimension_source_revision_read($draft_id);
 	if (!is_array($draft) || $draft['state'] !== 'available'
-		|| $draft['revision']['source_family'] !== 'inventory'
+		|| $draft['revision']['source_family'] !== $family
 		|| (int)$draft['revision']['trans_type'] !== (int)$trans_type) {
 		$result['errors'][] = _('The sealed inventory classification draft is missing or does not verify.');
 		return $result;

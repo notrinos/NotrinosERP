@@ -286,6 +286,55 @@ function display_wo_details($woid, $suppress_view_link=false) {
 
 //--------------------------------------------------------------------------------------
 
+/**
+ * DIM-MFG-001: show the frozen cost object and the classified capitalisation of one work order.
+ *
+ * Lifetime amounts and the amounts of the optional period are shown separately from period cost:
+ * capitalisation into WIP and its release to finished inventory are never expense.
+ *
+ * @param int $woid Work order id
+ * @param string|null $from ISO date, inclusive (null = unbounded)
+ * @param string|null $to ISO date, inclusive (null = unbounded)
+ * @return void
+ */
+function display_wo_cost_classification($woid, $from = null, $to = null) {
+	if (!manufacturing_cost_classification_ready())
+		return;
+
+	$report = manufacturing_cost_classification_report($woid, $from, $to);
+	if ($report === null)
+		return;
+
+	$labels = array('material_issue' => _('Material issued to WIP'), 'bom_consumption' => _('BOM components consumed into WIP'),
+		'labour' => _('Labour capitalised into WIP'), 'overhead' => _('Overhead capitalised into WIP'),
+		'completion' => _('WIP released to finished inventory'));
+
+	display_heading(_('Work order cost classification'));
+	if ($report['cost_object'] === null)
+		display_note(_('This work order was created before cost classification; its first cost event will freeze its category pair.'));
+	else
+		display_note(sprintf(_('Frozen cost object categories: %s / %s'),
+			(int)$report['cost_object'][1], (int)$report['cost_object'][2]));
+
+	start_table(TABLESTYLE, "width='80%'");
+	table_header(array(_('Cost'), _('Lifetime'), $from === null && $to === null ? _('Period (all)') : _('Period'), _('Category pair: amount')));
+	foreach ($report['categories'] as $category => $entry) {
+		start_row();
+		label_cell($labels[$category]);
+		label_cell($entry['lifetime'], "align='right'");
+		label_cell($entry['period'], "align='right'");
+		$pairs = array();
+		foreach ($entry['pairs'] as $pair => $amount)
+			$pairs[] = $pair.' = '.$amount;
+		label_cell(implode('; ', $pairs));
+		end_row();
+	}
+	label_row(_('WIP balance'), $report['wip_balance'], "colspan=1 align='right'", "align='right'");
+	label_row(_('Period expense recognised on this work order (capitalisation is not period cost)'),
+		$report['period_expense'], "colspan=1 align='right'", "align='right'");
+	end_table();
+}
+
 function display_wo_details_quick($woid, $suppress_view_link=false) {
 	global $wo_types_array;
 

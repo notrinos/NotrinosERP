@@ -57,10 +57,14 @@ function execute_approved_work_order($draft_data, $reserved_trans_no, $draft_id)
 	$labour      = isset($draft_data['labour']) ? (float)$draft_data['labour'] : 0;
 	$cr_lab_acc  = isset($draft_data['cr_lab_acc']) ? $draft_data['cr_lab_acc'] : '';
 
+	// DIM-MFG-001: the restored sealed cost-object decision (and its pending draft revision) travels
+	// to the writer, so the pair the reviewer saw is the pair frozen on the new work order even when
+	// the finished item's default drifted while the draft waited.
 	$woid = add_work_order(
 		$wo_ref, $loc_code, $units_reqd, $stock_id,
 		$type, $date_, $required_by, $memo_,
-		$costs, $cr_acc, $labour, $cr_lab_acc
+		$costs, $cr_acc, $labour, $cr_lab_acc,
+		manufacturing_cost_classification_carrier($draft_data)
 	);
 
 	return $woid;
