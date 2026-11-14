@@ -683,7 +683,12 @@ function purchasing_classification_capture_cart($cart, $document_key = null, $fi
 		$line_source = purchasing_classification_native_line_source($cart, $line);
 		$line_snapshot = $line_source === false ? array('state' => 'none')
 			: purchasing_classification_source_snapshot($line_source);
-		$is_new = !$final || empty($line->po_detail_rec);
+		// An amendment captures after the native write has already assigned detail ids to lines
+		// added in this edit, so a missing id cannot identify them: a line never loaded from or
+		// captured against a stored source still carries the `new` lineage state.
+		$is_new = !$final || empty($line->po_detail_rec)
+			|| (isset($line->classification_lineage_state)
+				&& $line->classification_lineage_state === 'new');
 		$line_kind = $final && !empty($line->po_detail_rec) ? 'line' : 'draft_line';
 		$line_key = $line_kind === 'line'
 			? dimension_source_revision_line_key('line', $line->po_detail_rec)

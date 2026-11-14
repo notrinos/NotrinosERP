@@ -200,7 +200,7 @@ function dimension_document_classification_row($summary)
 	$dimension2_id = $summary['state'] === 'single'
 		? dimension_validation_legacy_id($summary['pair']['dimension2_id']) : 0;
 	if ($dimension_id === false || $dimension2_id === false
-		|| ($summary['state'] === 'single' && ($dimension_id < 1 || $dimension2_id < 1))
+		|| ($summary['state'] === 'single' && $dimension_id < 1 && $dimension2_id < 1)
 		|| ($summary['state'] !== 'single' && ($dimension_id !== 0 || $dimension2_id !== 0)))
 		return false;
 	return array('state' => $summary['state'], 'dimension_id' => $dimension_id,
@@ -265,7 +265,7 @@ function dimension_document_classification_read($custom_data, $dimension_id, $di
 		return $result;
 	}
 	$state = $declaration['state'];
-	if (($state === 'single' && ($id < 1 || $id2 < 1))
+	if (($state === 'single' && $id < 1 && $id2 < 1)
 		|| ($state !== 'single' && ($id !== 0 || $id2 !== 0))) {
 		$result['codes'][] = 'declaration_mismatch';
 		$result['errors'][] = _('The retained document classification does not match the stored axes.');
