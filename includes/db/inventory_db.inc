@@ -269,6 +269,7 @@ function adjust_deliveries($stock_id, $material_cost, $to) {
 
 	if ($row == false)
 		return;	
+	$corrected_qty = $row[0];
 	$old_sales_cost = $row[1];
 	$new_sales_cost = $row[0] * $material_cost;
 	$sales_diff = $new_sales_cost - $old_sales_cost;
@@ -286,6 +287,19 @@ function adjust_deliveries($stock_id, $material_cost, $to) {
 
 	if ($diff != 0) {
 		$stock_gl_code = get_stock_gl_code($stock_id);
+		// DIM-INV-001: a negative-stock cost correction keeps the lineage of the sources it corrects.
+		// The pair the corrected deliveries/adjustments were posted with outranks the current item
+		// default; the legacy item-master pair is used only when the companion schema is absent.
+		$classified = inventory_classification_resolve_correction(ST_COSTUPDATE, $stock_id,
+			inventory_classification_schema_ready() ? inventory_classification_original_pair($stock_id, $move_id) : null,
+			array('cost_source' => 'negative_stock_adjust_deliveries', 'first_move' => (int)$move_id,
+				'value_change' => inventory_classification_amount_text($diff)));
+		if ($classified !== null) {
+			if (!$classified['ok'])
+				throw new DimensionFinancialReferenceWriteException(implode(' ', $classified['errors']));
+			$stock_gl_code['dimension_id'] = (int)$classified['axes'][1]['value'];
+			$stock_gl_code['dimension2_id'] = (int)$classified['axes'][2]['value'];
+		}
 
 		$dec = user_price_dec();
 		$old_cost = -round2($old_sales_cost-$old_purchase_cost,$dec);
@@ -302,7 +316,9 @@ function adjust_deliveries($stock_id, $material_cost, $to) {
 		$cart->add_gl_item($stock_gl_code['cogs_account'], $stock_gl_code['dimension_id'], $stock_gl_code['dimension2_id'], $diff);
 		$cart->add_gl_item($stock_gl_code['inventory_account'], 0, 0, -$diff);
 
-		write_journal_entries($cart);
+		if (write_journal_entries($cart) !== false && $classified !== null)
+			inventory_classification_record_correction(ST_COSTUPDATE, $cart->order_id, $cart->tran_date,
+				$classified, $corrected_qty);
 	}
 }
 
@@ -353,10 +369,26 @@ function handle_negative_inventory($stock_id, $quantity, $standard_cost, $date_)
 
 			$stock_gl_code = get_stock_gl_code($stock_id);
 			$memo = _('Zero/negative inventory handling');
+			// DIM-INV-001: the handling journal inherits the lineage of the adjustment or delivery
+			// that drove stock to zero/negative; a caller that published no context falls back to
+			// the item default as a new event. No companion schema keeps the legacy item pair.
+			$classified = inventory_classification_resolve_correction(ST_JOURNAL, $stock_id, null,
+				array('cost_source' => 'zero_negative_stock_handling',
+					'value_change' => inventory_classification_amount_text($diff)));
+			if ($classified !== null) {
+				if (!$classified['ok']) {
+					cancel_transaction();
+					throw new DimensionFinancialReferenceWriteException(implode(' ', $classified['errors']));
+				}
+				$stock_gl_code['dimension_id'] = (int)$classified['axes'][1]['value'];
+				$stock_gl_code['dimension2_id'] = (int)$classified['axes'][2]['value'];
+			}
 			//Reverse the inventory effect if $qoh <=0
 			add_gl_trans_std_cost(ST_JOURNAL, $id, $date_, $stock_gl_code['inventory_account'], $stock_gl_code['dimension_id'], $stock_gl_code['dimension2_id'], $memo, -$diff);
 			//GL Posting to inventory adjustment account
 			add_gl_trans_std_cost(ST_JOURNAL, $id, $date_, $stock_gl_code['adjustment_account'], $stock_gl_code['dimension_id'], $stock_gl_code['dimension2_id'], $memo, $diff);
+			if ($classified !== null)
+				inventory_classification_record_correction(ST_JOURNAL, $id, $date_, $classified, abs($quantity));
 
 			add_audit_trail(ST_JOURNAL, $id, $date_);
 			add_comments(ST_JOURNAL, $id, $date_, $memo);
@@ -373,6 +405,7 @@ function handle_negative_inventory($stock_id, $quantity, $standard_cost, $date_)
 // $price - in transaction currency
 
 require_once __DIR__.'/../../dimensions/includes/dimension_financial_reference_writer.inc';
+require_once __DIR__.'/../../inventory/includes/db/inventory_classification_db.inc';
 
 function add_stock_move($type, $stock_id, $trans_no, $location, $date_, $reference, $quantity, $std_cost, $price=0) {
 

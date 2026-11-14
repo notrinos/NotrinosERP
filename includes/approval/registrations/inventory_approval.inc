@@ -127,7 +127,8 @@ function execute_approved_inventory_adjustment($draft_data, $reserved_trans_no, 
 		$location,
 		$date_,
 		$reference,
-		$memo_
+		$memo_,
+		$cart // DIM-INV-001: the restored header carrier holds the sealed reviewed classification
 	);
 
 	return $trans_no;
@@ -163,7 +164,8 @@ function execute_approved_inventory_transfer($draft_data, $reserved_trans_no, $d
 		$to_location,
 		$date_,
 		$reference,
-		$memo_
+		$memo_,
+		$cart // DIM-INV-001: the restored header carrier holds the sealed reviewed classification
 	);
 
 	return $trans_no;

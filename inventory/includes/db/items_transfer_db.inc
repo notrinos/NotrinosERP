@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__ . '/traceability_dimension_db.inc';
+require_once __DIR__ . '/inventory_classification_db.inc';
 
 /**
  * Remove tracked batch quantity from warehouse bins for a non-bin transfer.
@@ -190,16 +191,45 @@ function validate_transfer_tracking_input($items, $location_from, &$error_messag
 	return true;
 }
 
-function add_stock_transfer($Items, $location_from, $location_to, $date_, $reference, $memo_) {
+/**
+ * Post an ordinary location transfer.
+ *
+ * DIM-INV-001: a same-owner location transfer recognises no cost and writes no ledger row, so the
+ * optional seventh argument (the header carrier) only records the durable classification evidence
+ * of each line, with the source and destination location and `posting_effect` = `none`. It never
+ * manufactures an expense and never blocks a stock move on a company requiredness rule. An install
+ * without the companion schema posts exactly as before.
+ *
+ * @param array $Items Transfer line items
+ * @param string $location_from Source location code
+ * @param string $location_to Destination location code
+ * @param string $date_ Document date
+ * @param string $reference Reference
+ * @param string $memo_ Memo
+ * @param object|null $classification_cart Header classification carrier
+ * @return int Posted transaction number
+ */
+function add_stock_transfer($Items, $location_from, $location_to, $date_, $reference, $memo_, $classification_cart = null) {
 	global $SysPrefs, $path_to_root, $Refs;
 
 	begin_transaction();
-	$args = func_get_args();
+	$args = array($Items, $location_from, $location_to, $date_, $reference, $memo_);
 	$args = (object)array_combine(array('Items', 'location_from', 'location_to', 'date_', 'reference', 'memo_'), $args);
 	$args->trans_no = 0;
 	hook_db_prewrite($args, ST_LOCTRANSFER);
 
 	$transfer_id = get_next_trans_no(ST_LOCTRANSFER);
+	if (inventory_classification_schema_ready()) {
+		try {
+			inventory_classification_capture(ST_LOCTRANSFER,
+				is_object($classification_cart) ? $classification_cart : new stdClass(),
+				$Items, $date_, $transfer_id, array('from_location' => (string)$location_from,
+					'to_location' => (string)$location_to, 'ownership' => 'same_owner'));
+		} catch (Exception $exception) {
+			cancel_transaction();
+			throw $exception;
+		}
+	}
 
 	if ($SysPrefs->loc_notification() == 1) {
 		include_once($path_to_root.'/inventory/includes/inventory_db.inc');

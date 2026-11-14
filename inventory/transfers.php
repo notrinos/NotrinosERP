@@ -146,17 +146,32 @@ if (isset($_POST['Process'])) {
 if (isset($_POST['Process'])) {
 
 	// --- Approval workflow check ---
+	$amount = get_items_cart_total($_SESSION['transfer_items']);
+	$approval_context = array(
+		'summary'  => sprintf(_('Inventory Transfer: %s'), $_POST['ref']),
+		'loc_code' => $_POST['FromStockLocation'],
+	);
+	// DIM-INV-001: a pending transfer seals its operational classification evidence exactly like
+	// an adjustment; the transfer itself recognises no cost.
+	$transfer_evidence = array('from_location' => (string)$_POST['FromStockLocation'],
+		'to_location' => (string)$_POST['ToStockLocation'], 'ownership' => 'same_owner');
+	$classification_failed = false;
+	try {
+		if (get_approval_workflow_service()->isApprovalRequired(ST_LOCTRANSFER, $amount))
+			$approval_context = array_merge($approval_context, inventory_classification_approval_context(
+				ST_LOCTRANSFER, $_SESSION['transfer_items'], $_POST['AdjDate'], $transfer_evidence));
+	} catch (DimensionFinancialReferenceWriteException $exception) {
+		display_error($exception->getMessage());
+		$classification_failed = true;
+	}
+	if (!$classification_failed) {
 	$draft_data = collect_items_cart_data($_SESSION['transfer_items']);
 	$draft_data['from_location'] = $_POST['FromStockLocation'];
 	$draft_data['to_location']   = $_POST['ToStockLocation'];
 	$draft_data['date']          = $_POST['AdjDate'];
 	$draft_data['reference']     = $_POST['ref'];
 	$draft_data['memo_']         = $_POST['memo_'];
-	$amount = get_items_cart_total($_SESSION['transfer_items']);
-	$approval_result = approval_check_before_save(ST_LOCTRANSFER, $draft_data, $amount, array(
-		'summary'  => sprintf(_('Inventory Transfer: %s'), $_POST['ref']),
-		'loc_code' => $_POST['FromStockLocation'],
-	));
+	$approval_result = approval_check_before_save(ST_LOCTRANSFER, $draft_data, $amount, $approval_context);
 	if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
 		$trans_no = isset($approval_result['trans_no']) ? $approval_result['trans_no'] : 0;
 		$_SESSION['transfer_items']->clear_items();
@@ -169,12 +184,20 @@ if (isset($_POST['Process'])) {
 	}
 	// --- End approval check ---
 
-	$trans_no = add_stock_transfer($_SESSION['transfer_items']->line_items, $_POST['FromStockLocation'], $_POST['ToStockLocation'], $_POST['AdjDate'], $_POST['ref'], $_POST['memo_']);
+	try {
+		$trans_no = add_stock_transfer($_SESSION['transfer_items']->line_items, $_POST['FromStockLocation'], $_POST['ToStockLocation'], $_POST['AdjDate'], $_POST['ref'], $_POST['memo_'], $_SESSION['transfer_items']);
+	} catch (DimensionFinancialReferenceWriteException $exception) {
+		display_error($exception->getMessage());
+		$trans_no = 0;
+	}
+	if ($trans_no) {
 	new_doc_date($_POST['AdjDate']);
 	$_SESSION['transfer_items']->clear_items();
 	unset($_SESSION['transfer_items']);
 
 	meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no.get_sel_app_param('&'));
+	}
+	} // end classification-admitted submission
 } /*end of process credit note */
 
 //-----------------------------------------------------------------------------------------------

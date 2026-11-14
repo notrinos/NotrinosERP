@@ -93,6 +93,13 @@ function approval_check_before_save($trans_type, $draft_data, $amount = 0, $cont
  */
 function collect_items_cart_data($cart)
 {
+	// DIM-INV-001: only inventory adjustment/transfer drafts carry the sealed classification carriers.
+	$inventory_governed = in_array((int)$cart->trans_type, array(ST_INVADJUST, ST_LOCTRANSFER), true);
+	if ($inventory_governed && !function_exists('inventory_classification_line_fields')) {
+		global $path_to_root;
+		include_once($path_to_root.'/inventory/includes/db/inventory_classification_db.inc');
+	}
+	$inventory_governed = $inventory_governed && function_exists('inventory_classification_line_fields');
 	$data = array(
 		'trans_type'    => $cart->trans_type,
 		'order_id'      => $cart->order_id,
@@ -127,8 +134,18 @@ function collect_items_cart_data($cart)
 				'price'            => isset($line->price) ? $line->price : 0,
 				'standard_cost'    => isset($line->standard_cost) ? $line->standard_cost : 0,
 			);
+			// DIM-INV-001: the inventory line intent, its stable token and its pending draft
+			// revision travel with the draft so approval restores the exact reviewed decision.
+			if ($inventory_governed)
+				foreach (inventory_classification_line_fields() as $field)
+					if (isset($line->$field))
+						$data['line_items'][$key][$field] = $line->$field;
 		}
 	}
+	if ($inventory_governed)
+		foreach (inventory_classification_header_fields() as $field)
+			if (isset($cart->$field))
+				$data[$field] = $cart->$field;
 
 	// Collect GL items
 	$data['gl_items'] = array();
@@ -162,6 +179,12 @@ function collect_items_cart_data($cart)
 function restore_items_cart_from_data($data)
 {
 	$cart = new items_cart($data['trans_type'], 0);
+	$inventory_governed = in_array((int)$data['trans_type'], array(ST_INVADJUST, ST_LOCTRANSFER), true);
+	if ($inventory_governed && !function_exists('inventory_classification_line_fields')) {
+		global $path_to_root;
+		include_once($path_to_root.'/inventory/includes/db/inventory_classification_db.inc');
+	}
+	$inventory_governed = $inventory_governed && function_exists('inventory_classification_line_fields');
 
 	$cart->order_id      = isset($data['order_id']) ? $data['order_id'] : 0;
 	$cart->tran_date     = $data['tran_date'];
@@ -206,8 +229,19 @@ function restore_items_cart_from_data($data)
 				$line_data['quantity'],
 				isset($line_data['standard_cost']) ? $line_data['standard_cost'] : 0
 			);
+			if ($inventory_governed) {
+				$restored_line = $cart->line_items[count($cart->line_items) - 1];
+				foreach (inventory_classification_line_fields() as $field)
+					if (array_key_exists($field, $line_data))
+						$restored_line->$field = $line_data[$field];
+			}
 		}
 	}
+	// DIM-INV-001: restore the sealed header carriers; a legacy payload restores nothing.
+	if ($inventory_governed)
+		foreach (inventory_classification_header_fields() as $field)
+			if (array_key_exists($field, $data))
+				$cart->$field = $data[$field];
 
 	return $cart;
 }

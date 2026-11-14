@@ -36,6 +36,23 @@ function display_order_header(&$order) {
 	ref_row(_('Reference:'), 'ref', '', $Refs->get_next(ST_INVADJUST, null, array('location'=>get_post('StockLocation'), 'date'=>get_post('AdjDate'))), false, ST_INVADJUST);
 	hidden('ref_original_auto', get_post('ref'));
 
+	// DIM-INV-001: the cost-recognition category decision of this adjustment. "Inherit" resolves each
+	// line from its item default at posting time and snapshots the result; an explicit selection or
+	// an explicit blank is kept exactly and is never replaced by a later item-default change.
+	if (get_company_pref('use_dimension')) {
+		$classification_values = inventory_classification_carrier_values($order);
+		dimensions_list_row(dimension_category_policy_label(1).':', 'inv_dimension_id',
+			$classification_values['ids'][1], true, _('Inherit item default'), false, 1, false);
+		check_row(_('Leave this category explicitly unassigned'),
+			'_inv_classification_unassigned_1', $classification_values['unassigned'][1]);
+	}
+	if (get_company_pref('use_dimension') == 2) {
+		dimensions_list_row(dimension_category_policy_label(2).':', 'inv_dimension2_id',
+			$classification_values['ids'][2], true, _('Inherit item default'), false, 2, false);
+		check_row(_('Leave this category explicitly unassigned'),
+			'_inv_classification_unassigned_2', $classification_values['unassigned'][2]);
+	}
+
 	end_outer_table(1);
 }
 

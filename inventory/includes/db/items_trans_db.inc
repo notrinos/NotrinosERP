@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once __DIR__ . '/inventory_classification_db.inc';
 //-------------------------------------------------------------------------------------------------------------
 
 function stock_cost_update($stock_id, $material_cost, $labour_cost, $overhead_cost, $last_cost, $refline, $memo_) {
@@ -60,10 +61,29 @@ function stock_cost_update($stock_id, $material_cost, $labour_cost, $overhead_co
 			else
 				$cart->memo_ = $memo_;
 
+			// DIM-INV-001: snapshot the item-driven cost-recognition intent of this correction. The
+			// item default is read once as a new event and sealed with the document, so a later item
+			// master change cannot re-attribute the posted cost. Without the companion schema the
+			// legacy item-master pair is posted unchanged.
+			$classified = inventory_classification_resolve_correction(ST_COSTUPDATE, $stock_id, null,
+				array('cost_source' => 'stock_cost_update', 'old_unit_cost' => inventory_classification_amount_text($last_cost),
+					'new_unit_cost' => inventory_classification_amount_text($new_cost),
+					'value_change' => inventory_classification_amount_text($value_of_change)));
+			if ($classified !== null) {
+				if (!$classified['ok']) {
+					cancel_transaction();
+					throw new DimensionFinancialReferenceWriteException(implode(' ', $classified['errors']));
+				}
+				$stock_gl_code['dimension_id'] = (int)$classified['axes'][1]['value'];
+				$stock_gl_code['dimension2_id'] = (int)$classified['axes'][2]['value'];
+			}
+
 			$cart->add_gl_item($stock_gl_code['adjustment_account'], $stock_gl_code['dimension_id'], $stock_gl_code['dimension2_id'], -$value_of_change);
 			$cart->add_gl_item($stock_gl_code['inventory_account'], $stock_gl_code['dimension_id'], $stock_gl_code['dimension2_id'], $value_of_change);
 
-			write_journal_entries($cart);
+			if (write_journal_entries($cart) !== false && $classified !== null)
+				inventory_classification_record_correction(ST_COSTUPDATE, $cart->order_id, $cart->tran_date,
+					$classified, $qoh);
 		}
 	}
 

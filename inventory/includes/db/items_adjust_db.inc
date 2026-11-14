@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__ . '/traceability_dimension_db.inc';
+require_once __DIR__ . '/inventory_classification_db.inc';
 
 /**
  * Remove tracked batch quantity from warehouse bins for an adjustment.
@@ -211,16 +212,45 @@ function validate_adjustment_tracking_input($items, $location, &$error_message) 
 	return true;
 }
 
-function add_stock_adjustment($items, $location, $date_, $reference, $memo_) {
+/**
+ * Post an inventory adjustment.
+ *
+ * DIM-INV-001: the optional sixth argument is the header carrier (the page cart or the cart rebuilt
+ * from an approved draft). The cost-recognition pair of every line is captured as a durable source
+ * revision before the first ledger row, so a later item-default change cannot re-attribute it and
+ * an approval-sealed pair is the pair that is posted. A caller that passes no carrier is classified
+ * as a new event from the item default. An install without the companion schema posts exactly as
+ * before.
+ *
+ * @param array $items Adjustment line items
+ * @param string $location Location code
+ * @param string $date_ Document date
+ * @param string $reference Reference
+ * @param string $memo_ Memo
+ * @param object|null $classification_cart Header classification carrier
+ * @return int Posted transaction number
+ */
+function add_stock_adjustment($items, $location, $date_, $reference, $memo_, $classification_cart = null) {
 	global $SysPrefs, $path_to_root, $Refs;
 
 	begin_transaction();
-	$args = func_get_args();
+	$args = array($items, $location, $date_, $reference, $memo_);
 	$args = (object)array_combine(array('items', 'location', 'date_', 'reference', 'memo_'), $args);
 	$args->trans_no = 0;
 	hook_db_prewrite($args, ST_INVADJUST);
 
 	$adj_id = get_next_trans_no(ST_INVADJUST);
+	$classified = null;
+	if (inventory_classification_schema_ready()) {
+		try {
+			$classified = inventory_classification_capture(ST_INVADJUST,
+				is_object($classification_cart) ? $classification_cart : new stdClass(),
+				$items, $date_, $adj_id, array('location' => (string)$location));
+		} catch (Exception $exception) {
+			cancel_transaction();
+			throw $exception;
+		}
+	}
 
 	if ($SysPrefs->loc_notification() == 1) {
 		include_once($path_to_root . '/inventory/includes/inventory_db.inc');
@@ -239,7 +269,8 @@ function add_stock_adjustment($items, $location, $date_, $reference, $memo_) {
 			$line_item->quantity = $tmp;
 		}
 
-		add_stock_adjustment_item($adj_id, $line_item->stock_id, $location, $date_, $reference, $line_item->quantity, $line_item->standard_cost, $memo_);
+		add_stock_adjustment_item($adj_id, $line_item->stock_id, $location, $date_, $reference, $line_item->quantity, $line_item->standard_cost, $memo_,
+			$classified !== null ? $classified['axes'][$line_no] : null);
 		$line_no++;
 	}
 
@@ -281,13 +312,31 @@ function get_stock_adjustment_items($trans_no) {
 
 //--------------------------------------------------------------------------------------------------
 
-function add_stock_adjustment_item($adj_id, $stock_id, $location, $date_, $reference, $quantity, $standard_cost, $memo_) {
+/**
+ * Post one adjustment line.
+ *
+ * @param array|null $pair DIM-INV-001 captured cost-recognition pair (axis => stored identity), or
+ *                         null for the legacy item-master default of an install without the schema
+ */
+function add_stock_adjustment_item($adj_id, $stock_id, $location, $date_, $reference, $quantity, $standard_cost, $memo_, $pair = null) {
 	$mb_flag = get_mb_flag($stock_id);
 
 	if (is_service($mb_flag))
 		display_db_error("Cannot do inventory adjustment for Service item : $stock_id", '');
 
-	update_average_material_cost(null, $stock_id, $standard_cost, $quantity, $date_);
+	// Publish this line's pair so a negative-stock correction it provokes keeps its lineage.
+	if ($pair !== null)
+		inventory_classification_context('push', array('type' => ST_INVADJUST, 'number' => (int)$adj_id,
+			'stock_id' => $stock_id, 'axes' => $pair));
+	try {
+		update_average_material_cost(null, $stock_id, $standard_cost, $quantity, $date_);
+	} catch (Exception $exception) {
+		if ($pair !== null)
+			inventory_classification_context('pop');
+		throw $exception;
+	}
+	if ($pair !== null)
+		inventory_classification_context('pop');
 
 	if (is_fixed_asset($mb_flag)) {
 		$sql = "UPDATE ".TB_PREF."stock_master SET inactive = 1 WHERE stock_id = ".db_escape($stock_id);
@@ -309,6 +358,11 @@ function add_stock_adjustment_item($adj_id, $stock_id, $location, $date_, $refer
 	if ($standard_cost > 0 || is_fixed_asset($mb_flag)) {
 
 		$stock_gl_codes = get_stock_gl_code($stock_id);
+		// DIM-INV-001: the captured snapshot, not the current item master, decides the posted pair.
+		if ($pair !== null) {
+			$stock_gl_codes['dimension_id'] = (int)$pair[1];
+			$stock_gl_codes['dimension2_id'] = (int)$pair[2];
+		}
 
 		add_gl_trans_std_cost(ST_INVADJUST, $adj_id, $date_, $stock_gl_codes['adjustment_account'], $stock_gl_codes['dimension_id'], $stock_gl_codes['dimension2_id'], $memo_, $adj_value  );
 

@@ -121,6 +121,10 @@ function can_process() {
 		set_focus('AdjDate');
 		return false;
 	}
+	elseif (!inventory_classification_apply_header_post($adj)) {
+		display_error(_('A category cannot be both selected and explicitly unassigned.'));
+		return false;
+	}
 	elseif (!$SysPrefs->allow_negative_stock()) {
 		$low_stock = $adj->check_qoh($_POST['StockLocation'], $_POST['AdjDate']);
 
@@ -146,16 +150,29 @@ if (isset($_POST['Process']) && can_process()){
 	$fixed_asset = $_SESSION['adj_items']->fixed_asset; 
 
 	// --- Approval workflow check ---
+	$amount = get_items_cart_total($_SESSION['adj_items']);
+	$approval_context = array(
+		'summary'  => sprintf(_('Inventory Adjustment: %s'), $_POST['ref']),
+		'loc_code' => $_POST['StockLocation'],
+	);
+	// DIM-INV-001: when the document will wait for approval, seal the reviewed header/line
+	// cost-recognition intent as pending draft revisions before the payload is serialized.
+	$classification_failed = false;
+	try {
+		if (get_approval_workflow_service()->isApprovalRequired(ST_INVADJUST, $amount))
+			$approval_context = array_merge($approval_context, inventory_classification_approval_context(
+				ST_INVADJUST, $_SESSION['adj_items'], $_POST['AdjDate'], array('location' => (string)$_POST['StockLocation'])));
+	} catch (DimensionFinancialReferenceWriteException $exception) {
+		display_error($exception->getMessage());
+		$classification_failed = true;
+	}
+	if (!$classification_failed) {
 	$draft_data = collect_items_cart_data($_SESSION['adj_items']);
 	$draft_data['location']  = $_POST['StockLocation'];
 	$draft_data['date']      = $_POST['AdjDate'];
 	$draft_data['reference'] = $_POST['ref'];
 	$draft_data['memo_']     = $_POST['memo_'];
-	$amount = get_items_cart_total($_SESSION['adj_items']);
-	$approval_result = approval_check_before_save(ST_INVADJUST, $draft_data, $amount, array(
-		'summary'  => sprintf(_('Inventory Adjustment: %s'), $_POST['ref']),
-		'loc_code' => $_POST['StockLocation'],
-	));
+	$approval_result = approval_check_before_save(ST_INVADJUST, $draft_data, $amount, $approval_context);
 	if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
 		$trans_no = isset($approval_result['trans_no']) ? $approval_result['trans_no'] : 0;
 		$_SESSION['adj_items']->clear_items();
@@ -171,7 +188,13 @@ if (isset($_POST['Process']) && can_process()){
 	}
 	// --- End approval check ---
 
-	$trans_no = add_stock_adjustment($_SESSION['adj_items']->line_items, $_POST['StockLocation'], $_POST['AdjDate'],	$_POST['ref'], $_POST['memo_']);
+	try {
+		$trans_no = add_stock_adjustment($_SESSION['adj_items']->line_items, $_POST['StockLocation'], $_POST['AdjDate'],	$_POST['ref'], $_POST['memo_'], $_SESSION['adj_items']);
+	} catch (DimensionFinancialReferenceWriteException $exception) {
+		display_error($exception->getMessage());
+		$trans_no = 0;
+	}
+	if ($trans_no) {
 	new_doc_date($_POST['AdjDate']);
 	$_SESSION['adj_items']->clear_items();
 	unset($_SESSION['adj_items']);
@@ -180,6 +203,8 @@ if (isset($_POST['Process']) && can_process()){
 		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no.'&FixedAsset=1');
 	else
 		meta_forward($_SERVER['PHP_SELF'], 'AddedID='.$trans_no);
+	}
+	} // end classification-admitted submission
 } /*end of process credit note */
 
 //-----------------------------------------------------------------------------------------------

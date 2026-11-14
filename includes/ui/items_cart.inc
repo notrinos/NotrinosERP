@@ -42,6 +42,14 @@ class items_cart {
 
 	var $fixed_asset;
 
+	// DIM-INV-001 durable inventory classification custody for the document header: the explicit
+	// intents, the stable draft identity and the sealed approval draft revisions.
+	var $classification_intents = null;
+	var $classification_draft_token = null;
+	var $classification_draft_revisions = array();
+	var $classification_revision_id = 0;
+	var $classification_lineage_state = 'legacy_unspecified';
+
 	function __construct($type, $trans_no=0) {
 		$this->trans_type = $type;
 		$this->order_id = $trans_no;
@@ -430,7 +438,17 @@ class line_item {
 	var $price;
 	var $standard_cost;
 
+	// DIM-INV-001 line classification intent and stable identity. The token is a bounded opaque
+	// identity, never a cart position, so removing a line cannot re-attribute another one.
+	var $classification_intents = null;
+	var $classification_token;
+	var $draft_line_key = '';
+	var $classification_draft_revision_id = 0;
+	var $classification_revision_id = 0;
+	var $classification_lineage_state = 'new';
+
 	function __construct($stock_id, $qty, $standard_cost=null, $description=null) {
+		$this->classification_token = 'line_'.substr(hash('sha256', uniqid('', true).mt_rand()), 0, 48);
 		$item_row = stock_master_entity::find($stock_id);
 
 		if ($item_row == null)
