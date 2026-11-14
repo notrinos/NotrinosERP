@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__.'/purchase_document_dimension_db.inc';
+require_once __DIR__.'/purchasing_receipt_invoice_classification_db.inc';
 
 // probably this function should be optimized
 // passing transaction cart as argument. This would
@@ -159,6 +160,17 @@ function add_grn(&$po, $preserve_approved_intent = false) {
 		include_once($wh_ops_path);
 	$can_process_grn_tracking = function_exists('process_grn_tracking_and_wms');
 
+	// DIM-PUR-003: resolve every received line from its purchase-order-line snapshot before any row
+	// is written. The inventory and clearing legs then carry the pair the order authorized instead
+	// of the current item/supplier defaults; an order with no snapshot keeps the characterized E10
+	// behavior (plan === null) and a refusal leaves nothing written.
+	try {
+		$classification_plan = purchasing_receipt_plan($po, ST_SUPPRECEIVE);
+	} catch (DimensionFinancialReferenceWriteException $classification_refusal) {
+		display_error($classification_refusal->getMessage());
+		return false;
+	}
+
 	begin_transaction();
 	if ($preserve_approved_intent) {
 		include_once(dirname(__FILE__).'/direct_purchase_integrity_db.inc');
@@ -180,20 +192,45 @@ function add_grn(&$po, $preserve_approved_intent = false) {
 
 	$grn = add_grn_batch($po->order_no, $po->supplier_id, $po->reference, $po->Location, $date_, $po->ex_rate);
 
+	purchasing_receipt_record_header(ST_SUPPRECEIVE, $grn, $classification_plan);
+
 	$clearing_act = get_company_pref('grn_clearing_act');
+	$clearing_groups = array();
 	if ($clearing_act)	// otherwise GRN clearing account is not used
 		$total = 0;
 	foreach ($po->line_items as $line_no => $order_line) {
 		if ($order_line->receive_qty != 0 && $order_line->receive_qty != '' && isset($order_line->receive_qty)) {
 			$stock_gl_code = get_stock_gl_code($order_line->stock_id);
+			// DIM-PUR-003: a snapshotted order line posts with its immutable pair; the item default is
+			// kept only for a legacy (unsnapshotted) line.
+			$planned_pair = purchasing_receipt_line_pair($classification_plan, $line_no);
+			if ($planned_pair !== null) {
+				$stock_gl_code['dimension_id'] = $planned_pair[1];
+				$stock_gl_code['dimension2_id'] = $planned_pair[2];
+			}
 
-			/*Update sales_order_details for the new quantity received and the standard cost used for postings to GL 
+			/*Update sales_order_details for the new quantity received and the standard cost used for postings to GL
 			  and recorded in the stock movements for FIFO/LIFO stocks valuations*/
 			//------------------- update average material cost and clearing account --------------------------------
 			if (is_inventory_item($order_line->stock_id)) {
-				if ($clearing_act)
-					$total += add_gl_trans_supplier(ST_SUPPRECEIVE, $grn, $date_, $stock_gl_code['inventory_account'], $stock_gl_code['dimension_id'], $stock_gl_code['dimension2_id'], $order_line->taxfree_charge_value($po), $po->supplier_id, '', 0, $order_line->stock_id);
-				update_average_material_cost($po->supplier_id, $order_line->stock_id, $order_line->price, $order_line->receive_qty, $date_);
+				if ($clearing_act) {
+					$inventory_leg = add_gl_trans_supplier(ST_SUPPRECEIVE, $grn, $date_, $stock_gl_code['inventory_account'], $stock_gl_code['dimension_id'], $stock_gl_code['dimension2_id'], $order_line->taxfree_charge_value($po), $po->supplier_id, '', 0, $order_line->stock_id);
+					$total += $inventory_leg;
+					if ($planned_pair !== null) {
+						$group_key = $planned_pair[1].':'.$planned_pair[2];
+						if (!isset($clearing_groups[$group_key]))
+							$clearing_groups[$group_key] = array('dim' => $planned_pair[1], 'dim2' => $planned_pair[2], 'amount' => 0);
+						$clearing_groups[$group_key]['amount'] += $inventory_leg;
+					}
+				}
+				// A zero/negative-stock correction provoked by this receipt keeps its lineage.
+				purchasing_receipt_inventory_context('push', $grn, $order_line->stock_id, $planned_pair);
+				try {
+					update_average_material_cost($po->supplier_id, $order_line->stock_id, $order_line->price, $order_line->receive_qty, $date_);
+				} finally {
+					if ($planned_pair !== null)
+						purchasing_receipt_inventory_context('pop');
+				}
 			}
 			//------------------------------------------------------------------------------------------------------
 			if ($order_line->qty_received == 0) {
@@ -238,6 +275,7 @@ function add_grn(&$po, $preserve_approved_intent = false) {
 			}
 
 			$po->line_items[$line_no]->grn_item_id = $grn_item;
+			purchasing_receipt_record_line($order_line, ST_SUPPRECEIVE, $grn, $line_no, $grn_item, $classification_plan);
 			/* Update location stock records - NB  a po cannot be entered for a service/kit parts done automatically */
 			$tracking_mode = get_item_tracking_mode($order_line->stock_id);
 			$has_tracking = ($tracking_mode === 'serial' || $tracking_mode === 'batch' || $tracking_mode === 'serial_batch');
@@ -260,7 +298,13 @@ function add_grn(&$po, $preserve_approved_intent = false) {
 
 	if ($clearing_act && $total != 0.0) {
 		$accs = get_supplier_accounts($po->supplier_id);
-		$total += add_gl_trans_supplier(ST_SUPPRECEIVE, $grn, $date_, $clearing_act, $accs['dimension_id'], $accs['dimension2_id'], -$total, null);
+		// DIM-PUR-003: clearing is credited per planned pair so it reconciles to the bill's clearing
+		// debit by source, account and category; any legacy remainder stays on the supplier pair.
+		foreach ($clearing_groups as $clearing_group)
+			if ($clearing_group['amount'] != 0.0)
+				$total += add_gl_trans_supplier(ST_SUPPRECEIVE, $grn, $date_, $clearing_act, $clearing_group['dim'], $clearing_group['dim2'], -$clearing_group['amount'], null);
+		if (count($clearing_groups) ? round($total, 6) != 0.0 : $total != 0.0)
+			$total += add_gl_trans_supplier(ST_SUPPRECEIVE, $grn, $date_, $clearing_act, $accs['dimension_id'], $accs['dimension2_id'], -$total, null);
 	}
 
 	if (function_exists('get_company_pref') && get_company_pref('use_3way_matching')

@@ -482,6 +482,9 @@ function collect_supp_trans_data($supp_trans)
 		'ex_rate' => isset($supp_trans->ex_rate) ? $supp_trans->ex_rate : 1,
 		'tax_overrides' => isset($supp_trans->tax_overrides) ? $supp_trans->tax_overrides : array(),
 	);
+	// DIM-PUR-003: reviewed receipt/bill classification evidence (absent for a legacy source).
+	if (isset($supp_trans->classification_receipt_invoice) && is_array($supp_trans->classification_receipt_invoice))
+		$data['classification_receipt_invoice'] = $supp_trans->classification_receipt_invoice;
 
 	$data['grn_items'] = array();
 	if (!empty($supp_trans->grn_items)) {

@@ -236,6 +236,8 @@ class po_line_details {
 	var $classification_revision_id = 0;
 	var $classification_lineage_state = 'new';
 	var $classification_source = null;
+	// DIM-PUR-003 writer-level override carrier for a receipt line.
+	var $classification_override = null;
 
 	function __construct($line_no, $stock_item, $item_descr, $qty, $prc, $uom, $req_del_date, $qty_inv, $qty_recd, $grn_item_id=0) {
 

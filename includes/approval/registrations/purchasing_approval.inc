@@ -245,6 +245,9 @@ function restore_supplier_trans_from_data($data)
 	$supp_trans->ex_rate = isset($data['ex_rate']) ? (float)$data['ex_rate'] : 1;
 	$supp_trans->tax_overrides = isset($data['tax_overrides']) && is_array($data['tax_overrides'])
 		? $data['tax_overrides'] : array();
+	// DIM-PUR-003: the classification the approver reviewed is what execution must reproduce.
+	$supp_trans->classification_receipt_invoice = isset($data['classification_receipt_invoice'])
+		&& is_array($data['classification_receipt_invoice']) ? $data['classification_receipt_invoice'] : null;
 
 	$supp_trans->grn_items = array();
 	if (!empty($data['grn_items']) && is_array($data['grn_items'])) {

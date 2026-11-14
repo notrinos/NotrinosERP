@@ -221,6 +221,13 @@ function handle_commit_invoice() {
 			&& class_exists('ApprovalWorkflow')
 			&& ApprovalWorkflow::isRegistered(ST_SUPPINVOICE)
 			&& function_exists('collect_supp_trans_data')) {
+			// DIM-PUR-003: the classification an approver reviews is the one the bill will post with.
+			try {
+				$inv->classification_receipt_invoice = purchasing_receipt_approval_evidence($inv, ST_SUPPINVOICE);
+			} catch (DimensionFinancialReferenceWriteException $classification_refusal) {
+				display_error($classification_refusal->getMessage());
+				return;
+			}
 			$draft_data = collect_supp_trans_data($inv);
 			$amount = $inv->get_items_total();
 			$approval_result = approval_check_before_save(
@@ -235,6 +242,8 @@ function handle_commit_invoice() {
 				)
 			);
 
+			// The evidence belongs to the submitted draft only; a later edit of this entry re-resolves.
+			$inv->classification_receipt_invoice = null;
 			if ($approval_result !== false && $approval_result['status'] === 'auto_approved') {
 				$approved_invoice_no = isset($approval_result['trans_no']) ? (int)$approval_result['trans_no'] : 0;
 				$_SESSION['supp_trans']->clear_items();

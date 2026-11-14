@@ -49,6 +49,8 @@ class supp_trans {
 		$dimension2;
 	// DIM-FND-005 explicit ADR-02 modes for this request; null is a legacy document.
 	var $classification_intents = null;
+	// DIM-PUR-003 classification evidence the approver reviewed; execution must reproduce it.
+	var $classification_receipt_invoice = null;
 
 	function __construct($trans_type, $trans_no=0) {
 		$this->trans_type = $trans_type;
@@ -205,6 +207,8 @@ all the info to do the necessary entries without looking up ie additional querie
 	var $std_cost_unit;
 	var $gl_code;
 	var $tax_included;
+	// DIM-PUR-003 writer-level override carrier: array('reason' => text, 'intents' => axis => intent).
+	var $classification_override = null;
 
 	function __construct($id, $po_detail_item, $item_code, $item_description, $qty_recd, $prev_quantity_inv, $this_quantity_inv, $order_price, $chg_price, $std_cost_unit, $gl_code, $tax_included) {
 

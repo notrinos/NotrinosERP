@@ -11,6 +11,7 @@
 ***********************************************************************/
 require_once __DIR__.'/purchase_document_dimension_db.inc';
 require_once __DIR__.'/../../../dimensions/includes/dimension_resolution.inc';
+require_once __DIR__.'/purchasing_receipt_invoice_classification_db.inc';
 include_once($path_to_root.'/purchasing/includes/db/invoice_items_db.inc');
 include_once($path_to_root.'/admin/db/attachments_db.inc');
 
@@ -209,6 +210,23 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 		$supp_trans->dimension2, $supplier['dimension2_id'], null, 2,
 		dimension_resolution_document_intent($supp_trans, 2)));
 
+	// DIM-PUR-003: resolve every billed receipt line from its goods-receipt (or order) line snapshot
+	// before any row is written, so price variance, GRN clearing and expense carry the pair the
+	// order authorized and a later supplier/item default change cannot re-attribute them. An
+	// unsnapshotted source keeps the characterized E10 behavior (plan === null); a refusal leaves
+	// nothing written. Credit notes are not governed here (DIM-PUR-004).
+	try {
+		$classification_plan = purchasing_receipt_plan($supp_trans, (int)$trans_type);
+	} catch (DimensionFinancialReferenceWriteException $classification_refusal) {
+		display_error($classification_refusal->getMessage());
+		return false;
+	}
+	$planned_header = purchasing_receipt_header_pair($classification_plan);
+	if ($planned_header !== null) {
+		$dim = $planned_header[1];
+		$dim2 = $planned_header[2];
+	}
+
 	begin_transaction();
 	if ($preserve_approved_intent) {
 		include_once(dirname(__FILE__).'/direct_purchase_integrity_db.inc');
@@ -261,6 +279,7 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 		move_trans_attachments($trans_type, $trans_no, $invoice_id);
 
 	$supp_trans->trans_no = $invoice_id;
+	purchasing_receipt_record_header($trans_type, $invoice_id, $classification_plan);
 
 	$total = 0;
 
@@ -294,7 +313,7 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 
 	$to_allocate = ($invoice_items_total + $item_added_tax + $supp_trans->ov_discount);
 
-	foreach ($supp_trans->gl_codes as $entered_gl_code) {
+	foreach ($supp_trans->gl_codes as $gl_index => $entered_gl_code) {
 		/*GL Items are straight forward - just do the debit postings to the GL accounts specified -
 		the credit is to creditors control act  done later for the total invoice value + tax*/
 
@@ -304,7 +323,8 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 		$memo_ = $entered_gl_code->memo_;
 		$total += add_gl_trans_supplier($trans_type, $invoice_id, $date_, $entered_gl_code->gl_code, $entered_gl_code->gl_dim, $entered_gl_code->gl_dim2, $entered_gl_code->amount, $supp_trans->supplier_id, '', 0, $memo_);
 
-		add_supp_invoice_gl_item($trans_type, $invoice_id, $entered_gl_code->gl_code, $entered_gl_code->amount, $memo_, $entered_gl_code->gl_dim, $entered_gl_code->gl_dim2);
+		$gl_detail_id = add_supp_invoice_gl_item($trans_type, $invoice_id, $entered_gl_code->gl_code, $entered_gl_code->amount, $memo_, $entered_gl_code->gl_dim, $entered_gl_code->gl_dim2);
+		purchasing_receipt_record_gl_line($entered_gl_code, $invoice_id, $gl_index, $gl_detail_id, $classification_plan);
 
 		// store tax details if the gl account is a tax account
 		if ($trans_type == ST_SUPPCREDIT)
@@ -343,6 +363,13 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 		$dim2 = dimension_resolution_document_value(dimension_resolution_document_axis('purchasing',
 			$supp_trans->dimension2, $supplier['dimension2_id'], $stock_gl_code['dimension2_id'], 2,
 			dimension_resolution_document_intent($supp_trans, 2)));
+		// DIM-PUR-003: a snapshotted line posts with its immutable pair; the item default above
+		// remains only for a legacy line.
+		$planned_pair = purchasing_receipt_line_pair($classification_plan, $line_no);
+		if ($planned_pair !== null) {
+			$dim = $planned_pair[1];
+			$dim2 = $planned_pair[2];
+		}
 		if ($trans_type == ST_SUPPCREDIT) {
 			$iv_act = (is_inventory_item($entered_grn->item_code) ? $stock_gl_code['inventory_account'] : ($supplier['purchase_account'] ? $supplier['purchase_account'] : $stock_gl_code['cogs_account']));
 			$total += add_gl_trans_supplier($trans_type, $invoice_id, $date_, $iv_act, $dim, $dim2, $taxfree_line, $supp_trans->supplier_id);
@@ -404,7 +431,9 @@ function add_supp_invoice(&$supp_trans, $options = array()) {
 				update_last_purchase_price($supp_trans->supplier_id, $entered_grn->item_code, $entered_grn->chg_price, $date_);
 		}
 		update_purchase_value($entered_grn->item_code, $entered_grn->chg_price * $ex_rate);
-		add_supp_invoice_item($trans_type, $invoice_id, $entered_grn->item_code, $entered_grn->item_description, 0, 	$entered_grn->chg_price, $line_tax/$entered_grn->this_quantity_inv, $entered_grn->this_quantity_inv, $entered_grn->id, $entered_grn->po_detail_item, '');
+		$grn_detail_id = add_supp_invoice_item($trans_type, $invoice_id, $entered_grn->item_code, $entered_grn->item_description, 0, 	$entered_grn->chg_price, $line_tax/$entered_grn->this_quantity_inv, $entered_grn->this_quantity_inv, $entered_grn->id, $entered_grn->po_detail_item, '',
+			$planned_pair !== null ? $planned_pair[1] : 0, $planned_pair !== null ? $planned_pair[2] : 0);
+		purchasing_receipt_record_line($entered_grn, $trans_type, $invoice_id, $line_no, $grn_detail_id, $classification_plan);
 	} /* end of GRN postings */
 
 	/*Post a balance post if $total != 0 */
