@@ -10,6 +10,7 @@
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__ . '/warehouse_config_dimension_db.inc';
+require_once __DIR__ . '/../../../includes/db/inventory_event_classification_db.inc';
 
 /**
  * Warehouse Counting DB Layer — Cycle Count Plans, Count Sessions, Count Lines
@@ -667,6 +668,95 @@ function get_cycle_count_approval_amount($count_id)
 }
 
 /**
+ * DIM-INV-002: every variance line of one count in the stable posting order.
+ *
+ * Approval-time freezing and posting-time reading both use this single order, so the position of a line
+ * is its identity in the frozen classification; the sealed evidence also names the native line id.
+ *
+ * @param int $count_id Count session
+ * @return array Variance line rows
+ */
+function get_cycle_count_variance_rows($count_id)
+{
+    $rows = array();
+    $result = get_cycle_count_lines($count_id, true);
+    while ($row = db_fetch($result))
+        $rows[] = $row;
+    return $rows;
+}
+
+/**
+ * DIM-INV-002: capture the pending classification revisions of a count that is submitted for approval.
+ *
+ * @param int $count_id Count session
+ * @return array payload and context to merge into the approval submission (empty for a legacy install)
+ * @throws DimensionFinancialReferenceWriteException
+ */
+function warehouse_cycle_count_classification_draft($count_id)
+{
+    $empty = array('payload' => array(), 'context' => array());
+    if (!function_exists('inventory_event_classification_draft') || !inventory_event_classification_ready())
+        return $empty;
+    $count = get_cycle_count($count_id);
+    $lines = array();
+    foreach (get_cycle_count_variance_rows($count_id) as $row)
+        $lines[] = inventory_event_classification_line($row['stock_id'], $row['variance_qty'], null,
+            array('count_id' => (int)$count_id, 'count_line_id' => (int)$row['line_id']));
+    if (!$count || !count($lines))
+        return $empty;
+    return inventory_event_classification_draft(ST_WH_CYCLE_COUNT, $lines, sql2date($count['count_date']),
+        array('count_id' => (int)$count_id));
+}
+
+/**
+ * DIM-INV-002: freeze the classification of a count once, at approval.
+ *
+ * The adjustment is posted by a later, separate action, so the pair is decided here. A sealed approval
+ * draft is bound to the count identity; an auto-approved count resolves its lines as a new event.
+ * An exact retry never re-resolves (the frozen anchor is kept).
+ *
+ * @param array      $count      Count header
+ * @param array|null $draft_data Restored approval payload, or null for an auto-approved count
+ * @return array|null Capture result, or null when nothing needed freezing
+ * @throws DimensionFinancialReferenceWriteException
+ */
+function warehouse_cycle_count_freeze_classification($count, $draft_data)
+{
+    $count_id = (int)$count['count_id'];
+    $rows = get_cycle_count_variance_rows($count_id);
+    if (!count($rows) || inventory_event_classification_anchor_line(ST_WH_CYCLE_COUNT, $count_id, 1) !== null)
+        return null;
+    $carriers = is_array($draft_data) && isset($draft_data['classification_intents'])
+        ? inventory_event_classification_carriers($draft_data, true) : null;
+    if ($carriers !== null && count($carriers['lines']) !== count($rows)) {
+        cancel_transaction();
+        throw new DimensionFinancialReferenceWriteException(
+            _('The sealed count classification does not match the lines of the count.'));
+    }
+    $lines = array();
+    foreach ($rows as $index => $row) {
+        $line = inventory_event_classification_line($row['stock_id'], $row['variance_qty'], null,
+            array('count_id' => $count_id, 'count_line_id' => (int)$row['line_id']));
+        if ($carriers !== null) {
+            $carried = $carriers['lines'][$index];
+            if ($carried->stock_id !== $row['stock_id']) {
+                cancel_transaction();
+                throw new DimensionFinancialReferenceWriteException(
+                    _('The sealed count classification does not match the lines of the count.'));
+            }
+            if (isset($carried->classification_intents))
+                $line->classification_intents = $carried->classification_intents;
+            if (isset($carried->classification_token))
+                $line->classification_token = $carried->classification_token;
+        }
+        $lines[] = $line;
+    }
+    return inventory_event_classification_capture(ST_WH_CYCLE_COUNT, $count_id, sql2date($count['count_date']),
+        $lines, 'cycle_count_approval', array('count_id' => $count_id),
+        $carriers !== null ? $carriers['header'] : null);
+}
+
+/**
  * Build cycle count draft payload for core approval.
  *
  * @param int $count_id
@@ -750,6 +840,9 @@ function submit_cycle_count_for_core_approval($count_id)
         return array('status' => 'auto_approved', 'count_id' => (int)$count_id);
     }
 
+    // DIM-INV-002: capture the reviewed pair before the count leaves review, so a refusal changes nothing.
+    $classification = warehouse_cycle_count_classification_draft($count_id);
+
     $sql = "UPDATE " . TB_PREF . "wh_cycle_counts SET "
         . "status = 'submitted'"
         . " WHERE count_id = " . db_escape((int)$count_id)
@@ -761,18 +854,19 @@ function submit_cycle_count_for_core_approval($count_id)
     $draft_data = get_cycle_count_submission_data($count_id);
     if ($draft_data === false)
         return false;
+    $draft_data = array_merge($draft_data, $classification['payload']);
 
     $result = $approval->submit(
         ST_WH_CYCLE_COUNT,
         $draft_data,
         $approval_amount,
-        array(
+        array_merge(array(
             'summary' => sprintf(_('Cycle Count #%d'), (int)$reloaded['count_id']),
             'currency' => get_company_pref('curr_default'),
             'person_type' => PT_MISC,
             'person_id' => $_SESSION['wa_current_user']->user,
             'loc_code' => $reloaded['warehouse_loc_code'],
-        )
+        ), $classification['context'])
     );
 
     if (isset($result['status']) && $result['status'] === 'execution_failed') {
@@ -792,7 +886,7 @@ function submit_cycle_count_for_core_approval($count_id)
  * @param int $count_id
  * @return bool success
  */
-function approve_cycle_count($count_id) {
+function approve_cycle_count($count_id, $draft_data = null) {
     $count = get_cycle_count($count_id);
     if (!$count || $count['status'] != 'submitted') return false;
 
@@ -800,7 +894,18 @@ function approve_cycle_count($count_id) {
         . "status = 'approved', "
         . "approved_by = " . db_escape($_SESSION['wa_current_user']->user)
         . " WHERE count_id = " . db_escape(intval($count_id));
+    // DIM-INV-002: the count's classification is frozen in the same transaction as its approval.
+    $freeze = function_exists('inventory_event_classification_ready') && inventory_event_classification_ready();
+    if (!$freeze)
         return warehouse_config_dimension_status_write('wh_cycle_counts', intval($count_id), $sql, 'could not approve cycle count');
+    if (!begin_transaction())
+        return false;
+    warehouse_cycle_count_freeze_classification($count, $draft_data);
+    if (!warehouse_config_dimension_status_write('wh_cycle_counts', intval($count_id), $sql, 'could not approve cycle count')) {
+        cancel_transaction();
+        return false;
+    }
+    return commit_transaction();
 }
 
 /**
@@ -953,6 +1058,41 @@ function post_cycle_count_adjustments($count_id) {
     $reference = $Refs->get_next(ST_INVADJUST, null, $date_);
     $memo = sprintf(_("Cycle Count #%d adjustment"), $count_id);
 
+    // DIM-INV-002: every unposted line posts the pair frozen at approval (the item default only classifies a
+    // count approved before this capture existed). Position and native line id must both match the anchor.
+    $captured = null;
+    $capture_index = array();
+    if (function_exists('inventory_event_classification_ready') && inventory_event_classification_ready()) {
+        $capture_lines = array();
+        foreach (get_cycle_count_variance_rows($count_id) as $position => $variance_row) {
+            if ($variance_row['adjustment_posted'] || (float)$variance_row['variance_qty'] == 0)
+                continue;
+            $anchor = inventory_event_classification_anchor_line(ST_WH_CYCLE_COUNT, $count_id, $position + 1);
+            if ($anchor !== null && (!isset($anchor['evidence']['count_line_id'])
+                || (int)$anchor['evidence']['count_line_id'] !== (int)$variance_row['line_id'])) {
+                cancel_transaction();
+                throw new DimensionFinancialReferenceWriteException(
+                    _('The frozen count classification does not match the line being posted.'));
+            }
+            $evidence = array('count_id' => (int)$count_id, 'count_line_id' => (int)$variance_row['line_id']);
+            if ($anchor !== null) {
+                $evidence['lineage'] = 'approved_count_snapshot';
+                $evidence['anchor_revision'] = (int)$anchor['revision_id'];
+            }
+            $capture_index[(int)$variance_row['line_id']] = count($capture_lines);
+            $capture_lines[] = inventory_event_classification_line($variance_row['stock_id'],
+                $variance_row['variance_qty'], $anchor, $evidence);
+        }
+        try {
+            $captured = inventory_event_classification_capture(ST_INVADJUST, $adj_id, $date_, $capture_lines,
+                'cycle_count_posting', array('count_id' => (int)$count_id,
+                    'location' => (string)$count['warehouse_loc_code']));
+        } catch (DimensionFinancialReferenceWriteException $exception) {
+            cancel_transaction();
+            throw $exception;
+        }
+    }
+
     // Re-query variance lines for processing
     $var_lines = get_cycle_count_lines($count_id, true);
 
@@ -977,7 +1117,8 @@ function post_cycle_count_adjustments($count_id) {
 
         // GL entries (inventory + adjustment accounts)
         if ($standard_cost > 0) {
-            $stock_gl = get_stock_gl_code($line['stock_id']);
+            $stock_gl = inventory_event_classification_apply_pair(get_stock_gl_code($line['stock_id']), $captured,
+                isset($capture_index[(int)$line['line_id']]) ? $capture_index[(int)$line['line_id']] : -1);
             $inv_value = $standard_cost * $variance;
             $adj_value = $standard_cost * -($variance);
 

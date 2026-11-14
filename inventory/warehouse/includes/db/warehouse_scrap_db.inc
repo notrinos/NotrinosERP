@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__ . '/warehouse_config_dimension_db.inc';
+require_once __DIR__ . '/../../../includes/db/inventory_event_classification_db.inc';
 
 /**
  * Warehouse Scrap — CRUD, stock move creation, GL posting, serial/batch status updates.
@@ -87,10 +88,13 @@ function get_scrap_reason_label($reason_code) {
  * @param int|null    $batch_id      Batch FK
  * @param string|null $memo          Memo text
  * @param int|null    $approved_by   User ID that approved this entry
+ * @param array|null  $classification DIM-INV-002 carriers: header and line (restored approval intent) and an
+ *                                    optional original pair; null classifies the entry as a new event
  * @return int|false  scrap_id on success, false on failure
  */
 function add_scrap_entry($stock_id, $qty, $loc_code, $date_, $reason_code, $reason_detail = null,
-	$from_bin_id = null, $scrap_loc_id = null, $serial_id = null, $batch_id = null, $memo = null, $approved_by = null) {
+	$from_bin_id = null, $scrap_loc_id = null, $serial_id = null, $batch_id = null, $memo = null, $approved_by = null,
+	$classification = null) {
 
 	global $Refs, $path_to_root;
 
@@ -108,6 +112,28 @@ function add_scrap_entry($stock_id, $qty, $loc_code, $date_, $reason_code, $reas
 	// Create inventory adjustment (negative stock move)
 	$adj_id = get_next_trans_no(ST_INVADJUST);
 	$ref = $Refs->get_next(ST_INVADJUST, null, $date_);
+
+	// DIM-INV-002: the pair is captured once, before the first ledger row. The sealed approval pair (or the
+	// original pair of a returned item) outranks the current item default, which only classifies a new event.
+	$captured = null;
+	if (function_exists('inventory_event_classification_capture')) {
+		$classification = is_array($classification) ? $classification : array();
+		$scrap_line = inventory_event_classification_line($stock_id, $qty,
+			isset($classification['original']) ? $classification['original'] : null,
+			array('location' => (string)$loc_code, 'reason_code' => (string)$reason_code));
+		if (isset($classification['line']) && is_object($classification['line'])
+			&& isset($classification['line']->classification_intents))
+			$scrap_line->classification_intents = $classification['line']->classification_intents;
+		try {
+			$captured = inventory_event_classification_capture(ST_INVADJUST, $adj_id, $date_, array($scrap_line), 'scrap',
+				array_merge(array('location' => (string)$loc_code),
+					isset($classification['evidence']) && is_array($classification['evidence']) ? $classification['evidence'] : array()),
+				isset($classification['header']) ? $classification['header'] : null);
+		} catch (DimensionFinancialReferenceWriteException $exception) {
+			cancel_transaction();
+			throw $exception;
+		}
+	}
 
 	// Update average material cost
 	update_average_material_cost(null, $stock_id, $unit_cost, -$qty, $date_);
@@ -127,6 +153,8 @@ function add_scrap_entry($stock_id, $qty, $loc_code, $date_, $reason_code, $reas
 
 	// GL posting: debit adjustment (scrap) account, credit inventory account
 	$stock_gl_codes = get_stock_gl_code($stock_id);
+	if (function_exists('inventory_event_classification_apply_pair'))
+		$stock_gl_codes = inventory_event_classification_apply_pair($stock_gl_codes, $captured, 0);
 	$gl_memo = $memo ? $memo : sprintf(_('Scrap: %s x%s — %s'), $stock_id, $qty, get_scrap_reason_label($reason_code));
 
 	if ($unit_cost > 0) {
@@ -486,17 +514,27 @@ function submit_scrap_entry_for_core_approval($stock_id, $qty, $loc_code, $date_
 		$memo
 	);
 
+	// DIM-INV-002: the reviewed cost-recognition pair is captured as a pending revision and sealed into the
+	// approval envelope, so a default that changes while the draft waits cannot re-attribute the scrap.
+	$classification = array('payload' => array(), 'context' => array());
+	if (function_exists('inventory_event_classification_draft'))
+		$classification = inventory_event_classification_draft(ST_WH_SCRAP, array(
+			inventory_event_classification_line($stock_id, $qty, null,
+				array('location' => (string)$loc_code, 'reason_code' => (string)$reason_code))),
+			$date_, array('location' => (string)$loc_code));
+	$draft_data = array_merge($draft_data, $classification['payload']);
+
 	return $approval->submit(
 		ST_WH_SCRAP,
 		$draft_data,
 		$approval_amount,
-		array(
+		array_merge(array(
 			'summary' => sprintf(_('Scrap Entry %s x %s'), $stock_id, number_format2($qty, user_qty_dec())),
 			'currency' => get_company_pref('curr_default'),
 			'person_type' => PT_MISC,
 			'person_id' => $_SESSION['wa_current_user']->user,
 			'loc_code' => $loc_code,
-		)
+		), $classification['context'])
 	);
 }
 

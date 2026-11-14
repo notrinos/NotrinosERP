@@ -33,6 +33,7 @@
  */
 
 require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+require_once __DIR__.'/inventory_event_classification_db.inc';
 
 /**
  * Check if warranty provision posting is enabled and configured.
@@ -121,11 +122,12 @@ function calculate_warranty_provision_amount($stock_id, $qty, $standard_cost, $s
  * @param string $warranty_end   Optional warranty end date (display format)
  * @param int    $dimension      Dimension 1
  * @param int    $dimension2     Dimension 2
+ * @param array|null $origin     DIM-INV-002 bounded evidence naming the delivery line revision the pair came from
  * @return bool True if provision was posted
  */
 function post_warranty_provision_accrual($trans_type, $trans_no, $date_, $stock_id,
 	$qty, $standard_cost, $customer_id, $serial_id = null, $batch_id = null,
-	$warranty_end = null, $dimension = 0, $dimension2 = 0)
+	$warranty_end = null, $dimension = 0, $dimension2 = 0, $origin = null)
 {
 	$config = get_warranty_provision_config();
 
@@ -145,7 +147,8 @@ function post_warranty_provision_accrual($trans_type, $trans_no, $date_, $stock_
 
 	return post_warranty_provision_effect($trans_type, $trans_no, $date_, $stock_id,
         $customer_id, 'accrual', $provision_amount, $serial_id, $batch_id,
-        $warranty_end ? date2sql($warranty_end) : null, '', $dimension, $dimension2);
+        $warranty_end ? date2sql($warranty_end) : null, '', $dimension, $dimension2,
+        is_array($origin) ? array_merge($origin, array('kind'=>'accrual', 'quantity'=>abs((float)$qty))) : null);
 }
 
 /**
@@ -162,14 +165,90 @@ function post_warranty_provision_accrual($trans_type, $trans_no, $date_, $stock_
  * @param string $notes        Release reason
  * @param int    $dimension    Dimension 1
  * @param int    $dimension2   Dimension 2
+ * @param int|null $source_accrual DIM-INV-002 original accrual log id this release unwinds
  * @return bool True if release was posted
  */
 function release_warranty_provision($trans_type, $trans_no, $date_, $stock_id,
 	$customer_id, $amount, $serial_id = null, $batch_id = null,
-	$notes = '', $dimension = 0, $dimension2 = 0)
+	$notes = '', $dimension = 0, $dimension2 = 0, $source_accrual = null)
 {
+    if ($source_accrual !== null)
+        return release_warranty_provision_for_accrual($trans_type, $trans_no, $date_, $stock_id,
+            $customer_id, $amount, $serial_id, $batch_id, $notes, $dimension, $dimension2, $source_accrual);
     return post_warranty_provision_effect($trans_type, $trans_no, $date_, $stock_id,
         $customer_id, 'release', $amount, $serial_id, $batch_id, null, $notes, $dimension, $dimension2);
+}
+
+/**
+ * Prefix that links a release log entry to the accrual it unwinds.
+ *
+ * @param int $source_accrual Original accrual log id
+ * @return string
+ */
+function warranty_provision_release_prefix($source_accrual)
+{
+    return 'Provision release: accrual '.(int)$source_accrual.';';
+}
+
+/**
+ * Release part or all of one accrual with exactly the pair that accrual was posted with.
+ *
+ * The accrual row is locked, must still carry live ledger value (a voided delivery has zeroed it),
+ * must match the item and the customer, and the cumulative linked release can never exceed what was
+ * accrued, so the provision liability and the warranty expense unwind by the same identities and
+ * reconcile per original accrual. A caller that names other axes than the original is refused: the
+ * original coordinates are not a default the caller may override.
+ *
+ * @param int $trans_type Release document type
+ * @param int $trans_no Release document number
+ * @param string $date_ Release date (display format)
+ * @param string $stock_id Item code
+ * @param int $customer_id Customer
+ * @param float $amount Amount to release
+ * @param int|null $serial_id Serial
+ * @param int|null $batch_id Batch
+ * @param string $notes Reason
+ * @param int $dimension Caller axis 1 (0 inherits the original)
+ * @param int $dimension2 Caller axis 2 (0 inherits the original)
+ * @param int $source_accrual Original accrual log id
+ * @return bool
+ */
+function release_warranty_provision_for_accrual($trans_type, $trans_no, $date_, $stock_id,
+    $customer_id, $amount, $serial_id, $batch_id, $notes, $dimension, $dimension2, $source_accrual)
+{
+    if (!dimension_writer_reference_id($source_accrual) || !is_string($notes) || !is_string($stock_id)
+        || !is_numeric($amount) || !is_finite((float)$amount) || $amount <= 0 || !begin_transaction()) return false;
+    $rows = db_query('SELECT * FROM '.TB_PREF.'warranty_provision_log WHERE id='.(int)$source_accrual.' FOR UPDATE');
+    $source = $rows ? db_fetch($rows) : false;
+    $live = false;
+    if ($source && $source['gl_trans_id']) {
+        $rows = db_query('SELECT amount FROM '.TB_PREF.'gl_trans WHERE counter='.(int)$source['gl_trans_id'].' FOR UPDATE');
+        $gl = $rows ? db_fetch($rows) : false;
+        $live = $gl && (float)$gl['amount'] > 0;
+    }
+    $encoding = $_SESSION['language']->encoding === 'iso-8859-2' ? 'ISO-8859-1' : $_SESSION['language']->encoding;
+    $encoded = html_specials_encode(html_entity_decode($stock_id, ENT_QUOTES, $encoding));
+    if (!$source || $source['provision_type'] !== 'accrual' || !$live || $source['stock_id'] !== $encoded
+        || (int)$source['customer_id'] !== (int)$customer_id
+        || ((int)$dimension !== 0 && (int)$dimension !== (int)$source['dimension_id'])
+        || ((int)$dimension2 !== 0 && (int)$dimension2 !== (int)$source['dimension2_id'])) {
+        cancel_transaction(); return false;
+    }
+    $prefix = warranty_provision_release_prefix($source_accrual);
+    $rows = db_query('SELECT COALESCE(SUM(amount),0) AS released FROM '.TB_PREF.'warranty_provision_log'
+        ." WHERE provision_type='release' AND (notes=".db_escape($prefix).' OR notes LIKE '
+        .db_escape($prefix.'%').') FOR UPDATE');
+    $released = $rows ? db_fetch($rows) : false;
+    if (!$released || round2((float)$source['amount'] - (float)$released['released'] - (float)$amount, 6) < 0) {
+        cancel_transaction(); return false;
+    }
+    $origin = array('kind'=>'release', 'source_accrual'=>(int)$source_accrual, 'source_type'=>(int)$source['trans_type'],
+        'source_no'=>(int)$source['trans_no'], 'quantity'=>0);
+    $done = post_warranty_provision_effect($trans_type, $trans_no, $date_, $stock_id, $customer_id, 'release',
+        $amount, $serial_id, $batch_id, null, $prefix.($notes === '' ? '' : ' '.$notes),
+        (int)$source['dimension_id'], (int)$source['dimension2_id'], $origin);
+    if (!$done || !commit_transaction()) { cancel_transaction(); return false; }
+    return true;
 }
 
 /**
@@ -275,7 +354,7 @@ function add_warranty_provision_log($trans_type, $trans_no, $stock_id, $serial_i
 
 /** Post the paired GL and its immutable reference log under the same master locks. */
 function post_warranty_provision_effect($type, $number, $date, $stock, $customer, $kind,
-    $amount, $serial, $batch, $end, $notes, $dimension, $dimension2)
+    $amount, $serial, $batch, $end, $notes, $dimension, $dimension2, $origin = null)
 {
     $config = get_warranty_provision_config();
     if (!$config['enabled'] || !$config['expense_account'] || !$config['provision_account']
@@ -284,9 +363,16 @@ function post_warranty_provision_effect($type, $number, $date, $stock, $customer
         || !is_date($date) || !is_date_in_fiscalyear($date)) return false;
     $amount = round2($amount, user_price_dec());
     if ($amount <= 0) return false;
-    return dimension_ordinary_master_write('warranty_provision_log', null,
+    // DIM-INV-002: a classified effect records its evidence under the same outer transaction (and therefore
+    // the same Dimension master locks) as its ledger rows and its log row. The write boundary reads the
+    // last insert identity right after the callback, so the evidence is written after it, never inside it.
+    $classified = is_array($origin);
+    if ($classified && !begin_transaction()) return false;
+    $log_id = false;
+    $pair = null;
+    $done = dimension_ordinary_master_write('warranty_provision_log', null,
         array('dimension_id'=>$dimension,'dimension2_id'=>$dimension2),
-        function($admitted) use ($config,$type,$number,$date,$stock,$customer,$kind,$amount,$serial,$batch,$end,$notes) {
+        function($admitted) use ($config,$type,$number,$date,$stock,$customer,$kind,$amount,$serial,$batch,$end,$notes,&$log_id,&$pair) {
             $debit = $kind === 'accrual' ? $config['expense_account'] : $config['provision_account'];
             $credit = $kind === 'accrual' ? $config['provision_account'] : $config['expense_account'];
             foreach (array($debit=>$amount, $credit=>-$amount) as $account=>$value) {
@@ -302,9 +388,28 @@ function post_warranty_provision_effect($type, $number, $date, $stock, $customer
                     || (int)$gl['dimension_id'] !== $admitted['dimension_id'] || (int)$gl['dimension2_id'] !== $admitted['dimension2_id']) return false;
                 if ($value > 0) $debit_id = $counter;
             }
-            return add_warranty_provision_log($type,$number,$stock,$serial,$batch,$customer,$kind,$amount,$end,$date,$notes,
-                $admitted['dimension_id'],$admitted['dimension2_id'],$debit_id) !== false;
+            $log_id = add_warranty_provision_log($type,$number,$stock,$serial,$batch,$customer,$kind,$amount,$end,$date,$notes,
+                $admitted['dimension_id'],$admitted['dimension2_id'],$debit_id);
+            $pair = array(1=>$admitted['dimension_id'], 2=>$admitted['dimension2_id']);
+            return $log_id !== false;
         });
+    if (!$classified)
+        return $done;
+    if (!$done || !is_numeric($log_id) || (int)$log_id <= 0) { cancel_transaction(); return false; }
+    $evidence = array('kind'=>$kind, 'trans_type'=>(int)$type, 'trans_no'=>(int)$number,
+        'amount'=>number_format((float)$amount, 8, '.', ''));
+    foreach (array('source_type','source_no','source_accrual','delivery_line_revision') as $field)
+        if (isset($origin[$field])) $evidence[$field] = (int)$origin[$field];
+    try {
+        inventory_event_classification_record_warranty((int)$log_id, $date, $stock,
+            isset($origin['quantity']) ? $origin['quantity'] : 0, $pair, $evidence);
+    } catch (DimensionFinancialReferenceWriteException $exception) {
+        cancel_transaction();
+        if (function_exists('display_error')) display_error($exception->getMessage());
+        return false;
+    }
+    if (!commit_transaction()) { cancel_transaction(); return false; }
+    return true;
 }
 
 /**
@@ -441,19 +546,30 @@ function process_delivery_warranty_provisions($delivery, $delivery_no, $date_)
 		// Calculate warranty end date
 		$warranty_end = add_days($date_, $item['warranty_days']);
 
-		// Get dimensions
-		$stock_gl_code = get_stock_gl_code($delivery_line->stock_id);
-		$dim = ($header['dimension_id'] != $customer['dimension_id'] ? $header['dimension_id'] :
-			($customer['dimension_id'] != 0 ? $customer['dimension_id'] : $stock_gl_code['dimension_id']));
-		$dim2 = ($header['dimension2_id'] != $customer['dimension2_id'] ? $header['dimension2_id'] :
-			($customer['dimension2_id'] != 0 ? $customer['dimension2_id'] : $stock_gl_code['dimension2_id']));
+		// DIM-INV-002: the delivery line revision records the pair this line posted its cost of goods
+		// sold with. The provision uses that pair, never today's customer/item defaults. A legacy
+		// delivery with no recorded line revision keeps the historical derivation below.
+		$line_pair = inventory_event_classification_delivery_line($delivery_no, $detail['id']);
+		$origin = null;
+		if ($line_pair !== null) {
+			$dim = $line_pair[1];
+			$dim2 = $line_pair[2];
+			$origin = array('source_type'=>ST_CUSTDELIVERY, 'source_no'=>(int)$delivery_no,
+				'delivery_line_revision'=>$line_pair['revision_id']);
+		} else {
+			$stock_gl_code = get_stock_gl_code($delivery_line->stock_id);
+			$dim = ($header['dimension_id'] != $customer['dimension_id'] ? $header['dimension_id'] :
+				($customer['dimension_id'] != 0 ? $customer['dimension_id'] : $stock_gl_code['dimension_id']));
+			$dim2 = ($header['dimension2_id'] != $customer['dimension2_id'] ? $header['dimension2_id'] :
+				($customer['dimension2_id'] != 0 ? $customer['dimension2_id'] : $stock_gl_code['dimension2_id']));
+		}
 
         if (calculate_warranty_provision_amount($delivery_line->stock_id, $delivery_line->qty_dispatched, $delivery_line->standard_cost) <= 0) continue;
 		if (post_warranty_provision_accrual(
 			ST_CUSTDELIVERY, $delivery_no, $date_,
 			$delivery_line->stock_id, $delivery_line->qty_dispatched,
 			$delivery_line->standard_cost, $customer_id,
-			null, null, $warranty_end, $dim, $dim2
+			null, null, $warranty_end, $dim, $dim2, $origin
 		)) {
 			$count++;
 		} else { cancel_transaction(); return false; }

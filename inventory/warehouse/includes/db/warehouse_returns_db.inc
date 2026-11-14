@@ -10,6 +10,52 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__ . '/warehouse_config_dimension_db.inc';
+require_once __DIR__ . '/../../../includes/db/inventory_event_classification_db.inc';
+
+/**
+ * DIM-INV-002: the pair that the original delivery or receipt of a returned item actually posted.
+ *
+ * @param array  $order    Return order header (source_doc_type / source_doc_no)
+ * @param string $stock_id Returned item
+ * @return array|null Original pair with its source reference, or null when the return has no source
+ */
+function warehouse_return_original_pair($order, $stock_id)
+{
+	if (empty($order['source_doc_type']) || empty($order['source_doc_no']))
+		return null;
+	return inventory_event_classification_source_pair($order['source_doc_type'], $order['source_doc_no'], $stock_id);
+}
+
+/**
+ * DIM-INV-002: capture the classification of one return posting before its first ledger row.
+ *
+ * @param array  $order  Return order header
+ * @param array  $rows   Return order line rows being posted
+ * @param int    $adj_id Adjustment number the return posts under
+ * @param string $date_  Posting date (display format)
+ * @param string $event  Evidence event name
+ * @return array|null Capture result, or null on a legacy install
+ * @throws DimensionFinancialReferenceWriteException
+ */
+function warehouse_return_capture_classification($order, $rows, $adj_id, $date_, $event)
+{
+	if (!inventory_event_classification_ready())
+		return null;
+	$lines = array();
+	foreach ($rows as $row)
+		$lines[] = inventory_event_classification_line($row['stock_id'], $row['qty_expected'],
+			warehouse_return_original_pair($order, $row['stock_id']),
+			array('return_id' => (int)$order['return_id'], 'return_line' => (int)$row['line_id'],
+				'return_no' => (int)$order['return_no']));
+	try {
+		return inventory_event_classification_capture(ST_INVADJUST, $adj_id, $date_, $lines, $event,
+			array('return_id' => (int)$order['return_id'], 'location' => (string)$order['warehouse_loc_code']));
+	} catch (DimensionFinancialReferenceWriteException $exception) {
+		// The whole posting (stock moves, ledger rows and revisions) is rolled back together.
+		cancel_transaction();
+		throw $exception;
+	}
+}
 
 /**
  * Warehouse Returns — CRUD, lifecycle management, inspection, disposition routing.
@@ -590,8 +636,12 @@ function receive_return_order($return_id, $date_ = null) {
 		$adj_id = get_next_trans_no(ST_INVADJUST);
 		$ref = $Refs->get_next(ST_INVADJUST, null, $date_);
 
+		$return_rows = array();
 		$lines = get_return_order_lines($return_id);
-		while ($line = db_fetch($lines)) {
+		while ($row = db_fetch($lines))
+			$return_rows[] = $row;
+		$captured = warehouse_return_capture_classification($order, $return_rows, $adj_id, $date_, 'customer_return_receipt');
+		foreach ($return_rows as $line_index => $line) {
 			$qty = $line['qty_expected'];
 			$cost = get_unit_cost($line['stock_id']);
 
@@ -649,7 +699,7 @@ function receive_return_order($return_id, $date_ = null) {
 
 
 			// GL: debit inventory, credit COGS (reverse of delivery)
-			$stock_gl_codes = get_stock_gl_code($line['stock_id']);
+			$stock_gl_codes = inventory_event_classification_apply_pair(get_stock_gl_code($line['stock_id']), $captured, $line_index);
 			$value = round2($cost * $qty, user_price_dec());
 			if ($value > 0) {
 				$gl_memo = sprintf(_('Customer return RO#%s — %s'), $order['return_no'], $line['stock_id']);
@@ -862,7 +912,10 @@ function complete_return_order($return_id, $date_ = null) {
 					null,
 					$line['serial_id'],
 					$line['batch_id'],
-					sprintf(_('Scrap from return order RO#%s'), $order['return_no'])
+					sprintf(_('Scrap from return order RO#%s'), $order['return_no']),
+					null,
+					array('original' => warehouse_return_original_pair($order, $line['stock_id']),
+						'evidence' => array('return_id' => (int)$return_id, 'return_line' => (int)$line['line_id']))
 				) or dimension_financial_reference_failure();
 			}
 		}
@@ -876,8 +929,12 @@ function complete_return_order($return_id, $date_ = null) {
 		$adj_id = get_next_trans_no(ST_INVADJUST);
 		$ref = $Refs->get_next(ST_INVADJUST, null, $date_);
 
+		$return_rows = array();
 		$lines2 = get_return_order_lines($return_id);
-		while ($line = db_fetch($lines2)) {
+		while ($row = db_fetch($lines2))
+			$return_rows[] = $row;
+		$captured = warehouse_return_capture_classification($order, $return_rows, $adj_id, $date_, 'supplier_return_completion');
+		foreach ($return_rows as $line_index => $line) {
 			$qty = $line['qty_expected'];
 			$cost = get_unit_cost($line['stock_id']);
 
@@ -904,7 +961,7 @@ function complete_return_order($return_id, $date_ = null) {
 			}
 
 			// GL: debit purchase returns account, credit inventory
-			$stock_gl_codes = get_stock_gl_code($line['stock_id']);
+			$stock_gl_codes = inventory_event_classification_apply_pair(get_stock_gl_code($line['stock_id']), $captured, $line_index);
 			$value = round2($cost * $qty, user_price_dec());
 			if ($value > 0) {
 				$gl_memo = sprintf(_('Supplier return RO#%s — %s'), $order['return_no'], $line['stock_id']);

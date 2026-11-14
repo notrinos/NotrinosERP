@@ -29,21 +29,33 @@ require_once __DIR__.'/../../../dimensions/includes/dimension_category_policy.in
 // harnesses evaluate named writers without the page bootstrap, so the same canonical values are
 // admitted here without ever replacing an existing definition.
 foreach (array('ST_JOURNAL' => 0, 'ST_LOCTRANSFER' => 16, 'ST_INVADJUST' => 17,
-	'ST_COSTUPDATE' => 35, 'ST_CUSTDELIVERY' => 13) as $inventory_classification_type => $inventory_classification_value)
+	'ST_COSTUPDATE' => 35, 'ST_CUSTDELIVERY' => 13, 'ST_WH_SCRAP' => 52, 'ST_WH_CYCLE_COUNT' => 54,
+	'ST_SUPPRECEIVE' => 25) as $inventory_classification_type => $inventory_classification_value)
 	if (!defined($inventory_classification_type))
 		define($inventory_classification_type, $inventory_classification_value);
+
+// DIM-INV-002: source-revision anchors of two warehouse events that have no native transaction type.
+// They are revision identities only: no transaction table ever stores them, and they live in a range
+// that no ST_* constant uses, so they can never collide with a posted document identity.
+if (!defined('INVENTORY_CLASSIFICATION_WARRANTY_ANCHOR'))
+	define('INVENTORY_CLASSIFICATION_WARRANTY_ANCHOR', 9054);
+if (!defined('INVENTORY_CLASSIFICATION_CONSIGNMENT_ANCHOR'))
+	define('INVENTORY_CLASSIFICATION_CONSIGNMENT_ANCHOR', 9055);
 
 /**
  * Transaction types that this adapter classifies.
  *
  * ST_JOURNAL appears here only for the zero/negative-stock handling journal that inventory itself
- * posts; ordinary journals stay with DIM-GL-001/DIM-GL-002.
+ * posts; ordinary journals stay with DIM-GL-001/DIM-GL-002. DIM-INV-002 adds the two warehouse
+ * approval documents (scrap and cycle count) and the two anchors of the events that are classified
+ * before or beside their ledger posting (warranty provision and consignment receipt).
  *
  * @return int[]
  */
 function inventory_classification_supported_types()
 {
-	return array(ST_INVADJUST, ST_COSTUPDATE, ST_LOCTRANSFER, ST_JOURNAL);
+	return array(ST_INVADJUST, ST_COSTUPDATE, ST_LOCTRANSFER, ST_JOURNAL, ST_WH_SCRAP, ST_WH_CYCLE_COUNT,
+		INVENTORY_CLASSIFICATION_WARRANTY_ANCHOR, INVENTORY_CLASSIFICATION_CONSIGNMENT_ANCHOR);
 }
 
 /**
@@ -558,10 +570,12 @@ function inventory_classification_bind_draft($draft_id, $trans_type, $document_k
  * @param string $date_ Document date in the display format
  * @param mixed $document_no Final native number, or null for a draft
  * @param array $evidence Bounded scalar evidence sealed with the revisions (location etc.)
+ * @param array $original_by_line Optional line index => (axis => stored identity) preserved pair of an
+ *                                event that corrects or consumes an earlier posting (DIM-INV-002)
  * @return array document_key, draft, header_revision_id, line_revision_ids, header_axes, axes
  */
 function inventory_classification_capture($trans_type, $header, $items, $date_, $document_no = null,
-	$evidence = array())
+	$evidence = array(), $original_by_line = array())
 {
 	if (!inventory_classification_type_supported($trans_type) || !is_object($header) || !is_array($items))
 		throw new DimensionFinancialReferenceWriteException(_('This inventory document cannot retain classification intent.'));
@@ -575,7 +589,8 @@ function inventory_classification_capture($trans_type, $header, $items, $date_, 
 	$effective = date2sql($date_);
 	if (dimension_source_revision_date($effective) === false)
 		throw new DimensionFinancialReferenceWriteException(_('The inventory source date is invalid.'));
-	$context = array('evidence' => is_array($evidence) ? $evidence : array());
+	$context = array('evidence' => is_array($evidence) ? $evidence : array(),
+		'original_by_line' => is_array($original_by_line) ? $original_by_line : array());
 	$sealed = isset($header->classification_draft_revisions) && is_array($header->classification_draft_revisions)
 		? $header->classification_draft_revisions : array();
 	$sealed_matches = !$draft && isset($sealed['document_key']) && $sealed['document_key'] === $draft_key;
@@ -613,6 +628,8 @@ function inventory_classification_capture($trans_type, $header, $items, $date_, 
 		$token = (string)$line->classification_token;
 		$quantity = inventory_classification_quantity(isset($line->quantity) ? $line->quantity : 0);
 		$line_context = $context;
+		if (isset($line->classification_evidence) && is_array($line->classification_evidence))
+			$line_context['evidence'] = array_merge($line_context['evidence'], $line->classification_evidence);
 		$line_context['evidence']['line'] = (int)$index + 1;
 		if (isset($context['original_by_line'][$index]))
 			$line_context['original'] = $context['original_by_line'][$index];
@@ -845,5 +862,6 @@ function inventory_classification_header_fields()
 function inventory_classification_line_fields()
 {
 	return array('classification_intents', 'classification_token', 'draft_line_key',
-		'classification_draft_revision_id', 'classification_revision_id', 'classification_lineage_state');
+		'classification_draft_revision_id', 'classification_revision_id', 'classification_lineage_state',
+		'classification_evidence');
 }

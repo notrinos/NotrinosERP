@@ -281,8 +281,25 @@ function execute_approved_warehouse_scrap_entry($draft_data, $reserved_trans_no,
 		!empty($draft_data['serial_id']) ? (int)$draft_data['serial_id'] : null,
 		!empty($draft_data['batch_id']) ? (int)$draft_data['batch_id'] : null,
 		isset($draft_data['memo']) ? $draft_data['memo'] : null,
-		$approved_by
+		$approved_by,
+		warehouse_scrap_classification_carriers($draft_data, $draft_id)
 	);
+}
+
+/**
+ * DIM-INV-002: carriers of the sealed scrap classification restored onto an approved draft.
+ *
+ * @param array $draft_data Restored draft payload
+ * @param int   $draft_id   Approval draft id
+ * @return array|null header, line and evidence carriers, or null for a legacy draft
+ */
+function warehouse_scrap_classification_carriers($draft_data, $draft_id)
+{
+	if (!function_exists('inventory_event_classification_carriers') || !isset($draft_data['classification_intents']))
+		return null;
+	$carriers = inventory_event_classification_carriers($draft_data);
+	return array('header' => $carriers['header'], 'line' => count($carriers['lines']) ? $carriers['lines'][0] : null,
+		'evidence' => array('approval_draft' => (int)$draft_id));
 }
 
 /**
@@ -325,7 +342,7 @@ function execute_approved_warehouse_cycle_count($draft_data, $reserved_trans_no,
 	if ($count_id <= 0)
 		return false;
 
-	if (!approve_cycle_count($count_id))
+	if (!approve_cycle_count($count_id, $draft_data))
 		return false;
 
 	return $count_id;

@@ -10,6 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 require_once __DIR__ . '/warehouse_config_dimension_db.inc';
+require_once __DIR__ . '/../../../includes/db/inventory_event_classification_db.inc';
 
 /**
  * Consignment & VMI (Vendor-Managed Inventory) Database Functions.
@@ -136,6 +137,16 @@ function receive_consignment_stock($stock_id, $supplier_id, $qty, $unit_cost, $d
 	if (!$consignment_id) {
 		cancel_transaction();
 		return false;
+	}
+
+	// DIM-INV-002: a receipt recognises nothing, but it freezes the owner intent so that the later recognition
+	// of the consumed stock is not driven by an item default that changed in between. Never blocks the receipt.
+	try {
+		inventory_event_classification_freeze_receipt($consignment_id, $stock_id, $qty, $date_,
+			array('supplier_id' => (int)$supplier_id, 'location' => (string)$loc_code));
+	} catch (DimensionFinancialReferenceWriteException $exception) {
+		cancel_transaction();
+		throw $exception;
 	}
 
 	// Log a consignment receipt movement
@@ -311,14 +322,38 @@ function consume_consignment_stock($consignment_id, $qty, $date_, $memo = '')
 	// 2. Create stock move — positive qty = stock in (now owned)
 	$item_row = stock_master_entity::find($stock_id);
 	$std_cost = $item_row ? $item_row['material_cost'] : $unit_cost;
-	$move_id = add_stock_move(ST_INVADJUST, $stock_id, 0, $loc_code, $date_,
-		'CONSIGN-' . $consignment_id, $qty, $std_cost, $unit_cost);
 
-	// Update the stock move trans_no with the actual adjustment number
+	// The stock movement and the ledger rows share one adjustment identity (the movement used to be
+	// written under number 0 and so could never be reconciled with its own ledger rows).
 	$adj_no = get_next_trans_no(ST_INVADJUST);
 
+	// DIM-INV-002: the recognition posts the pair frozen at receipt; only a receipt that was never frozen
+	// (legacy, or an unresolvable intent at that time) resolves the item default as a new event.
+	$captured = null;
+	if (inventory_event_classification_ready()) {
+		try {
+			$anchor = inventory_event_classification_anchor_line(INVENTORY_CLASSIFICATION_CONSIGNMENT_ANCHOR,
+				$consignment_id, 1);
+			$evidence = array('consignment_id' => (int)$consignment_id, 'supplier_id' => (int)$supplier_id);
+			if ($anchor !== null) {
+				$evidence['lineage'] = 'consignment_receipt';
+				$evidence['anchor_revision'] = (int)$anchor['revision_id'];
+			}
+			$captured = inventory_event_classification_capture(ST_INVADJUST, $adj_no, $date_,
+				array(inventory_event_classification_line($stock_id, $qty, $anchor, $evidence)),
+				'consignment_recognition', array('consignment_id' => (int)$consignment_id,
+					'location' => (string)$loc_code));
+		} catch (DimensionFinancialReferenceWriteException $exception) {
+			cancel_transaction();
+			throw $exception;
+		}
+	}
+
+	$move_id = add_stock_move(ST_INVADJUST, $stock_id, $adj_no, $loc_code, $date_,
+		'CONSIGN-' . $consignment_id, $qty, $std_cost, $unit_cost);
+
 	// 3. GL posting — Debit inventory, Credit supplier payable
-	$stock_gl = get_stock_gl_code($stock_id);
+	$stock_gl = inventory_event_classification_apply_pair(get_stock_gl_code($stock_id), $captured, 0);
 	$supplier = suppliers_entity::find($supplier_id);
 
 	if (!$supplier) {
