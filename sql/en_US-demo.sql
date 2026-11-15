@@ -1188,6 +1188,133 @@ CREATE TABLE `0_dimension_posting_links` (
 
 -- Data of table `0_dimension_posting_links` --
 
+-- Structure of table `0_dimension_allocation_runs` --
+
+DROP TABLE IF EXISTS `0_dimension_allocation_runs`;
+
+CREATE TABLE `0_dimension_allocation_runs` (
+	`run_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`run_key` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`active_key` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	`run_kind` varchar(20) NOT NULL,
+	`axis` tinyint(4) NOT NULL DEFAULT '0',
+	`rule_mode` varchar(12) NOT NULL DEFAULT '',
+	`tran_date` date NOT NULL,
+	`status` varchar(16) NOT NULL,
+	`approval_draft_id` int(11) DEFAULT NULL,
+	`journal_trans_no` int(11) DEFAULT NULL,
+	`inverse_of_run_id` bigint(20) unsigned DEFAULT NULL,
+	`active_inverse_of` bigint(20) unsigned DEFAULT NULL,
+	`source_total` decimal(24,8) NOT NULL DEFAULT '0.00000000',
+	`request_payload` longtext NOT NULL,
+	`journal_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`failure_reason` varchar(255) NOT NULL DEFAULT '',
+	`actor_id` int(10) unsigned NOT NULL DEFAULT '0',
+	`created_at` datetime NOT NULL,
+	`resolved_at` datetime DEFAULT NULL,
+	PRIMARY KEY (`run_id`),
+	UNIQUE KEY `dimension_allocation_active_key` (`active_key`),
+	UNIQUE KEY `dimension_allocation_active_inverse` (`active_inverse_of`),
+	KEY `dimension_allocation_run_key` (`run_key`),
+	KEY `dimension_allocation_status` (`status`),
+	KEY `dimension_allocation_journal` (`journal_trans_no`),
+	KEY `dimension_allocation_inverse_of` (`inverse_of_run_id`),
+	CONSTRAINT `0_dimension_allocation_inverse_parent` FOREIGN KEY (`inverse_of_run_id`) REFERENCES `0_dimension_allocation_runs` (`run_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_allocation_runs` --
+
+-- Structure of table `0_dimension_allocation_sources` --
+
+DROP TABLE IF EXISTS `0_dimension_allocation_sources`;
+
+CREATE TABLE `0_dimension_allocation_sources` (
+	`source_link_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`run_id` bigint(20) unsigned NOT NULL,
+	`gl_counter` int(11) NOT NULL,
+	`active_counter` int(11) DEFAULT NULL,
+	`account` varchar(15) NOT NULL,
+	`source_amount` decimal(24,8) NOT NULL,
+	PRIMARY KEY (`source_link_id`),
+	UNIQUE KEY `dimension_allocation_run_source` (`run_id`,`gl_counter`),
+	UNIQUE KEY `dimension_allocation_active_source` (`active_counter`),
+	KEY `dimension_allocation_source_row` (`gl_counter`),
+	CONSTRAINT `0_dimension_allocation_source_run` FOREIGN KEY (`run_id`) REFERENCES `0_dimension_allocation_runs` (`run_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_allocation_sources` --
+
+-- Structure of table `0_dimension_allocation_drivers` --
+
+DROP TABLE IF EXISTS `0_dimension_allocation_drivers`;
+
+CREATE TABLE `0_dimension_allocation_drivers` (
+	`driver_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`driver_key` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`version_no` int(10) unsigned NOT NULL,
+	`axis` tinyint(4) NOT NULL,
+	`source_kind` varchar(24) NOT NULL,
+	`unit_label` varchar(40) NOT NULL,
+	`period_from` date NOT NULL,
+	`period_to` date NOT NULL,
+	`population_units` bigint(20) unsigned NOT NULL,
+	`units_total` bigint(20) unsigned NOT NULL,
+	`aggregate_source_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	`status` varchar(16) NOT NULL,
+	`content_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`note` varchar(200) NOT NULL DEFAULT '',
+	`maker_id` int(10) unsigned NOT NULL,
+	`checker_id` int(10) unsigned DEFAULT NULL,
+	`superseded_by` bigint(20) unsigned DEFAULT NULL,
+	`created_at` datetime NOT NULL,
+	`decided_at` datetime DEFAULT NULL,
+	PRIMARY KEY (`driver_id`),
+	UNIQUE KEY `dimension_allocation_driver_version` (`driver_key`,`version_no`),
+	KEY `dimension_allocation_driver_status` (`driver_key`,`status`),
+	KEY `dimension_allocation_driver_content` (`content_sha256`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_allocation_drivers` --
+
+-- Structure of table `0_dimension_allocation_driver_values` --
+
+DROP TABLE IF EXISTS `0_dimension_allocation_driver_values`;
+
+CREATE TABLE `0_dimension_allocation_driver_values` (
+	`value_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`driver_id` bigint(20) unsigned NOT NULL,
+	`target_id` int(11) NOT NULL,
+	`units` bigint(20) unsigned NOT NULL,
+	`member_count` int(10) unsigned DEFAULT NULL,
+	PRIMARY KEY (`value_id`),
+	UNIQUE KEY `dimension_allocation_driver_dimension` (`driver_id`,`target_id`),
+	CONSTRAINT `0_dimension_allocation_value_driver` FOREIGN KEY (`driver_id`) REFERENCES `0_dimension_allocation_drivers` (`driver_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_allocation_driver_values` --
+
+-- Structure of table `0_dimension_allocation_driver_runs` --
+
+DROP TABLE IF EXISTS `0_dimension_allocation_driver_runs`;
+
+CREATE TABLE `0_dimension_allocation_driver_runs` (
+	`run_id` bigint(20) unsigned NOT NULL,
+	`driver_id` bigint(20) unsigned NOT NULL,
+	`driver_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`residual_policy` varchar(12) NOT NULL,
+	`residual_target_id` int(11) DEFAULT NULL,
+	`residual_ppm` int(10) unsigned NOT NULL DEFAULT '0',
+	`fully_allocated` tinyint(1) NOT NULL DEFAULT '0',
+	`weights_payload` text NOT NULL,
+	`created_at` datetime NOT NULL,
+	PRIMARY KEY (`run_id`),
+	KEY `dimension_allocation_driver_run_driver` (`driver_id`),
+	CONSTRAINT `0_dimension_allocation_driver_run_run` FOREIGN KEY (`run_id`) REFERENCES `0_dimension_allocation_runs` (`run_id`) ON DELETE RESTRICT,
+	CONSTRAINT `0_dimension_allocation_driver_run_driver` FOREIGN KEY (`driver_id`) REFERENCES `0_dimension_allocation_drivers` (`driver_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_allocation_driver_runs` --
+
 -- Structure of table `0_employees` --
 
 DROP TABLE IF EXISTS `0_employees`;

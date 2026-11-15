@@ -23,6 +23,11 @@ ApprovalWorkflow::registerTransactionType(ST_JOURNAL, array(
 	'amount_getter'  => 'get_journal_draft_amount',
 	'draft_renderer' => 'render_journal_draft',
 	'edit_url'       => 'gl/gl_journal.php',
+	// DIM-ALC-001: a guided allocation journal binds its run to the draft atomically and releases it on
+	// rejection or cancellation. Every other journal draft passes these hooks unchanged.
+	'submitted'      => 'journal_allocation_draft_submitted',
+	'rejector'       => 'journal_allocation_draft_released',
+	'canceler'       => 'journal_allocation_draft_released',
 ));
 
 ApprovalWorkflow::registerTransactionType(ST_BANKPAYMENT, array(
@@ -84,7 +89,53 @@ function execute_approved_journal_entry($draft_data, $reserved_trans_no, $draft_
 
 	$trans_no = write_journal_entries($cart);
 
+	// DIM-ALC-001: a guided allocation journal is confirmed against its run (digest, ledger rows) inside
+	// the same transaction; a mismatch aborts the approval execution. Ordinary journals are untouched.
+	if ($trans_no && isset($draft_data['dimension_allocation'])) {
+		journal_allocation_include();
+		if (!dimension_allocation_confirm_posted($draft_data, $trans_no, $draft_id))
+			return false;
+	}
+
 	return $trans_no;
+}
+
+/** Load the guided allocation authority only when an allocation draft needs it. */
+function journal_allocation_include()
+{
+	global $path_to_root;
+	include_once($path_to_root . '/dimensions/includes/dimension_allocation.inc');
+}
+
+/**
+ * Approval submission hook: bind an allocation run to its draft.
+ *
+ * @param array $data     Draft data
+ * @param int   $draft_id New draft identity
+ * @return bool False aborts the submission
+ */
+function journal_allocation_draft_submitted($data, $draft_id)
+{
+	if (!is_array($data) || !isset($data['dimension_allocation']))
+		return true;
+	journal_allocation_include();
+	return dimension_allocation_approval_submitted($data, $draft_id);
+}
+
+/**
+ * Approval rejection/cancellation hook: release an allocation run.
+ *
+ * @param array  $draft_data Draft data
+ * @param int    $draft_id   Draft identity
+ * @param string $comments   Reviewer comment
+ * @return bool False aborts the action
+ */
+function journal_allocation_draft_released($draft_data, $draft_id, $comments = '')
+{
+	if (!is_array($draft_data) || !isset($draft_data['dimension_allocation']))
+		return true;
+	journal_allocation_include();
+	return dimension_allocation_approval_released($draft_data, $draft_id, $comments);
 }
 
 /**

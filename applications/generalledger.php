@@ -18,6 +18,10 @@ class GeneralLedgerApp extends application {
 		$this->add_lapp_function(0, _('&Deposits'), 'gl/gl_bank.php?NewDeposit=Yes', 'SA_DEPOSIT', MENU_TRANSACTION);
 		$this->add_lapp_function(0, _('Bank Account &Transfers'), 'gl/bank_transfer.php?', 'SA_BANKTRANSFER', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('&Journal Entry'), 'gl/gl_journal.php?NewJournal=Yes', 'SA_JOURNALENTRY', MENU_TRANSACTION);
+		// DIM-ALC-001: guided approved Dimension allocation and reclassification journals (same journal authority).
+		$this->add_rapp_function(0, _('&Dimension Allocation Journal'), 'gl/gl_allocation.php?', 'SA_JOURNALENTRY', MENU_TRANSACTION);
+		// DIM-ALC-002: versioned measured drivers (overhead and labor) and driver-based allocation runs.
+		$this->add_rapp_function(0, _('Dimension Allocation &Drivers'), 'gl/gl_allocation_driver.php?', 'SA_JOURNALENTRY', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('&Budget Entry'), 'gl/gl_budget.php?', 'SA_BUDGETENTRY', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('&Reconcile Bank Account'), 'gl/bank_account_reconcile.php?', 'SA_RECONCILE', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Revenue / &Costs Accruals'), 'gl/accruals.php?', 'SA_ACCRUALS', MENU_TRANSACTION);
