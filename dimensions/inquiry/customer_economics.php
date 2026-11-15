@@ -51,6 +51,11 @@ if (!isset($_POST['TransFromDate']))
 if (!isset($_POST['TransToDate']))
 	$_POST['TransToDate'] = Today();
 
+// DIM-G4: the filters post through AJAX and every block below depends on them. Without this the response was empty and
+// Show or a changed Dimension silently left the previous figures on screen.
+if (!empty($_POST))
+	$Ajax->activate('_page_body');
+
 start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();

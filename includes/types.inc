@@ -12,6 +12,10 @@
 //----------------------------------------------------------------------------------
 //	NotrinosERP system transaction types
 //
+// DIM-G4: the eleven types below are guarded because inventory_classification_db.inc may admit the same canonical
+// values first when a page loads the inventory libraries before this file; a repeated define raised a visible warning.
+// Each define() stays at the start of its own line: several test fixtures extract the definitions by that exact shape.
+if (!defined('ST_JOURNAL'))
 define('ST_JOURNAL', 0);
 
 define('ST_BANKPAYMENT', 1);
@@ -21,19 +25,26 @@ define('ST_BANKTRANSFER', 4);
 define('ST_SALESINVOICE', 10);
 define('ST_CUSTCREDIT', 11);
 define('ST_CUSTPAYMENT', 12);
+if (!defined('ST_CUSTDELIVERY'))
 define('ST_CUSTDELIVERY', 13);
 
+if (!defined('ST_LOCTRANSFER'))
 define('ST_LOCTRANSFER', 16);
+if (!defined('ST_INVADJUST'))
 define('ST_INVADJUST', 17);
 
 define('ST_PURCHORDER', 18);
 define('ST_SUPPINVOICE', 20);
 define('ST_SUPPCREDIT', 21);
 define('ST_SUPPAYMENT', 22);
+if (!defined('ST_SUPPRECEIVE'))
 define('ST_SUPPRECEIVE', 25);
 
+if (!defined('ST_WORKORDER'))
 define('ST_WORKORDER', 26);
+if (!defined('ST_MANUISSUE'))
 define('ST_MANUISSUE', 28);
+if (!defined('ST_MANURECEIVE'))
 define('ST_MANURECEIVE', 29);
 
 define('ST_PAYSLIP', 80);
@@ -67,6 +78,7 @@ define('FA_YEARLY', 1);
 
 define('ST_SALESORDER', 30);
 define('ST_SALESQUOTE', 32);
+if (!defined('ST_COSTUPDATE'))
 define('ST_COSTUPDATE', 35);
 define('ST_DIMENSION', 40);
 define('ST_CUSTOMER', 41);
@@ -79,8 +91,10 @@ define('ST_EMPLOYEE',     46);
 // --- Warehouse Management transaction types ---
 define('ST_WH_TRANSFER_ORDER',   50);  // Inter-branch transfer order
 define('ST_WH_MATERIAL_REQUEST', 51);  // Material request
+if (!defined('ST_WH_SCRAP'))
 define('ST_WH_SCRAP',            52);  // Scrap entry
 define('ST_WH_RETURN_ORDER',     53);  // Return order
+if (!defined('ST_WH_CYCLE_COUNT'))
 define('ST_WH_CYCLE_COUNT',      54);  // Cycle count adjustment
 define('ST_WH_INTERNAL_MOVE',    55);  // Internal bin-to-bin move
 

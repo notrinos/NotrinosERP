@@ -89,6 +89,11 @@ if (!isset($_POST['Show']) && !isset($_POST['LoadFilter']) && !isset($_POST['Sav
 	$_POST['IncludeQueue'] = 1;
 }
 
+// DIM-G4: the filters post through AJAX and every block below depends on them. Without this the response was empty and
+// Show or a changed Dimension silently left the previous figures on screen.
+if (!empty($_POST))
+	$Ajax->activate('_page_body');
+
 start_form();
 start_table(TABLESTYLE_NOBORDER);
 start_row();

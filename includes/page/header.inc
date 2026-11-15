@@ -73,8 +73,13 @@ function send_scripts() {
 		// compress also static files
 		if (!file_exists($fpath) || $SysPrefs->go_debug || (file_exists($source_path) && filemtime($fpath) < filemtime($source_path))) {
 			// don't need to compress minified files
-			if(strpos($basename, '.min.js' ) !== false)
+			if(strpos($basename, '.min.js' ) !== false) {
+				// DIM-G4: a user's first page found no cache folder here, so the first two minified scripts
+				// (jQuery and Select2) were never copied and answered 404 until the next page load.
+				if (!is_dir(dirname($fpath)))
+					@mkdir(dirname($fpath), 0777, true);
 				copy($source_path, $fpath);
+			}
 			else
 				cache_js_file($fpath, file_get_contents($source_path));
 		}
