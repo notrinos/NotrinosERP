@@ -282,6 +282,9 @@ function dimension_budget_read_rows($account, $scope1, $scope2, $from, $to)
     if (!$result) return false;
     $rows = array();
     while ($row = db_fetch_assoc($result)) $rows[] = $row;
+    // DIM-BUD-002: a fiscal year with an explicitly chosen approved budget version reads that version instead of the live rows.
+    if (function_exists('dimension_budget_version_overlay'))
+        return dimension_budget_version_overlay($rows, $account, $scope1, $scope2, $first, $last);
     return $rows;
 }
 
@@ -346,3 +349,6 @@ function dimension_budget_reason_text($reason)
         'missing_months'=>_('Some months of this period have no budget entered.'));
     return isset($texts[$reason]) ? $texts[$reason] : '';
 }
+
+// DIM-BUD-002: versioned baselines, approved revisions and the explicit active comparison.
+include_once dirname(__FILE__).'/dimension_budget_version.inc';

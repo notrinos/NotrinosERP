@@ -165,6 +165,9 @@ function budget_view_query() {
  */
 function display_budget_period_note($begin, $end, $full_month) {
 	$period = dimension_budget_period(date2sql($begin), date2sql($end));
+	// DIM-BUD-002: name the approved budget version when a fiscal year compares against one.
+	foreach (dimension_budget_version_source_labels(date2sql($begin), date2sql($end)) as $label)
+		display_note($label, 0, 1);
 	if ($period['comparable'])
 		return;
 	if ($full_month && $period['reason'] !== 'invalid') {

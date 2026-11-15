@@ -88,6 +88,11 @@ if (db_has_gl_accounts()) {
 	}
 	submit_row('submit', _('Get'), true, '', '', true);
 	end_table(1);
+	// DIM-BUD-002: this page edits the live budget only; say so when the reports compare against an approved version.
+	$fyear_note = fiscal_year_entity::find($_POST['fyear']);
+	if ($fyear_note)
+		foreach (dimension_budget_version_source_labels($fyear_note['begin'], $fyear_note['end']) as $label)
+			display_note($label.' '._('Changes made here affect the live budget entry only.'), 0, 1);
 	div_start('budget_tbl');
 	start_table(TABLESTYLE);
 	$showdims = (($dim == 1 && $_POST['dim1'] == 0) ||

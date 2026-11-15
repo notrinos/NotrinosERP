@@ -23,6 +23,7 @@ class GeneralLedgerApp extends application {
 		// DIM-ALC-002: versioned measured drivers (overhead and labor) and driver-based allocation runs.
 		$this->add_rapp_function(0, _('Dimension Allocation &Drivers'), 'gl/gl_allocation_driver.php?', 'SA_JOURNALENTRY', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('&Budget Entry'), 'gl/gl_budget.php?', 'SA_BUDGETENTRY', MENU_TRANSACTION);
+		$this->add_rapp_function(0, _('Budget Baselines and &Revisions'), 'gl/gl_budget_version.php?', 'SA_BUDGETENTRY', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('&Reconcile Bank Account'), 'gl/bank_account_reconcile.php?', 'SA_RECONCILE', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Revenue / &Costs Accruals'), 'gl/accruals.php?', 'SA_ACCRUALS', MENU_TRANSACTION);
 

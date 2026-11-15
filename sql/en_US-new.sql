@@ -1192,6 +1192,77 @@ CREATE TABLE `0_dimension_allocation_driver_runs` (
 
 -- Data of table `0_dimension_allocation_driver_runs` --
 
+-- Structure of table `0_dimension_budget_versions` --
+
+DROP TABLE IF EXISTS `0_dimension_budget_versions`;
+
+CREATE TABLE `0_dimension_budget_versions` (
+	`version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`fiscal_year` int(11) NOT NULL,
+	`version_no` int(10) unsigned NOT NULL,
+	`version_kind` varchar(12) NOT NULL,
+	`basis_version_id` bigint(20) unsigned DEFAULT NULL,
+	`basis_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	`status` varchar(12) NOT NULL,
+	`period_from` date NOT NULL,
+	`period_to` date NOT NULL,
+	`line_count` int(10) unsigned NOT NULL,
+	`total_amount` decimal(24,6) NOT NULL,
+	`content_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`commentary` varchar(500) NOT NULL DEFAULT '',
+	`decision_note` varchar(200) NOT NULL DEFAULT '',
+	`maker_id` int(10) unsigned NOT NULL,
+	`checker_id` int(10) unsigned DEFAULT NULL,
+	`created_at` datetime NOT NULL,
+	`decided_at` datetime DEFAULT NULL,
+	PRIMARY KEY (`version_id`),
+	UNIQUE KEY `dimension_budget_version_no` (`fiscal_year`,`version_no`),
+	KEY `dimension_budget_version_status` (`fiscal_year`,`status`),
+	KEY `dimension_budget_version_content` (`content_sha256`),
+	CONSTRAINT `0_dimension_budget_version_basis` FOREIGN KEY (`basis_version_id`) REFERENCES `0_dimension_budget_versions` (`version_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_budget_versions` --
+
+-- Structure of table `0_dimension_budget_version_lines` --
+
+DROP TABLE IF EXISTS `0_dimension_budget_version_lines`;
+
+CREATE TABLE `0_dimension_budget_version_lines` (
+	`line_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`version_id` bigint(20) unsigned NOT NULL,
+	`account_code` varchar(15) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`coordinate_1` int(11) NOT NULL DEFAULT '0',
+	`coordinate_2` int(11) NOT NULL DEFAULT '0',
+	`period_start` date NOT NULL,
+	`amount` decimal(24,6) NOT NULL,
+	`source_rows` int(10) unsigned NOT NULL DEFAULT '1',
+	PRIMARY KEY (`line_id`),
+	UNIQUE KEY `dimension_budget_version_line` (`version_id`,`account_code`,`coordinate_1`,`coordinate_2`,`period_start`),
+	KEY `dimension_budget_version_line_scope` (`version_id`,`account_code`,`period_start`),
+	CONSTRAINT `0_dimension_budget_line_version` FOREIGN KEY (`version_id`) REFERENCES `0_dimension_budget_versions` (`version_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_budget_version_lines` --
+
+-- Structure of table `0_dimension_budget_activations` --
+
+DROP TABLE IF EXISTS `0_dimension_budget_activations`;
+
+CREATE TABLE `0_dimension_budget_activations` (
+	`activation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`fiscal_year` int(11) NOT NULL,
+	`version_id` bigint(20) unsigned DEFAULT NULL,
+	`reason` varchar(200) NOT NULL,
+	`actor_id` int(10) unsigned NOT NULL,
+	`created_at` datetime NOT NULL,
+	PRIMARY KEY (`activation_id`),
+	KEY `dimension_budget_activation_year` (`fiscal_year`,`activation_id`),
+	CONSTRAINT `0_dimension_budget_activation_version` FOREIGN KEY (`version_id`) REFERENCES `0_dimension_budget_versions` (`version_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_budget_activations` --
+
 -- Structure of table `0_employees` --
 
 DROP TABLE IF EXISTS `0_employees`;
