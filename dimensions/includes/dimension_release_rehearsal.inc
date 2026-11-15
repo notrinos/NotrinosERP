@@ -169,7 +169,7 @@ function dimension_release_family_matrix()
 		'commitments_and_hierarchy'=>array('level'=>'supported', 'tasks'=>array('DIM-ADV-001', 'DIM-ADV-002'),
 			'statement'=>'Purchase commitments, forecasts and effective hierarchy rollups are advisory evidence beside the ledger: commitments and reservations never post, reservations stay off until separately activated, and a hierarchy is an optional approved structure whose as-posted view is never restated.'),
 		'additional_categories'=>array('level'=>'unsupported', 'tasks'=>array('DIM-AXS-001'),
-			'statement'=>'Only the two native categories exist; an independent third category is not evaluated.'));
+			'statement'=>'Only the two native categories exist; a third independent category was evaluated (DIM-AXS-001) and is deliberately not built.'));
 }
 
 /**
@@ -370,6 +370,16 @@ function dimension_release_backlog_tasks($backlog)
 }
 
 /**
+ * Unsupported families whose owner task is complete because it is a characterization or an evaluation, not an implementation.
+ *
+ * @return string[]
+ */
+function dimension_release_evaluation_only_families()
+{
+	return array('trade_finance_extension', 'additional_categories');
+}
+
+/**
  * Check the family matrix against the backlog's own statements.
  *
  * @param array $tasks Result of dimension_release_backlog_tasks()
@@ -387,7 +397,7 @@ function dimension_release_family_problems(array $tasks)
 				continue;
 			}
 			$complete = $tasks[$task]['status'] === 'COMPLETE';
-			if ($row['level'] === 'unsupported' && $complete && $family !== 'trade_finance_extension')
+			if ($row['level'] === 'unsupported' && $complete && !in_array($family, dimension_release_evaluation_only_families(), true))
 				$problems[] = 'unsupported_family_has_complete_task:'.$family.':'.$task;
 			if ($row['level'] !== 'unsupported' && !$complete)
 				$problems[] = 'supported_family_has_open_task:'.$family.':'.$task;
