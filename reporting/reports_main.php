@@ -510,6 +510,18 @@ $reports->addReport(RC_DIMENSIONS, 501, _('Dimension &Summary'),
 			_('Comments') => 'TEXTBOX',
 			_('Orientation') => 'ORIENTATION',
 			_('Destination') => 'DESTINATION'));
+// DIM-REP-006: unified comparison, account matrix and exception queue, one dataset for PDF and Excel.
+$reports->addReport(RC_DIMENSIONS, 502, _('Dimension Comparison and &Exceptions'),
+	array(	_('Start Date') => 'DATEBEGINM',
+			_('End Date') => 'DATEENDM',
+			_('Compare to') => 'DIMENSION_COMPARISON',
+			_('Dimension').' 1' => 'DIMENSIONS1',
+			_('Dimension').' 2' => 'DIMENSIONS2',
+			_('Account matrix') => 'YES_NO',
+			_('Exception queue') => 'YES_NO',
+			_('Comments') => 'TEXTBOX',
+			_('Orientation') => 'ORIENTATION',
+			_('Destination') => 'DESTINATION'));
 $reports->addReportClass(_('Banking'), RC_BANKING);
 	$reports->addReport(RC_BANKING,  601, _('Bank &Statement'),
 	array(	_('Bank Accounts') => 'BANK_ACCOUNTS_NO_FILTER',

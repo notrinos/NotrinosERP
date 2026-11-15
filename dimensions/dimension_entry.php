@@ -19,6 +19,7 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/admin/db/tags_db.inc');
 include_once($path_to_root.'/dimensions/includes/dimensions_db.inc');
 include_once($path_to_root.'/dimensions/includes/dimensions_ui.inc');
+include_once($path_to_root.'/dimensions/includes/dimension_inquiry.inc');
 
 $js = '';
 if (user_use_date_picker())
@@ -68,14 +69,15 @@ if (isset($_GET['DeletedID'])) {
 if (isset($_GET['ClosedID'])) {
 	$id = $_GET['ClosedID'];
 
-	display_notification_centered(_('The dimension has been closed. There can be no more changes to it.').' #'.$id);
+	// DIM-REP-004: closing stops new postings only; history and reports are unchanged and the dimension can be re-opened.
+	display_notification_centered(_('The dimension has been closed. No new posting accepts it; its history and reports are unchanged and it can be re-opened.').' #'.(int)$id);
 	safe_exit();
 }
 
 if (isset($_GET['ReopenedID'])) {
 	$id = $_GET['ReopenedID'];
 
-	display_notification_centered(_('The dimension has been re-opened. ').' #'.$id);
+	display_notification_centered(_('The dimension has been re-opened and accepts new postings again.').' #'.(int)$id);
 	safe_exit();
 }
 
@@ -86,7 +88,10 @@ function safe_exit() {
 
 	hyperlink_no_params('', _('Enter a &new dimension'));
 	hyperlink_no_params($path_to_root.'/dimensions/inquiry/search_dimensions.php', _('&Select an existing dimension'));
-	hyperlink_no_params($path_to_root.'/admin/attachments.php?filterType=40&trans_no=$id', _('&Add Attachment'));
+	// DIM-REP-004: the attachment link carries the real identity (the literal text "$id" was sent before) and is
+	// offered only for a dimension that still exists.
+	if (isset($_GET['DeletedID']) === false && (int)$id > 0)
+		hyperlink_no_params($path_to_root.'/admin/attachments.php?filterType='.ST_DIMENSION.'&trans_no='.(int)$id, _('&Add Attachment'));
 
 	display_footer_exit();
 }
@@ -122,19 +127,16 @@ function can_process() {
 		set_focus('type_');
 		return false;
 	}
-	if (strlen($_POST['name']) == 0) {
-		display_error( _('The dimension name must be entered.'));
-		set_focus('name');
-		return false;
-	}
-	if (!is_date($_POST['date_'])){
-		display_error( _('The date entered is in an invalid format.'));
-		set_focus('date_');
-		return false;
-	}
-	if (!is_date($_POST['due_date'])) {
-		display_error( _('The required by date entered is in an invalid format.'));
-		set_focus('due_date');
+	// DIM-REP-004: one shared rule judges the name/reference length in characters (the canonical column length, which the
+	// form also uses as its maximum), and a required-by date before the start date is refused.
+	$start_sql = is_date($_POST['date_']) ? date2sql($_POST['date_']) : null;
+	$due_sql = is_date($_POST['due_date']) ? date2sql($_POST['due_date']) : null;
+	$codes = dimension_inquiry_validate_master($selected_id == -1 ? $_POST['ref'] : '', $_POST['name'], $start_sql, $due_sql);
+	if (count($codes)) {
+		$focus = array('reference_too_long'=>'ref', 'name_required'=>'name', 'name_too_long'=>'name', 'start_invalid'=>'date_', 'due_invalid'=>'due_date', 'due_before_start'=>'due_date');
+		foreach ($codes as $code)
+			display_error(dimension_inquiry_reason_text($code));
+		set_focus($focus[$codes[0]]);
 		return false;
 	}
 
@@ -247,7 +249,7 @@ else {
 	ref_row(_('Dimension Reference:'), 'ref', '', $Refs->get_next(ST_DIMENSION), false, ST_DIMENSION);
 }
 
-text_row_ex(_('Name').':', 'name', 50, 75);
+text_row_ex(_('Name').':', 'name', 50, dimension_inquiry_name_limit());
 $dim = (int)get_company_pref('use_dimension');
 // DIM-LFC-002: a disabled axis preference governs new events only. An existing historical master keeps
 // displaying (and resubmitting) its stored axis instead of being silently reassigned by a shortened list.
@@ -273,7 +275,7 @@ textarea_row(_('Memo:'), 'memo_', null, 40, 5);
 end_table(1);
 
 if (isset($_POST['closed']) && $_POST['closed'] == 1)
-	display_note(_('This Dimension is closed.'), 0, 0, "class='currentfg'");
+	display_note(dimension_inquiry_closed_text(), 0, 0, "class='currentfg'");
 
 if ($selected_id != -1) {
 	echo '<br>';

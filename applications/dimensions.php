@@ -27,6 +27,10 @@ class DimensionsApp extends application {
 		$this->add_lapp_function($dim > 0 ? 1 : 0, _('Dimension &Inquiry'), 'dimensions/inquiry/search_dimensions.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
 		// DIM-REP-003: the shared Financial Tracking workspace; the page itself also requires GL analytics.
 		$this->add_lapp_function($dim > 0 ? 1 : 0, _('Financial &Tracking'), 'dimensions/inquiry/dimension_tracking.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
+		// DIM-REP-005: customer and project economics; the page itself also requires GL analytics and sales view.
+		$this->add_lapp_function($dim > 0 ? 1 : 0, _('&Customer Economics'), 'dimensions/inquiry/customer_economics.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
+		// DIM-REP-006: comparisons, account matrix and the exception work queue; the page also requires GL analytics.
+		$this->add_lapp_function($dim > 0 ? 1 : 0, _('Dimension &Exceptions'), 'dimensions/inquiry/dimension_exceptions.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
 		$this->add_rapp_function($dim > 0 ? 1 : 0, _('Dimension &Reports'), 'reporting/reports_main.php?Class=4', 'SA_DIMENSIONREP', MENU_REPORT);
 
 		$this->add_module(_('Maintenance'));

@@ -100,6 +100,7 @@ function report_access_report_registry()
 		409 => array('areas' => array('SA_MANUFTRANSVIEW', 'SA_MANUFBULKREP'), 'selector' => 'document_pair'),
 		451 => array('areas' => array('SA_ASSETSANALYTIC')),
 		501 => array('areas' => array('SA_DIMENSIONREP')),
+		502 => array('areas' => array('SA_DIMENSIONREP')),
 		601 => array('areas' => array('SA_BANKREP')),
 		602 => array('areas' => array('SA_BANKREP')),
 		701 => array('areas' => array('SA_GLREP')),

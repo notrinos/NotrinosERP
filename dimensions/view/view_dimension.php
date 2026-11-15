@@ -112,6 +112,9 @@ elseif (is_date($_POST['TransFromDate']) && is_date($_POST['TransToDate']) && !d
 		display_dimension_tracking_summary($tracking_lifetime, sprintf(_('Lifetime to %s'), $_POST['TransToDate']));
 		hyperlink_params($path_to_root.'/dimensions/inquiry/dimension_tracking.php', _('Open the Financial Tracking workspace for this Dimension'),
 			'TransFromDate='.urlencode($_POST['TransFromDate']).'&TransToDate='.urlencode($_POST['TransToDate']).'&Dimension'.((int)$myrow['type_'] === 2 ? '2' : '').'='.(int)$id);
+		// DIM-REP-005: the customer split of the same scope; its own page checks the customer economics aggregate.
+		hyperlink_params($path_to_root.'/dimensions/inquiry/customer_economics.php', _('Open the customer economics for this Dimension'),
+			'TransFromDate='.urlencode($_POST['TransFromDate']).'&TransToDate='.urlencode($_POST['TransToDate']).'&Dimension'.((int)$myrow['type_'] === 2 ? '2' : '').'='.(int)$id);
 	}
 }
 

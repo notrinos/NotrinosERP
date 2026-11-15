@@ -12,12 +12,15 @@
 $page_security = 'SA_DIMTRANSVIEW';
 $path_to_root = '../..';
 
-include($path_to_root.'/includes/db_pager.inc');
 include_once($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/reporting/includes/reporting.inc');
+include_once($path_to_root.'/reporting/includes/report_access_scope.inc');
+include_once($path_to_root.'/dimensions/includes/dimensions_db.inc');
+include_once($path_to_root.'/dimensions/includes/dimensions_ui.inc');
+include_once($path_to_root.'/dimensions/includes/dimension_inquiry.inc');
 $js = '';
 if ($SysPrefs->use_popup_windows)
 	$js .= get_js_open_window(800, 500);
@@ -34,115 +37,96 @@ else {
 }
 
 //-----------------------------------------------------------------------------------
-// Ajax updates
+// DIM-REP-004: the master start date and the activity period are two different filters, the reference text is combined
+// with every other filter, and the result is one bounded page with grouped performance columns.
 //
-if (get_post('SearchOrders'))
+if (get_post('SearchOrders') || get_post('dim_prev') || get_post('dim_next'))
 	$Ajax->activate('dim_table');
-elseif (get_post('_OrderNumber_changed')) {
-	$disable = get_post('OrderNumber') !== '';
-
-	$Ajax->addDisable(true, 'FromDate', $disable);
-	$Ajax->addDisable(true, 'ToDate', $disable);
-	$Ajax->addDisable(true, 'type_', $disable);
-	$Ajax->addDisable(true, 'OverdueOnly', $disable);
-	$Ajax->addDisable(true, 'OpenOnly', $disable);
-
-	if ($disable)
-		set_focus('OrderNumber');
-	else
-		set_focus('type_');
-
-	$Ajax->activate('dim_table');
-}
-
-//--------------------------------------------------------------------------------------
 
 if (isset($_GET['stock_id']))
 	$_POST['SelectedStockItem'] = $_GET['stock_id'];
 
-//--------------------------------------------------------------------------------------
-
-// DIM-LFC-002: the default historical scope must not hide an older master. The explicit From/To
-// filters remain available and labelled, but opening the inquiry starts from the full stored history.
-if (!isset($_POST['FromDate']) || $_POST['FromDate'] == '')
-	$_POST['FromDate'] = sql2date('1900-01-01');
-if (!isset($_POST['ToDate']) || $_POST['ToDate'] == '')
-	$_POST['ToDate'] = sql2date('2099-12-31');
+if (!isset($_POST['dim_page']) || !preg_match('/^[0-9]{1,9}$/D', (string)$_POST['dim_page']))
+	$_POST['dim_page'] = 1;
+if (get_post('SearchOrders'))
+	$_POST['dim_page'] = 1;
+elseif (get_post('dim_prev'))
+	$_POST['dim_page'] = max(1, (int)$_POST['dim_page'] - 1);
+elseif (get_post('dim_next'))
+	$_POST['dim_page'] = (int)$_POST['dim_page'] + 1;
 
 start_form(false, $_SERVER['PHP_SELF'].'?outstanding_only='.$outstanding_only);
 
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 
-ref_cells(_('Reference:'), 'OrderNumber', '', null, '', true);
-
+text_cells(_('Reference or name:'), 'OrderNumber', null, 20, dimension_inquiry_name_limit());
 number_list_cells(_('Type'), 'type_', null, 1, 2, _('All'));
-date_cells(_('From:'), 'FromDate', '', null, 0, 0, -5);
-date_cells(_('To:'), 'ToDate');
-
-check_cells( _('Only Overdue:'), 'OverdueOnly', null);
-
+date_cells(_('Started from:'), 'StartFrom', _('Filters by the date the dimension was created, not by its postings'), null, 0, 0, 1001);
+date_cells(_('Started to:'), 'StartTo', '', null, 0, 0, 1001);
+date_cells(_('Active from:'), 'ActiveFrom', _('Filters by postings dated in this period, whatever the start date of the dimension'), null, 0, 0, 1001);
+date_cells(_('Active to:'), 'ActiveTo', '', null, 0, 0, 1001);
+check_cells(_('Only Overdue:'), 'OverdueOnly', null);
 if (!$outstanding_only)
-	check_cells( _('Only Open:'), 'OpenOnly', null);
+	check_cells(_('Only Open:'), 'OpenOnly', null);
 else
 	$_POST['OpenOnly'] = 1;
-
 submit_cells('SearchOrders', _('Apply Filter'), '', '', 'default');
 
 end_row();
 end_table();
 
-$dim = get_company_pref('use_dimension');
-
-function view_link($row) {
-	return get_dimensions_trans_view_str(ST_DIMENSION, $row['id']);
+foreach (array('StartFrom', 'StartTo', 'ActiveFrom', 'ActiveTo') as $date_field) {
+	if (isset($_POST[$date_field]) && $_POST[$date_field] !== '' && !is_date($_POST[$date_field])) {
+		display_error(_('A date filter is not a valid date.'));
+		$_POST[$date_field] = '';
+	}
 }
+$filter_input = array(
+	'reference' => isset($_POST['OrderNumber']) ? $_POST['OrderNumber'] : '',
+	'type' => isset($_POST['type_']) ? $_POST['type_'] : 0,
+	'status' => check_value('OpenOnly') ? 'open' : 'all',
+	'overdue' => check_value('OverdueOnly'),
+	'start_from' => (isset($_POST['StartFrom']) && $_POST['StartFrom'] !== '') ? date2sql($_POST['StartFrom']) : '',
+	'start_to' => (isset($_POST['StartTo']) && $_POST['StartTo'] !== '') ? date2sql($_POST['StartTo']) : '',
+	'active_from' => (isset($_POST['ActiveFrom']) && $_POST['ActiveFrom'] !== '') ? date2sql($_POST['ActiveFrom']) : '',
+	'active_to' => (isset($_POST['ActiveTo']) && $_POST['ActiveTo'] !== '') ? date2sql($_POST['ActiveTo']) : '',
+	'today' => date2sql(Today()),
+	'sort' => 'reference',
+	'page' => $_POST['dim_page']);
+$normalized = dimension_inquiry_normalize_filters($filter_input);
 
-function sum_dimension($row) {
-	return get_dimension_balance($row['id'], $_POST['FromDate'], $_POST['ToDate']); 
+div_start('dim_table');
+if (!$normalized['ok']) {
+	foreach ($normalized['errors'] as $reason)
+		display_error(dimension_inquiry_reason_text($reason));
 }
-
-function is_closed($row) {
-	return $row['closed'] ? _('Yes') : _('No');
+else {
+	$performance = report_access_aggregate_scope('dimension_inquiry_performance');
+	$show_measures = !empty($performance['allowed']);
+	$search = dimension_inquiry_search($normalized['filters'], $show_measures);
+	if ($search === false)
+		display_error(_('The dimensions could not be searched.'));
+	else {
+		$_POST['dim_page'] = $search['page'];
+		hidden('dim_page', $search['page']);
+		display_dimension_inquiry_results($search, $show_measures, $normalized['filters']['today']);
+		if ($search['pages'] > 1) {
+			start_table(TABLESTYLE_NOBORDER);
+			start_row();
+			if ($search['page'] > 1)
+				submit_cells('dim_prev', _('Previous page'), '', '', true);
+			label_cell(sprintf(_('Page %d of %d'), $search['page'], $search['pages']));
+			if ($search['page'] < $search['pages'])
+				submit_cells('dim_next', _('Next page'), '', '', true);
+			end_row();
+			end_table();
+		}
+		if (!$show_measures)
+			display_note(_('Revenue, costs and result are not shown: they need both the Dimension view and the GL analytics permissions.'));
+	}
 }
-
-function is_overdue($row) {
-	return date_diff2(Today(), sql2date($row['due_date']), 'd') > 0;
-}
-
-function edit_link($row) {
-	return pager_link(_('Edit'), '/dimensions/dimension_entry.php?trans_no='.$row['id'], ICON_EDIT);
-}
-
-function prt_link($row) {
-	return print_document_link($row['id'], _('Print'), ST_DIMENSION, ICON_PRINT);
-}
-
-
-$sql = get_sql_for_search_dimensions($dim, $_POST['FromDate'], $_POST['ToDate'], $_POST['OrderNumber'], $_POST['type_'], check_value('OpenOnly'), check_value('OverdueOnly'));
-
-$cols = array(
-	_('#') => array('fun'=>'view_link'), 
-	_('Reference'), 
-	_('Name'), 
-	_('Type'), 
-	_('Date') =>'date',
-	_('Due Date') => array('name'=>'due_date', 'type'=>'date', 'ord'=>'asc'), 
-	_('Closed') => array('fun'=>'is_closed'),
-	_('Balance') => array('type'=>'amount', 'insert'=>true, 'fun'=>'sum_dimension'),
-	array('insert'=>true, 'fun'=>'edit_link'),
-	array('insert'=>true, 'fun'=>'prt_link')
-);
-
-if ($outstanding_only)
-	$cols[_('Closed')] = 'skip';
-
-$table =& new_db_pager('dim_tbl', $sql, $cols);
-$table->set_marker('is_overdue', _('Marked dimensions are overdue.'));
-
-$table->width = '80%';
-
-display_db_pager($table);
+div_end();
 
 end_form();
 end_page();

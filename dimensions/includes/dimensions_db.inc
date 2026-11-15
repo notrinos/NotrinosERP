@@ -224,23 +224,28 @@ function get_dimension_balance($id, $from, $to) {
 	return $row[0];
 }
 
+/**
+ * Legacy master search SQL kept for its numeric callers.
+ *
+ * DIM-REP-004: the reference text is one more filter combined with the Type, Open, Overdue and start-date filters; it no
+ * longer discards them. The master start date is still the only date it narrows by; the activity period and the grouped
+ * performance are `dimension_inquiry_search()`.
+ */
 function get_sql_for_search_dimensions($dim, $from, $to, $order='', $type = -1, $open=false, $overdue=false) {
 	$sql = "SELECT dim.id, dim.reference, dim.name, dim.type_, dim.date_, dim.due_date, dim.closed FROM ".TB_PREF."dimensions as dim WHERE id > 0";
 
 	if ($order)
 		$sql .= " AND reference LIKE ".db_escape("%". $order . "%");
-	else {
-		// DIM-LFC-002: the enabled-axis posting preference governs new events only. It must never
-		// narrow a historical search, so the caller's explicit Type/Open filters are the only scope.
-		if ($open)
-			$sql .= " AND closed=0";
-		if ($type > 0)
-			$sql .= " AND type_=".db_escape($type);
-		if ($overdue)
-			$sql .= " AND due_date < '".date2sql(Today())."'";
+	// DIM-LFC-002: the enabled-axis posting preference governs new events only. It must never
+	// narrow a historical search, so the caller's explicit Type/Open filters are the only scope.
+	if ($open)
+		$sql .= " AND closed=0";
+	if ($type > 0)
+		$sql .= " AND type_=".db_escape($type);
+	if ($overdue)
+		$sql .= " AND closed=0 AND due_date < '".date2sql(Today())."'";
 
-		$sql .= " AND date_ >= '".date2sql($from)."' AND date_ <= '".date2sql($to)."'";
-	}
+	$sql .= " AND date_ >= '".date2sql($from)."' AND date_ <= '".date2sql($to)."'";
 
 	return $sql;
 }

@@ -686,6 +686,15 @@ function report_access_aggregate_map()
 		// DIM-REP-003: the shared Financial Tracking workspace and the single-Dimension tracking block.
 		'dimension_tracking_workspace' => array('areas' => array('SA_DIMTRANSVIEW', 'SA_GLANALYTIC'),
 			'label' => 'dimension_tracking_workspace'),
+		// DIM-REP-004: the revenue/cost/result columns of the Dimension master search and the report 501 balance column.
+		'dimension_inquiry_performance' => array('areas' => array('SA_DIMTRANSVIEW', 'SA_GLANALYTIC'),
+			'label' => 'dimension_inquiry_performance'),
+		// DIM-REP-005: customer economics reads customer identities from sales documents, so it also needs the sales view area.
+		'dimension_customer_economics' => array('areas' => array('SA_DIMTRANSVIEW', 'SA_GLANALYTIC', 'SA_SALESTRANSVIEW'),
+			'label' => 'dimension_customer_economics'),
+		// DIM-REP-006: comparisons, account matrix, exception queue and the shared export dataset (page, PDF and Excel).
+		'dimension_exception_workspace' => array('areas' => array('SA_DIMTRANSVIEW', 'SA_GLANALYTIC'),
+			'label' => 'dimension_exception_workspace'),
 		'dimension_balance_sheet_net' => array('areas' => array('SA_DIMTRANSVIEW', 'SA_GLANALYTIC'),
 			'label' => 'dimension_balance_sheet_net'),
 		'dimension_company_result' => array('areas' => array('SA_DIMTRANSVIEW', 'SA_GLANALYTIC'),

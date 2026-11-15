@@ -300,3 +300,248 @@ function display_dimension_tracking_workspace($data, $drill, $from, $to) {
 }
 
 
+
+//--------------------------------------------------------------------------------------
+
+/**
+ * DIM-REP-004: status text of one master in the search results.
+ *
+ * @param array $master Master row (closed, due_date in SQL form)
+ * @param string $today SQL date, or '' when unknown
+ * @return string Closed, Overdue or Open
+ */
+function dimension_inquiry_status_text($master, $today) {
+	if ((int)$master['closed'] === 1)
+		return _('Closed');
+	if ($today !== '' && $master['due_date'] < $today)
+		return _('Overdue');
+	return _('Open');
+}
+
+/**
+ * DIM-REP-004: render the result page of a Dimension master search.
+ *
+ * Master columns always show; the grouped revenue/cost/result columns show only when the caller is allowed the tracking
+ * aggregate and are the own-axis P&L measures of the shared reader, with the net balance of balance-sheet accounts kept
+ * apart. The note states whether the figures are for the chosen activity period or for the stored lifetime.
+ *
+ * @param array $search Result of dimension_inquiry_search()
+ * @param bool $show_measures Whether the performance columns are shown
+ * @param string $today SQL date used for the Overdue status
+ * @return void
+ */
+function display_dimension_inquiry_results($search, $show_measures, $today) {
+	if (!count($search['rows'])) {
+		display_note(_('No dimension matches the selected filters.'));
+		return;
+	}
+	$first = ($search['page'] - 1) * $search['page_size'] + 1;
+	display_note(sprintf(_('Showing %d-%d of %d dimensions (page %d of %d).'), $first, $first + count($search['rows']) - 1, $search['total'], $search['page'], $search['pages']));
+	$headers = array(_('#'), _('Reference'), _('Name'), _('Type'), _('Start date'), _('Due Date'), _('Status'));
+	if ($show_measures)
+		$headers = array_merge($headers, array(_('Revenue'), _('Costs'), _('Result'), _('Net GL balance (not a result)')));
+	$headers[] = '';
+	$headers[] = '';
+	start_table(TABLESTYLE);
+	table_header($headers);
+	$k = 0;
+	foreach ($search['rows'] as $master) {
+		alt_table_row_color($k);
+		label_cell(get_dimensions_trans_view_str(ST_DIMENSION, $master['id']));
+		label_cell($master['reference']);
+		label_cell($master['name']);
+		label_cell((string)$master['type_']);
+		label_cell(sql2date($master['date_']));
+		label_cell(sql2date($master['due_date']));
+		label_cell(dimension_inquiry_status_text($master, $today));
+		if ($show_measures) {
+			$m = $master['measures'];
+			amount_cell($m['revenue']);
+			amount_cell($m['costs']);
+			amount_cell($m['result']);
+			amount_cell($m['balance_net']);
+		}
+		label_cell(pager_link(_('Edit'), '/dimensions/dimension_entry.php?trans_no='.(int)$master['id'], ICON_EDIT));
+		label_cell(print_document_link($master['id'], _('Print'), ST_DIMENSION, ICON_PRINT));
+		end_row();
+	}
+	end_table(1);
+	if ($show_measures) {
+		if ($search['basis'] === 'period')
+			display_note(_('Revenue, costs and result are the posted GL measures of each dimension on its own category for the selected activity period (revenue credit-positive, costs debit-positive). The net balance of balance-sheet accounts is separate and is not a result.'));
+		else
+			display_note(_('No activity period is selected, so revenue, costs and result are the stored lifetime measures of each dimension on its own category (revenue credit-positive, costs debit-positive). The net balance of balance-sheet accounts is separate and is not a result.'));
+	}
+}
+
+//--------------------------------------------------------------------------------------
+
+/**
+ * DIM-REP-005: name one customer row, keeping an unknown customer identity visible.
+ *
+ * @param array $customer Row of dimension_customer_economics()
+ * @return string Plain text
+ */
+function dimension_customer_label($customer) {
+	if (empty($customer['known']))
+		return sprintf(_('Unknown customer #%d'), (int)$customer['customer_no']);
+	return $customer['reference'].' '.$customer['name'];
+}
+
+/**
+ * DIM-REP-005: render the customer economics of one scope.
+ *
+ * Revenue and matched cost come from the customer source documents; a customer without supported matched cost shows no
+ * contribution or margin; costs no customer document supports are listed as unattributed and are never allocated or
+ * estimated; fully allocated profit is shown as unavailable.
+ *
+ * @param array $data Result of dimension_customer_economics()
+ * @param string $heading Section heading
+ * @return void
+ */
+function display_dimension_customer_economics($data, $heading) {
+	display_heading2($heading);
+	if (!count($data['customers']))
+		display_note(_('No P&L posting of a customer document in this scope.'));
+	else {
+		$link = $_SESSION['wa_current_user']->can_access('SA_SALESTRANSVIEW');
+		start_table(TABLESTYLE);
+		table_header(array(_('Customer'), _('Revenue'), _('Matched cost'), _('Direct contribution'), _('Margin'), _('Share of attributed revenue'), _('Status')));
+		$k = 0;
+		foreach ($data['customers'] as $customer) {
+			alt_table_row_color($k);
+			$label = htmlspecialchars(dimension_customer_label($customer), ENT_QUOTES, 'UTF-8');
+			if ($link && !empty($customer['known']))
+				$label = "<a href='".$GLOBALS['path_to_root'].'/sales/inquiry/customer_inquiry.php?customer_id='.(int)$customer['customer_no']."'>".$label.'</a>';
+			label_cell($label);
+			amount_cell($customer['revenue']);
+			amount_cell($customer['matched_cost']);
+			if ($customer['contribution'] === null)
+				label_cell(_('N/A'), "align='right'");
+			else
+				amount_cell($customer['contribution']);
+			label_cell(dimension_tracking_percent_text($customer['margin']), "align='right'");
+			label_cell(dimension_tracking_percent_text($customer['revenue_share']), "align='right'");
+			label_cell(dimension_customer_contribution_text($customer['contribution_state']));
+			end_row();
+		}
+		end_table(1);
+	}
+	$mix = $data['mix'];
+	if ($mix['state'] === 'single')
+		display_note(_('Single-customer scope: all attributed revenue belongs to one customer.'));
+	elseif ($mix['state'] === 'multi')
+		display_note(sprintf(_('Multi-customer scope: %d customers share this scope. Costs that no customer document supports are not split among them.'), $mix['customers']));
+	display_heading2(_('Not attributed to a customer'));
+	start_table(TABLESTYLE);
+	table_header(array(_('Reason'), _('Revenue'), _('Costs'), _('Lines'), _('Next step')));
+	$k = 0;
+	$listed = 0;
+	foreach ($data['unattributed'] as $state => $bucket) {
+		if ($bucket['lines'] === 0)
+			continue;
+		$listed++;
+		alt_table_row_color($k);
+		label_cell(dimension_customer_state_text($state));
+		amount_cell($bucket['revenue']);
+		amount_cell($bucket['costs']);
+		label_cell((string)$bucket['lines'], "align='right'");
+		label_cell(dimension_customer_state_action($state));
+		end_row();
+	}
+	end_table(1);
+	if (!$listed)
+		display_note(_('Every eligible P&L posting of this scope is attributed to a customer through its source document.'));
+	$coverage = $data['coverage'];
+	display_note(sprintf(_('Attribution coverage: revenue lines %s (%d of %d), cost lines %s (%d of %d), absolute eligible amount %s.'),
+		dimension_tracking_percent_text($coverage['revenue_line_percent']), $coverage['revenue_attributed_lines'], $coverage['revenue_lines'],
+		dimension_tracking_percent_text($coverage['cost_line_percent']), $coverage['cost_attributed_lines'], $coverage['cost_lines'],
+		dimension_tracking_percent_text($coverage['absolute_percent'])));
+	$missing = $data['missing'];
+	if ($missing['customers_without_matched_cost'] > 0 || $missing['unattributed_cost_lines'] > 0)
+		display_note(sprintf(_('Missing cost, not estimated: %d customer(s) have revenue with no matched cost; %d cost line(s) (COGS %s, expense %s) have no customer source.'),
+			$missing['customers_without_matched_cost'], $missing['unattributed_cost_lines'], number_format2($missing['unattributed_cogs'], 2), number_format2($missing['unattributed_expense'], 2)));
+	if ($data['fully_allocated']['state'] !== 'available')
+		display_note(_('Fully allocated profit is not available: allocation coverage has not been accepted, so unattributed costs are neither allocated nor estimated. Direct contribution counts only cost supported by a customer document.'));
+	display_note($data['reconciled']
+		? _('Reconciles to the Financial Tracking revenue, costs and result of the same scope, period and cutoff.')
+		: _('WARNING: this split does not reconcile to the Financial Tracking measures of the same scope; do not rely on it.'));
+}
+
+/**
+ * DIM-REP-005: render the attribution queue of unattributed source documents.
+ *
+ * @param array $queue Result of dimension_customer_attribution_queue()
+ * @return void
+ */
+function display_dimension_customer_queue($queue) {
+	display_heading2(_('Attribution queue'));
+	if (!count($queue['rows'])) {
+		display_note(_('No source document is waiting for customer attribution.'));
+		return;
+	}
+	start_table(TABLESTYLE);
+	table_header(array(_('Source'), _('Document #'), _('Reason'), _('First posting'), _('Age (days)'), _('Revenue'), _('Costs'), _('Lines')));
+	$k = 0;
+	foreach ($queue['rows'] as $row) {
+		alt_table_row_color($k);
+		label_cell(dimension_tracking_family_label($row['type']));
+		label_cell((string)$row['type_no'], "align='right'");
+		label_cell(dimension_customer_state_text($row['state']));
+		label_cell(sql2date($row['first_date']));
+		label_cell((string)$row['age_days'], "align='right'");
+		amount_cell($row['revenue']);
+		amount_cell($row['costs']);
+		label_cell((string)$row['lines'], "align='right'");
+		end_row();
+	}
+	end_table(1);
+	if ($queue['truncated'])
+		display_note(sprintf(_('Only the first %d documents are listed; narrow the scope or period to see the rest.'), dimension_tracking_row_limit()));
+}
+
+//--------------------------------------------------------------------------------------
+
+/**
+ * DIM-REP-006: render one section of the shared export dataset.
+ *
+ * The page, the PDF and the Excel report all render the same section cells: a float is an amount, anything else is text. This is
+ * the page side of that one dataset.
+ *
+ * @param array $section Section of dimension_export_dataset()
+ * @return void
+ */
+function display_dimension_export_section($section) {
+	display_heading2($section['title']);
+	if (count($section['rows'])) {
+		start_table(TABLESTYLE);
+		table_header($section['headers']);
+		$k = 0;
+		foreach ($section['rows'] as $row) {
+			alt_table_row_color($k);
+			foreach ($row as $column => $cell) {
+				if (is_float($cell))
+					amount_cell($cell);
+				elseif (isset($section['aligns'][$column]) && $section['aligns'][$column] === 'right')
+					label_cell((string)$cell, "align='right'");
+				else
+					label_cell((string)$cell);
+			}
+			end_row();
+		}
+		end_table(1);
+	}
+	foreach ($section['notes'] as $note)
+		display_note($note);
+}
+
+/**
+ * DIM-REP-006: render the whole shared export dataset.
+ *
+ * @param array $dataset Result of dimension_export_dataset()
+ * @return void
+ */
+function display_dimension_export_dataset($dataset) {
+	foreach ($dataset['sections'] as $section)
+		display_dimension_export_section($section);
+}

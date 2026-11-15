@@ -270,6 +270,11 @@ class BoxReports {
 				$sel = array(_('Accumulated'), _('Period Y-1'), _('Budget'));
 				return array_selector($name, null, $sel);
 
+			case 'DIMENSION_COMPARISON':
+				// DIM-REP-006: report 502 comparison basis.
+				$sel = array(_('Previous period'), _('Year to date vs last year'), _('Monthly budget'));
+				return array_selector($name, null, $sel);
+
 			case 'GRAPHIC':
 				$sel = array(_('No Graphics'), _('Vertical bars'), _('Horizontal bars'), _('Dots'), _('Lines'), _('Pie'), _('Donut'));
 				return array_selector($name, null, $sel);

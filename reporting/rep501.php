@@ -126,6 +126,18 @@ function print_dimension_summary() {
 	$rep->Info($params, $cols, $headers, $aligns);
 	$rep->NewPage();
 
+	// DIM-REP-004: the net GL balances of the whole identity range come from ONE grouped statement instead of one
+	// statement per Dimension; the figure is the as-posted balance of the legacy YTD reader (same OR-of-axes counting, once per posting).
+	$balances = array();
+	if ($showbal) {
+		include_once($path_to_root . '/dimensions/includes/dimension_inquiry.inc');
+		$balances = dimension_inquiry_net_balances((int)$fromdim, (int)$todim, date2sql($fiscal_start), date2sql($as_of));
+		if ($balances === false) {
+			display_error(_('The net GL balance could not be calculated.'));
+			return;
+		}
+	}
+
 	$res = getTransactions($fromdim, $todim);
 	while ($trans=db_fetch($res)) {
 		$rep->TextCol(0, 1, $trans['reference']);
@@ -139,11 +151,12 @@ function print_dimension_summary() {
 			$str = _('No');
 		$rep->TextCol(5, 6, $str);
 		if ($showbal) {
-			$balance = getYTD($trans['id'], $as_of);
-			if ($balance === false) {
+			// A master whose identity is not a valid native ID must fail loudly, never render as a numeric zero.
+			if (!preg_match('/^[1-9][0-9]*$/D', (string)$trans['id']) || (float)$trans['id'] > 2147483647) {
 				display_error(_('The net GL balance could not be calculated.'));
 				return;
 			}
+			$balance = isset($balances[(int)$trans['id']]) ? $balances[(int)$trans['id']] : 0;
 			$rep->AmountCol(6, 7, $balance, 0);
 		}	
 		$rep->NewLine(1, 2);
