@@ -24,6 +24,8 @@ class DimensionsApp extends application {
 		}
 
 		$this->add_module(_('Inquiries and Reports'));
+		// DIM-UX-001: the three-step guide, the made-up examples and the disabled-history view; read-only and open to every Dimension viewer.
+		$this->add_lapp_function($dim > 0 ? 1 : 0, _('&Getting Started'), 'dimensions/dimension_onboarding.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
 		$this->add_lapp_function($dim > 0 ? 1 : 0, _('Dimension &Inquiry'), 'dimensions/inquiry/search_dimensions.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
 		// DIM-REP-003: the shared Financial Tracking workspace; the page itself also requires GL analytics.
 		$this->add_lapp_function($dim > 0 ? 1 : 0, _('Financial &Tracking'), 'dimensions/inquiry/dimension_tracking.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);

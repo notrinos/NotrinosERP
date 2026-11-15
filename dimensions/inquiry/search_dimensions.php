@@ -21,6 +21,8 @@ include_once($path_to_root.'/reporting/includes/report_access_scope.inc');
 include_once($path_to_root.'/dimensions/includes/dimensions_db.inc');
 include_once($path_to_root.'/dimensions/includes/dimensions_ui.inc');
 include_once($path_to_root.'/dimensions/includes/dimension_inquiry.inc');
+include_once($path_to_root.'/dimensions/includes/dimension_category_policy.inc');
+include_once($path_to_root.'/dimensions/includes/dimension_business_mode.inc');
 $js = '';
 if ($SysPrefs->use_popup_windows)
 	$js .= get_js_open_window(800, 500);
@@ -45,6 +47,9 @@ if (get_post('SearchOrders') || get_post('dim_prev') || get_post('dim_next'))
 
 if (isset($_GET['stock_id']))
 	$_POST['SelectedStockItem'] = $_GET['stock_id'];
+// DIM-UX-001: the disabled-history view links here with the category whose history is wanted; normalization still validates it.
+if (isset($_GET['type_']) && !isset($_POST['type_']))
+	$_POST['type_'] = $_GET['type_'];
 
 if (!isset($_POST['dim_page']) || !preg_match('/^[0-9]{1,9}$/D', (string)$_POST['dim_page']))
 	$_POST['dim_page'] = 1;
@@ -61,12 +66,15 @@ start_table(TABLESTYLE_NOBORDER);
 start_row();
 
 text_cells(_('Reference or name:'), 'OrderNumber', null, 20, dimension_inquiry_name_limit());
-number_list_cells(_('Type'), 'type_', null, 1, 2, _('All'));
+// DIM-UX-001: both categories are always selectable (a switched-off one keeps its history) and are named as the company named them.
+filter_cell_open(_('Type'));
+echo array_selector('type_', null, dimension_business_mode_type_choices((int)get_company_pref('use_dimension')), array('spec_option' => _('All'), 'spec_id' => ALL_NUMERIC));
+filter_cell_close();
 date_cells(_('Started from:'), 'StartFrom', _('Filters by the date the dimension was created, not by its postings'), null, 0, 0, 1001);
 date_cells(_('Started to:'), 'StartTo', '', null, 0, 0, 1001);
 date_cells(_('Active from:'), 'ActiveFrom', _('Filters by postings dated in this period, whatever the start date of the dimension'), null, 0, 0, 1001);
 date_cells(_('Active to:'), 'ActiveTo', '', null, 0, 0, 1001);
-check_cells(_('Only Overdue:'), 'OverdueOnly', null);
+check_cells(_('Only Overdue:'), 'OverdueOnly', null, false, _('Applies to categories with a real deadline, such as projects. An ongoing cost center is never overdue.'));
 if (!$outstanding_only)
 	check_cells(_('Only Open:'), 'OpenOnly', null);
 else
@@ -95,6 +103,8 @@ $filter_input = array(
 	'sort' => 'reference',
 	'page' => $_POST['dim_page']);
 $normalized = dimension_inquiry_normalize_filters($filter_input);
+// DIM-UX-001: overdue means something only for the categories whose required-by date is a real deadline.
+$normalized['filters']['overdue_axes'] = dimension_business_mode_overdue_axes();
 
 div_start('dim_table');
 if (!$normalized['ok']) {
@@ -110,7 +120,17 @@ else {
 	else {
 		$_POST['dim_page'] = $search['page'];
 		hidden('dim_page', $search['page']);
-		display_dimension_inquiry_results($search, $show_measures, $normalized['filters']['today']);
+		$type_text = array();
+		foreach (dimension_category_policy_axes() as $axis)
+			$type_text[$axis] = dimension_business_mode_axis_text($axis);
+		display_dimension_inquiry_results($search, $show_measures, $normalized['filters']['today'], array(
+			'deadline_axes' => dimension_business_mode_overdue_axes(),
+			'measures' => dimension_business_mode_measures($normalized['filters']['type']),
+			'can_edit' => dimension_business_mode_can_edit(),
+			'type_text' => $type_text,
+			'deadline_caption' => dimension_business_mode_deadline_caption($normalized['filters']['type'] > 0 ? array($normalized['filters']['type']) : dimension_category_policy_axes())));
+		if (!count(dimension_business_mode_overdue_axes()) && check_value('OverdueOnly'))
+			display_dimension_failure_state('no_deadline');
 		if ($search['pages'] > 1) {
 			start_table(TABLESTYLE_NOBORDER);
 			start_row();

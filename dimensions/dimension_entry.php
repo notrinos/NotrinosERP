@@ -20,6 +20,8 @@ include_once($path_to_root.'/admin/db/tags_db.inc');
 include_once($path_to_root.'/dimensions/includes/dimensions_db.inc');
 include_once($path_to_root.'/dimensions/includes/dimensions_ui.inc');
 include_once($path_to_root.'/dimensions/includes/dimension_inquiry.inc');
+include_once($path_to_root.'/dimensions/includes/dimension_category_policy.inc');
+include_once($path_to_root.'/dimensions/includes/dimension_business_mode.inc');
 
 $js = '';
 if (user_use_date_picker())
@@ -43,6 +45,9 @@ if ($selected_id == -1 && (int)get_company_pref('use_dimension') < 1
 	&& !isset($_GET['AddedID']) && !isset($_GET['UpdatedID']) && !isset($_GET['DeletedID'])
 	&& !isset($_GET['ClosedID']) && !isset($_GET['ReopenedID'])) {
 	display_error(_('No Dimension axis is enabled for new entries. Historical Dimension inquiry and reports remain available.'));
+	// DIM-UX-001: say in plain words what is switched off and what to do, not only that it is.
+	display_dimension_failure_state('not_enabled');
+	hyperlink_no_params($path_to_root.'/dimensions/dimension_onboarding.php', _('Open the getting started guide'));
 	display_footer_exit();
 }
 
@@ -260,7 +265,6 @@ if ($selected_id != -1 && (int)$myrow['type_'] > $dim) {
 else {
 	// DIM-CFG-001: an optional published category policy only supplies the display name of each
 	// enabled category; the stored value is still the native axis 1..N and never a semantic key.
-	require_once($path_to_root.'/dimensions/includes/dimension_category_policy.inc');
 	$axis_choices = dimension_category_policy_axis_choices($dim);
 	if (count($axis_choices) > 0)
 		array_selector_row(_('Type').':', 'type_', null, $axis_choices, array('select_submit' => false, 'async' => false));
@@ -268,11 +272,25 @@ else {
 		number_list_row(_('Type').':', 'type_', null, 1, max(1, $dim));
 }
 date_row(_('Start Date').':', 'date_');
-date_row(_('Date Required By').':', 'due_date', '', null, $SysPrefs->default_dimension_required_by());
+// DIM-UX-001: the date is a deadline for a project and only a review date for an ongoing cost center; the caption follows the
+// category of an existing master, or the shared caption of every category the form can create.
+$deadline_axes = ($selected_id != -1) ? array((int)$myrow['type_']) : range(1, max(1, $dim));
+date_row(dimension_business_mode_deadline_caption($deadline_axes).':', 'due_date', '', null, $SysPrefs->default_dimension_required_by());
 tag_list_row(_('Tags:'), 'dimension_tags', 5, TAG_DIMENSION, true);
 textarea_row(_('Memo:'), 'memo_', null, 40, 5);
 
 end_table(1);
+
+// DIM-UX-001: what each category is for and how its date behaves, in the words the company chose.
+if ($selected_id != -1 && (int)$myrow['type_'] > $dim)
+	display_dimension_failure_state('history_only');
+else {
+	foreach (dimension_business_mode_entry_guide($dim) as $guide_line)
+		display_note($guide_line);
+	$hrm_note = dimension_business_mode_hrm_note(1);
+	if ($hrm_note !== '' && $dim >= 1)
+		display_note($hrm_note);
+}
 
 if (isset($_POST['closed']) && $_POST['closed'] == 1)
 	display_note(dimension_inquiry_closed_text(), 0, 0, "class='currentfg'");

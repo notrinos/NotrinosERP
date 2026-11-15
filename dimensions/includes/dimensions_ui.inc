@@ -306,14 +306,19 @@ function display_dimension_tracking_workspace($data, $drill, $from, $to) {
 /**
  * DIM-REP-004: status text of one master in the search results.
  *
- * @param array $master Master row (closed, due_date in SQL form)
+ * DIM-UX-001: the optional list of deadline categories keeps an ongoing category (a cost center) from being
+ * called overdue; without it every category keeps the legacy behavior.
+ *
+ * @param array $master Master row (closed, due_date in SQL form, type_ when a deadline list is given)
  * @param string $today SQL date, or '' when unknown
+ * @param int[]|null $deadline_axes Categories whose required-by date is a real deadline, or null for all
  * @return string Closed, Overdue or Open
  */
-function dimension_inquiry_status_text($master, $today) {
+function dimension_inquiry_status_text($master, $today, $deadline_axes = null) {
 	if ((int)$master['closed'] === 1)
 		return _('Closed');
-	if ($today !== '' && $master['due_date'] < $today)
+	if ($today !== '' && $master['due_date'] < $today
+		&& ($deadline_axes === null || in_array((int)$master['type_'], array_map('intval', (array)$deadline_axes), true)))
 		return _('Overdue');
 	return _('Open');
 }
@@ -328,19 +333,32 @@ function dimension_inquiry_status_text($master, $today) {
  * @param array $search Result of dimension_inquiry_search()
  * @param bool $show_measures Whether the performance columns are shown
  * @param string $today SQL date used for the Overdue status
+ * @param array|null $options DIM-UX-001 business-mode presentation: deadline_axes (categories that can be overdue), measures
+ *                            (revenue/costs/result subset), can_edit (show the Edit action), type_text (axis => HTML-safe text);
+ *                            null keeps the legacy presentation
  * @return void
  */
-function display_dimension_inquiry_results($search, $show_measures, $today) {
+function display_dimension_inquiry_results($search, $show_measures, $today, $options = null) {
 	if (!count($search['rows'])) {
 		display_note(_('No dimension matches the selected filters.'));
 		return;
 	}
 	$first = ($search['page'] - 1) * $search['page_size'] + 1;
 	display_note(sprintf(_('Showing %d-%d of %d dimensions (page %d of %d).'), $first, $first + count($search['rows']) - 1, $search['total'], $search['page'], $search['pages']));
-	$headers = array(_('#'), _('Reference'), _('Name'), _('Type'), _('Start date'), _('Due Date'), _('Status'));
-	if ($show_measures)
-		$headers = array_merge($headers, array(_('Revenue'), _('Costs'), _('Result'), _('Net GL balance (not a result)')));
-	$headers[] = '';
+	$options = is_array($options) ? $options : array();
+	$deadline_axes = isset($options['deadline_axes']) ? $options['deadline_axes'] : null;
+	$measures = isset($options['measures']) ? $options['measures'] : array('revenue', 'costs', 'result');
+	$can_edit = !isset($options['can_edit']) || $options['can_edit'];
+	$type_text = isset($options['type_text']) ? $options['type_text'] : array();
+	$measure_headers = array('revenue' => _('Revenue'), 'costs' => _('Costs'), 'result' => _('Result'));
+	$headers = array(_('#'), _('Reference'), _('Name'), _('Type'), _('Start date'), isset($options['deadline_caption']) ? $options['deadline_caption'] : _('Due Date'), _('Status'));
+	if ($show_measures) {
+		foreach ($measures as $measure)
+			$headers[] = $measure_headers[$measure];
+		$headers[] = _('Net GL balance (not a result)');
+	}
+	if ($can_edit)
+		$headers[] = '';
 	$headers[] = '';
 	start_table(TABLESTYLE);
 	table_header($headers);
@@ -350,18 +368,18 @@ function display_dimension_inquiry_results($search, $show_measures, $today) {
 		label_cell(get_dimensions_trans_view_str(ST_DIMENSION, $master['id']));
 		label_cell($master['reference']);
 		label_cell($master['name']);
-		label_cell((string)$master['type_']);
+		label_cell(isset($type_text[(int)$master['type_']]) ? $type_text[(int)$master['type_']] : (string)$master['type_']);
 		label_cell(sql2date($master['date_']));
 		label_cell(sql2date($master['due_date']));
-		label_cell(dimension_inquiry_status_text($master, $today));
+		label_cell(dimension_inquiry_status_text($master, $today, $deadline_axes));
 		if ($show_measures) {
 			$m = $master['measures'];
-			amount_cell($m['revenue']);
-			amount_cell($m['costs']);
-			amount_cell($m['result']);
+			foreach ($measures as $measure)
+				amount_cell($m[$measure]);
 			amount_cell($m['balance_net']);
 		}
-		label_cell(pager_link(_('Edit'), '/dimensions/dimension_entry.php?trans_no='.(int)$master['id'], ICON_EDIT));
+		if ($can_edit)
+			label_cell(pager_link(_('Edit'), '/dimensions/dimension_entry.php?trans_no='.(int)$master['id'], ICON_EDIT));
 		label_cell(print_document_link($master['id'], _('Print'), ST_DIMENSION, ICON_PRINT));
 		end_row();
 	}
@@ -544,4 +562,186 @@ function display_dimension_export_section($section) {
 function display_dimension_export_dataset($dataset) {
 	foreach ($dataset['sections'] as $section)
 		display_dimension_export_section($section);
+}
+
+//--------------------------------------------------------------------------------------
+
+/**
+ * DIM-UX-001: show one plain failure or empty state (title, what it means, what to do next).
+ *
+ * @param string $code State code of dimension_business_mode_failure_states()
+ * @return void
+ */
+function display_dimension_failure_state($code) {
+	$state = dimension_business_mode_failure_state($code);
+	if ($state === false)
+		return;
+	display_note(htmlspecialchars($state['title'], ENT_QUOTES, 'UTF-8').': '.htmlspecialchars($state['explanation'], ENT_QUOTES, 'UTF-8').' '
+		.htmlspecialchars($state['next_step'], ENT_QUOTES, 'UTF-8'));
+}
+
+/**
+ * DIM-UX-001: render the three onboarding steps.
+ *
+ * An action link is drawn only for a step that carries one, which the step builder gives only to a caller with the authority
+ * of the target page; every other step explains why in words.
+ *
+ * @param array $steps Result of dimension_onboarding_steps()
+ * @return void
+ */
+function display_dimension_onboarding_steps($steps) {
+	global $path_to_root;
+
+	$status_text = array('done' => _('Done'), 'todo' => _('To do'), 'blocked' => _('Cannot continue'));
+	start_table(TABLESTYLE);
+	table_header(array(_('Step'), _('What to do'), _('Where you are'), _('Next')));
+	$k = 0;
+	foreach ($steps as $step) {
+		alt_table_row_color($k);
+		label_cell($step['number']);
+		label_cell('<b>'.htmlspecialchars($step['title'], ENT_QUOTES, 'UTF-8').'</b><br>'.htmlspecialchars($step['text'], ENT_QUOTES, 'UTF-8'));
+		$where = $status_text[$step['status']];
+		foreach (array($step['state'], $step['extra_state']) as $code) {
+			$state = $code === '' ? false : dimension_business_mode_failure_state($code);
+			if ($state !== false)
+				$where .= '<br>'.htmlspecialchars($state['title'], ENT_QUOTES, 'UTF-8').': '.htmlspecialchars($state['explanation'], ENT_QUOTES, 'UTF-8');
+		}
+		label_cell($where);
+		if ($step['link'] !== '')
+			label_cell("<a href='".$path_to_root.'/'.$step['link']."'>".htmlspecialchars($step['link_label'], ENT_QUOTES, 'UTF-8').'</a>');
+		else {
+			$next = '';
+			foreach (array($step['extra_state'], $step['state']) as $code) {
+				$state = $code === '' ? false : dimension_business_mode_failure_state($code);
+				if ($state !== false) {
+					$next = htmlspecialchars($state['next_step'], ENT_QUOTES, 'UTF-8');
+					break;
+				}
+			}
+			label_cell($next);
+		}
+		end_row();
+	}
+	end_table(1);
+}
+
+/**
+ * DIM-UX-001: disabled-history view, one block per category that is switched off but still holds history.
+ *
+ * @param array $history Result of dimension_onboarding_history_only()
+ * @return void
+ */
+function display_dimension_history_only($history) {
+	global $path_to_root;
+
+	if (!count($history))
+		return;
+	display_heading2(_('Switched off, history kept'));
+	foreach ($history as $entry) {
+		$text = sprintf(_('Category %d (%s) is switched off for new entries. Its %d values and everything recorded with them stay available for viewing and reports.'),
+			$entry['axis'], htmlspecialchars($entry['label'], ENT_QUOTES, 'UTF-8'), $entry['masters']);
+		display_note($text);
+		hyperlink_no_params($path_to_root.'/dimensions/inquiry/search_dimensions.php?type_='.(int)$entry['axis'], sprintf(_('View the history of category %d'), $entry['axis']));
+	}
+}
+
+/**
+ * DIM-UX-001: render one synthetic demo with its totals, every reconciliation check and a plain explanation of each line.
+ *
+ * @param array $dataset Result of dimension_demo_dataset()
+ * @return void
+ */
+function display_dimension_demo($dataset) {
+	display_heading2($dataset['title']);
+	display_note(_('This is an example with made-up numbers. It is not your company data and nothing is saved.'));
+	$axes = array();
+	foreach (array(1, 2) as $axis)
+		if (count($dataset['axes'][$axis]['values']))
+			$axes[] = $axis;
+	$headers = array(_('Source'), _('Document'), _('Account'), _('Income'), _('Cost'));
+	foreach ($axes as $axis)
+		$headers[] = htmlspecialchars($dataset['axes'][$axis]['label'], ENT_QUOTES, 'UTF-8');
+	start_table(TABLESTYLE);
+	table_header($headers);
+	$k = 0;
+	foreach ($dataset['lines'] as $line) {
+		alt_table_row_color($k);
+		label_cell(htmlspecialchars($line['source'], ENT_QUOTES, 'UTF-8'));
+		label_cell(htmlspecialchars($line['document'], ENT_QUOTES, 'UTF-8'));
+		label_cell(htmlspecialchars($line['account'], ENT_QUOTES, 'UTF-8'));
+		amount_cell($line['kind'] === 'revenue' ? $line['cents'] / 100 : 0);
+		amount_cell($line['kind'] === 'cost' ? $line['cents'] / 100 : 0);
+		foreach ($axes as $axis) {
+			$value = (int)$line[$axis === 1 ? 'd1' : 'd2'];
+			label_cell($value > 0 ? htmlspecialchars($dataset['axes'][$axis]['values'][$value], ENT_QUOTES, 'UTF-8') : _('Not assigned'));
+		}
+		end_row();
+	}
+	end_table(1);
+	$view = dimension_demo_totals($dataset);
+	foreach ($axes as $axis) {
+		display_heading2(sprintf(_('By %s'), htmlspecialchars($dataset['axes'][$axis]['label'], ENT_QUOTES, 'UTF-8')));
+		start_table(TABLESTYLE);
+		table_header(array(_('Name'), _('Income'), _('Cost'), _('Result')));
+		$k = 0;
+		$keys = array_keys($dataset['axes'][$axis]['values']);
+		$keys[] = 0;
+		foreach ($keys as $key) {
+			if (!isset($view['by_axis'][$axis][$key]))
+				continue;
+			alt_table_row_color($k);
+			label_cell($key > 0 ? htmlspecialchars($dataset['axes'][$axis]['values'][$key], ENT_QUOTES, 'UTF-8') : _('Not assigned'));
+			$row = $view['by_axis'][$axis][$key];
+			amount_cell($row['revenue'] / 100);
+			amount_cell($row['costs'] / 100);
+			amount_cell($row['result'] / 100);
+			end_row();
+		}
+		alt_table_row_color($k);
+		label_cell('<b>'._('Total').'</b>');
+		amount_cell($view['totals']['revenue'] / 100, true);
+		amount_cell($view['totals']['costs'] / 100, true);
+		amount_cell($view['totals']['result'] / 100, true);
+		end_row();
+		end_table(1);
+	}
+	if (count($axes) === 2) {
+		display_heading2(sprintf(_('Result by %s and %s'), htmlspecialchars($dataset['axes'][1]['label'], ENT_QUOTES, 'UTF-8'), htmlspecialchars($dataset['axes'][2]['label'], ENT_QUOTES, 'UTF-8')));
+		start_table(TABLESTYLE);
+		$header = array('');
+		foreach (array_keys($dataset['axes'][2]['values']) as $key)
+			$header[] = htmlspecialchars($dataset['axes'][2]['values'][$key], ENT_QUOTES, 'UTF-8');
+		$header[] = _('Not assigned');
+		table_header($header);
+		$k = 0;
+		$rows = array_keys($dataset['axes'][1]['values']);
+		$rows[] = 0;
+		foreach ($rows as $key1) {
+			alt_table_row_color($k);
+			label_cell($key1 > 0 ? htmlspecialchars($dataset['axes'][1]['values'][$key1], ENT_QUOTES, 'UTF-8') : _('Not assigned'));
+			$cols = array_keys($dataset['axes'][2]['values']);
+			$cols[] = 0;
+			foreach ($cols as $key2)
+				amount_cell((isset($view['matrix'][$key1][$key2]) ? $view['matrix'][$key1][$key2] : 0) / 100);
+			end_row();
+		}
+		end_table(1);
+	}
+	$reconciliation = dimension_demo_reconcile($dataset);
+	display_heading2(_('Does it add up?'));
+	start_table(TABLESTYLE);
+	table_header(array(_('Check'), _('Expected'), _('Shown'), _('Result')));
+	$k = 0;
+	foreach ($reconciliation['checks'] as $check) {
+		alt_table_row_color($k);
+		label_cell(htmlspecialchars($check['label'], ENT_QUOTES, 'UTF-8'));
+		amount_cell($check['expected'] / 100);
+		amount_cell($check['actual'] / 100);
+		label_cell($check['ok'] ? _('Adds up') : _('Different'));
+		end_row();
+	}
+	end_table(1);
+	display_heading2(_('Where each line came from'));
+	foreach ($dataset['lines'] as $line)
+		display_note(htmlspecialchars(dimension_demo_explain_line($dataset, $line), ENT_QUOTES, 'UTF-8'));
 }

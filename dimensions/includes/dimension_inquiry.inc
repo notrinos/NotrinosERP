@@ -171,7 +171,15 @@ function dimension_inquiry_where_sql($filters)
     if ($filters['status'] === 'open') $where .= ' AND dim.closed=0';
     elseif ($filters['status'] === 'closed') $where .= ' AND dim.closed=1';
     // An overdue master is one still open past its required-by date; a closed master is never overdue.
-    if (!empty($filters['overdue']) && $filters['today'] !== '') $where .= " AND dim.closed=0 AND dim.due_date < '".$filters['today']."'";
+    // DIM-UX-001: an optional `overdue_axes` list restricts "overdue" to the categories whose required-by date is a real deadline
+    // (an ongoing cost center is never overdue); without the list every category keeps the legacy behavior.
+    if (!empty($filters['overdue']) && $filters['today'] !== '') {
+        $where .= " AND dim.closed=0 AND dim.due_date < '".$filters['today']."'";
+        if (isset($filters['overdue_axes']) && is_array($filters['overdue_axes'])) {
+            $axes = array_values(array_unique(array_filter(array_map('intval', $filters['overdue_axes']), function ($axis) { return $axis === 1 || $axis === 2; })));
+            $where .= count($axes) ? ' AND dim.type_ IN ('.implode(',', $axes).')' : ' AND 1=0';
+        }
+    }
     if ($filters['start_from'] !== '') $where .= " AND dim.date_ >= '".$filters['start_from']."'";
     if ($filters['start_to'] !== '') $where .= " AND dim.date_ <= '".$filters['start_to']."'";
     if (dimension_inquiry_has_activity_filter($filters)) {

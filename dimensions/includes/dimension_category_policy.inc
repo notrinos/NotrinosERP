@@ -235,7 +235,7 @@ function dimension_category_policy_version($version)
 		$axis = (int)$row['axis'];
 		if (($axis !== 1 && $axis !== 2) || isset($axes[$axis]))
 			return false;
-		$axes[$axis] = array('axis' => $axis, 'label' => (string)$row['label'],
+		$axes[$axis] = array('axis' => $axis, 'label' => dimension_category_policy_roundtrip_text($row['label']),
 			'purpose' => (string)$row['purpose'], 'required' => (int)$row['required']);
 		$digest = (string)$row['digest'];
 		$created_at = (string)$row['created_at'];
@@ -251,7 +251,7 @@ function dimension_category_policy_version($version)
 	while ($row = db_fetch($rule_result))
 		$rules[] = array('axis' => (int)$row['axis'], 'kind' => (string)$row['kind'],
 			'left_value' => (string)$row['left_value'], 'right_value' => (string)$row['right_value'],
-			'note' => (string)$row['note']);
+			'note' => dimension_category_policy_roundtrip_text($row['note']));
 	if (dimension_category_policy_digest($version, $axes, $rules) !== $digest)
 		return false;
 	return array('version' => $version, 'state' => 'published', 'axes' => $axes, 'rules' => $rules,
@@ -382,6 +382,22 @@ function dimension_category_policy_authorized()
 }
 
 /**
+ * Canonical text of a policy value as it survives a store and a read.
+ *
+ * `db_escape()` HTML-encodes `&`, quotes and angle brackets before a value is stored, so a label such as `R&D` is stored as
+ * `R&amp;D`. The digest must be computed over, and compared with, the value after that round trip, or a label containing
+ * one of those characters would make its own version look tampered (DIM-UX-001 found this: such a company silently fell back
+ * to neutral names). Decoding is idempotent on the round-tripped value, so a store followed by a read reproduces it exactly.
+ *
+ * @param mixed $value Raw or stored value
+ * @return string Entity-decoded text
+ */
+function dimension_category_policy_roundtrip_text($value)
+{
+	return html_entity_decode((string)$value, ENT_QUOTES, 'UTF-8');
+}
+
+/**
  * Trim and length-check one free-text policy value.
  *
  * @param mixed $value Raw value
@@ -437,7 +453,7 @@ function dimension_category_policy_validate_rule($rule)
 		$axis = 1;
 	}
 	return array('axis' => $axis, 'kind' => $kind, 'left_value' => $left === '*' ? '' : $left,
-		'right_value' => $right === '*' ? '' : $right, 'note' => (string)$note);
+		'right_value' => $right === '*' ? '' : $right, 'note' => dimension_category_policy_roundtrip_text($note));
 }
 
 /**
@@ -464,6 +480,7 @@ function dimension_category_policy_validate($input)
 			$errors[] = sprintf(_('The %s label must be at most 64 characters without control characters or angle brackets.'), $name);
 			$label = '';
 		}
+		$label = dimension_category_policy_roundtrip_text($label);
 		if (!isset($purposes[$purpose])) {
 			$errors[] = sprintf(_('The %s purpose is not a declared purpose.'), $name);
 			$purpose = '';

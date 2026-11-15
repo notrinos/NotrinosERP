@@ -26,6 +26,8 @@ include_once($path_to_root.'/dimensions/includes/dimensions_db.inc');
 include_once($path_to_root.'/dimensions/includes/dimensions_ui.inc');
 include_once($path_to_root.'/reporting/includes/report_access_scope.inc');
 include_once($path_to_root.'/dimensions/includes/dimension_tracking_workspace.inc');
+include_once($path_to_root.'/dimensions/includes/dimension_category_policy.inc');
+include_once($path_to_root.'/dimensions/includes/dimension_business_mode.inc');
 
 //-------------------------------------------------------------------------------------------------
 
@@ -45,14 +47,15 @@ $myrow = get_dimension($id, true);
 if (is_array($myrow)) {
 	start_table(TABLESTYLE);
 
-	$th = array(_('#'), _('Reference'), _('Name'), _('Type'), _('Date'), _('Due Date'));
+	// DIM-UX-001: the date column carries the caption of the category (a deadline, an end date or only a review date).
+	$th = array(_('#'), _('Reference'), _('Name'), _('Type'), _('Date'), dimension_business_mode_deadline_caption(array((int)$myrow['type_'])));
 	table_header($th);
 
 	start_row();
 	label_cell($myrow['id']);
 	label_cell($myrow['reference']);
 	label_cell($myrow['name']);
-	label_cell($myrow['type_']);
+	label_cell(dimension_business_mode_axis_text((int)$myrow['type_']));
 	label_cell(sql2date($myrow['date_']));
 	label_cell(sql2date($myrow['due_date']));
 	end_row();
@@ -117,6 +120,10 @@ elseif (is_date($_POST['TransFromDate']) && is_date($_POST['TransToDate']) && !d
 			'TransFromDate='.urlencode($_POST['TransFromDate']).'&TransToDate='.urlencode($_POST['TransToDate']).'&Dimension'.((int)$myrow['type_'] === 2 ? '2' : '').'='.(int)$id);
 	}
 }
+
+// DIM-UX-001: the edit action is offered only to a user who holds the Dimension master authority; an inquiry-only user sees none.
+if (is_array($myrow) && dimension_business_mode_can_edit())
+	hyperlink_params($path_to_root.'/dimensions/dimension_entry.php', _('Edit this dimension'), 'trans_no='.(int)$id);
 
 br(1);
 
