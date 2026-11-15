@@ -24,6 +24,8 @@ include_once($path_to_root.'/includes/data_checks.inc');
 
 include_once($path_to_root.'/dimensions/includes/dimensions_db.inc');
 include_once($path_to_root.'/dimensions/includes/dimensions_ui.inc');
+include_once($path_to_root.'/reporting/includes/report_access_scope.inc');
+include_once($path_to_root.'/dimensions/includes/dimension_tracking_workspace.inc');
 
 //-------------------------------------------------------------------------------------------------
 
@@ -83,6 +85,35 @@ hidden('trans_no', $id);
 end_form();
 
 display_dimension_balance($id, $_POST['TransFromDate'], $_POST['TransToDate']);
+
+// DIM-REP-003: period and lifetime P&L tracking of this exact Dimension from the shared reader. The balance above
+// is a net GL balance across every account; this block separates revenue, costs and result and states its coverage.
+$tracking_access = report_access_aggregate_scope('dimension_tracking_workspace');
+if (empty($tracking_access['allowed'])) {
+	report_access_render_aggregate_state($tracking_access);
+}
+elseif (!is_array($myrow)) {
+	display_note(_('The category of a deleted Dimension is unknown, so its P&L tracking is not shown.'));
+}
+elseif (is_date($_POST['TransFromDate']) && is_date($_POST['TransToDate']) && !date1_greater_date2($_POST['TransFromDate'], $_POST['TransToDate'])) {
+	$tracking_from = date2sql($_POST['TransFromDate']);
+	$tracking_to = date2sql($_POST['TransToDate']);
+	$tracking_scope1 = (int)$myrow['type_'] === 1 ? (int)$id : 0;
+	$tracking_scope2 = (int)$myrow['type_'] === 2 ? (int)$id : 0;
+	$tracking_period = dimension_tracking_summary($tracking_from, $tracking_to, $tracking_scope1, $tracking_scope2);
+	$tracking_lifetime = dimension_tracking_summary(null, $tracking_to, $tracking_scope1, $tracking_scope2);
+	if ($tracking_period === false || $tracking_lifetime === false)
+		display_error(_('The tracking measures could not be read.'));
+	else {
+		br(1);
+		display_heading2(_('Financial tracking'));
+		display_note(_('Posted GL measures in company base currency. These are GL classification measures, not customer attribution or fully allocated profit.'));
+		display_dimension_tracking_summary($tracking_period, sprintf(_('Period %s - %s'), $_POST['TransFromDate'], $_POST['TransToDate']));
+		display_dimension_tracking_summary($tracking_lifetime, sprintf(_('Lifetime to %s'), $_POST['TransToDate']));
+		hyperlink_params($path_to_root.'/dimensions/inquiry/dimension_tracking.php', _('Open the Financial Tracking workspace for this Dimension'),
+			'TransFromDate='.urlencode($_POST['TransFromDate']).'&TransToDate='.urlencode($_POST['TransToDate']).'&Dimension'.((int)$myrow['type_'] === 2 ? '2' : '').'='.(int)$id);
+	}
+}
 
 br(1);
 

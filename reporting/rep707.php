@@ -17,12 +17,15 @@ include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/gl/includes/gl_db.inc');
 include_once($path_to_root . '/admin/db/tags_db.inc');
+include_once($path_to_root . '/dimensions/includes/dimension_budget_basis.inc');
 
 check_page_security('SA_GLANALYTIC');
 
 //----------------------------------------------------------------------------------------------------
 
 function display_type ($type, $typename, $from, $to, $begin, $end, $compare, $convert, &$dec, &$pdec, &$rep, $dimension, $dimension2, $tags, &$pg, $graphics) {
+	$code_na = 0;
+	$na_total = 0;
 	$code_per_balance = 0;
 	$code_acc_balance = 0;
 	$per_balance_total = 0;
@@ -40,12 +43,19 @@ function display_type ($type, $typename, $from, $to, $begin, $end, $compare, $co
 		}	
 		$per_balance = get_gl_trans_from_to($from, $to, $account['account_code'], $dimension, $dimension2);
 
-		if ($compare == 2)
-			$acc_balance = get_budget_trans_from_to($begin, $end, $account['account_code'], $dimension, $dimension2);
+		$budget_na = false;
+		if ($compare == 2) {
+			// DIM-BUD-001: whole-month comparable budget, never a raw date-range sum.
+			$budget = dimension_budget_report_amount($account['account_code'], $dimension, $dimension2, date2sql($begin), date2sql($end), false);
+			$acc_balance = $budget['amount'];
+			$budget_na = !$budget['available'];
+		}
 		else
 			$acc_balance = get_gl_trans_from_to($begin, $end, $account['account_code'], $dimension, $dimension2);
 		if (!$per_balance && !$acc_balance)
 			continue;
+		if ($budget_na)
+			$code_na++;
 		
 		//Print Type Title if it has atleast one non-zero account	
 		if (!$printtitle) {
@@ -61,8 +71,14 @@ function display_type ($type, $typename, $from, $to, $begin, $end, $compare, $co
 		$rep->TextCol(1, 2,	$account['account_name']);
 
 		$rep->AmountCol(2, 3, $per_balance * $convert, $dec);
-		$rep->AmountCol(3, 4, $acc_balance * $convert, $dec);
-		$rep->AmountCol(4, 5, Achieve($per_balance, $acc_balance), $pdec);
+		if ($budget_na) {
+			$rep->TextCol(3, 4, _('N/A'));
+			$rep->TextCol(4, 5, _('N/A'));
+		}
+		else {
+			$rep->AmountCol(3, 4, $acc_balance * $convert, $dec);
+			$rep->AmountCol(4, 5, Achieve($per_balance, $acc_balance), $pdec);
+		}
 
 		$rep->NewLine();
 
@@ -91,6 +107,7 @@ function display_type ($type, $typename, $from, $to, $begin, $end, $compare, $co
 		$totals_arr = display_type($accounttype['id'], $accounttype['name'], $from, $to, $begin, $end, $compare, $convert, $dec, $pdec, $rep, $dimension, $dimension2, $tags, $pg, $graphics);
 		$per_balance_total += $totals_arr[0];
 		$acc_balance_total += $totals_arr[1];
+		$na_total += $totals_arr[2];
 	}
 
 	//Display Type Summary if total is != 0 OR head is printed (Needed in case of unused hierarchical COA) 
@@ -100,8 +117,14 @@ function display_type ($type, $typename, $from, $to, $begin, $end, $compare, $co
 		$rep->NewLine();
 		$rep->TextCol(0, 2,	_('Total') . ' ' . $typename);
 		$rep->AmountCol(2, 3, ($code_per_balance + $per_balance_total) * $convert, $dec);
-		$rep->AmountCol(3, 4, ($code_acc_balance + $acc_balance_total) * $convert, $dec);
-		$rep->AmountCol(4, 5, Achieve(($code_per_balance + $per_balance_total), ($code_acc_balance + $acc_balance_total)), $pdec);		
+		if (($code_na + $na_total) > 0) {
+			$rep->TextCol(3, 4, _('N/A'));
+			$rep->TextCol(4, 5, _('N/A'));
+		}
+		else {
+			$rep->AmountCol(3, 4, ($code_acc_balance + $acc_balance_total) * $convert, $dec);
+			$rep->AmountCol(4, 5, Achieve(($code_per_balance + $per_balance_total), ($code_acc_balance + $acc_balance_total)), $pdec);
+		}
 		if ($graphics) {
 			$pg->x[] = $typename;
 			$pg->y[] = abs($code_per_balance + $per_balance_total);
@@ -112,6 +135,7 @@ function display_type ($type, $typename, $from, $to, $begin, $end, $compare, $co
 	
 	$totals_arr[0] = $code_per_balance + $per_balance_total;
 	$totals_arr[1] = $code_acc_balance + $acc_balance_total;
+	$totals_arr[2] = $code_na + $na_total;
 	return $totals_arr;
 }
 
@@ -185,6 +209,9 @@ function print_profit_and_loss_statement() {
 		if ($compare == 2) {
 			$begin = $from;
 			$headers[3] = _('Budget');
+			$budget_period = dimension_budget_period(date2sql($begin), date2sql($end));
+			if (!$budget_period['comparable'])
+				$params[5] = array('text' => _('Budget'), 'from' => dimension_budget_reason_text($budget_period['reason']), 'to' => '');
 		}
 		else
 			$begin = begin_fiscalyear();
@@ -207,11 +234,13 @@ function print_profit_and_loss_statement() {
 
 	$salesper = 0.0;
 	$salesacc = 0.0;	
+	$sales_na = 0;
 
 	$classresult = get_account_classes(false, 0);
 	while ($class = db_fetch($classresult)) {
 		$class_per_total = 0;
 		$class_acc_total = 0;
+		$class_na = 0;
 		$convert = get_class_type_convert($class['ctype']); 		
 		
 		//Print Class Name	
@@ -226,7 +255,8 @@ function print_profit_and_loss_statement() {
 			$classtotal = display_type($accounttype['id'], $accounttype['name'], $from, $to, $begin, $end, $compare, $convert, $dec, 
 				$pdec, $rep, $dimension, $dimension2, $tags, $pg, $graphics);
 			$class_per_total += $classtotal[0];
-			$class_acc_total += $classtotal[1];			
+			$class_acc_total += $classtotal[1];
+			$class_na += $classtotal[2];
 		}
 		
 		//Print Class Summary	
@@ -236,20 +266,33 @@ function print_profit_and_loss_statement() {
 		$rep->Font('bold');
 		$rep->TextCol(0, 2,	_('Total') . ' ' . $class['class_name']);
 		$rep->AmountCol(2, 3, $class_per_total * $convert, $dec);
-		$rep->AmountCol(3, 4, $class_acc_total * $convert, $dec);
-		$rep->AmountCol(4, 5, Achieve($class_per_total, $class_acc_total), $pdec);
+		if ($class_na > 0) {
+			$rep->TextCol(3, 4, _('N/A'));
+			$rep->TextCol(4, 5, _('N/A'));
+		}
+		else {
+			$rep->AmountCol(3, 4, $class_acc_total * $convert, $dec);
+			$rep->AmountCol(4, 5, Achieve($class_per_total, $class_acc_total), $pdec);
+		}
 		$rep->Font();
 		$rep->NewLine(2);	
 
 		$salesper += $class_per_total;
 		$salesacc += $class_acc_total;
+		$sales_na += $class_na;
 	}
 	
 	$rep->Font('bold');	
 	$rep->TextCol(0, 2,	_('Calculated Return'));
 	$rep->AmountCol(2, 3, $salesper *-1, $dec); // always convert
-	$rep->AmountCol(3, 4, $salesacc * -1, $dec);
-	$rep->AmountCol(4, 5, Achieve($salesper, $salesacc), $pdec);
+	if ($sales_na > 0) {
+		$rep->TextCol(3, 4, _('N/A'));
+		$rep->TextCol(4, 5, _('N/A'));
+	}
+	else {
+		$rep->AmountCol(3, 4, $salesacc * -1, $dec);
+		$rep->AmountCol(4, 5, Achieve($salesper, $salesacc), $pdec);
+	}
 	if ($graphics) {
 		$pg->x[] = _('Calculated Return');
 		$pg->y[] = abs($salesper);

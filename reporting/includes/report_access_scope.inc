@@ -683,6 +683,9 @@ function report_access_aggregate_map()
 	return array(
 		'dimension_tracking_pl' => array('areas' => array('SA_DIMTRANSVIEW', 'SA_GLANALYTIC'),
 			'label' => 'dimension_tracking_pl'),
+		// DIM-REP-003: the shared Financial Tracking workspace and the single-Dimension tracking block.
+		'dimension_tracking_workspace' => array('areas' => array('SA_DIMTRANSVIEW', 'SA_GLANALYTIC'),
+			'label' => 'dimension_tracking_workspace'),
 		'dimension_balance_sheet_net' => array('areas' => array('SA_DIMTRANSVIEW', 'SA_GLANALYTIC'),
 			'label' => 'dimension_balance_sheet_net'),
 		'dimension_company_result' => array('areas' => array('SA_DIMTRANSVIEW', 'SA_GLANALYTIC'),
