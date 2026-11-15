@@ -1263,6 +1263,198 @@ CREATE TABLE `0_dimension_budget_activations` (
 
 -- Data of table `0_dimension_budget_activations` --
 
+-- Structure of table `0_dimension_commitment_lines` --
+
+DROP TABLE IF EXISTS `0_dimension_commitment_lines`;
+
+CREATE TABLE `0_dimension_commitment_lines` (
+	`commitment_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`po_detail_item` int(11) NOT NULL,
+	`order_no` int(11) NOT NULL,
+	`account_code` varchar(15) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`coordinate_1` int(11) NOT NULL DEFAULT '0',
+	`coordinate_2` int(11) NOT NULL DEFAULT '0',
+	`lineage_state` varchar(12) NOT NULL,
+	`commit_date` date NOT NULL,
+	`ordered_qty` decimal(20,6) NOT NULL,
+	`received_qty` decimal(20,6) NOT NULL,
+	`billed_qty` decimal(20,6) NOT NULL,
+	`unit_amount` decimal(24,6) NOT NULL,
+	`state` varchar(12) NOT NULL,
+	`released_amount` decimal(24,6) NOT NULL DEFAULT '0.000000',
+	`state_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`observed_at` datetime NOT NULL,
+	PRIMARY KEY (`commitment_id`),
+	UNIQUE KEY `dimension_commitment_line_source` (`po_detail_item`),
+	KEY `dimension_commitment_line_order` (`order_no`),
+	KEY `dimension_commitment_line_scope` (`account_code`,`commit_date`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_commitment_lines` --
+
+-- Structure of table `0_dimension_commitment_events` --
+
+DROP TABLE IF EXISTS `0_dimension_commitment_events`;
+
+CREATE TABLE `0_dimension_commitment_events` (
+	`event_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`commitment_id` bigint(20) unsigned NOT NULL,
+	`event_key` varchar(80) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`event_type` varchar(12) NOT NULL,
+	`ordered_amount` decimal(24,6) NOT NULL,
+	`open_amount` decimal(24,6) NOT NULL,
+	`received_amount` decimal(24,6) NOT NULL,
+	`billed_amount` decimal(24,6) NOT NULL,
+	`released_amount` decimal(24,6) NOT NULL,
+	`remaining_amount` decimal(24,6) NOT NULL,
+	`delta_remaining` decimal(24,6) NOT NULL,
+	`actor_id` int(10) unsigned NOT NULL,
+	`created_at` datetime NOT NULL,
+	PRIMARY KEY (`event_id`),
+	UNIQUE KEY `dimension_commitment_event_key` (`commitment_id`,`event_key`),
+	CONSTRAINT `0_dimension_commitment_event_line` FOREIGN KEY (`commitment_id`) REFERENCES `0_dimension_commitment_lines` (`commitment_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_commitment_events` --
+
+-- Structure of table `0_dimension_commitment_reservations` --
+
+DROP TABLE IF EXISTS `0_dimension_commitment_reservations`;
+
+CREATE TABLE `0_dimension_commitment_reservations` (
+	`reservation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`reference` varchar(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`request_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`account_code` varchar(15) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`coordinate_1` int(11) NOT NULL DEFAULT '0',
+	`coordinate_2` int(11) NOT NULL DEFAULT '0',
+	`period_from` date NOT NULL,
+	`period_to` date NOT NULL,
+	`amount` decimal(24,6) NOT NULL,
+	`consumed_amount` decimal(24,6) NOT NULL DEFAULT '0.000000',
+	`released_amount` decimal(24,6) NOT NULL DEFAULT '0.000000',
+	`state` varchar(12) NOT NULL,
+	`reason` varchar(200) NOT NULL,
+	`actor_id` int(10) unsigned NOT NULL,
+	`created_at` datetime NOT NULL,
+	`closed_at` datetime DEFAULT NULL,
+	PRIMARY KEY (`reservation_id`),
+	UNIQUE KEY `dimension_commitment_reservation_reference` (`reference`),
+	KEY `dimension_commitment_reservation_scope` (`account_code`,`state`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_commitment_reservations` --
+
+-- Structure of table `0_dimension_commitment_activations` --
+
+DROP TABLE IF EXISTS `0_dimension_commitment_activations`;
+
+CREATE TABLE `0_dimension_commitment_activations` (
+	`activation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`mode` varchar(12) NOT NULL,
+	`reason` varchar(200) NOT NULL,
+	`actor_id` int(10) unsigned NOT NULL,
+	`created_at` datetime NOT NULL,
+	PRIMARY KEY (`activation_id`)
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_commitment_activations` --
+
+-- Structure of table `0_dimension_forecast_versions` --
+
+DROP TABLE IF EXISTS `0_dimension_forecast_versions`;
+
+CREATE TABLE `0_dimension_forecast_versions` (
+	`version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`fiscal_year` int(11) NOT NULL,
+	`version_no` int(10) unsigned NOT NULL,
+	`version_kind` varchar(12) NOT NULL,
+	`basis_version_id` bigint(20) unsigned DEFAULT NULL,
+	`basis_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	`status` varchar(12) NOT NULL,
+	`as_of_date` date NOT NULL,
+	`line_count` int(10) unsigned NOT NULL,
+	`total_amount` decimal(24,6) NOT NULL,
+	`content_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`commentary` varchar(500) NOT NULL DEFAULT '',
+	`decision_note` varchar(200) NOT NULL DEFAULT '',
+	`maker_id` int(10) unsigned NOT NULL,
+	`checker_id` int(10) unsigned DEFAULT NULL,
+	`created_at` datetime NOT NULL,
+	`decided_at` datetime DEFAULT NULL,
+	PRIMARY KEY (`version_id`),
+	UNIQUE KEY `dimension_forecast_version_no` (`fiscal_year`,`version_no`),
+	KEY `dimension_forecast_version_status` (`fiscal_year`,`status`),
+	CONSTRAINT `0_dimension_forecast_version_basis` FOREIGN KEY (`basis_version_id`) REFERENCES `0_dimension_forecast_versions` (`version_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_forecast_versions` --
+
+-- Structure of table `0_dimension_forecast_lines` --
+
+DROP TABLE IF EXISTS `0_dimension_forecast_lines`;
+
+CREATE TABLE `0_dimension_forecast_lines` (
+	`line_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`version_id` bigint(20) unsigned NOT NULL,
+	`account_code` varchar(15) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`coordinate_1` int(11) NOT NULL DEFAULT '0',
+	`coordinate_2` int(11) NOT NULL DEFAULT '0',
+	`etc_amount` decimal(24,6) NOT NULL,
+	PRIMARY KEY (`line_id`),
+	UNIQUE KEY `dimension_forecast_line_scope` (`version_id`,`account_code`,`coordinate_1`,`coordinate_2`),
+	CONSTRAINT `0_dimension_forecast_line_version` FOREIGN KEY (`version_id`) REFERENCES `0_dimension_forecast_versions` (`version_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_forecast_lines` --
+
+-- Structure of table `0_dimension_hierarchy_versions` --
+
+DROP TABLE IF EXISTS `0_dimension_hierarchy_versions`;
+
+CREATE TABLE `0_dimension_hierarchy_versions` (
+	`version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`axis` tinyint(3) unsigned NOT NULL,
+	`version_no` int(10) unsigned NOT NULL,
+	`basis_version_id` bigint(20) unsigned DEFAULT NULL,
+	`basis_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+	`status` varchar(12) NOT NULL,
+	`effective_from` date NOT NULL,
+	`retroactive` tinyint(1) NOT NULL DEFAULT '0',
+	`parent_policy` varchar(12) NOT NULL,
+	`member_count` int(10) unsigned NOT NULL,
+	`content_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`commentary` varchar(500) NOT NULL DEFAULT '',
+	`decision_note` varchar(200) NOT NULL DEFAULT '',
+	`maker_id` int(10) unsigned NOT NULL,
+	`checker_id` int(10) unsigned DEFAULT NULL,
+	`created_at` datetime NOT NULL,
+	`decided_at` datetime DEFAULT NULL,
+	PRIMARY KEY (`version_id`),
+	UNIQUE KEY `dimension_hierarchy_version_no` (`axis`,`version_no`),
+	KEY `dimension_hierarchy_version_status` (`axis`,`status`,`effective_from`),
+	CONSTRAINT `0_dimension_hierarchy_version_basis` FOREIGN KEY (`basis_version_id`) REFERENCES `0_dimension_hierarchy_versions` (`version_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_hierarchy_versions` --
+
+-- Structure of table `0_dimension_hierarchy_members` --
+
+DROP TABLE IF EXISTS `0_dimension_hierarchy_members`;
+
+CREATE TABLE `0_dimension_hierarchy_members` (
+	`member_link_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	`version_id` bigint(20) unsigned NOT NULL,
+	`member_id` int(11) NOT NULL,
+	`parent_member_id` int(11) NOT NULL DEFAULT '0',
+	PRIMARY KEY (`member_link_id`),
+	UNIQUE KEY `dimension_hierarchy_member_version` (`version_id`,`member_id`),
+	KEY `dimension_hierarchy_member_parent` (`version_id`,`parent_member_id`),
+	CONSTRAINT `0_dimension_hierarchy_member_version` FOREIGN KEY (`version_id`) REFERENCES `0_dimension_hierarchy_versions` (`version_id`) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- Data of table `0_dimension_hierarchy_members` --
+
 -- Structure of table `0_employees` --
 
 DROP TABLE IF EXISTS `0_employees`;

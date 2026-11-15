@@ -33,6 +33,8 @@ class DimensionsApp extends application {
 		$this->add_lapp_function($dim > 0 ? 1 : 0, _('&Customer Economics'), 'dimensions/inquiry/customer_economics.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
 		// DIM-REP-006: comparisons, account matrix and the exception work queue; the page also requires GL analytics.
 		$this->add_lapp_function($dim > 0 ? 1 : 0, _('Dimension &Exceptions'), 'dimensions/inquiry/dimension_exceptions.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
+		// DIM-ADV-002: optional effective hierarchy and portfolio rollups; the page also requires GL analytics to read a rollup.
+		$this->add_lapp_function($dim > 0 ? 1 : 0, _('Dimension &Hierarchy'), 'dimensions/dimension_hierarchy.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
 		$this->add_rapp_function($dim > 0 ? 1 : 0, _('Dimension &Reports'), 'reporting/reports_main.php?Class=4', 'SA_DIMENSIONREP', MENU_REPORT);
 
 		$this->add_module(_('Maintenance'));

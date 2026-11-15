@@ -166,8 +166,8 @@ function dimension_release_family_matrix()
 			'statement'=>'The inactive Trade Finance extension stays blocked from activation; Dimension parity is characterized only.'),
 		'budget_baselines'=>array('level'=>'supported', 'tasks'=>array('DIM-BUD-002'),
 			'statement'=>'An exact approved baseline and independently approved revisions with commentary sit beside the editable budget; the active comparison is an explicit, audited choice and a tampered version is never shown.'),
-		'commitments_and_hierarchy'=>array('level'=>'unsupported', 'tasks'=>array('DIM-ADV-001', 'DIM-ADV-002'),
-			'statement'=>'Commitments, forecasts, effective hierarchy and portfolio rollups are not offered.'),
+		'commitments_and_hierarchy'=>array('level'=>'supported', 'tasks'=>array('DIM-ADV-001', 'DIM-ADV-002'),
+			'statement'=>'Purchase commitments, forecasts and effective hierarchy rollups are advisory evidence beside the ledger: commitments and reservations never post, reservations stay off until separately activated, and a hierarchy is an optional approved structure whose as-posted view is never restated.'),
 		'additional_categories'=>array('level'=>'unsupported', 'tasks'=>array('DIM-AXS-001'),
 			'statement'=>'Only the two native categories exist; an independent third category is not evaluated.'));
 }

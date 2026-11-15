@@ -24,6 +24,8 @@ class GeneralLedgerApp extends application {
 		$this->add_rapp_function(0, _('Dimension Allocation &Drivers'), 'gl/gl_allocation_driver.php?', 'SA_JOURNALENTRY', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('&Budget Entry'), 'gl/gl_budget.php?', 'SA_BUDGETENTRY', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Budget Baselines and &Revisions'), 'gl/gl_budget_version.php?', 'SA_BUDGETENTRY', MENU_TRANSACTION);
+		// DIM-ADV-001: advisory purchase commitments, separately activated reservations and the forecast.
+		$this->add_rapp_function(0, _('Commitments, Reservations and &Forecast'), 'gl/gl_commitment_forecast.php?', 'SA_BUDGETENTRY', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('&Reconcile Bank Account'), 'gl/bank_account_reconcile.php?', 'SA_RECONCILE', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Revenue / &Costs Accruals'), 'gl/accruals.php?', 'SA_ACCRUALS', MENU_TRANSACTION);
 
