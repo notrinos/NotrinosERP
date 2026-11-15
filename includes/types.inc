@@ -217,8 +217,12 @@ define('WO_ASSEMBLY', 0);
 define('WO_UNASSEMBLY', 1);
 define('WO_ADVANCED', 2);
 
-define('WO_LABOUR', 0);
-define('WO_OVERHEAD', 1);
+// The manufacturing cost classification include may admit these two values first when it is loaded
+// ahead of this file, so they are defined only when absent (same values, never redefined).
+if (!defined('WO_LABOUR'))
+	define('WO_LABOUR', 0);
+if (!defined('WO_OVERHEAD'))
+	define('WO_OVERHEAD', 1);
 define('WO_MATERIALS', 2);
 
 //----------------------------------------------------------------------------------

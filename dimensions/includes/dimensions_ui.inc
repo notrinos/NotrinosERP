@@ -10,6 +10,8 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 include_once($path_to_root . '/includes/ui.inc');
+// pager_link() is used for the Edit action of the inquiry result table.
+include_once($path_to_root . '/includes/ui/db_pager_view.inc');
 
 //--------------------------------------------------------------------------------------
 
