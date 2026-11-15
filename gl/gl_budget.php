@@ -19,11 +19,17 @@ page(_($help_context = 'Budget Entry'));
 
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
+include_once($path_to_root.'/dimensions/includes/dimension_budget_basis.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/admin/db/fiscalyears_db.inc');
 include_once($path_to_root.'/admin/db/fiscal_years_entity.inc');
 
 check_db_has_gl_account_groups(_('There are no account groups defined. Please define at least one account group before entering accounts.'));
+
+// DIM-BUD-001: same-scope drilldown from the reports pre-selects the account, fiscal year and exact coordinates.
+foreach (array('account', 'fyear', 'dim1', 'dim2') as $drill_key)
+	if (!isset($_POST[$drill_key]) && isset($_GET[$drill_key]) && is_string($_GET[$drill_key]) && preg_match('/^[A-Za-z0-9_.-]{1,15}$/D', $_GET[$drill_key]))
+		$_POST[$drill_key] = $_GET[$drill_key];
 
 //-------------------------------------------------------------------------------------
 
@@ -109,9 +115,11 @@ if (db_has_gl_accounts()) {
 		label_cell($date_);
 		amount_cells(null, 'amount'.$i, null, 15, null, 0);
 		if ($showdims) {
-			$d = get_budget_trans_from_to($date_, $date_, $_POST['account'], $_POST['dim1'], $_POST['dim2']);
-			label_cell(number_format2($d, 0), 'nowrap align=right');
-			$btotal += $d;
+			// DIM-BUD-001: the all-Dimensions month basis never adds a company aggregate and its detail rows.
+			$month_begin = substr(date2sql($date_), 0, 8).'01';
+			$all_dims = dimension_budget_report_amount($_POST['account'], 0, 0, $month_begin, dimension_budget_month_end($month_begin));
+			label_cell($all_dims['available'] ? number_format2($all_dims['amount'], 0) : '-', 'nowrap align=right');
+			$btotal += $all_dims['amount'];
 		}
 		$lamount = get_gl_trans_from_to(add_years($date_, -1), add_years(end_month($date_), -1), $_POST['account'], $_POST['dim1'], $_POST['dim2']);
 		$total += input_num('amount'.$i);
