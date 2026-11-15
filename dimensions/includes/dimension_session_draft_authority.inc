@@ -79,7 +79,9 @@ function dimension_session_draft_ignored_keys()
         'report_artifact_grants'=>true, 'formula_designer_rate_limits'=>true, 'purch_matching_last_result'=>true,
         'Processing'=>true, 'security_session_registry_id'=>true, 'security_session_secret'=>true,
         'wa_global_supplier_id'=>true, 'wa_global_stock_id'=>true, 'wa_global_customer_id'=>true,
-        'wa_global_employee_id'=>true, 'wa_global_curr_code'=>true);
+        'wa_global_employee_id'=>true, 'wa_global_curr_code'=>true,
+        // Report access binding (schema, actor, company, connection ids and a principal fingerprint) and its random epoch.
+        'report_access_binding'=>true, 'report_access_epoch'=>true);
 }
 
 /**

@@ -30,6 +30,10 @@ function dimension_reference_owners() {
     $owners['payroll_custody'] = array('kind'=>'domain_adapter','reason'=>'Governed allocation axes, mapping/projection JSON, native-v1 and immutable payroll evidence');
     $owners['retained_payloads'] = array('kind'=>'domain_adapter','reason'=>'Domain audit, saved source/custom_data, serialized carts, session drafts and future source snapshots');
     $owners['source_revisions'] = array('kind'=>'domain_adapter','reason'=>'Durable DIM-FND-006 source classification revisions and their posting lineage');
+    // B08 owns this table: dimension_session_draft_observe() reads it only for live sealed sessions inside the locked recheck.
+    // A generic scalar read would also count rows of expired sessions, so the generic observer keeps it unknown.
+    $owners['session_draft_references'] = array('kind'=>'domain_adapter','table'=>'session_draft_references','columns'=>array('dimension_id'),
+        'reason'=>'DIM-LFC-001 B08 live session draft registry; authoritative reader is dimension_session_draft_observe in the locked recheck');
     $owners['extensions'] = array('kind'=>'domain_adapter','reason'=>'Installed and company hooks, inactive extension references, external deployment ownership');
     return $owners;
 }
