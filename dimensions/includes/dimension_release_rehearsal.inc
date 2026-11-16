@@ -155,10 +155,14 @@ function dimension_release_family_matrix()
 			'statement'=>'Tracking, inquiry, customer economics, monthly budget comparison and archive retrieval reconcile to GL.'),
 		'business_modes'=>array('level'=>'supported', 'tasks'=>array('DIM-CFG-001', 'DIM-UX-001'),
 			'statement'=>'Declared category purposes drive wording and overdue behavior without changing stored meaning.'),
-		'allocation_journals'=>array('level'=>'supported', 'tasks'=>array('DIM-ALC-001'),
-			'statement'=>'Posted rows are allocated or reclassified by fixed percentages or amounts through the journal approval path, with an exact inverse.'),
-		'driver_allocation'=>array('level'=>'supported', 'tasks'=>array('DIM-ALC-002'),
-			'statement'=>'Approved, effective-dated measured drivers (including minimized payroll aggregates) allocate posted rows through the same journal approval path; a stale driver cannot post and the fully allocated label needs a complete driver.'),
+		// DIM-P5-001 decision (2026-11-16): allocation is held for a second pilot. It has no default-off activation gate (every journal-entry
+		// user reaches it) and, with no journal approval workflow active (none is seeded), it posts directly with no independent checker.
+		'allocation_journals'=>array('level'=>'limited', 'tasks'=>array('DIM-ALC-001'),
+			'statement'=>'Held for a second pilot (DIM-P5-001): posted rows can be allocated or reclassified by fixed percentages or amounts with an exact inverse, '
+				.'but the page has no activation switch and a company with no active journal approval workflow posts directly with no independent checker. Not part of the first release or the pilot admission.'),
+		'driver_allocation'=>array('level'=>'limited', 'tasks'=>array('DIM-ALC-002'),
+			'statement'=>'Held for a second pilot (DIM-P5-001) with allocation journals: measured drivers (including minimized payroll aggregates) feed the same journal path and inherit its '
+				.'missing activation switch; driver versions use a module-local maker/checker. Not part of the first release or the pilot admission.'),
 		'payroll_and_hrm'=>array('level'=>'limited', 'tasks'=>array('DIM-HRM-001', 'DIM-PAY-002'),
 			'statement'=>'Native payroll classification is read and explained; the effective-dated Finance mapping command, '
 				.'recalculation and any Dimension axis on HRM employees are not part of this release.'),

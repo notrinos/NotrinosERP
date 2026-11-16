@@ -42,6 +42,11 @@
  * evidence and the PAY-GLB native receipts. ST_PAYROLL_PERIOD approval drafts
  * are classified inside the approval observer by the same authority.
  *
+ * DIM-LFC-003 adds the phase-5 stores through dimensions/includes/dimension_closed_policy.inc: any stored
+ * hierarchy member, budget version line, commitment, reservation, forecast line, driver value, residual target
+ * or retained allocation request naming the master reports used; an absent table is unused, a partial table or
+ * undecodable payload is unknown. A used Dimension is closed, never deleted.
+ *
  * DIM-FND-006 adds the durable source classification revisions: any stored
  * revision naming the master (header or line, either axis) reports used, a
  * verified-absent companion schema cannot hold evidence and reports unused, and
@@ -55,6 +60,7 @@ require_once __DIR__.'/dimension_shared_record_authority.inc';
 require_once __DIR__.'/dimension_session_draft_authority.inc';
 require_once __DIR__.'/dimension_extension_authority.inc';
 require_once __DIR__.'/dimension_source_revision.inc';
+require_once __DIR__.'/dimension_closed_policy.inc';
 
 /**
  * Return the ordinary owners the B02 matrix registers for reconciliation:
@@ -211,6 +217,7 @@ function dimension_reference_locked_recheck($id, $tolerate_own = array())
     require_once dirname(dirname(__DIR__)).'/hrm/includes/db/pay_dimension_reference_authority_db.inc';
     foreach (pay_dimension_reference_owner_names() as $name) $result['owners'][$name] = 'unknown';
     foreach (dimension_shared_record_owner_names() as $name) $result['owners'][$name] = 'unknown';
+    foreach (dimension_closed_policy_tables() as $name) $result['owners'][$name] = 'unknown';
     if (!dimension_lifecycle_authorized() || !dimension_lifecycle_valid_id($id) || empty($GLOBALS['transaction_level'])) return $result;
     $id = (int)$id;
     $extension_signature = dimension_extension_signature();
@@ -221,7 +228,7 @@ function dimension_reference_locked_recheck($id, $tolerate_own = array())
         if (!$level || !in_array(strtoupper($level[0]), array('REPEATABLE-READ', 'SERIALIZABLE'), true)) return $result;
         $scalar_only = dimension_reference_recheck_scalar_only();
         $columns = dimension_reference_recheck_columns(array_merge(array_keys($owners), $hrm_retained, pay_dimension_reference_tables(),
-            dimension_shared_record_tables()));
+            dimension_shared_record_tables(), dimension_closed_policy_tables()));
         if ($columns === false) return $result;
         foreach ($owners as $name=>$scalar) {
             $state = dimension_reference_recheck_owner($name, $columns[$name], $scalar, !in_array($name, $scalar_only, true), $id);
@@ -259,6 +266,11 @@ function dimension_reference_locked_recheck($id, $tolerate_own = array())
         }
         // DIM-FND-006: durable source classification revisions bound to the master.
         foreach (dimension_source_revision_observe($id) as $name=>$state) {
+            $result['owners'][$name] = $state;
+            if ($state === 'unknown' && db_error_no()) return $result;
+        }
+        // DIM-LFC-003: the phase-5 stores (hierarchy, budget versions, commitments, forecast, drivers, allocation runs).
+        foreach (dimension_closed_policy_observe($id, $columns) as $name=>$state) {
             $result['owners'][$name] = $state;
             if ($state === 'unknown' && db_error_no()) return $result;
         }

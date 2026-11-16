@@ -485,14 +485,21 @@ function dimension_customer_label_text($customer)
  * @param int|string $scope2 Axis 2 scope
  * @param array $axes Enabled axes (1 and/or 2)
  * @param array $reasons Reasons to read (default all)
+ * @param bool $customer_access Whether the caller holds the reviewed `dimension_customer_economics` areas (Dimension view, GL analytics
+ *        and sales transactions view). When false the customer-based reason is neither read nor returned, even when it is the only
+ *        reason requested or when no reason is requested (DIM-PERM-001). The data layer does not authorize; every entry point passes
+ *        the result of its own aggregate check.
  * @return array|false summary (per reason: state, items, lines, absolute, line_percent, absolute_percent), items, eligible_lines, eligible_absolute, truncated; false when invalid or unreadable
  */
-function dimension_exception_queue($from, $to, $scope1 = 0, $scope2 = 0, $axes = array(1, 2), $reasons = array())
+function dimension_exception_queue($from, $to, $scope1 = 0, $scope2 = 0, $axes = array(1, 2), $reasons = array(), $customer_access = true)
 {
     if (!dimension_tracking_valid_range($from, $to) || $from === null || $from === '') return false;
     $axes = array_values(array_intersect(array(1, 2), array_map('intval', (array)$axes)));
     if (!count($axes)) return false;
     $reasons = count($reasons) ? array_values(array_intersect(dimension_exception_reasons(), $reasons)) : dimension_exception_reasons();
+    // Narrowed after the default is expanded, so a denied caller who selected nothing or only the customer reason gets an empty
+    // queue for that reason rather than every reason.
+    if (!$customer_access) $reasons = array_values(array_diff($reasons, array('missing_customer_cost')));
     $scope1 = dimension_tracking_normalize_scope($scope1);
     $scope2 = dimension_tracking_normalize_scope($scope2);
     $summary = dimension_tracking_summary($from, $to, $scope1, $scope2);
@@ -505,7 +512,8 @@ function dimension_exception_queue($from, $to, $scope1 = 0, $scope2 = 0, $axes =
     $overrun = dimension_exception_overrun_items($from, $to, $axes, $scope1, $scope2);
     $by_reason['overrun'] = $overrun['items'];
     $state['overrun'] = array('state'=>$overrun['state'], 'reason'=>$overrun['reason']);
-    $customers = dimension_exception_customer_items($from, $to, $scope1, $scope2);
+    // The customer reader is not called at all for a caller without the sales view area, or when the reason is not selected.
+    $customers = in_array('missing_customer_cost', $reasons, true) ? dimension_exception_customer_items($from, $to, $scope1, $scope2) : array();
     if ($customers === false) return false;
     $by_reason['missing_customer_cost'] = $customers;
     $state['missing_customer_cost'] = array('state'=>'ok', 'reason'=>'ok');
@@ -638,17 +646,20 @@ function dimension_export_dataset($params)
             array(_('No Dimension category is enabled for new postings, so no posting is an exception. Historical Dimension reports stay available.')));
     }
     elseif (!empty($params['queue'])) {
-        $queue = dimension_exception_queue($from, $to, $scope1, $scope2, $queue_axes, isset($params['reasons']) ? $params['reasons'] : array());
+        $queue = dimension_exception_queue($from, $to, $scope1, $scope2, $queue_axes, isset($params['reasons']) ? $params['reasons'] : array(),
+            !isset($params['customer_access']) || $params['customer_access'] === true);
         if ($queue === false) return false;
         $srows = array();
         foreach ($queue['summary'] as $reason => $s) {
             $srows[] = array(dimension_exception_reason_text($reason), $s['state'] === 'ok' ? (string)$s['items'] : _('N/A'), (string)$s['lines'], (float)$s['absolute'],
                 dimension_export_percent($s['line_percent']), dimension_export_percent($s['absolute_percent']), dimension_exception_reason_authority($reason));
         }
+        $summary_notes = array(sprintf(_('Eligible P&L lines in scope: %d, absolute amount %s. A line can have more than one reason, so reasons are not added together.'), $queue['eligible_lines'], number_format($queue['eligible_absolute'], 2, '.', '')));
+        if (isset($params['customer_access']) && $params['customer_access'] !== true)
+            $summary_notes[] = _('Missing customer cost is not shown: it needs the sales transactions view permission as well.');
         $sections[] = dimension_export_section('queue_summary', _('Exception queue - counts and coverage'),
             array(_('Reason'), _('Items'), _('Lines'), _('Absolute amount'), _('Line coverage'), _('Absolute coverage'), _('Action authority')),
-            array('left', 'right', 'right', 'right', 'right', 'right', 'left'), $srows,
-            array(sprintf(_('Eligible P&L lines in scope: %d, absolute amount %s. A line can have more than one reason, so reasons are not added together.'), $queue['eligible_lines'], number_format($queue['eligible_absolute'], 2, '.', ''))));
+            array('left', 'right', 'right', 'right', 'right', 'right', 'left'), $srows, $summary_notes);
         $irows = array();
         foreach ($queue['items'] as $item) {
             $irows[] = array(dimension_exception_reason_text($item['reason']), $item['subject'], $item['source'] === null ? '' : (string)$item['source'], $item['first_date'] === null ? '' : $item['first_date'],

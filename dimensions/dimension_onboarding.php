@@ -34,6 +34,11 @@ include_once($path_to_root.'/dimensions/includes/dimensions_ui.inc');
 
 display_note(_('Dimensions let you see where money was spent or earned, for example by project or by cost center. Follow the three steps below; each one says what is missing and who can do it.'));
 
+// DIM-UX-002: the one home that lists every Financial Tracking page and what the user can open.
+hyperlink_no_params($path_to_root.'/dimensions/financial_tracking_home.php?', _('See every Financial Tracking page'));
+// DIM-UX-003: the end-user guide to the flow and to every page.
+hyperlink_no_params($path_to_root.'/dimensions/financial_tracking_guide.php?', _('Read the Financial Tracking Guide'));
+
 $facts = dimension_onboarding_facts();
 $steps = dimension_onboarding_steps($facts, dimension_business_mode_can_configure(), dimension_business_mode_can_edit());
 display_dimension_onboarding_steps($steps);

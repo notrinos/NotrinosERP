@@ -19,6 +19,7 @@ include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/includes/ui/ui_lists.inc');
 include_once($path_to_root . '/purchasing/includes/purchasing_db.inc');
+include_once($path_to_root . '/dimensions/includes/dimension_budget_availability.inc');
 include_once($path_to_root . '/purchasing/includes/db/purch_requisition_refresh_db.inc');
 
 $js = '';
@@ -529,6 +530,9 @@ if ($requisition) {
 	}
 
 	br();
+
+	// DIM-BUD-003: advisory budget availability of the open requisition quantity (never blocks).
+	dimension_availability_show('requisition', $selected_id);
 
 	echo '<div style="text-align:center;margin-top:18px;">';
 	if ($requisition['status'] === 'draft' || $requisition['status'] === 'rejected') {

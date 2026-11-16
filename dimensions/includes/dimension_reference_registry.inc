@@ -21,9 +21,14 @@ function dimension_reference_owners() {
         'purch_rfq'=>$pair, 'purch_agreements'=>$pair,
         'dimension_source_revisions'=>$pair,
         'hrm_pay_gl_001_gl_posting_lines'=>array('core_dimension_id','core_dimension2_id'));
+    // DIM-LFC-003: the phase-5 stores declared by the closed-never-deleted policy are scalar owners too.
+    foreach (dimension_closed_policy_owners() as $table=>$policy) $tables[$table] = $policy['columns'];
     $owners = array();
     foreach ($tables as $table=>$columns)
         $owners[$table] = array('kind'=>'scalar','table'=>$table,'columns'=>$columns);
+    foreach (dimension_closed_policy_payload_owners() as $table=>$policy)
+        $owners[$table] = array('kind'=>'domain_adapter','table'=>$table,'columns'=>array($policy['column']),
+            'reason'=>'DIM-LFC-003 '.$policy['reason'].'; authoritative reader is dimension_closed_policy_observe in the locked recheck');
     $owners['approval_drafts'] = array('kind'=>'payload','table'=>'approval_drafts','columns'=>array('draft_data'));
     $owners['approval_actions'] = array('kind'=>'payload','table'=>'approval_actions','columns'=>array('draft_data_snapshot'));
     $owners['tags'] = array('kind'=>'domain_adapter','reason'=>'TAG_DIMENSION association and ST_DIMENSION comments/references/attachments');
@@ -96,3 +101,5 @@ function dimension_reference_observe($id, $reader, $additional_owners = array())
     $result['state'] = count($result['used_owners']) ? 'used' : (count($result['unknown_owners']) ? 'unknown' : 'unused');
     return $result;
 }
+
+require_once __DIR__."/dimension_closed_policy.inc";

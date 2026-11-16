@@ -99,7 +99,10 @@ function dimension_extension_known_tables()
     require_once dirname(dirname(__DIR__)).'/hrm/includes/db/pay_dimension_reference_authority_db.inc';
     $known = array('dimensions'=>true, 'approval_drafts'=>true, 'approval_actions'=>true, 'user_sessions'=>true,
         'session_draft_seals'=>true, 'session_draft_references'=>true, 'hrm_lifecycle_hire_commands'=>true,
-        'hrm_lifecycle_hire_payloads'=>true, 'hrm_worker_profile_versions'=>true);
+        'hrm_lifecycle_hire_payloads'=>true, 'hrm_worker_profile_versions'=>true,
+        // DIM-FND-006 revisions: observed by dimension_source_revision_observe() in the locked recheck. Without this entry the
+        // schema read below reports the table's dimension_id columns as unknown extension storage on every real install.
+        'dimension_source_revisions'=>true);
     foreach (array_keys(dimension_reference_recheck_owners()) as $table) $known[$table] = true;
     foreach (pay_dimension_reference_tables() as $table) $known[$table] = true;
     foreach (dimension_shared_record_tables() as $table) $known[$table] = true;

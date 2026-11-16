@@ -38,6 +38,7 @@ include_once($path_to_root . '/admin/db/approval_dashboard_db.inc');
 include_once($path_to_root . '/includes/approval/approval_delegation.inc');
 include_once($path_to_root . '/includes/approval/approval_escalation.inc');
 include_once($path_to_root . '/includes/approval/approval_dimension_snapshot.inc');
+include_once($path_to_root . '/dimensions/includes/dimension_budget_availability.inc');
 
 // =====================================================
 // Get draft ID from request
@@ -509,6 +510,10 @@ if ((int)$draft['trans_type'] === ST_SALESORDER && is_array($draft_data) && isse
 } else {
 	display_note(_('Draft data is not available or could not be decoded.'));
 }
+
+// --- DIM-BUD-003: advisory budget availability for purchase order and requisition reviews ---
+if (is_array($draft_data) && in_array((int)$draft['trans_type'], array(ST_PURCHORDER, ST_PURCHREQUISITION), true))
+	dimension_availability_show('draft', (int)$draft['trans_type'], $draft_data);
 
 // --- Section 6: Action Buttons ---
 $is_pending = ((int)$draft['status'] === APPROVAL_STATUS_PENDING);

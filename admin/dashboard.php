@@ -119,6 +119,10 @@ if (isset($_GET['sel_app'])) {
 	$dashboard->addWidgetWithClass(DA_DIMENSIONS, 614, WIDGET_QUARTER, 'widget-small-stat');
 	$dashboard->addWidget(DA_DIMENSIONS, 601, WIDGET_HALF);
 	$dashboard->addWidget(DA_DIMENSIONS, 602, WIDGET_HALF);
+	// DIM-BUD-004: budget overrun alerts at the company thresholds (each widget checks the Dimension view area and the funds-position rule).
+	$dashboard->addWidgetWithClass(DA_DIMENSIONS, 621, WIDGET_QUARTER, 'widget-small-stat');
+	$dashboard->addWidgetWithClass(DA_DIMENSIONS, 622, WIDGET_QUARTER, 'widget-small-stat');
+	$dashboard->addWidget(DA_DIMENSIONS, 623, WIDGET_HALF);
 
 	$dashboard->addDashboard(_('General Ledger'), DA_GL);
 	$dashboard->addWidgetWithClass(DA_GL, 711, WIDGET_QUARTER, 'widget-small-stat');

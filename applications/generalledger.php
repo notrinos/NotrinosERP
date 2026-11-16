@@ -34,6 +34,8 @@ class GeneralLedgerApp extends application {
 		$this->add_lapp_function(1, _('GL &Inquiry'), 'gl/inquiry/gl_account_inquiry.php?', 'SA_GLTRANSVIEW', MENU_INQUIRY);
 		$this->add_lapp_function(1, _('Bank Account &Inquiry'), 'gl/inquiry/bank_inquiry.php?', 'SA_BANKTRANSVIEW', MENU_INQUIRY);
 		$this->add_lapp_function(1, _('Ta&x Inquiry'), 'gl/inquiry/tax_inquiry.php?', 'SA_TAXREP', MENU_INQUIRY);
+		// DIM-UX-002: the home page of the Financial Tracking pages that live in this menu and in Dimensions.
+		$this->add_lapp_function(1, _('Financial &Tracking Home'), 'dimensions/financial_tracking_home.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
 
 		$this->add_rapp_function(1, _('Trial &Balance'), 'gl/inquiry/gl_trial_balance.php?', 'SA_GLANALYTIC', MENU_INQUIRY);
 		$this->add_rapp_function(1, _('Balance &Sheet Drilldown'), 'gl/inquiry/balance_sheet.php?', 'SA_GLANALYTIC', MENU_INQUIRY);

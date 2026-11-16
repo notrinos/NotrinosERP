@@ -24,6 +24,10 @@ class DimensionsApp extends application {
 		}
 
 		$this->add_module(_('Inquiries and Reports'));
+		// DIM-UX-002: the one home that lists every Financial Tracking page of this menu and of General Ledger, by task.
+		$this->add_lapp_function($dim > 0 ? 1 : 0, _('&Financial Tracking Home'), 'dimensions/financial_tracking_home.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
+		// DIM-UX-003: the end-user guide; read-only and open to every Dimension viewer.
+		$this->add_lapp_function($dim > 0 ? 1 : 0, _('Financial Tracking Gui&de'), 'dimensions/financial_tracking_guide.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
 		// DIM-UX-001: the three-step guide, the made-up examples and the disabled-history view; read-only and open to every Dimension viewer.
 		$this->add_lapp_function($dim > 0 ? 1 : 0, _('&Getting Started'), 'dimensions/dimension_onboarding.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
 		$this->add_lapp_function($dim > 0 ? 1 : 0, _('Dimension &Inquiry'), 'dimensions/inquiry/search_dimensions.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
@@ -34,6 +38,8 @@ class DimensionsApp extends application {
 		// DIM-REP-006: comparisons, account matrix and the exception work queue; the page also requires GL analytics.
 		$this->add_lapp_function($dim > 0 ? 1 : 0, _('Dimension &Exceptions'), 'dimensions/inquiry/dimension_exceptions.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
 		// DIM-ADV-002: optional effective hierarchy and portfolio rollups; the page also requires GL analytics to read a rollup.
+		// DIM-BUD-004: cost budgets at their warning or limit threshold; the page also requires GL analytics or budget entry.
+		$this->add_lapp_function($dim > 0 ? 1 : 0, _('Budget &Alerts'), 'dimensions/inquiry/dimension_budget_alerts.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
 		$this->add_lapp_function($dim > 0 ? 1 : 0, _('Dimension &Hierarchy'), 'dimensions/dimension_hierarchy.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
 		$this->add_rapp_function($dim > 0 ? 1 : 0, _('Dimension &Reports'), 'reporting/reports_main.php?Class=4', 'SA_DIMENSIONREP', MENU_REPORT);
 

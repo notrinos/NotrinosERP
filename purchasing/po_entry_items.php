@@ -16,6 +16,7 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/purchasing/includes/purchasing_ui.inc');
 include_once($path_to_root.'/purchasing/includes/db/suppliers_db.inc');
 include_once($path_to_root.'/reporting/includes/reporting.inc');
+include_once($path_to_root.'/dimensions/includes/dimension_budget_availability.inc');
 
 // A new GET may deliberately replace an old cart. Never rebind a stale POST,
 // including a form whose query string still contains NewOrder/ModifyOrderNumber.
@@ -651,6 +652,13 @@ if ($_SESSION['PO']->trans_type == ST_SUPPINVOICE)
 textarea_row(_('Memo:'), 'Comments', null, 70, 4);
 
 end_table(1);
+
+// DIM-BUD-003: advisory budget availability of the order being entered (never blocks).
+$Ajax->activate('budget_availability');
+div_start('budget_availability');
+if ($_SESSION['PO']->trans_type == ST_PURCHORDER)
+	dimension_availability_show('cart', $_SESSION['PO']);
+div_end();
 
 div_start('controls', 'items_table');
 $process_txt = _('Place Order');

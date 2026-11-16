@@ -140,17 +140,16 @@ else {
 	foreach (dimension_exception_reasons() as $reason)
 		if (check_value('Reason_'.$reason))
 			$reasons[] = $reason;
+	// DIM-PERM-001: the customer-based reason needs the sales view area. The queue itself drops it (and never reads it) when
+	// `customer_access` is false, so an empty or customer-only selection cannot widen to every reason; the dataset states the omission.
 	$customer_access = report_access_aggregate_scope('dimension_customer_economics');
-	if (empty($customer_access['allowed'])) {
-		$reasons = array_values(array_diff($reasons, array('missing_customer_cost')));
-		display_note(_('Missing customer cost is not shown: it needs the sales transactions view permission as well.'));
-	}
 	$enabled = (int)get_company_pref('use_dimension');
 	$matrix_axis = (int)get_post('MatrixAxis', 1) === 2 ? 2 : 1;
 	$dataset = dimension_export_dataset(array(
 		'from' => date2sql($_POST['TransFromDate']), 'to' => date2sql($_POST['TransToDate']), 'scope1' => $scope1, 'scope2' => $scope2,
 		'mode' => $_POST['Mode'], 'fiscal_start' => date2sql(begin_fiscalyear()), 'matrix' => check_value('IncludeMatrix'), 'queue' => check_value('IncludeQueue'),
-		'axes' => array($matrix_axis), 'queue_axes' => $enabled >= 2 ? array(1, 2) : ($enabled === 1 ? array(1) : array()), 'reasons' => $reasons));
+		'axes' => array($matrix_axis), 'queue_axes' => $enabled >= 2 ? array(1, 2) : ($enabled === 1 ? array(1) : array()), 'reasons' => $reasons,
+			'customer_access' => !empty($customer_access['allowed'])));
 	if ($dataset === false)
 		display_error(_('The comparison and exceptions could not be read. Check the period; a year-to-date comparison needs the fiscal year start on or before the end date.'));
 	else {
