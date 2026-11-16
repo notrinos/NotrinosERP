@@ -67,6 +67,12 @@ function dimension_budget_month_end($date)
 function dimension_budget_months($from, $to)
 {
     if (!dimension_budget_valid_date($from) || !dimension_budget_valid_date($to) || $from > $to) return false;
+    // DIM performance gate: a pure function that a report calls several times per account; a small request-local memo avoids
+    // rebuilding up to 600 month rows for every account.
+    static $memo = array();
+    $memo_key = $from.'|'.$to;
+    if (isset($memo[$memo_key])) return $memo[$memo_key];
+    if (count($memo) >= 64) $memo = array();
     $year = (int)substr($from, 0, 4);
     $month = (int)substr($from, 5, 2);
     $months = array();
@@ -78,6 +84,7 @@ function dimension_budget_months($from, $to)
         if (++$month > 12) { $month = 1; $year++; }
         if (count($months) > dimension_budget_max_months()) return false;
     }
+    $memo[$memo_key] = $months;
     return $months;
 }
 
@@ -140,13 +147,22 @@ function dimension_budget_month_basis($rows, $from, $to, $scope1, $scope2)
         $summary[$key] = array('whole'=>$month['whole'], 'state'=>'absent', 'amount'=>null, 'rows'=>0, 'overlap'=>false,
             'off_boundary'=>false, 'aggregate'=>array(), 'detail'=>array());
     }
+    // DIM performance gate: budget rows carry a few distinct dates, so the calendar check runs once per distinct date, and the
+    // scope test of dimension_budget_scope_matches() is inlined for the row loop (same rule: 0 = all, negative = unassigned).
+    static $date_ok = array();
+    if (count($date_ok) > 4000) $date_ok = array();
+    $want1 = (int)$scope1;
+    $want2 = (int)$scope2;
     foreach ($rows as $row) {
-        if (!isset($row['tran_date']) || !dimension_budget_valid_date($row['tran_date'])) continue;
-        $key = substr($row['tran_date'], 0, 7);
+        if (!isset($row['tran_date'])) continue;
+        $date = $row['tran_date'];
+        if (!isset($date_ok[$date])) $date_ok[$date] = dimension_budget_valid_date($date);
+        if (!$date_ok[$date]) continue;
+        $key = substr($date, 0, 7);
         if (!isset($summary[$key])) continue;
         $d1 = isset($row['dimension_id']) ? (int)$row['dimension_id'] : 0;
         $d2 = isset($row['dimension2_id']) ? (int)$row['dimension2_id'] : 0;
-        if (!dimension_budget_scope_matches($scope1, $d1) || !dimension_budget_scope_matches($scope2, $d2)) continue;
+        if (($want1 !== 0 && $d1 !== ($want1 < 0 ? 0 : $want1)) || ($want2 !== 0 && $d2 !== ($want2 < 0 ? 0 : $want2))) continue;
         $aggregate = ((int)$scope1 !== 0 || $d1 === 0) && ((int)$scope2 !== 0 || $d2 === 0);
         $summary[$key][$aggregate ? 'aggregate' : 'detail'][] = (float)$row['amount'];
         $summary[$key]['rows']++;
@@ -258,6 +274,81 @@ function dimension_budget_variance($basis, $actual, $full_month = false)
 }
 
 /**
+ * Request-local store of budget rows prefetched for a chunk of accounts.
+ *
+ * @return array Reference to array('key'=>string, 'rows'=>array(account code => rows)); empty when nothing is prefetched
+ */
+function &dimension_budget_prefetch_store()
+{
+    static $store = array();
+    return $store;
+}
+
+/** Identity of one prefetch: the active company, the touched window and both scopes. */
+function dimension_budget_prefetch_key($first, $last, $scope1, $scope2)
+{
+    $company = isset($_SESSION['wa_current_user']->cur_con) ? (int)$_SESSION['wa_current_user']->cur_con : 0;
+    return $company.'|'.$first.'|'.$last.'|'.(int)$scope1.'|'.(int)$scope2;
+}
+
+/** Date window and scope conditions shared by the single-account read and the chunk prefetch. */
+function dimension_budget_window_sql($first, $last, $scope1, $scope2)
+{
+    $sql = " AND tran_date >= '".$first."' AND tran_date <= '".$last."'";
+    if ((int)$scope1 !== 0) $sql .= ' AND dimension_id='.((int)$scope1 < 0 ? 0 : (int)$scope1);
+    if ((int)$scope2 !== 0) $sql .= ' AND dimension2_id='.((int)$scope2 < 0 ? 0 : (int)$scope2);
+    return $sql;
+}
+
+/**
+ * Read the budget rows of a chunk of accounts in one statement, so a report that visits many accounts does not run one
+ * statement per account. The rows are kept only for the next calls of dimension_budget_read_rows() with the same window and scopes
+ * and are released by dimension_budget_prefetch_clear(). Callers keep chunks small (50 accounts) to bound memory.
+ *
+ * @param array $accounts Account codes of the chunk
+ * @param int $scope1 Axis 1 scope
+ * @param int $scope2 Axis 2 scope
+ * @param string $from SQL date
+ * @param string $to SQL date
+ * @return bool True when the chunk is prefetched; false leaves the per-account reads in place
+ */
+function dimension_budget_prefetch_rows($accounts, $scope1, $scope2, $from, $to)
+{
+    $store = &dimension_budget_prefetch_store();
+    $store = array();
+    $months = dimension_budget_months($from, $to);
+    if ($months === false || !is_array($accounts) || !count($accounts)) return false;
+    $keys = array_keys($months);
+    $first = $months[$keys[0]]['start'];
+    $last = $months[$keys[count($keys) - 1]]['end'];
+    $rows = array();
+    $escaped = array();
+    foreach ($accounts as $account) {
+        $rows[(string)$account] = array();
+        $escaped[] = db_escape($account);
+    }
+    $result = db_query('SELECT account, tran_date, dimension_id, dimension2_id, amount FROM '.TB_PREF.'budget_trans WHERE account IN ('.implode(',', $escaped).')'
+        .dimension_budget_window_sql($first, $last, $scope1, $scope2), 'The budget rows could not be read');
+    if (!$result) return false;
+    while ($row = db_fetch_assoc($result)) {
+        $code = (string)$row['account'];
+        // A code the collation treats as equal to a requested one but that differs in spelling stays on the per-account read.
+        if (!isset($rows[$code])) return false;
+        unset($row['account']);
+        $rows[$code][] = $row;
+    }
+    $store = array('key'=>dimension_budget_prefetch_key($first, $last, $scope1, $scope2), 'rows'=>$rows);
+    return true;
+}
+
+/** Release the prefetched budget rows. */
+function dimension_budget_prefetch_clear()
+{
+    $store = &dimension_budget_prefetch_store();
+    $store = array();
+}
+
+/**
  * Read the candidate budget rows of one account for the calendar months a period touches.
  *
  * @param string $account Account code
@@ -274,14 +365,18 @@ function dimension_budget_read_rows($account, $scope1, $scope2, $from, $to)
     $keys = array_keys($months);
     $first = $months[$keys[0]]['start'];
     $last = $months[$keys[count($keys) - 1]]['end'];
-    $sql = 'SELECT tran_date, dimension_id, dimension2_id, amount FROM '.TB_PREF.'budget_trans WHERE account='.db_escape($account)
-        ." AND tran_date >= '".$first."' AND tran_date <= '".$last."'";
-    if ((int)$scope1 !== 0) $sql .= ' AND dimension_id='.((int)$scope1 < 0 ? 0 : (int)$scope1);
-    if ((int)$scope2 !== 0) $sql .= ' AND dimension2_id='.((int)$scope2 < 0 ? 0 : (int)$scope2);
-    $result = db_query($sql, 'The budget rows could not be read');
-    if (!$result) return false;
-    $rows = array();
-    while ($row = db_fetch_assoc($result)) $rows[] = $row;
+    $store = &dimension_budget_prefetch_store();
+    if (isset($store['key']) && $store['key'] === dimension_budget_prefetch_key($first, $last, $scope1, $scope2) && isset($store['rows'][$account])) {
+        // DIM performance gate: rows of this account were read with the rest of its chunk in one statement.
+        $rows = $store['rows'][$account];
+    } else {
+        $sql = 'SELECT tran_date, dimension_id, dimension2_id, amount FROM '.TB_PREF.'budget_trans WHERE account='.db_escape($account)
+            .dimension_budget_window_sql($first, $last, $scope1, $scope2);
+        $result = db_query($sql, 'The budget rows could not be read');
+        if (!$result) return false;
+        $rows = array();
+        while ($row = db_fetch_assoc($result)) $rows[] = $row;
+    }
     // DIM-BUD-002: a fiscal year with an explicitly chosen approved budget version reads that version instead of the live rows.
     if (function_exists('dimension_budget_version_overlay'))
         return dimension_budget_version_overlay($rows, $account, $scope1, $scope2, $first, $last);

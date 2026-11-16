@@ -334,12 +334,22 @@ function dimension_tracking_budget_summary($from, $to, $scope1 = 0, $scope2 = 0)
             AND b.tran_date >= '".$window_from."' AND b.tran_date <= '".$window_to."'".$budget_scope.') x ORDER BY x.account', 'The budget accounts could not be read');
     if (!$accounts) return $out;
     $revenue = $cost = 0.0;
-    while ($account = db_fetch_assoc($accounts)) {
-        $out['accounts']++;
-        $amount = dimension_budget_report_amount($account['account'], $scope1, $scope2, $from, $to);
-        if (!$amount['available']) { $out['accounts_without_budget']++; continue; }
-        if ((int)$account['ctype'] === CL_INCOME) $revenue += -$amount['amount']; else $cost += $amount['amount'];
+    $visited = array();
+    while ($account = db_fetch_assoc($accounts)) $visited[] = $account;
+    // DIM performance gate: the budget rows of 50 accounts are read in one statement instead of one statement per account
+    // (3,600 statements for the exception queue of a 300-account chart before this change).
+    foreach (array_chunk($visited, 50) as $chunk) {
+        $codes = array();
+        foreach ($chunk as $account) $codes[] = $account['account'];
+        dimension_budget_prefetch_rows($codes, $scope1, $scope2, $from, $to);
+        foreach ($chunk as $account) {
+            $out['accounts']++;
+            $amount = dimension_budget_report_amount($account['account'], $scope1, $scope2, $from, $to);
+            if (!$amount['available']) { $out['accounts_without_budget']++; continue; }
+            if ((int)$account['ctype'] === CL_INCOME) $revenue += -$amount['amount']; else $cost += $amount['amount'];
+        }
     }
+    dimension_budget_prefetch_clear();
     if ($out['accounts'] === 0 || $out['accounts_without_budget'] === $out['accounts']) {
         $out['state'] = 'absent'; $out['reason'] = 'no_budget'; return $out;
     }
