@@ -9,8 +9,8 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-require_once __DIR__ . '/quality_dimension_db.inc';
-require_once __DIR__ . '/../../warehouse/includes/db/warehouse_config_dimension_db.inc';
+require_once __DIR__ . '/quality_tracking_db.inc';
+require_once __DIR__ . '/../../warehouse/includes/db/warehouse_config_tracking_db.inc';
 
 $serial_batch_db_path = dirname(__FILE__) . '/serial_batch_db.inc';
 if (file_exists($serial_batch_db_path))
@@ -895,7 +895,7 @@ function complete_quality_inspection($inspection_id, $result = '', $accepted_qty
 		$sql = "UPDATE " . TB_PREF . "grn_items SET inspection_status=" . db_escape($grn_status)
 			. " WHERE grn_batch_id=" . (int)$insp['trans_no']
 			. " AND item_code=" . db_escape($insp['stock_id']);
-		require_once dirname(dirname(dirname(__DIR__))).'/purchasing/includes/db/purchase_document_dimension_db.inc';
+		require_once dirname(dirname(dirname(__DIR__))).'/purchasing/includes/db/purchase_document_tracking_db.inc';
 		// Every receipt line selected by the native batch/item predicate keeps its retained metadata.
 		purchase_grn_item_dimension_group($insp['trans_no'], (string)$insp['stock_id'], function() use ($sql) {
 			return db_query($sql, 'could not update grn inspection status');

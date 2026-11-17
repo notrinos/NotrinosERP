@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-require_once __DIR__.'/item_dimension_maintenance_db.inc';
+require_once __DIR__.'/item_tracking_maintenance_db.inc';
 
 /** Serialize native item defaults, retained intent and all dependent SQL. */
 function update_item($stock_id, $description, $long_description, $category_id, $tax_type_id, $units, $mb_flag, $sales_account, $inventory_account, $cogs_account, $adjustment_account, $wip_account, $dimension_id, $dimension2_id, $no_sale, $editable, $no_purchase, $depreciation_method = 'D', $depreciation_rate=100, $depreciation_factor=1, $depreciation_start=null, $fa_class_id=null, $tracking=null) {

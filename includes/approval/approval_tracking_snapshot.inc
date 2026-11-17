@@ -46,8 +46,8 @@
  *
  * PHP 5.6 compatible syntax.
  */
-require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_source_revision.inc';
-require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_validation_contract.inc';
+require_once dirname(dirname(__DIR__)).'/tracking/includes/tracking_source_revision.inc';
+require_once dirname(dirname(__DIR__)).'/tracking/includes/tracking_validation_contract.inc';
 
 /**
  * Envelope schema name stored in the approval draft JSON.
@@ -842,12 +842,12 @@ function approval_dimension_snapshot_revalidate($snapshot, $options = array())
 	if ($ready === 'absent') {
 		$result['state'] = 'unavailable';
 		$result['codes'][] = 'schema_unavailable';
-		$result['errors'][] = _('The durable Dimension source revision store is not installed, so the snapshot cannot be verified.');
+		$result['errors'][] = _('The durable tracking source revision store is not installed, so the snapshot cannot be verified.');
 		return $result;
 	}
 	if ($ready !== true) {
 		$result['codes'][] = 'schema_unknown';
-		$result['errors'][] = _('The durable Dimension source revision store cannot be verified.');
+		$result['errors'][] = _('The durable tracking source revision store cannot be verified.');
 		return $result;
 	}
 	$entries = array_merge(array($snapshot['header']), $snapshot['lines']);

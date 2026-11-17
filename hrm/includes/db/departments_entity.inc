@@ -14,7 +14,7 @@ if (!function_exists('append_domain_audit_event'))
 	include_once($path_to_root . '/includes/db/domain_audit_db.inc');
 include_once($path_to_root . '/hrm/includes/db/legal_entity_db.inc');
 include_once($path_to_root . '/hrm/includes/db/organization_unit_db.inc');
-include_once($path_to_root . '/hrm/includes/db/hrm_dimension_reference_writer_db.inc');
+include_once($path_to_root . '/hrm/includes/db/hrm_tracking_reference_writer_db.inc');
 
 /**
  * Reuse the existing Department maintenance authority inside the server writer.

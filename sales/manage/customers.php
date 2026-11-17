@@ -85,7 +85,7 @@ function handle_submit(&$selected_id) {
 		}
 		if (!update_customer($_POST['customer_id'], $_POST['CustName'], $_POST['cust_ref'], $_POST['address'], $_POST['tax_id'], $_POST['curr_code'], $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['credit_status'], $_POST['payment_terms'], input_num('discount') / 100, input_num('pymt_discount') / 100, input_num('credit_limit'), $_POST['sales_type'], $_POST['notes'])) {
 			cancel_transaction();
-			display_error(_("The customer could not be saved. Check the Dimension selections and retry."));
+			display_error(_("The customer could not be saved. Check the tracking selections and retry."));
 			return;
 		}
 
@@ -108,7 +108,7 @@ function handle_submit(&$selected_id) {
 		}
 		if (!add_customer($_POST['CustName'], $_POST['cust_ref'], $_POST['address'], $_POST['tax_id'], $_POST['curr_code'], $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['credit_status'], $_POST['payment_terms'], input_num('discount') / 100, input_num('pymt_discount') / 100, input_num('credit_limit'), $_POST['sales_type'], $_POST['notes'])) {
 			cancel_transaction();
-			display_error(_("The customer could not be saved. Check the Dimension selections and retry."));
+			display_error(_("The customer could not be saved. Check the tracking selections and retry."));
 			return;
 		}
 
@@ -281,9 +281,9 @@ function customer_settings($selected_id) {
 	credit_status_list_row(_('Credit Status:'), 'credit_status', $_POST['credit_status']); 
 	$dim = get_company_pref('use_dimension');
 	if ($dim >= 1)
-		dimensions_list_row(_('Dimension').' 1:', 'dimension_id', $_POST['dimension_id'], true, ' ', false, 1);
+		dimensions_list_row(dimension_axis_label_html(1, ':'), 'dimension_id', $_POST['dimension_id'], true, ' ', false, 1);
 	if ($dim > 1)
-		dimensions_list_row(_('Dimension').' 2:', 'dimension2_id', $_POST['dimension2_id'], true, ' ', false, 2);
+		dimensions_list_row(dimension_axis_label_html(2, ':'), 'dimension2_id', $_POST['dimension2_id'], true, ' ', false, 2);
 	if ($dim < 1)
 		hidden('dimension_id', 0);
 	if ($dim < 2)

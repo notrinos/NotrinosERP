@@ -288,7 +288,7 @@ if (isset($_POST['process_delivery']) && check_data()) {
 		set_focus('ref');
 	}
 	elseif ($delivery_no == -3) {
-		display_error(_('Financial or warranty provision validation failed. No delivery changes were saved. Review its accounts, Dimensions and retained provision history.'));
+		display_error(_('Financial or warranty provision validation failed. No delivery changes were saved. Review its accounts, tracking values and retained provision history.'));
 	}
 	elseif ($delivery_no == -2) {
 		display_error(_('Dispatch validation failed. Please correct serial/batch input and try again.'));
@@ -366,12 +366,12 @@ if (!empty($_SESSION['Items']->trans_no)) {
 }
 $dim = get_company_pref('use_dimension');
 if ($dim > 0)
-	dimensions_list_row(_('Dimension:'), 'dimension_id', null, true, ' ', false, 1, false,
+	dimensions_list_row(dimension_axis_label_html(1, ':'), 'dimension_id', null, true, ' ', false, 1, false,
 		$retained_delivery ? $retained_delivery['dimension_id'] : 0);
 else
 	hidden('dimension_id', 0);
 if ($dim > 1)
-	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', null, true, ' ', false, 2, false,
+	dimensions_list_row(dimension_axis_label_html(2, ':'), 'dimension2_id', null, true, ' ', false, 2, false,
 		$retained_delivery ? $retained_delivery['dimension2_id'] : 0);
 else
 	hidden('dimension2_id', 0);

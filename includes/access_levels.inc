@@ -24,6 +24,11 @@
 	for sections/areas defined in this file, and extid+1 for those defined 
 	by extensions 
 */
+// DIM-NAM-002: the module terms (Cost & Profit Tracking) are available to every page that loads the security areas.
+include_once(dirname(__DIR__).'/tracking/includes/tracking_terms.inc');
+// DIM-NAM-003: the company name of each tracking category, for forms, views and report parameters.
+include_once(dirname(__DIR__).'/tracking/includes/tracking_axis_label.inc');
+
 define('SS_SADMIN',	1<<8);	// site admin
 define('SS_SETUP',	2<<8);	// company level setup
 define('SS_SPEC',	3<<8);	// special administration
@@ -83,8 +88,9 @@ $security_sections = array(
 	SS_MANUF_C => _('Manufacturing configuration'),
 	SS_MANUF => _('Manufacturing transactions'),
 	SS_MANUF_A => _('Manufacturing analytics'),
-	SS_DIM_C => _('Dimensions configuration'),
-	SS_DIM => _('Dimensions'),
+	// DIM-NAM-002: the section names come from the module term source; the SS_DIM codes do not change.
+	SS_DIM_C => _('Cost & Profit Tracking setup'),
+	SS_DIM => _('Cost & Profit Tracking'),
 	SS_GL_C => _('Banking & GL configuration'),
 	SS_GL => _('Banking & GL transactions'),
 	SS_GL_A => _('Banking & GL analytics'),
@@ -300,14 +306,14 @@ $security_areas =array(
 	'SA_MANUFBULKREP' => array(SS_MANUF_A|3, _('Work order bulk reports')),
 	'SA_BOMREP' => array(SS_MANUF_A|4, _('Bill of materials reports')),
 
-	// Dimensions
-	'SA_DIMTAGS' => array(SS_DIM_C|1, _('Dimension tags')),
+	// Cost & Profit Tracking (internal name: Dimensions; the SA_DIM* codes do not change)
+	'SA_DIMTAGS' => array(SS_DIM_C|1, _('Tracking tags')),
 
-	'SA_DIMTRANSVIEW' => array(SS_DIM|1, _('Dimension view')),
+	'SA_DIMTRANSVIEW' => array(SS_DIM|1, _('Tracking view')),
 
-	'SA_DIMENSION' => array(SS_DIM|2, _('Dimension entry')),
+	'SA_DIMENSION' => array(SS_DIM|2, _('Tracking entry')),
 
-	'SA_DIMENSIONREP' => array(SS_DIM|3, _('Dimension reports')),
+	'SA_DIMENSIONREP' => array(SS_DIM|3, _('Tracking reports')),
 
 	// Banking and General Ledger
 	'SA_ITEMTAXTYPE' => array(SS_GL_C|1, _('Item tax type definitions')),

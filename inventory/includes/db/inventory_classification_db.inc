@@ -22,8 +22,8 @@
  *
  * PHP 5.6 compatible.
  */
-require_once __DIR__.'/../../../dimensions/includes/dimension_source_revision.inc';
-require_once __DIR__.'/../../../dimensions/includes/dimension_category_policy.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_source_revision.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_category_policy.inc';
 
 // The canonical transaction types are loaded by includes/types.inc in a normal request. Focused CLI
 // harnesses evaluate named writers without the page bootstrap, so the same canonical values are

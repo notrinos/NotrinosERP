@@ -11,7 +11,7 @@
 ***********************************************************************/
 
 include_once($path_to_root . '/admin/db/payment_terms_entity.inc');
-require_once __DIR__.'/sales_order_dimension_db.inc';
+require_once __DIR__.'/sales_order_tracking_db.inc';
 
 /** Preserve current retained metadata through the native whole command. */
 function add_sales_order(&$order) {

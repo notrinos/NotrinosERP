@@ -23,9 +23,9 @@
  * PAY-GL stores) belong to B05 and are not handled here.
  */
 if (!function_exists('dimension_writer_reference_id'))
-    require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_writer_fence.inc';
+    require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_reference_writer_fence.inc';
 if (!function_exists('dimension_master_payload_references'))
-    require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_master_payload_guard.inc';
+    require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_master_payload_guard.inc';
 
 /**
  * Load the HRM custody sources only when an HRM evidence row must be opened.

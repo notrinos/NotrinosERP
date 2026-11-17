@@ -1,8 +1,8 @@
 <?php
 /** Inventory-owned retained JSON presence, never an unused/delete certificate. */
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_lifecycle_db.inc';
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_registry.inc';
-require_once __DIR__.'/inventory_retained_dimension_references_db.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_lifecycle_db.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_reference_registry.inc';
+require_once __DIR__.'/inventory_retained_tracking_references_db.inc';
 
 /**
  * Fixed ordinary Inventory sources, with source-owned document discriminators.

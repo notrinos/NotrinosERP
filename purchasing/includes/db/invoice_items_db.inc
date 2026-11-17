@@ -10,7 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_financial_reference_writer.inc';
 
 function add_supp_invoice_item($supp_trans_type, $supp_trans_no, $stock_id, $description, $gl_code, $unit_price, $unit_tax, $quantity, $grn_item_id, $po_detail_item_id, $memo_, $dim_id=0, $dim2_id=0) {
 

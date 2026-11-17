@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-require_once __DIR__ . '/warehouse_config_dimension_db.inc';
+require_once __DIR__ . '/warehouse_config_tracking_db.inc';
 
 /**
  * Warehouse Packing DB layer — Package CRUD, packing station operations,
@@ -541,7 +541,7 @@ function seal_package($package_id) {
 		if (!warehouse_config_dimension_write('wh_packages', (int)$package_id, array(), function() use ($sql) {
 		return db_query($sql, 'could not seal package') ? true : false;
 	}))
-		return array('success' => false, 'message' => _('The package could not be sealed: its retained Dimension metadata could not be certified.'));
+		return array('success' => false, 'message' => _('The package could not be sealed: its retained tracking metadata could not be certified.'));
 
 	return array('success' => true, 'message' => sprintf(_('Package %s has been sealed.'), $pkg['package_code']));
 }
@@ -565,7 +565,7 @@ function unseal_package($package_id) {
 		if (!warehouse_config_dimension_write('wh_packages', (int)$package_id, array(), function() use ($sql) {
 		return db_query($sql, 'could not unseal package') ? true : false;
 	}))
-		return array('success' => false, 'message' => _('The package could not be reopened: its retained Dimension metadata could not be certified.'));
+		return array('success' => false, 'message' => _('The package could not be reopened: its retained tracking metadata could not be certified.'));
 
 	return array('success' => true, 'message' => sprintf(_('Package %s has been reopened.'), $pkg['package_code']));
 }
@@ -622,7 +622,7 @@ function deliver_package($package_id) {
 		if (!warehouse_config_dimension_write('wh_packages', (int)$package_id, array(), function() use ($sql) {
 		return db_query($sql, 'could not deliver package') ? true : false;
 	}))
-		return array('success' => false, 'message' => _('The package could not be marked delivered: its retained Dimension metadata could not be certified.'));
+		return array('success' => false, 'message' => _('The package could not be marked delivered: its retained tracking metadata could not be certified.'));
 
 	return array('success' => true, 'message' => sprintf(_('Package %s has been delivered.'), $pkg['package_code']));
 }
@@ -655,7 +655,7 @@ function cancel_package($package_id) {
 		return db_query($sql, 'could not cancel package') ? true : false;
 	})) {
 		cancel_transaction();
-		return array('success' => false, 'message' => _('The package could not be cancelled: its retained Dimension metadata could not be certified.'));
+		return array('success' => false, 'message' => _('The package could not be cancelled: its retained tracking metadata could not be certified.'));
 	}
 
 	commit_transaction();

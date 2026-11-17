@@ -11,9 +11,9 @@
 ***********************************************************************/
 
 include_once($path_to_root . '/taxes/db/tax_types_entity.inc');
-require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
-require_once __DIR__.'/../../../dimensions/includes/dimension_validation_contract.inc';
-require_once __DIR__.'/../../../dimensions/includes/dimension_derived_posting_policy.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_financial_reference_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_validation_contract.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_derived_posting_policy.inc';
 
 /*
 *	Base function for adding a GL transaction

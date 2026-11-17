@@ -28,7 +28,7 @@
  */
 
 require_once __DIR__.'/regulatory_json.inc';
-require_once __DIR__.'/regulatory_dimension_db.inc';
+require_once __DIR__.'/regulatory_tracking_db.inc';
 
 // =====================================================================
 // UDI CONSTANTS

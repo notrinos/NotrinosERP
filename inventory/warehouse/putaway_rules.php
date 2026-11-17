@@ -185,7 +185,7 @@ if ($Mode == 'Delete') {
 				if (delete_putaway_rule($selected_id))
 			display_notification(_('Selected putaway rule has been deleted.'));
 		else
-			display_error(_('The putaway rule cannot be deleted while it retains a Dimension reference.'));
+			display_error(_('The putaway rule cannot be deleted while it retains a tracking reference.'));
 	} else {
 		display_error($can);
 	}

@@ -158,7 +158,7 @@ if (isset($_POST['DELETE_LINE'])) {
 				if (delete_return_order_line($line_id))
 			display_notification(_('Line item has been deleted.'));
 		else
-			display_error(_('The line cannot be deleted while it retains a Dimension reference.'));
+			display_error(_('The line cannot be deleted while it retains a tracking reference.'));
 	}
 	$Ajax->activate('_page_body');
 }
@@ -228,7 +228,7 @@ if (isset($_POST['DELETE_RETURN']) && $selected_id > 0) {
 		display_notification(_('Return order has been deleted.'));
 		$selected_id = -1;
 	} else {
-				display_error(_('Cannot delete this return order. Only draft orders without a retained Dimension reference can be deleted.'));
+				display_error(_('Cannot delete this return order. Only draft orders without a retained tracking reference can be deleted.'));
 	}
 	$Ajax->activate('_page_body');
 }

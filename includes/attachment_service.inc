@@ -1104,7 +1104,7 @@ function generate_attachment_unique_name() {
 function create_attachment($type_no, $trans_no, $description, $upload_info, $tran_date = '', $custom_data = array()) {
     // B06 shared-record fence: no coordinate key in shared JSON, and a Dimension-bound
     // attachment is serialized with the Dimension master lock until the insert commits.
-    require_once dirname(__DIR__).'/dimensions/includes/dimension_shared_record_authority.inc';
+    require_once dirname(__DIR__).'/tracking/includes/tracking_shared_record_authority.inc';
     if (!dimension_shared_record_custom_data_admit($custom_data)) {
         return false;
     }
@@ -1201,7 +1201,7 @@ function create_private_hrm_attachment($trans_no, $description, $validated, $cus
         }
         return false;
     }
-    require_once dirname(__DIR__).'/dimensions/includes/dimension_shared_record_authority.inc';
+    require_once dirname(__DIR__).'/tracking/includes/tracking_shared_record_authority.inc';
     if (!dimension_shared_record_custom_data_admit($custom_data)) {
         if (isset($stored['path'])) @unlink($stored['path']);
         return false;
@@ -1316,7 +1316,7 @@ function update_attachment_metadata($attachment_id, $description, $tran_date = '
 
     if ($custom_data !== null && is_array($custom_data)) {
         // B06 shared-record fence: shared JSON never gains a coordinate key.
-        require_once dirname(__DIR__).'/dimensions/includes/dimension_shared_record_authority.inc';
+        require_once dirname(__DIR__).'/tracking/includes/tracking_shared_record_authority.inc';
         if (!dimension_shared_record_custom_data_admit($custom_data)) {
             return false;
         }
@@ -1349,7 +1349,7 @@ function delete_attachment_with_file($attachment_id) {
     }
 
     // B07: retained Dimension evidence is never deleted; decide before the file is removed.
-    require_once dirname(__DIR__).'/dimensions/includes/dimension_retention_authority.inc';
+    require_once dirname(__DIR__).'/tracking/includes/tracking_retention_authority.inc';
     if (!dimension_retention_attachment_delete_admit($attachment_id)) {
         return false;
     }

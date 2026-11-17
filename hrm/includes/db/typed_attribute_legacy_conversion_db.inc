@@ -50,7 +50,7 @@ function hrm_typed_attribute_legacy_conversion_extract_scalar($raw, $legacy_key)
         || hrm_typed_attribute_legacy_mapping_key($legacy_key) === false) return false;
     // B04: a Dimension coordinate key is never converted, even under an older approved mapping.
     if (!function_exists('hrm_dimension_legacy_key_is_coordinate'))
-        include_once(dirname(__FILE__).'/hrm_dimension_retained_evidence_db.inc');
+        include_once(dirname(__FILE__).'/hrm_tracking_retained_evidence_db.inc');
     if (hrm_dimension_legacy_key_is_coordinate($legacy_key)) return false;
     $trim=ltrim($raw); if($trim==='' || $trim[0]!=='{') return false;
     $decoded=json_decode($raw,true);

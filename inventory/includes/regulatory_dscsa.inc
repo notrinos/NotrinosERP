@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-require_once __DIR__ . '/db/traceability_dimension_db.inc';
+require_once __DIR__ . '/db/traceability_tracking_db.inc';
 
 /**
  * DSCSA (Drug Supply Chain Security Act) Compliance Functions.
@@ -27,7 +27,7 @@ require_once __DIR__ . '/db/traceability_dimension_db.inc';
  * @package NotrinosERP
   * @subpackage Inventory/Regulatory/DSCSA
  */
-require_once __DIR__.'/regulatory_dimension_db.inc';
+require_once __DIR__.'/regulatory_tracking_db.inc';
 
 // =====================================================================
 // DSCSA TRANSACTION TYPES & STATUSES

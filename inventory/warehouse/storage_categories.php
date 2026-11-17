@@ -130,7 +130,7 @@ if ($Mode == 'Delete') {
 				if (delete_storage_category($selected_id))
 			display_notification(_('Selected storage category has been deleted.'));
 		else
-			display_error(_('The storage category cannot be deleted while it retains a Dimension reference.'));
+			display_error(_('The storage category cannot be deleted while it retains a tracking reference.'));
 	} else {
 		display_error($can);
 	}

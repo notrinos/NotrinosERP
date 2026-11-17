@@ -215,9 +215,9 @@ if ($Mode == 'Delete') {
 	$row = get_attachment($selected_id);
 
 	// B07: an attachment that still retains a Dimension reference is retained evidence; check before its file is touched.
-	require_once($path_to_root.'/dimensions/includes/dimension_retention_authority.inc');
+	require_once($path_to_root.'/tracking/includes/tracking_retention_authority.inc');
 	if (!dimension_retention_attachment_delete_admit($selected_id)) {
-		display_error(_('This attachment cannot be deleted because it retains a Dimension reference or its metadata cannot be verified.'));
+		display_error(_('This attachment cannot be deleted because it retains a tracking reference or its metadata cannot be verified.'));
 		reset_form();
 		$Mode = 'RESET';
 	} else {

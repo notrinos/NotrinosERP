@@ -206,7 +206,7 @@ if (isset($_POST['report_suspect'])) {
 			);
 			display_notification(_('Suspect product has been reported and quarantined.'));
 		} catch (DimensionFinancialReferenceWriteException $e) {
-			display_error(_('The suspect product report could not be saved: its retained Dimension metadata could not be certified.'));
+			display_error(_('The suspect product report could not be saved: its retained tracking metadata could not be certified.'));
 		}
 	}
 	$active_tab = 'dscsa';
@@ -306,7 +306,7 @@ if (isset($_POST['delete_udi']) && isset($_POST['sel_udi'])) {
 		if (delete_udi_registration((int)$_POST['sel_udi']))
 		display_notification(_('UDI registration has been deleted.'));
 	else
-		display_error(_('The UDI registration cannot be deleted while it retains a Dimension reference.'));
+		display_error(_('The UDI registration cannot be deleted while it retains a tracking reference.'));
 	$active_tab = 'udi';
 }
 

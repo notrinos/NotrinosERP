@@ -127,7 +127,7 @@ if (isset($_POST['delete_template']) && $selected_id > 0) {
 		display_notification(_('Purchase order template has been deleted.'));
 		$selected_id = 0;
 	} else {
-		display_error(_('The purchase order template cannot be deleted while it retains a Dimension reference.'));
+		display_error(_('The purchase order template cannot be deleted while it retains a tracking reference.'));
 	}
 }
 
@@ -188,7 +188,7 @@ if ($delete_line_id > 0 && $selected_id > 0) {
 		if (delete_template_line($delete_line_id, $selected_id))
 			display_notification(_('Template line has been deleted.'));
 		else
-			display_error(_('The template line cannot be deleted while it retains a Dimension reference.'));
+			display_error(_('The template line cannot be deleted while it retains a tracking reference.'));
 	}
 }
 

@@ -19,7 +19,7 @@
 // To find how various hooks are processed look into respective hook_* functions below.
 //
 // DIM-INT-001: seals the Dimension intent of a document around the document hooks (self-contained).
-require_once dirname(__FILE__).'/../dimensions/includes/dimension_integration_hook_guard.inc';
+require_once dirname(__FILE__).'/../tracking/includes/tracking_integration_hook_guard.inc';
 
 class hooks {
 	var $module_name; // extension module name.
@@ -249,7 +249,7 @@ function install_hooks($lang_code=null) {
  * @return bool
  */
 function dimension_extension_activation_allowed($ext) {
-	$authority = dirname(__DIR__).'/dimensions/includes/dimension_extension_posting_parity.inc';
+	$authority = dirname(__DIR__).'/tracking/includes/tracking_extension_posting_parity.inc';
 	if (!is_file($authority))
 		return true; // authority not deployed: nothing profiled, behavior unchanged
 	require_once $authority;
@@ -257,7 +257,7 @@ function dimension_extension_activation_allowed($ext) {
 	if ($gate['allowed'])
 		return true;
 	if (function_exists('display_error'))
-		display_error(sprintf(_("Package '%s' cannot be activated: its Dimension posting parity is not accepted (%s)."), $ext, $gate['code']));
+		display_error(sprintf(_("Package '%s' cannot be activated: its tracking posting parity is not accepted (%s)."), $ext, $gate['code']));
 	return false;
 }
 /*

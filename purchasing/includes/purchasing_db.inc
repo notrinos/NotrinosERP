@@ -134,7 +134,7 @@ function get_purchase_data($supplier_id, $stock_id) {
 }
 
 function add_or_update_purchase_data($supplier_id, $stock_id, $price, $description='', $uom='') {
-	require_once __DIR__.'/../../dimensions/includes/dimension_composite_metadata_writer.inc';
+	require_once __DIR__.'/../../tracking/includes/tracking_composite_metadata_writer.inc';
 	if (!begin_transaction()) dimension_financial_reference_failure();
 	try {
 	$key=array('supplier_id'=>$supplier_id,'stock_id'=>$stock_id);

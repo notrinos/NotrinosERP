@@ -52,7 +52,7 @@ if ($Mode == 'Delete') {
 				if (delete_warranty_claim($selected_id))
 			display_notification(_('Warranty claim has been deleted.'));
 		else
-			display_error(_('The warranty claim cannot be deleted while it retains a Dimension reference.'));
+			display_error(_('The warranty claim cannot be deleted while it retains a tracking reference.'));
 	}
 	$Mode = 'RESET';
 }
@@ -71,7 +71,7 @@ if (get_post('change_status')) {
 	if (in_array($new_status, $valid_statuses)) {
 		if (!update_warranty_claim_status($claim_id, $new_status,
 			$resolution_desc, $resolution_date, $repair_cost)) {
-			display_error(_('The warranty claim status could not be changed: its retained Dimension metadata could not be certified.'));
+			display_error(_('The warranty claim status could not be changed: its retained tracking metadata could not be certified.'));
 			$new_status = null;
 		}
 

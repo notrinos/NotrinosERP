@@ -178,7 +178,7 @@ function add_exchange_variation_all($date, $memo) {
 	return array($b_num, $je);
 }
 
-require_once __DIR__.'/../../../dimensions/includes/dimension_document_classification.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_document_classification.inc';
 
 function add_bank_transfer($from_account, $to_account, $date_, $amount, $ref, $memo_, $dim1, $dim2, $charge=0, $target_amount=0) {
 	global $Refs, $SysPrefs;

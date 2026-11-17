@@ -146,7 +146,7 @@ if (fixed_asset_responsibility_ready()) {
 	text_row(_('Reason:'), 'reason', null, 50, 200);
 }
 else
-	label_row('', _('The Dimension source revision schema is not installed; asset responsibility cannot be recorded.'));
+	label_row('', _('The tracking source revision schema is not installed; asset responsibility cannot be recorded.'));
 
 end_table(1);
 

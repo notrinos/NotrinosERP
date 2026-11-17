@@ -10,7 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-require_once __DIR__ . '/sales_dimension_custody_db.inc';
+require_once __DIR__ . '/sales_tracking_custody_db.inc';
 
 /**
  * Add a new sales pricelist.

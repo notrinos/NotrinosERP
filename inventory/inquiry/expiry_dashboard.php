@@ -46,7 +46,7 @@ if (isset($_POST['auto_expire']) && $_POST['auto_expire'] != '') {
 		else
 			display_note(_('No active batches found with past expiry dates.'));
 	} catch (DimensionFinancialReferenceWriteException $e) {
-		display_error(_('The expiry sweep was refused: a batch retained Dimension metadata could not be certified.'));
+		display_error(_('The expiry sweep was refused: a batch retained tracking metadata could not be certified.'));
 	}
 }
 

@@ -135,7 +135,7 @@ function print_supplier_details_listing() {
 				$rep->TextCol(0, 1, $adr[1]);
 			if ($myrow['dimension_id'] != 0) {
 				$dim = get_dimension($myrow['dimension_id']);
-				$rep->TextCol(1, 2,	_('Dimension') . ': ' . $dim['name']);
+				$rep->TextCol(1, 2,	dimension_axis_label(1) . ': ' . $dim['name']);
 			}		
 			if (isset($contacts[0]))
 				$rep->TextCol(2, 3, _('Ph') . ': ' . $contacts[0]['phone']);
@@ -146,7 +146,7 @@ function print_supplier_details_listing() {
 				$rep->TextCol(0, 1, $adr[2]);
 			if ($myrow['dimension2_id'] != 0) {
 				$dim = get_dimension($myrow['dimension2_id']);
-				$rep->TextCol(1, 2,	_('Dimension') . ' 2: ' . $dim['name']);
+				$rep->TextCol(1, 2,	dimension_axis_label(2) . ': ' . $dim['name']);
 			}
 			if ($myrow['notes'] != '') {
 				$oldrow = $rep->row;

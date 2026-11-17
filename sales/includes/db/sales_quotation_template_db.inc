@@ -25,7 +25,7 @@
  * @subpackage Sales
  */
 
-require_once __DIR__ . '/sales_dimension_custody_db.inc';
+require_once __DIR__ . '/sales_tracking_custody_db.inc';
 require_once __DIR__ . '/sales_classification_db.inc';
 
 // ============================================================================

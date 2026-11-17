@@ -428,7 +428,7 @@ if (isset($_POST['addupdate'])) {
 				set_focus('NewStockID');
 			}
 		}
-		if (!$saved) display_error(_('The item could not be saved. Check current Dimension defaults and retry.'));
+		if (!$saved) display_error(_('The item could not be saved. Check current tracking defaults and retry.'));
 		$Ajax->activate('_page_body');
 	}
 }
@@ -587,11 +587,11 @@ function item_settings(&$stock_id, $new_item) {
 
 	$dim = get_company_pref('use_dimension');
 	if ($dim >= 1) {
-		table_section_title(_('Dimensions'));
+		table_section_title(dimension_term_module_name());
 
-		dimensions_list_row(_('Dimension').' 1', 'dimension_id', null, true, ' ', false, 1);
+		dimensions_list_row(dimension_axis_label_html(1), 'dimension_id', null, true, ' ', false, 1);
 		if ($dim > 1)
-			dimensions_list_row(_('Dimension').' 2', 'dimension2_id', null, true, ' ', false, 2);
+			dimensions_list_row(dimension_axis_label_html(2), 'dimension2_id', null, true, ' ', false, 2);
 	}
 	if ($dim < 1)
 		hidden('dimension_id', 0);

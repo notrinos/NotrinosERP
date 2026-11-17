@@ -191,7 +191,7 @@ if (get_post('delete_inspection')) {
 				if (delete_quality_inspection($del_id))
 			display_notification(_('Inspection has been deleted.'));
 		else
-			display_error(_('The inspection cannot be deleted while it retains a Dimension reference.'));
+			display_error(_('The inspection cannot be deleted while it retains a tracking reference.'));
 	} else {
 		display_error(_('Only pending inspections can be deleted.'));
 	}

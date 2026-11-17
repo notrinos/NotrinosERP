@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-require_once __DIR__ . '/quality_dimension_db.inc';
+require_once __DIR__ . '/quality_tracking_db.inc';
 
 /**
  * Warranty Claims & Recall Campaigns Database Layer.
@@ -995,7 +995,7 @@ function update_recall_campaign_status($id, $status)
 	if (!quality_dimension_write('recall_campaigns', (int)$id, array(), function() use ($sql) {
 		return db_query($sql, 'could not update recall campaign status') ? true : false;
 	}))
-		return _('The recall campaign status could not be changed: its retained Dimension metadata could not be certified.');
+		return _('The recall campaign status could not be changed: its retained tracking metadata could not be certified.');
 	return true;
 }
 

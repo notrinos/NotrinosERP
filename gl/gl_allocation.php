@@ -15,7 +15,7 @@
  * Step 1 picks posted ledger rows (the source pool), step 2 states a fixed percentage or amount rule, step 3
  * previews the exact balancing journal and, only after a successful preview, runs it through the ordinary
  * journal approval path. A posted run can be reversed by its exact inverse journal. The page owns no posting
- * logic: everything is decided by `dimensions/includes/dimension_allocation.inc`.
+ * logic: everything is decided by `tracking/includes/tracking_allocation.inc`.
  */
 $page_security = 'SA_JOURNALENTRY';
 $path_to_root = '..';
@@ -24,17 +24,18 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/includes/ui.inc');
-include_once($path_to_root.'/dimensions/includes/dimension_validation_contract.inc');
+include_once($path_to_root.'/tracking/includes/tracking_validation_contract.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
 include_once($path_to_root.'/gl/includes/gl_ui.inc');
 include_once($path_to_root.'/taxes/db/tax_types_db.inc');
 include_once($path_to_root.'/includes/approval/ui/approval_ui.inc');
-include_once($path_to_root.'/dimensions/includes/dimension_allocation.inc');
+include_once($path_to_root.'/tracking/includes/tracking_allocation.inc');
 
 $js = '';
 if (user_use_date_picker())
 	$js .= get_js_date_picker();
-page(_($help_context = 'Dimension Allocation Journal'), false, false, '', $js);
+$help_context = 'Dimension Allocation Journal';
+page(_('Cost Allocation Journal'), false, false, '', $js);
 
 //-----------------------------------------------------------------------------------------------
 
@@ -82,7 +83,7 @@ function dimension_allocation_page_show_preview($request, $preview)
 		foreach ($row['shares'] as $share) {
 			start_row();
 			label_cell('');
-			label_cell(sprintf(_('to Dimension #%d'), $share['dimension_id']), "colspan='2'");
+			label_cell(sprintf(_('to tracking value #%d'), $share['dimension_id']), "colspan='2'");
 			label_cell(dimension_allocation_format_minor($row['amount_minor'] < 0 ? -$share['minor'] : $share['minor']), "align='right'");
 			label_cell('');
 			end_row();
@@ -90,7 +91,7 @@ function dimension_allocation_page_show_preview($request, $preview)
 	}
 	end_table(1);
 	start_table(TABLESTYLE);
-	table_header(array(_('Account'), _('Dimension'), _('Dimension 2'), _('Debit'), _('Credit')));
+	table_header(array(_('Account'), dimension_axis_label_html(1), dimension_axis_label_html(2), _('Debit'), _('Credit')));
 	foreach ($preview['lines'] as $line) {
 		start_row();
 		label_cell($line['code_id']);
@@ -101,7 +102,7 @@ function dimension_allocation_page_show_preview($request, $preview)
 		end_row();
 	}
 	end_table(1);
-	display_note(sprintf(_('Source pool %s moves between Dimensions on the same accounts; the company total of every account is unchanged (net %s).'),
+	display_note(sprintf(_('Source pool %s moves between tracking values on the same accounts; the company total of every account is unchanged (net %s).'),
 		dimension_allocation_format_minor(abs($preview['totals']['source_pool_minor'])), dimension_allocation_format_minor($preview['totals']['net_minor'])), 0, 1);
 }
 
@@ -179,7 +180,7 @@ start_row();
 date_cells(_('From:'), 'from_date', '', null, -30);
 date_cells(_('To:'), 'to_date', '', null, 1);
 gl_all_accounts_list_cells(_('Account:'), 'filter_account', null, false, false, _('All accounts'));
-dimensions_history_list_cells(_('Dimension:'), 'filter_dimension', null, true, _('Any'));
+dimensions_history_list_cells(dimension_term_value().':', 'filter_dimension', null, true, _('Any'));
 submit_cells('FindRows', _('Find rows'), '', false, false);
 end_row();
 end_table(1);
@@ -199,7 +200,7 @@ if (isset($_POST['FindRows']) || isset($_POST['Preview']) || isset($_POST['RunAl
 		.' LEFT JOIN '.TB_PREF.'dimension_allocation_sources s ON s.active_counter=g.counter WHERE '.implode(' AND ', $conditions)
 		.' ORDER BY g.tran_date DESC, g.counter DESC LIMIT 100', 'could not list the source rows');
 	start_table(TABLESTYLE);
-	table_header(array(_('Select'), _('Date'), _('Document'), _('Account'), _('Dimension'), _('Dimension 2'), _('Amount'), _('Memo')));
+	table_header(array(_('Select'), _('Date'), _('Document'), _('Account'), dimension_axis_label_html(1), dimension_axis_label_html(2), _('Amount'), _('Memo')));
 	$shown = 0;
 	while ($found && ($row = db_fetch_assoc($found))) {
 		if ((int)$row['voided'] === 1 || is_bank_account($row['account']) || is_tax_account($row['account']) || is_subledger_account($row['account']))
@@ -228,14 +229,14 @@ display_heading(_('Step 2 - state the rule'));
 start_table(TABLESTYLE2);
 array_selector_row(_('Run type:'), 'kind', get_post('kind', 'allocation'), array('allocation' => _('Allocation (split between several targets)'),
 	'reclassification' => _('Reclassification (move all to one target)')));
-array_selector_row(_('Dimension category:'), 'axis', get_post('axis', '1'), array('1' => _('Dimension 1'), '2' => _('Dimension 2')));
+array_selector_row(dimension_term_category().':', 'axis', get_post('axis', '1'), array('1' => dimension_axis_label_html(1), '2' => dimension_axis_label_html(2)));
 array_selector_row(_('Rule:'), 'mode', get_post('mode', 'percent'), array('percent' => _('Fixed percentages (total 100)'),
 	'amount' => _('Fixed amounts (total the source pool)')));
 date_row(_('Journal date:'), 'alc_date');
 text_row(_('Memo:'), 'alc_memo', get_post('alc_memo', ''), 50, 200);
 end_table(1);
 start_table(TABLESTYLE);
-table_header(array(_('Target Dimension'), _('Percentage or amount')));
+table_header(array(_('Target tracking value'), _('Percentage or amount')));
 for ($index = 1; $index <= 6; $index++) {
 	start_row();
 	echo '<td>'.dimensions_list('target_'.$index, null, true, _('(not used)'), false, false, 0).'</td>';

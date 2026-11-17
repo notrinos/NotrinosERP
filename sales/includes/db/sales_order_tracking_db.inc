@@ -1,6 +1,6 @@
 <?php
 /** Native order/quotation retained-reference custody, including derived writers. */
-require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_financial_reference_writer.inc';
 require_once __DIR__.'/sales_order_source_db.inc';
 require_once __DIR__.'/../../../includes/approval/approval_number.inc';
 

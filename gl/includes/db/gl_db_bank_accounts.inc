@@ -10,7 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_financial_reference_writer.inc';
 
 function clear_dflt_curr_account($curr_code) {
 	$sql = "UPDATE ".TB_PREF."bank_accounts SET dflt_curr_act = 0 WHERE bank_curr_code = ".db_escape($curr_code);
@@ -19,7 +19,7 @@ function clear_dflt_curr_account($curr_code) {
 
 /** Create a bank account and its currency default in one reference boundary. */
 function add_bank_account($account_code, $account_type, $bank_account_name, $bank_name, $bank_account_number, $bank_address, $bank_curr_code, $dflt_curr_act, $bank_charge_act) {
-	require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+	require_once __DIR__.'/../../../tracking/includes/tracking_reference_writer_fence.inc';
 	return dimension_ordinary_master_write('bank_accounts', null, array(),
 		function() use ($account_code, $account_type, $bank_account_name, $bank_name, $bank_account_number, $bank_address, $bank_curr_code, $dflt_curr_act, $bank_charge_act) {
 			if ($dflt_curr_act && !clear_dflt_curr_account($bank_curr_code)) return false;
@@ -38,7 +38,7 @@ function add_bank_account($account_code, $account_type, $bank_account_name, $ban
 
 /** Maintain the current bank owner while retaining its serialized references. */
 function update_bank_account($id, $account_code, $account_type, $bank_account_name, $bank_name, $bank_account_number, $bank_address, $bank_curr_code, $dflt_curr_act, $bank_charge_act) {
-	require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+	require_once __DIR__.'/../../../tracking/includes/tracking_reference_writer_fence.inc';
 	return dimension_ordinary_master_write('bank_accounts', $id, array(),
 		function() use ($id, $account_code, $account_type, $bank_account_name, $bank_name, $bank_account_number, $bank_address, $bank_curr_code, $dflt_curr_act, $bank_charge_act) {
 			if ($dflt_curr_act && !clear_dflt_curr_account($bank_curr_code)) return false;
@@ -57,7 +57,7 @@ function update_bank_account($id, $account_code, $account_type, $bank_account_na
 
 /** Deny removal of retained bank references under current owner/master locks. */
 function delete_bank_account($id) {
-	require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+	require_once __DIR__.'/../../../tracking/includes/tracking_reference_writer_fence.inc';
 	return dimension_ordinary_master_write('bank_accounts', $id, array(),
 		function() use ($id) {
 			$sql = "DELETE FROM ".TB_PREF."bank_accounts WHERE id=".db_escape($id);
@@ -130,7 +130,7 @@ function delete_quick_entry($selected_id) {
 
 /** Create a template line while its native Dimension defaults are locked. */
 function add_quick_entry_line($qid, $action, $dest_id, $amount, $dim, $dim2, $memo) {
-	require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+	require_once __DIR__.'/../../../tracking/includes/tracking_reference_writer_fence.inc';
 	return dimension_ordinary_master_write('quick_entry_lines', null,
 		array('dimension_id'=>$dim, 'dimension2_id'=>$dim2), function($next) use ($qid, $action, $dest_id, $amount, $memo) {
 			$dim = $next['dimension_id']; $dim2 = $next['dimension2_id'];
@@ -143,7 +143,7 @@ function add_quick_entry_line($qid, $action, $dest_id, $amount, $dim, $dim2, $me
 
 /** Serialize template changes against current owner and former/new defaults. */
 function update_quick_entry_line($selected_id, $qid, $action, $dest_id, $amount, $dim, $dim2, $memo) {
-	require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+	require_once __DIR__.'/../../../tracking/includes/tracking_reference_writer_fence.inc';
 	return dimension_ordinary_master_write('quick_entry_lines', $selected_id,
 		array('dimension_id'=>$dim, 'dimension2_id'=>$dim2), function($next) use ($selected_id, $qid, $action, $dest_id, $amount, $memo) {
 			$dim = $next['dimension_id']; $dim2 = $next['dimension2_id'];
@@ -155,7 +155,7 @@ function update_quick_entry_line($selected_id, $qid, $action, $dest_id, $amount,
 
 /** Lock the line and its former defaults before removing an unused template line. */
 function delete_quick_entry_line($selected_id) {
-	require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+	require_once __DIR__.'/../../../tracking/includes/tracking_reference_writer_fence.inc';
 	return dimension_ordinary_master_write('quick_entry_lines', $selected_id,
 		array('dimension_id'=>0, 'dimension2_id'=>0), function() use ($selected_id) {
 			$sql = "DELETE FROM ".TB_PREF."quick_entry_lines WHERE id=".db_escape($selected_id);

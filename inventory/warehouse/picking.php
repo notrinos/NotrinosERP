@@ -144,7 +144,7 @@ if ($Mode == 'Delete') {
 				if (delete_picking_wave($selected_id))
 			display_notification(_('Picking wave deleted.'));
 		else
-			display_error(_('The picking wave cannot be deleted while it retains a Dimension reference.'));
+			display_error(_('The picking wave cannot be deleted while it retains a tracking reference.'));
 	} else {
 		display_error($check);
 	}

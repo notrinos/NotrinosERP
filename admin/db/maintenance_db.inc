@@ -142,9 +142,9 @@ function write_extensions($extensions=null, $company = -1) {
 	// DIM-LFC-001 B09: the registry decides which extension code runs, so a company registry write joins the
 	// Dimension lifecycle fence (exclusive sys_prefs version row, shared while a Dimension recheck is deciding).
 	if ($company >= 0 && !empty($GLOBALS['db'])) {
-		require_once($path_to_root.'/dimensions/includes/dimension_extension_authority.inc');
+		require_once($path_to_root.'/tracking/includes/tracking_extension_authority.inc');
 		if (!dimension_extension_fence_write($company, $write_registry)) {
-			display_error(_('The extension list could not be saved because a Dimension lifecycle operation is in progress or the company database is unavailable. Retry in a moment.'));
+			display_error(_('The extension list could not be saved because a tracking value lifecycle operation is in progress or the company database is unavailable. Retry in a moment.'));
 			return false;
 		}
 	}

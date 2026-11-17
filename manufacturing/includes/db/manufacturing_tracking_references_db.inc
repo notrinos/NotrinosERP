@@ -1,7 +1,7 @@
 <?php
 /** Manufacturing-owned retained JSON presence, never unused/delete authority. */
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_lifecycle_db.inc';
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_registry.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_lifecycle_db.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_reference_registry.inc';
 
 /** Return fixed raw JSON owners exposed by work-order, issue-item and BOM readers. */
 function manufacturing_dimension_reference_sources()

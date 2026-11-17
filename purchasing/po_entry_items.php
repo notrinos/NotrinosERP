@@ -16,7 +16,7 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/purchasing/includes/purchasing_ui.inc');
 include_once($path_to_root.'/purchasing/includes/db/suppliers_db.inc');
 include_once($path_to_root.'/reporting/includes/reporting.inc');
-include_once($path_to_root.'/dimensions/includes/dimension_budget_availability.inc');
+include_once($path_to_root.'/tracking/includes/tracking_budget_availability.inc');
 
 // A new GET may deliberately replace an old cart. Never rebind a stale POST,
 // including a form whose query string still contains NewOrder/ModifyOrderNumber.

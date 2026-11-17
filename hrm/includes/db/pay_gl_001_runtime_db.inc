@@ -14,8 +14,8 @@ include_once($path_to_root.'/includes/db/domain_audit_db.inc');
 include_once($path_to_root.'/gl/includes/db/gl_db_trans.inc');
 include_once($path_to_root.'/gl/includes/db/gl_journal.inc');
 include_once($path_to_root.'/admin/db/transactions_db.inc');
-include_once($path_to_root.'/dimensions/includes/dimensions_db.inc');
-include_once($path_to_root.'/hrm/includes/db/pay_dimension_reference_authority_db.inc');
+include_once($path_to_root.'/tracking/includes/tracking_values_db.inc');
+include_once($path_to_root.'/hrm/includes/db/pay_tracking_reference_authority_db.inc');
 include_once($path_to_root.'/hrm/includes/db/pay_native_classification_validation_db.inc');
 include_once($path_to_root.'/includes/date_functions.inc');
 

@@ -34,7 +34,7 @@ include_once($path_to_root . '/crm/includes/ui/crm_ui.inc');
 page(_($help_context = 'Lead Conversion Follow-up'));
 
 if (!crm_conversion_ready()) {
-    display_note(_('The Dimension source revision schema is not installed, so conversion follow-ups are not recorded for this company.'));
+    display_note(_('The tracking source revision schema is not installed, so conversion follow-ups are not recorded for this company.'));
     end_page();
     exit;
 }

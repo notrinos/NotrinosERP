@@ -29,10 +29,10 @@
 function dimension_history_label($row, $id) {
 	$id = (int)$id;
 	if (!is_array($row))
-		return sprintf(_('Unknown Dimension #%d (deleted)'), $id);
+		return sprintf(_('Unknown tracking value #%d (deleted)'), $id);
 	$label = trim((string)$row['reference'].'  '.(string)$row['name']);
 	if ($label === '')
-		$label = sprintf(_('Dimension #%d'), $id);
+		$label = sprintf(_('Tracking value #%d'), $id);
 	if ((int)$row['closed'] === 1)
 		$label .= ' ['._('closed').']';
 	return $label;

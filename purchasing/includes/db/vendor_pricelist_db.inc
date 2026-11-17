@@ -10,7 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-require_once __DIR__.'/vendor_pricelist_dimension_db.inc';
+require_once __DIR__.'/vendor_pricelist_tracking_db.inc';
 include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/hooks.inc');
 include_once($path_to_root . '/purchasing/includes/db/suppliers_db.inc');

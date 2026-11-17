@@ -1,7 +1,7 @@
 <?php
 /** PAY-GL-owned, presence-only native allocation observation (DIM-LFC-001B3c1). */
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_lifecycle_db.inc';
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_schema.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_lifecycle_db.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_reference_schema.inc';
 
 /**
  * Observe a retained native allocation without releasing payroll facts.

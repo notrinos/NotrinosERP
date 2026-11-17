@@ -32,7 +32,7 @@
  * @subpackage Inventory/WarrantyGL
  */
 
-require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_reference_writer_fence.inc';
 require_once __DIR__.'/inventory_event_classification_db.inc';
 
 /**

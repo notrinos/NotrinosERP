@@ -7,7 +7,7 @@ include_once(dirname(__FILE__).'/lifecycle_separation_command_db.inc');
 include_once(dirname(__FILE__).'/employee_contract_db.inc');
 include_once(dirname(__FILE__).'/lifecycle_rehire_rollover_plan_db.inc');
 include_once(dirname(__FILE__).'/lifecycle_rehire_evidence_db.inc');
-include_once(dirname(__FILE__).'/hrm_dimension_reference_writer_db.inc');
+include_once(dirname(__FILE__).'/hrm_tracking_reference_writer_db.inc');
 
 /** Require an active, unconditional, non-self-approving central workflow. */
 function hrm_lifecycle_rehire_workflow_is_maker_checker()

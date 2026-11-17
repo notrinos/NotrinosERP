@@ -9,8 +9,8 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-require_once __DIR__ . '/../../includes/db/traceability_dimension_db.inc';
-require_once __DIR__ . '/db/warehouse_config_dimension_db.inc';
+require_once __DIR__ . '/../../includes/db/traceability_tracking_db.inc';
+require_once __DIR__ . '/db/warehouse_config_tracking_db.inc';
 
 /**
  * Warehouse Operations Orchestrator — Multi-step inbound/outbound flow management.
@@ -1428,7 +1428,7 @@ function update_bin_stock($wh_loc_id, $stock_id, $qty, $batch_id = null,
  * Tracking columns are native state; a failed update or metadata change restores the receipt.
  */
 function grn_item_tracking_dimension_update($grn_item_id, $sql, $message) {
-	require_once dirname(dirname(dirname(__DIR__))).'/purchasing/includes/db/purchase_document_dimension_db.inc';
+	require_once dirname(dirname(dirname(__DIR__))).'/purchasing/includes/db/purchase_document_tracking_db.inc';
 	return purchase_document_dimension_guard(array('grn_items'=>array($grn_item_id)), function() use ($sql, $message) {
 		return db_query($sql, $message);
 	});

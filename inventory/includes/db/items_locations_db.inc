@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-require_once dirname(__FILE__) . '/../../warehouse/includes/db/warehouse_config_dimension_db.inc';
+require_once dirname(__FILE__) . '/../../warehouse/includes/db/warehouse_config_tracking_db.inc';
 function add_item_location($loc_code, $location_name, $delivery_address, $phone, $phone2, $fax, $email, $contact, $fixed_asset = 0, $wh_enabled = 0, $inbound_steps = 1, $outbound_steps = 1) {
 	$inbound_steps = (int)$inbound_steps;
 	if ($inbound_steps < 1 || $inbound_steps > 3)

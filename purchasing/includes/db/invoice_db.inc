@@ -9,8 +9,8 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-require_once __DIR__.'/purchase_document_dimension_db.inc';
-require_once __DIR__.'/../../../dimensions/includes/dimension_resolution.inc';
+require_once __DIR__.'/purchase_document_tracking_db.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_resolution.inc';
 require_once __DIR__.'/purchasing_receipt_invoice_classification_db.inc';
 require_once __DIR__.'/purchasing_credit_payment_classification_db.inc';
 include_once($path_to_root.'/purchasing/includes/db/invoice_items_db.inc');

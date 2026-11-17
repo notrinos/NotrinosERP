@@ -24,7 +24,7 @@
  * get_customer_details() in customers_db.inc — it's a multi-table JOIN, not simple CRUD.
  */
 include_once($path_to_root . '/includes/db/class.entity.inc');
-require_once($path_to_root . '/dimensions/includes/dimension_reference_writer_fence.inc');
+require_once($path_to_root . '/tracking/includes/tracking_reference_writer_fence.inc');
 
 class debtors_master_entity extends Entity {
 	function __construct() {

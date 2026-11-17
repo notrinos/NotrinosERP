@@ -16,7 +16,7 @@
  * authorized user chooses which approved version (or the live budget entry) the reports compare against. Part 2 captures
  * the exact baseline of the live budget. Part 3 proposes a revision with commentary. Part 4 compares two versions or a
  * version with the live budget. The page owns no budget logic: everything is decided by
- * `dimensions/includes/dimension_budget_version.inc`. The editable budget entry page stays unchanged.
+ * `tracking/includes/tracking_budget_version.inc`. The editable budget entry page stays unchanged.
  */
 $page_security = 'SA_BUDGETENTRY';
 $path_to_root = '..';
@@ -27,7 +27,7 @@ include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
 include_once($path_to_root.'/admin/db/fiscalyears_db.inc');
 include_once($path_to_root.'/admin/db/fiscal_years_entity.inc');
-include_once($path_to_root.'/dimensions/includes/dimension_budget_basis.inc');
+include_once($path_to_root.'/tracking/includes/tracking_budget_basis.inc');
 
 page(_($help_context = 'Budget Baselines and Revisions'));
 
@@ -169,7 +169,7 @@ if (!$latest)
 	display_note(_('A revision needs an approved baseline first.'), 0, 1);
 else {
 	hidden('revision_basis', (int)$latest['version_id']);
-	display_note(sprintf(_('The revision builds on the latest approved version #%d (v%d). One line per change: account, dimension 1, dimension 2, date, amount. An amount of 0 is an explicit zero; the word remove drops the line.'),
+	display_note(sprintf(_('The revision builds on the latest approved version #%d (v%d). One line per change: account, category 1 value, category 2 value, date, amount. An amount of 0 is an explicit zero; the word remove drops the line.'),
 		$latest['version_id'], $latest['version_no']), 0, 1);
 	textarea_row(_('Changes:'), 'revision_changes', get_post('revision_changes', ''), 50, 8);
 	text_row_ex(_('Commentary (required):'), 'revision_note', 50, 500, '', get_post('revision_note', ''));
@@ -199,7 +199,7 @@ if ($compare_result !== null) {
 			$counts['same'], $counts['changed'], $counts['added'], $counts['removed'], $counts['zero_vs_absent']), 0, 1);
 		if (count($compare_result['rows'])) {
 			start_table(TABLESTYLE);
-			table_header(array(_('Account'), _('Dimension 1'), _('Dimension 2'), _('Date'), _('Earlier'), _('Later'), _('Difference')));
+			table_header(array(_('Account'), dimension_axis_label_html(1), dimension_axis_label_html(2), _('Date'), _('Earlier'), _('Later'), _('Difference')));
 			foreach ($compare_result['rows'] as $row) {
 				start_row();
 				label_cell($row['account_code']);

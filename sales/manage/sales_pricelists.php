@@ -124,7 +124,7 @@ if ($Mode == 'Delete') {
 	if (delete_sales_pricelist($selected_id))
 		display_notification(_('Pricelist and all its rules have been deleted'));
 	else
-		display_error(_('The pricelist cannot be deleted while it or one of its rules retains a Dimension reference'));
+		display_error(_('The pricelist cannot be deleted while it or one of its rules retains a tracking reference'));
 	$Mode = 'RESET';
 }
 
@@ -235,7 +235,7 @@ if (isset($_POST['rule_delete']) && $selected_id > 0) {
 	if (delete_pricelist_rule($rule_id))
 		display_notification(_('Rule has been deleted from the pricelist'));
 	else
-		display_error(_('The rule cannot be deleted while it retains a Dimension reference'));
+		display_error(_('The rule cannot be deleted while it retains a tracking reference'));
 	if ($selected_rule_id == $rule_id) {
 		$selected_rule_id = -1;
 		unset($_POST['selected_rule_id']);

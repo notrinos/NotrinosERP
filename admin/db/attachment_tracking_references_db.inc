@@ -1,7 +1,7 @@
 <?php
 /** Attachment-owned ordinary retained presence; protected/shared families remain unknown. */
-require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_lifecycle_db.inc';
-require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_reference_registry.inc';
+require_once dirname(dirname(__DIR__)).'/tracking/includes/tracking_lifecycle_db.inc';
+require_once dirname(dirname(__DIR__)).'/tracking/includes/tracking_reference_registry.inc';
 require_once dirname(dirname(__DIR__)).'/includes/attachment_service.inc';
 
 /** Return only reviewed ordinary attachment types, never caller-provided families. */

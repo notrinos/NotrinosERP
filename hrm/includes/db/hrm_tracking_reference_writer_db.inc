@@ -13,11 +13,11 @@
  * never silently remapped.
  *
  * This is NOT a deletion certificate: the unused authority is the locked
- * recheck in dimensions/includes/dimension_reference_recheck.inc. Payloads are
+ * recheck in tracking/includes/tracking_reference_recheck.inc. Payloads are
  * never read or returned here; only numeric coordinates.
  */
 if (!function_exists('dimension_writer_reference_id'))
-    require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_writer_fence.inc';
+    require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_reference_writer_fence.inc';
 
 /**
  * Normalize one stored or submitted coordinate. Blank means no reference;

@@ -16,7 +16,7 @@
  * reservations and the free funds. Part 2 observes the purchase orders into the commitment register (advisory evidence; a
  * cancelled order releases its remaining commitment once). Part 3 shows the reservation mode (separately activated) and the
  * claims. Part 4 lists, proposes and decides forecast versions and shows the forecast of one scope. The page owns no logic:
- * everything is decided by `dimensions/includes/dimension_commitment.inc` and `dimension_forecast.inc`.
+ * everything is decided by `tracking/includes/tracking_commitment.inc` and `tracking_forecast.inc`.
  */
 $page_security = 'SA_BUDGETENTRY';
 $path_to_root = '..';
@@ -26,7 +26,7 @@ include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
 include_once($path_to_root.'/admin/db/fiscalyears_db.inc');
-include_once($path_to_root.'/dimensions/includes/dimension_commitment.inc');
+include_once($path_to_root.'/tracking/includes/tracking_commitment.inc');
 
 page(_($help_context = 'Commitments, Reservations and Forecast'));
 
@@ -114,8 +114,8 @@ display_note(_('Commitments and reservations are advisory evidence. Only the act
 start_table(TABLESTYLE_NOBORDER);
 start_row();
 text_cells(_('Account:'), 'fp_account', get_post('fp_account', ''), 15, 15);
-text_cells(_('Dimension 1 (0 = all, -1 = unassigned):'), 'fp_dim1', get_post('fp_dim1', '0'), 8, 10);
-text_cells(_('Dimension 2:'), 'fp_dim2', get_post('fp_dim2', '0'), 8, 10);
+text_cells(dimension_axis_label_html(1, ' '._('(0 = all, -1 = unassigned):')), 'fp_dim1', get_post('fp_dim1', '0'), 8, 10);
+text_cells(dimension_axis_label_html(2, ':'), 'fp_dim2', get_post('fp_dim2', '0'), 8, 10);
 date_cells(_('From:'), 'TransFromDate');
 date_cells(_('To:'), 'TransToDate');
 submit_cells('ShowPosition', _('Show'), '', false, false);
@@ -141,7 +141,7 @@ if (get_post('fp_account', '') !== '' && is_date($_POST['TransFromDate']) && is_
 		if (!$position['complete'])
 			display_warning(sprintf(_('%d register row(s) fail their digest and are excluded; the position is not complete.'), $position['tampered_lines']));
 		if ($position['unclassified_lines'])
-			display_note(sprintf(_('%d counted line(s) have no durable Dimension classification and read as unassigned.'), $position['unclassified_lines']), 0, 1);
+			display_note(sprintf(_('%d counted line(s) have no durable tracking classification and read as unassigned.'), $position['unclassified_lines']), 0, 1);
 	}
 }
 
@@ -151,7 +151,7 @@ submit_center('Observe', _('Observe purchase orders'), true, _('Update the advis
 $register = dimension_commit_register(0, 200);
 if ($register !== false && count($register)) {
 	start_table(TABLESTYLE);
-	table_header(array(_('Order'), _('Line'), _('Account'), _('Dimension 1'), _('Dimension 2'), _('Lineage'), _('State'), _('Not received'), _('Received, not billed'), _('Billed'), _('Released')));
+	table_header(array(_('Order'), _('Line'), _('Account'), dimension_axis_label_html(1), dimension_axis_label_html(2), _('Lineage'), _('State'), _('Not received'), _('Received, not billed'), _('Billed'), _('Released')));
 	foreach ($register as $row) {
 		start_row();
 		label_cell((int)$row['order_no']);
@@ -182,7 +182,7 @@ submit_center('SetMode', _('Record mode'), true, _('Requires the company setup a
 $claims = dimension_commit_reservation_list(100);
 if ($claims !== false && count($claims)) {
 	start_table(TABLESTYLE);
-	table_header(array(_('Reference'), _('Account'), _('Dimension 1'), _('Dimension 2'), _('Period'), _('Amount'), _('Consumed'), _('Released'), _('State'), ''));
+	table_header(array(_('Reference'), _('Account'), dimension_axis_label_html(1), dimension_axis_label_html(2), _('Period'), _('Amount'), _('Consumed'), _('Released'), _('State'), ''));
 	foreach ($claims as $claim) {
 		start_row();
 		label_cell(htmlspecialchars($claim['reference']));
@@ -237,7 +237,7 @@ if ($fiscal_year) {
 		}
 		end_table(1);
 	}
-	display_note(_('One line per estimate: account, dimension 1, dimension 2, estimate to complete (the total still expected, including committed work; the word remove drops a line of the approved forecast).'), 0, 1);
+	display_note(_('One line per estimate: account, category 1 value, category 2 value, estimate to complete (the total still expected, including committed work; the word remove drops a line of the approved forecast).'), 0, 1);
 	textarea_row(_('Estimates:'), 'forecast_changes', get_post('forecast_changes', ''), 50, 6);
 	date_row(_('As of:'), 'forecast_as_of', get_post('forecast_as_of', Today()));
 	text_row_ex(_('Commentary (required):'), 'forecast_note', 50, 500, '', get_post('forecast_note', ''));

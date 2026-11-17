@@ -327,7 +327,7 @@ function get_inventory_availability_maps($category, $location, $item_like='') {
 
 //--------------------------------------------------------------------------------------
 
-require_once __DIR__.'/../../dimensions/includes/dimension_composite_metadata_writer.inc';
+require_once __DIR__.'/../../tracking/includes/tracking_composite_metadata_writer.inc';
 
 /** Resolve a legacy UI id to one canonical row; indexed id is not unique. */
 function bom_dimension_row_by_id($id,$parent=null) {

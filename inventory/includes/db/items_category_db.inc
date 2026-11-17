@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_reference_writer_fence.inc';
 
 /** Serialize category defaults and retained intent before native persistence. */
 function add_item_category($description, $tax_type_id, $sales_account, $cogs_account, $inventory_account, $adjustment_account, $wip_account, $units, $mb_flag, $dim1, $dim2, $no_sale, $no_purchase) {

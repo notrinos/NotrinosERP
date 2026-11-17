@@ -17,7 +17,7 @@
  * permission and carry counts of at least three persons, never a person or an amount). Part 3 previews and runs
  * an allocation of posted ledger rows by an approved driver through the DIM-ALC-001 engine and the ordinary
  * journal approval path. The page owns no posting logic: everything is decided by
- * `dimensions/includes/dimension_allocation_driver.inc`.
+ * `tracking/includes/tracking_allocation_driver.inc`.
  */
 $page_security = 'SA_JOURNALENTRY';
 $path_to_root = '..';
@@ -26,17 +26,18 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/date_functions.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/includes/ui.inc');
-include_once($path_to_root.'/dimensions/includes/dimension_validation_contract.inc');
+include_once($path_to_root.'/tracking/includes/tracking_validation_contract.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
 include_once($path_to_root.'/gl/includes/gl_ui.inc');
 include_once($path_to_root.'/taxes/db/tax_types_db.inc');
 include_once($path_to_root.'/includes/approval/ui/approval_ui.inc');
-include_once($path_to_root.'/dimensions/includes/dimension_allocation.inc');
+include_once($path_to_root.'/tracking/includes/tracking_allocation.inc');
 
 $js = '';
 if (user_use_date_picker())
 	$js .= get_js_date_picker();
-page(_($help_context = 'Dimension Allocation Drivers'), false, false, '', $js);
+$help_context = 'Dimension Allocation Drivers';
+page(_('Cost Allocation Drivers'), false, false, '', $js);
 
 //-----------------------------------------------------------------------------------------------
 
@@ -114,7 +115,7 @@ function dimension_driver_page_show_outcome($outcome)
 		return;
 	}
 	$suffix = $outcome['duplicate'] ? ' '._('(this identical request already exists; nothing new was posted)') : '';
-	$label = $outcome['fully_allocated'] ? ' '._('Fully allocated.') : ' '._('Partly allocated: a residual or an unmeasured Dimension remains.');
+	$label = $outcome['fully_allocated'] ? ' '._('Fully allocated.') : ' '._('Partly allocated: a residual or an unmeasured tracking value remains.');
 	if ($outcome['state'] === 'posted')
 		display_notification(sprintf(_('Allocation run #%d is posted as journal #%d.'), $outcome['run_id'], $outcome['trans_no']).$label.$suffix);
 	elseif ($outcome['state'] === 'pending')
@@ -128,7 +129,7 @@ function dimension_driver_page_show_preview($prepared)
 {
 	display_heading(_('Preview - nothing has been posted yet'));
 	start_table(TABLESTYLE);
-	table_header(array(_('Dimension'), _('Role'), _('Measured units'), _('Share (%)')));
+	table_header(array(dimension_term_value(), _('Role'), _('Measured units'), _('Share (%)')));
 	foreach ($prepared['weights']['targets'] as $target) {
 		start_row();
 		label_cell('#'.$target['dimension_id']);
@@ -140,7 +141,7 @@ function dimension_driver_page_show_preview($prepared)
 	end_table(1);
 	display_note(dimension_driver_completeness_label($prepared['weights']), 0, 1);
 	start_table(TABLESTYLE);
-	table_header(array(_('Account'), _('Dimension'), _('Dimension 2'), _('Debit'), _('Credit')));
+	table_header(array(_('Account'), dimension_axis_label_html(1), dimension_axis_label_html(2), _('Debit'), _('Credit')));
 	foreach ($prepared['preview']['lines'] as $line) {
 		start_row();
 		label_cell($line['code_id']);
@@ -239,7 +240,7 @@ else {
 display_heading(_('Part 2 - propose a driver version'));
 start_table(TABLESTYLE2);
 text_row(_('Driver key:'), 'driver_key', get_post('driver_key', ''), 30, 64);
-array_selector_row(_('Dimension category:'), 'driver_axis', get_post('driver_axis', '1'), array('1' => _('Dimension 1'), '2' => _('Dimension 2')));
+array_selector_row(dimension_term_category().':', 'driver_axis', get_post('driver_axis', '1'), array('1' => dimension_axis_label_html(1), '2' => dimension_axis_label_html(2)));
 array_selector_row(_('Source:'), 'driver_source', get_post('driver_source', 'measured'), array('measured' => _('Measured data (floor area, machine hours ...)'),
 	'payroll_aggregate' => _('Payroll aggregate (headcount, fte or hours; needs the payroll evidence permission)')));
 text_row(_('Unit:'), 'driver_unit', get_post('driver_unit', ''), 20, 40);
@@ -248,7 +249,7 @@ date_row(_('Effective to:'), 'driver_to');
 text_row(_('Measured population (optional):'), 'driver_population', get_post('driver_population', ''), 15, 15);
 text_row(_('Payroll result-set digest (payroll aggregate only):'), 'driver_aggregate', get_post('driver_aggregate', ''), 66, 64);
 text_row(_('Note:'), 'driver_note', get_post('driver_note', ''), 50, 200);
-textarea_row(_('Measured units (one line per Dimension: id units [persons]):'), 'driver_values', get_post('driver_values', ''), 40, 8);
+textarea_row(_('Measured units (one line per tracking value: id units [persons]):'), 'driver_values', get_post('driver_values', ''), 40, 8);
 end_table(1);
 submit_center('ProposeDriver', _('Propose driver version'), true, _('The version waits for an independent checker'), false);
 
@@ -275,7 +276,7 @@ if (isset($_POST['FindRows']) || isset($_POST['PreviewDriverRun']) || isset($_PO
 		.' LEFT JOIN '.TB_PREF.'dimension_allocation_sources s ON s.active_counter=g.counter WHERE '.implode(' AND ', $conditions)
 		.' ORDER BY g.tran_date DESC, g.counter DESC LIMIT 100', 'could not list the source rows');
 	start_table(TABLESTYLE);
-	table_header(array(_('Select'), _('Date'), _('Document'), _('Account'), _('Dimension'), _('Dimension 2'), _('Amount'), _('Memo')));
+	table_header(array(_('Select'), _('Date'), _('Document'), _('Account'), dimension_axis_label_html(1), dimension_axis_label_html(2), _('Amount'), _('Memo')));
 	$shown = 0;
 	while ($found && ($row = db_fetch_assoc($found))) {
 		if ((int)$row['voided'] === 1 || is_bank_account($row['account']) || is_tax_account($row['account']) || is_subledger_account($row['account']))
@@ -312,9 +313,9 @@ else
 date_row(_('Journal date:'), 'run_date');
 text_row(_('Memo:'), 'run_memo', get_post('run_memo', ''), 50, 200);
 array_selector_row(_('If the driver is incomplete:'), 'run_policy', get_post('run_policy', 'block'), array('block' => _('Block the run'),
-	'dimension' => _('Allocate the unmeasured remainder to an explicit residual Dimension')));
-text_row(_('Residual Dimension (id):'), 'run_residual', get_post('run_residual', ''), 10, 10);
-text_row(_('Dimensions that must carry a measure (ids):'), 'run_cover', get_post('run_cover', ''), 40, 100);
+	'dimension' => _('Allocate the unmeasured remainder to an explicit residual tracking value')));
+text_row(_('Residual tracking value (id):'), 'run_residual', get_post('run_residual', ''), 10, 10);
+text_row(_('Tracking values that must carry a measure (ids):'), 'run_cover', get_post('run_cover', ''), 40, 100);
 end_table(1);
 submit_center_first('PreviewDriverRun', _('Preview'), _('Show the exact weights and journal without posting anything'), false);
 if ($prepared_state !== null || isset($_POST['RunDriverAllocation']))

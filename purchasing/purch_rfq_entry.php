@@ -702,10 +702,10 @@ if ($editable) {
 	table_section(2);
 
 	text_row(_('Linked Requisition ID:'), 'linked_requisition_id', get_post('linked_requisition_id'), 10, 10);
-	dimensions_list_row(_('Dimension:'), 'dimension_id', get_post('dimension_id'), true);
+	dimensions_list_row(dimension_axis_label_html(1, ':'), 'dimension_id', get_post('dimension_id'), true);
 	check_row(_('Leave this category explicitly unassigned'), '_classification_unassigned_1',
 		get_post('_classification_unassigned_1', 0));
-	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', get_post('dimension2_id'), true);
+	dimensions_list_row(dimension_axis_label_html(2, ':'), 'dimension2_id', get_post('dimension2_id'), true);
 	check_row(_('Leave this category explicitly unassigned'), '_classification_unassigned_2',
 		get_post('_classification_unassigned_2', 0));
 	textarea_row(_('Evaluation Criteria:'), 'evaluation_criteria', get_post('evaluation_criteria'), 35, 3);
@@ -727,8 +727,8 @@ if ($editable) {
 		label_row(_('Linked Requisition:'), '<a href="' . $path_to_root . '/purchasing/purch_requisition_entry.php?requisition_id=' . (int)$rfq['requisition_id'] . '">' . htmlspecialchars($rfq['requisition_reference']) . '</a>');
 	else
 		label_row(_('Linked Requisition:'), '-');
-	label_row(_('Dimension:'), (int)$rfq['dimension_id'] > 0 ? (int)$rfq['dimension_id'] : '-');
-	label_row(_('Dimension 2:'), (int)$rfq['dimension2_id'] > 0 ? (int)$rfq['dimension2_id'] : '-');
+	label_row(dimension_axis_label_html(1, ':'), (int)$rfq['dimension_id'] > 0 ? (int)$rfq['dimension_id'] : '-');
+	label_row(dimension_axis_label_html(2, ':'), (int)$rfq['dimension2_id'] > 0 ? (int)$rfq['dimension2_id'] : '-');
 	label_row(_('Evaluation Criteria:'), $rfq['evaluation_criteria'] ? nl2br(htmlspecialchars($rfq['evaluation_criteria'])) : '-');
 	label_row(_('Terms and Conditions:'), $rfq['terms_and_conditions'] ? nl2br(htmlspecialchars($rfq['terms_and_conditions'])) : '-');
 	label_row(_('Notes:'), $rfq['notes'] ? nl2br(htmlspecialchars($rfq['notes'])) : '-');

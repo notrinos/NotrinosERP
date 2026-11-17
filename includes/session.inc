@@ -435,7 +435,7 @@ include_once($path_to_root.'/includes/access_levels.inc');
 include_once($path_to_root.'/version.php');
 include_once($path_to_root.'/includes/main.inc');
 include_once($path_to_root.'/includes/session_registry.inc');
-include_once($path_to_root.'/dimensions/includes/dimension_session_draft_authority.inc');
+include_once($path_to_root.'/tracking/includes/tracking_session_draft_authority.inc');
 include_once($path_to_root.'/includes/app_entries.inc');
 include_once($path_to_root.'/includes/approval/approval_workflow.inc');
 

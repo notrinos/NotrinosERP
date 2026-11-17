@@ -319,7 +319,8 @@ class renderer {
 		echo "<ul class='modern-app-switcher'>";
 		foreach ($visible_applications as $application) {
 			$access = access_string($application->name);
-			$tooltip_text = str_replace('&', '', strip_tags($access[0]));
+			// DIM-NAM-001: access_string() already removed the hotkey marker; keep a literal ampersand ("Cost & Profit Tracking").
+			$tooltip_text = htmlspecialchars(strip_tags($access[0]), ENT_QUOTES, 'UTF-8');
 			$is_active = $selected_application_id == $application->id;
 			echo "<li class='modern-app-item'>";
 			echo "<a class='modern-app-link".(($is_active ? ' is-active' : ''))."' href='".$path_to_root."/admin/dashboard.php?sel_app=".$application->id."' title='".$tooltip_text."' data-tooltip='".$tooltip_text."' data-app-id='".$application->id."' ".$access[1].">";
@@ -493,7 +494,7 @@ class renderer {
 		$branding_details = $this->get_company_branding_details();
 		$search_placeholder = htmlspecialchars(_('Type / to search menu or actions...'), ENT_QUOTES, 'UTF-8');
 		if ($this->is_dashboard_page() && is_object($selected_application) && $selected_application->name != '') {
-			$selected_application_title = str_replace('&', '', $selected_application->name);
+			$selected_application_title = access_string($selected_application->name, true);
 			$page_title = $title.' / '.$selected_application_title;
 		}
 		$indicator = $path_to_root.'/themes/'.user_theme().'/images/ajax-loader.gif';
@@ -536,7 +537,7 @@ class renderer {
 			echo '</div>';
 			$this->render_sidebar_applications($applications, $selected_application_id);
 			if (is_object($selected_application)) {
-				echo "<div class='modern-sidebar-section-title'>".str_replace('&', '', $selected_application->name)."</div>";
+				echo "<div class='modern-sidebar-section-title'>".access_string($selected_application->name, true)."</div>";
 				$this->render_sidebar_modules($selected_application);
 			}
 			echo "</aside>";
@@ -628,7 +629,7 @@ class renderer {
 
 		echo "<section class='modern-workspace'>";
 		echo "<header class='modern-workspace-header'>";
-		echo "<h2 class='modern-workspace-title'>".$selected_application->name."</h2>";
+		echo "<h2 class='modern-workspace-title'>".access_string($selected_application->name, true)."</h2>";
 		echo "<p class='modern-workspace-subtitle'>"._('Workspace')."</p>";
 		echo "</header>";
 		echo "<div class='modern-workspace-grid'>";
@@ -673,7 +674,8 @@ class renderer {
 			if (!$current_user->check_application_access($application))
 				continue;
 
-			$application_name = str_replace('&', '', $application->name);
+			// DIM-NAM-001: remove only the hotkey marker, so "Cost & Profit Tracking" and "Routes & Rules" keep their ampersand.
+			$application_name = access_string($application->name, true);
 
 			foreach ($application->modules as $module) {
 				if (!$current_user->check_module_access($module))
@@ -686,7 +688,7 @@ class renderer {
 
 					$function_link = $this->app_context_link($app_function->link, $application->id);
 					$absolute_link = $path_to_root.'/'.$function_link;
-					$clean_label = str_replace('&', '', strip_tags($app_function->label));
+					$clean_label = access_string(strip_tags($app_function->label), true);
 					$items[] = array(
 						'l' => $clean_label,
 						'u' => $absolute_link,

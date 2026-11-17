@@ -20,7 +20,7 @@ include_once($path_to_root.'/admin/db/fiscal_years_entity.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/sales/includes/db/cust_trans_db.inc');
 include_once($path_to_root.'/admin/db/maintenance_db.inc');
-include_once($path_to_root.'/dimensions/includes/dimension_archive_retention.inc');
+include_once($path_to_root.'/tracking/includes/tracking_archive_retention.inc');
 $js = '';
 if (user_use_date_picker())
 	$js .= get_js_date_picker();
@@ -201,13 +201,13 @@ function display_fiscalyear_preview($year) {
 	if (count($preview['blocking']))
 		label_row(_('Blocking records:'), implode(', ', $preview['blocking']));
 	label_row(_('General ledger rows destroyed:'), $preview['ledger']['rows']);
-	label_row(_('...of which carry a Dimension:'), $preview['ledger']['tagged_rows']);
-	label_row(_('Balance sheet ledger rows summarized without Dimensions:'), $preview['ledger']['balance_sheet_rows']);
-	label_row(_('...of which carry a Dimension (would be lost):'), $preview['ledger']['summarized_tagged_rows']);
+	label_row(_('...of which carry a tracking value:'), $preview['ledger']['tagged_rows']);
+	label_row(_('Balance sheet ledger rows summarized without tracking values:'), $preview['ledger']['balance_sheet_rows']);
+	label_row(_('...of which carry a tracking value (would be lost):'), $preview['ledger']['summarized_tagged_rows']);
 	label_row(_('Budget rows destroyed:'), $preview['budget']['rows']);
-	label_row(_('...of which carry a Dimension:'), $preview['budget']['tagged_rows']);
+	label_row(_('...of which carry a tracking value:'), $preview['budget']['tagged_rows']);
 	end_table();
-	display_note(_('A fiscal year whose history carries a Dimension, lineage or payroll reference cannot be deleted. A deletion also needs a backup that can be read back without restoring it.'), 0, 1);
+	display_note(_('A fiscal year whose history carries a tracking value, lineage or payroll reference cannot be deleted. A deletion also needs a backup that can be read back without restoring it.'), 0, 1);
 
 	if (dimension_archive_retrieval_authorized()) {
 		$names = dimension_archive_list_files();

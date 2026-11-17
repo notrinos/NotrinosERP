@@ -2,7 +2,7 @@
 /**
  * DIM-BUD-004: dashboard tile with the number of cost budgets at or above their warning threshold (below the limit).
  */
-include_once dirname(__DIR__).'/dimensions/includes/dimension_budget_alert.inc';
+include_once dirname(__DIR__).'/tracking/includes/tracking_budget_alert.inc';
 
 $widget = new Widget();
 $widget->setTitle(_('Budgets at the warning level'));

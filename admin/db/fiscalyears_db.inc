@@ -11,8 +11,8 @@
 ***********************************************************************/
 require_once($path_to_root.'/includes/ui/items_cart.inc');
 require_once($path_to_root.'/admin/db/fiscal_years_entity.inc');
-require_once($path_to_root.'/dimensions/includes/dimension_retention_authority.inc');
-require_once($path_to_root.'/dimensions/includes/dimension_archive_retention.inc');
+require_once($path_to_root.'/tracking/includes/tracking_retention_authority.inc');
+require_once($path_to_root.'/tracking/includes/tracking_archive_retention.inc');
 
 /**
  * Validate that a stored unique_name resolves safely within the attachments directory.

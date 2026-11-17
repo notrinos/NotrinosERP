@@ -75,8 +75,8 @@ function gl_inquiry_controls() {
 	start_row();
 	// DIM-LFC-002: both historical axes stay filterable even when the posting preference enables only
 	// one of them (or none); the filter lists closed and retained/unknown identities explicitly.
-	dimensions_history_list_cells(_('Dimension').' 1:', 'Dimension', null, true, _('All Dimensions'));
-	dimensions_history_list_cells(_('Dimension').' 2:', 'Dimension2', null, true, _('All Dimensions'));
+	dimensions_history_list_cells(dimension_axis_label_html(1, ':'), 'Dimension', null, true, sprintf(_('%s: all'), dimension_axis_label_html(1)));
+	dimensions_history_list_cells(dimension_axis_label_html(2, ':'), 'Dimension2', null, true, sprintf(_('%s: all'), dimension_axis_label_html(2)));
 
 	ref_cells(_('Memo:'), 'Memo', '',null, _('Enter memo fragment or leave empty'));
 	small_amount_cells(_('Amount min:'), 'amount_min', null, ' ');
@@ -128,7 +128,7 @@ function show_results() {
 	else
 		$account_col = array();
 	
-	$dim_cols = array(_('Dimension').' 1', _('Dimension').' 2');
+	$dim_cols = array(dimension_axis_label_html(1), dimension_axis_label_html(2));
 	
 	if ($show_balances)
 		$remaining_cols = array(_('Person/Item'), _('Debit'), _('Credit'), _('Balance'), _('Memo'), '');

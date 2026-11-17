@@ -123,7 +123,7 @@ if ($plan_mode == 'delete' && $plan_selected_id > 0) {
                 if (delete_cycle_count_plan($plan_selected_id))
             display_notification(_('Count plan has been deleted.'));
         else
-            display_error(_('The count plan cannot be deleted while it retains a Dimension reference.'));
+            display_error(_('The count plan cannot be deleted while it retains a tracking reference.'));
     } else {
         display_error(_('Cannot delete this plan because it has associated count sessions.'));
     }
@@ -180,7 +180,7 @@ if ($Mode == 'Delete') {
                 if (delete_cycle_count($selected_id))
             display_notification(_('Count session has been deleted.'));
         else
-            display_error(_('The count session cannot be deleted while it retains a Dimension reference.'));
+            display_error(_('The count session cannot be deleted while it retains a tracking reference.'));
     } else {
         display_error(_('Cannot delete this count session. Only draft counts can be deleted.'));
     }

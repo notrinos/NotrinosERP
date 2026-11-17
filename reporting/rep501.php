@@ -77,7 +77,7 @@ function print_dimension_summary() {
 		if ((!is_int($dimension) && !is_string($dimension))
 			|| !preg_match('/^(?:0|[1-9][0-9]*)$/D', (string)$dimension)
 			|| (float)$dimension > 2147483647) {
-			display_error(_('Invalid dimension range.'));
+			display_error(_('Invalid tracking value range.'));
 			return;
 		}
 	}
@@ -99,7 +99,7 @@ function print_dimension_summary() {
 	$fiscal_start = begin_fiscalyear();
 	if ((int)$fromdim > (int)$todim || !is_string($as_of) || !is_date($as_of)
 		|| !is_string($fiscal_start) || !is_date($fiscal_start)) {
-		display_error(_('Invalid dimension range or fiscal dates.'));
+		display_error(_('Invalid tracking value range or fiscal dates.'));
 		return;
 	}
 	if ($destination)
@@ -115,10 +115,10 @@ function print_dimension_summary() {
 	$aligns = array('left',	'left', 'left',	'left', 'left', 'left', 'right');
 
 	$params =   array( 	0 => $comments,
-						1 => array('text' => _('Dimension'), 'from' => get_dimension_string($fromdim), 'to' => get_dimension_string($todim)),
+						1 => array('text' => dimension_term_value(), 'from' => get_dimension_string($fromdim), 'to' => get_dimension_string($todim)),
 						2 => array('text' => _('Year to date'), 'from' => $fiscal_start, 'to' => $as_of));
 
-	$rep = new FrontReport(_('Dimension Summary'), 'DimensionSummary', user_pagesize(), 9, $orientation);
+	$rep = new FrontReport(_('Tracking Summary'), 'DimensionSummary', user_pagesize(), 9, $orientation);
 	if ($orientation == 'L')
 		recalculate_cols($cols);
 
@@ -130,7 +130,7 @@ function print_dimension_summary() {
 	// statement per Dimension; the figure is the as-posted balance of the legacy YTD reader (same OR-of-axes counting, once per posting).
 	$balances = array();
 	if ($showbal) {
-		include_once($path_to_root . '/dimensions/includes/dimension_inquiry.inc');
+		include_once($path_to_root . '/tracking/includes/tracking_inquiry.inc');
 		$balances = dimension_inquiry_net_balances((int)$fromdim, (int)$todim, date2sql($fiscal_start), date2sql($as_of));
 		if ($balances === false) {
 			display_error(_('The net GL balance could not be calculated.'));

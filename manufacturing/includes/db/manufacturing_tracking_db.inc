@@ -6,7 +6,7 @@
  * Both tables declare custom_data NOT NULL DEFAULT '{}', so a native birth that writes no
  * metadata must pass an empty payload (the protocol then expects the stored '{}').
  */
-require_once __DIR__.'/../../../dimensions/includes/dimension_master_metadata_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_master_metadata_writer.inc';
 
 /**
  * Fixed Manufacturing owners admitted by this helper; no caller-selected table.

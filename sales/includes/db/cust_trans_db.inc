@@ -12,7 +12,7 @@
 /*
 *	Mark changes in debtor_trans_details
 */
-require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_financial_reference_writer.inc';
 
 function update_customer_trans_version($type, $versions) {
 

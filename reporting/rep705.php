@@ -213,9 +213,9 @@ function print_annual_expense_breakdown() {
 	$params =   array( 	0 => $comments,
 					1 => array('text' => _('Year'),
 						'from' => $year, 'to' => ''),
-					2 => array('text' => _('Dimension').' 1',
+					2 => array('text' => dimension_axis_label(1),
 						'from' => get_dimension_string($dimension), 'to' => ''),
-					3 => array('text' => _('Dimension').' 2',
+					3 => array('text' => dimension_axis_label(2),
 						'from' => get_dimension_string($dimension2), 'to' => ''),
 					4 => array('text' => _('Tags'), 'from' => get_tag_names($tags), 'to' => ''),
 					5 => array('text' => _('Info'), 'from' => $amts_thousands, 'to' => ''));

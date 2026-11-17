@@ -11,7 +11,7 @@
 if (!function_exists('append_domain_audit_event'))
     include_once($path_to_root.'/includes/db/domain_audit_db.inc');
 if (!function_exists('hrm_dimension_writer_admit'))
-    include_once(dirname(__FILE__).'/hrm_dimension_reference_writer_db.inc');
+    include_once(dirname(__FILE__).'/hrm_tracking_reference_writer_db.inc');
 
 if (!defined('HRM_LIFECYCLE_HIRE_PAYLOAD_ENVELOPE_VERSION'))
     define('HRM_LIFECYCLE_HIRE_PAYLOAD_ENVELOPE_VERSION', 1);

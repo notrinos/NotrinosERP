@@ -104,7 +104,7 @@ function execute_approved_journal_entry($draft_data, $reserved_trans_no, $draft_
 function journal_allocation_include()
 {
 	global $path_to_root;
-	include_once($path_to_root . '/dimensions/includes/dimension_allocation.inc');
+	include_once($path_to_root . '/tracking/includes/tracking_allocation.inc');
 }
 
 /**

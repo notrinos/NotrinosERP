@@ -15,7 +15,7 @@ include($path_to_root.'/purchasing/includes/po_class.inc');
 
 include($path_to_root.'/includes/session.inc');
 include($path_to_root.'/purchasing/includes/purchasing_ui.inc');
-include_once($path_to_root.'/dimensions/includes/dimension_budget_availability.inc');
+include_once($path_to_root.'/tracking/includes/tracking_budget_availability.inc');
 
 $js = '';
 if ($SysPrefs->use_popup_windows)

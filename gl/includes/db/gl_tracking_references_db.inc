@@ -1,7 +1,7 @@
 <?php
 /** GL-owned ordinary retained metadata presence; never unused/delete authority. */
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_lifecycle_db.inc';
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_registry.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_lifecycle_db.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_reference_registry.inc';
 
 /** Return only source-verified ordinary raw JSON owners, excluding transaction/payroll payloads. */
 function gl_dimension_reference_sources()

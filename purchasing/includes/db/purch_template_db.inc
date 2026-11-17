@@ -14,7 +14,7 @@ include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/hooks.inc');
 include_once($path_to_root . '/purchasing/includes/po_class.inc');
 include_once($path_to_root . '/purchasing/includes/db/po_db.inc');
-require_once __DIR__ . '/purch_policy_dimension_db.inc';
+require_once __DIR__ . '/purch_policy_tracking_db.inc';
 require_once __DIR__ . '/purchasing_classification_db.inc';
 
 /**

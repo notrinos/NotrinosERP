@@ -36,13 +36,13 @@ include_once($path_to_root.'/hrm/includes/db/lifecycle_suspension_payroll_consum
 include_once($path_to_root.'/hrm/includes/db/pay_ctry_002_runtime_db.inc');
 // B05: load the inverse-copy lock authority with the engine rather than from inside the command, so the
 // exact-inverse path remains includable by the focused storage-compatibility harness (no behavior change).
-include_once($path_to_root.'/hrm/includes/db/pay_dimension_reference_authority_db.inc');
+include_once($path_to_root.'/hrm/includes/db/pay_tracking_reference_authority_db.inc');
 include_once($path_to_root.'/hrm/includes/payroll/pay_rule_006_activation.inc');
 
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_ID'))
     define('HRM_LEGACY_PAYROLL_CONTRACT_ID', 'notrinoserp.hrm.payroll.legacy');
 if (!defined('HRM_LEGACY_PAYROLL_CONTRACT_VERSION'))
-    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.774');
+    define('HRM_LEGACY_PAYROLL_CONTRACT_VERSION', '1.0.780');
 
 /**
  * Payroll Formula Engine.
@@ -1652,7 +1652,7 @@ function payroll_create_linked_gl_reversal(
     // or orphan included) without re-validating them, but must hold their masters
     // so a concurrent close or delete-side recheck serializes with it.
     if (!function_exists('pay_dimension_inverse_copy_lock'))
-        require_once $path_to_root.'/hrm/includes/db/pay_dimension_reference_authority_db.inc';
+        require_once $path_to_root.'/hrm/includes/db/pay_tracking_reference_authority_db.inc';
     if (!pay_dimension_inverse_copy_lock($original))
         return false;
 

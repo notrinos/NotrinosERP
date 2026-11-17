@@ -19,7 +19,7 @@
     created on invoice post / reversed on credit note.
 */
 
-require_once __DIR__ . '/sales_dimension_custody_db.inc';
+require_once __DIR__ . '/sales_tracking_custody_db.inc';
 
 // -------------------------------------------------------------------------
 // Commission Plans

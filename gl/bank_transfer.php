@@ -113,7 +113,7 @@ function gl_payment_controls($trans_no) {
 
 	$dim = get_company_pref('use_dimension');
 	if ($dim > 0)
-		dimensions_list_row(_('Dimension').':', 'dimension_id', null, true, ' ', false, 1, false);
+		dimensions_list_row(dimension_axis_label_html(1, ':'), 'dimension_id', null, true, ' ', false, 1, false);
 	else
 		hidden('dimension_id', 0);
 
@@ -131,7 +131,7 @@ function gl_payment_controls($trans_no) {
 		amount_row(_('Bank Charge:'), 'charge');
 	}
 	if ($dim > 1)
-		dimensions_list_row(_('Dimension').' 2:', 'dimension2_id', null, true, ' ', false, 2, false);
+		dimensions_list_row(dimension_axis_label_html(2, ':'), 'dimension2_id', null, true, ' ', false, 2, false);
 	else
 		hidden('dimension2_id', 0);
 

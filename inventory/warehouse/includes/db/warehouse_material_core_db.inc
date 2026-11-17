@@ -1,6 +1,6 @@
 <?php
 /** Standalone material demand uses the registered core, never local approval. */
-require_once __DIR__.'/../../../../dimensions/includes/dimension_reference_writer_fence.inc';
+require_once __DIR__.'/../../../../tracking/includes/tracking_reference_writer_fence.inc';
 require_once __DIR__.'/warehouse_review_lock_db.inc';
 
 /** Serialize direct core actions before locking one member of the Material family. */

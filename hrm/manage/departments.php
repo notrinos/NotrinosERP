@@ -17,7 +17,7 @@ include_once($path_to_root.'/includes/session.inc');
 
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/departments_entity.inc');
-include_once($path_to_root.'/hrm/includes/db/hrm_dimension_compatibility_diagnostics_db.inc');
+include_once($path_to_root.'/hrm/includes/db/hrm_tracking_compatibility_diagnostics_db.inc');
 
 //--------------------------------------------------------------------------
 

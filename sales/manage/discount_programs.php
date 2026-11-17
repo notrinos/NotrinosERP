@@ -165,7 +165,7 @@ if ($Mode == 'UPDATE_ITEM' && can_process_discount_program()) {
 
 if ($Mode == 'Delete') {
 	if (!delete_discount_program($selected_id))
-		display_error(_('Only draft programs without a retained Dimension reference can be deleted. Use Cancel status to disable active programs.'));
+		display_error(_('Only draft programs without a retained tracking reference can be deleted. Use Cancel status to disable active programs.'));
 	else
 		display_notification(_('Discount program and its coupons have been deleted.'));
 	$Mode = 'RESET';

@@ -13,7 +13,7 @@
 //
 //	FIXME - this should be revised for transaction update case.
 //
-require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_financial_reference_writer.inc';
 
 function write_supp_trans($type, $trans_no, $supplier_id, $date_, $due_date, $reference, $supp_reference, $amount, $amount_tax, $discount, $err_msg="", $rate=0, $included=0) {
 	$new = $trans_no==0;

@@ -183,7 +183,7 @@ if ($Mode == 'Delete') {
 						if (delete_route($selected_id))
 				display_notification(_('Selected route and its rules have been deleted.'));
 			else
-				display_error(_('The route cannot be deleted while it or one of its rules retains a Dimension reference.'));
+				display_error(_('The route cannot be deleted while it or one of its rules retains a tracking reference.'));
 		} else {
 			display_error($can);
 		}
@@ -293,7 +293,7 @@ if (isset($_POST['DeleteRule'])) {
 				if (delete_route_rule((int)$rule_id))
 			display_notification(_('Rule has been deleted.'));
 		else
-			display_error(_('The rule cannot be deleted while it retains a Dimension reference.'));
+			display_error(_('The rule cannot be deleted while it retains a tracking reference.'));
 	}
 	$Ajax->activate('_page_body');
 }

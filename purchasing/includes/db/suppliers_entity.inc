@@ -26,7 +26,7 @@
  * The get_suppliers_search() and get_supplier_accounts() helpers also stay standalone.
  */
 include_once($path_to_root . '/includes/db/class.entity.inc');
-require_once($path_to_root . '/dimensions/includes/dimension_reference_writer_fence.inc');
+require_once($path_to_root . '/tracking/includes/tracking_reference_writer_fence.inc');
 
 class suppliers_entity extends Entity {
 	function __construct() {

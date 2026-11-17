@@ -1,9 +1,9 @@
 <?php
 /** Atomic native requisition header commands; no approval or deletion certificate. */
-require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_reference_writer_fence.inc';
 // require_once __DIR__.'/purchasing_classification_db.inc';
-require_once __DIR__.'/../../../dimensions/includes/dimension_source_revision.inc';
-require_once __DIR__.'/../../../dimensions/includes/dimension_category_policy.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_source_revision.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_category_policy.inc';
 if (!defined('ST_PURCHTEMPLATE')) define('ST_PURCHTEMPLATE', 66);
 foreach (array('ST_PURCHORDER' => 18, 'ST_PURCHREQUISITION' => 58, 'ST_PURCHRFQ' => 59,
 	'ST_PURCHAGREEMENT' => 60, 'ST_PROCUREMENTPLAN' => 61) as $dbg_type => $dbg_value)

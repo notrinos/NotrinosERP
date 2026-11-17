@@ -12,7 +12,7 @@
 include_once($path_to_root.'/includes/prefs/sysprefs.inc');
 include_once($path_to_root.'/inventory/includes/inventory_db.inc');
 include_once($path_to_root.'/taxes/db/tax_types_entity.inc');
-require_once __DIR__.'/../../dimensions/includes/dimension_document_classification.inc';
+require_once __DIR__.'/../../tracking/includes/tracking_document_classification.inc';
 
 class items_cart {
 	var $trans_type;

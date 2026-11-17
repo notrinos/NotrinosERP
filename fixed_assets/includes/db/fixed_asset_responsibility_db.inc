@@ -247,7 +247,7 @@ function fixed_asset_responsibility_preview($stock_id, $effective_date, $carrier
 	$result = array('ok' => false, 'errors' => array(), 'pair' => null, 'effective' => null, 'in_force' => null,
 		'depreciated_through' => null, 'resolved' => null);
 	if (!fixed_asset_responsibility_ready()) {
-		$result['errors'][] = _('The Dimension source revision schema is not installed; asset responsibility cannot be recorded.');
+		$result['errors'][] = _('The tracking source revision schema is not installed; asset responsibility cannot be recorded.');
 		return $result;
 	}
 	$asset = fixed_asset_responsibility_asset($stock_id);

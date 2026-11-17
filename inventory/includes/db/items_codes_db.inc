@@ -17,7 +17,7 @@
 	Complex/reporting queries (JOINs, recursive checks) remain standalone.
 */
 include_once($path_to_root.'/inventory/includes/db/items_codes_entity.inc');
-require_once __DIR__.'/item_dimension_maintenance_db.inc';
+require_once __DIR__.'/item_tracking_maintenance_db.inc';
 
 /**
  * Get all item codes for a stock item (with JOIN to stock_category).

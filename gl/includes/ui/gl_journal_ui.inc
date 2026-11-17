@@ -9,6 +9,8 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+// DIM-NAM-003: the company name of each tracking category (also when this file is loaded without a page).
+include_once(dirname(dirname(dirname(__FILE__))).'/tracking/includes/tracking_axis_label.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/ui/items_cart.inc');
 
@@ -94,9 +96,9 @@ function display_gl_items($title, &$order) {
 	div_start('items_table');
 	start_table(TABLESTYLE, "width='95%'");
 	if ($dim == 2)
-		$th = array(_('Account Code'), _('Account Description'), _('Dimension').' 1', _('Dimension').' 2', _('Debit'), _('Credit'), _('Memo'), '');
+		$th = array(_('Account Code'), _('Account Description'), dimension_axis_label_html(1), dimension_axis_label_html(2), _('Debit'), _('Credit'), _('Memo'), '');
 	elseif ($dim == 1)
-		$th = array(_('Account Code'), _('Account Description'), _('Dimension'), _('Debit'), _('Credit'), _('Memo'), '');
+		$th = array(_('Account Code'), _('Account Description'), dimension_axis_label_html(1), _('Debit'), _('Credit'), _('Memo'), '');
 	else
 		$th = array(_('Account Code'), _('Account Description'), _('Debit'), _('Credit'), _('Memo'), '');
 

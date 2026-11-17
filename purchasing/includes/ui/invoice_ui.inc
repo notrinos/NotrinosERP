@@ -9,6 +9,8 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+// DIM-NAM-003: the company name of each tracking category (also when this file is loaded without a page).
+include_once(dirname(dirname(dirname(__FILE__))).'/tracking/includes/tracking_axis_label.inc');
 
 function copy_from_trans(&$supp_trans) {
 	$_POST['Comments'] = $supp_trans->Comments;
@@ -126,10 +128,10 @@ function invoice_header(&$supp_trans) {
 	label_row(_('Terms:'), $supp_trans->terms['description']);
 
 	if (get_company_pref('use_dimension'))
-		dimensions_list_row(_('Dimension').':', 'dimension', null, true, _('Default'), false, 1);
+		dimensions_list_row(dimension_axis_label_html(1, ':'), 'dimension', null, true, _('Default'), false, 1);
 
 	if (get_company_pref('use_dimension') == 2)
-		dimensions_list_row(_('Dimension 2').':', 'dimension2', null, true, _('Default'), false, 2);
+		dimensions_list_row(dimension_axis_label_html(2, ':'), 'dimension2', null, true, _('Default'), false, 2);
 
 	label_row(_('Tax Group:'), $supp_trans->tax_description);
 	supplier_credit_row($supp_trans->supplier_id, $supp_trans->credit);
@@ -239,9 +241,9 @@ function display_gl_items(&$supp_trans, $mode=0) {
 
 	$dim = get_company_pref('use_dimension');
 	if ($dim == 2)
-		$th = array(_('Account'), _('Name'), _('Dimension').' 1', _('Dimension').' 2', _('Amount'), _('Memo'));
+		$th = array(_('Account'), _('Name'), dimension_axis_label_html(1), dimension_axis_label_html(2), _('Amount'), _('Memo'));
 	elseif ($dim == 1)
-		$th = array(_('Account'), _('Name'), _('Dimension'), _('Amount'), _('Memo'));
+		$th = array(_('Account'), _('Name'), dimension_axis_label_html(1), _('Amount'), _('Memo'));
 	else
 		$th = array(_('Account'), _('Name'), _('Amount'), _('Memo'));
 

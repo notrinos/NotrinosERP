@@ -33,8 +33,8 @@
  *
  * PHP 5.6 compatible.
  */
-require_once __DIR__.'/../../../dimensions/includes/dimension_source_revision.inc';
-require_once __DIR__.'/../../../dimensions/includes/dimension_category_policy.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_source_revision.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_category_policy.inc';
 
 if (!defined('CRM_CONVERSION_ANCHOR'))
 	define('CRM_CONVERSION_ANCHOR', 9058);
@@ -393,7 +393,7 @@ function crm_convert_lead_to_customer($lead_id, $input, $decision, $companions =
 		$customer_id = $created ? (int)db_insert_id() : 0;
 		if ($customer_id < 1)
 			throw new DimensionFinancialReferenceWriteException(
-				_('The customer could not be created. Check the Dimension selections and retry.'));
+				_('The customer could not be created. Check the tracking selections and retry.'));
 		$person_id = is_callable($companions) ? (int)call_user_func($companions, $customer_id, $lead) : 0;
 		db_query('UPDATE '.TB_PREF.'crm_leads SET linked_customer_id='.$customer_id.', linked_person_id='
 			.($person_id > 0 ? $person_id : 'NULL').", lead_status='converted', date_converted="
@@ -407,7 +407,7 @@ function crm_convert_lead_to_customer($lead_id, $input, $decision, $companions =
 		}
 		elseif (count($resolved['follow_up']))
 			throw new DimensionFinancialReferenceWriteException(
-				_('A required category needs a value: the follow-up cannot be recorded without the Dimension source revision schema.'));
+				_('A required category needs a value: the follow-up cannot be recorded without the tracking source revision schema.'));
 		commit_transaction();
 	}
 	catch (Exception $exception) {

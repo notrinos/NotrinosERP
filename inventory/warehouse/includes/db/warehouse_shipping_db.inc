@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-require_once __DIR__ . '/warehouse_config_dimension_db.inc';
+require_once __DIR__ . '/warehouse_config_tracking_db.inc';
 
 /**
  * Warehouse Shipping DB layer — Shipment CRUD, ship confirmation,
@@ -468,7 +468,7 @@ function ship_shipment($shipment_id, $carrier = '', $tracking = '') {
 		} catch (DimensionFinancialReferenceWriteException $e) {
 			// The fence has already rolled the whole shipment back.
 			cancel_transaction();
-			return array('success' => false, 'message' => _("The shipment could not be shipped: a package's retained Dimension metadata could not be certified."));
+			return array('success' => false, 'message' => _("The shipment could not be shipped: a package's retained tracking metadata could not be certified."));
 		}
 		$pkg_count++;
 	}

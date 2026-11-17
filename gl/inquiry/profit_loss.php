@@ -19,7 +19,7 @@ include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 
 include_once($path_to_root.'/gl/includes/gl_db.inc');
-include_once($path_to_root.'/dimensions/includes/dimension_budget_basis.inc');
+include_once($path_to_root.'/tracking/includes/tracking_budget_basis.inc');
 
 $js = '';
 if (user_use_date_picker())
@@ -238,8 +238,8 @@ function inquiry_controls() {
 	check_cells(_('Full-month budget:'), 'FullMonth', null, false, _('Show the budget of every month the period touches (actual covers only the selected dates)'));
 
 	// DIM-LFC-002: historical axis filters are independent of the current posting preference.
-	dimensions_history_list_cells(_('Dimension').' 1:', 'Dimension', null, true, _('All Dimensions'));
-	dimensions_history_list_cells(_('Dimension').' 2:', 'Dimension2', null, true, _('All Dimensions'));
+	dimensions_history_list_cells(dimension_axis_label_html(1, ':'), 'Dimension', null, true, sprintf(_('%s: all'), dimension_axis_label_html(1)));
+	dimensions_history_list_cells(dimension_axis_label_html(2, ':'), 'Dimension2', null, true, sprintf(_('%s: all'), dimension_axis_label_html(2)));
 	
 	submit_cells('Show',_('Show'), '', '', 'default');
 	end_row();

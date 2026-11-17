@@ -9,8 +9,8 @@
  *
  * PHP 5.6 compatible.
  */
-require_once __DIR__.'/../../../dimensions/includes/dimension_source_revision.inc';
-require_once __DIR__.'/../../../dimensions/includes/dimension_category_policy.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_source_revision.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_category_policy.inc';
 
 // A quotation template is a source owner but is not a posted transaction type. Keeping a distinct
 // source type prevents a template id from colliding with a quotation number in the same family.

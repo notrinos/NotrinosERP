@@ -23,7 +23,7 @@
  *
  * PHP 5.6 compatible.
  */
-require_once __DIR__.'/../../../dimensions/includes/dimension_category_policy.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_category_policy.inc';
 
 if (!defined('HRM_DIM_COMPAT_DEPARTMENT_AREA'))
 	define('HRM_DIM_COMPAT_DEPARTMENT_AREA', 'SA_DEPARTMENT');

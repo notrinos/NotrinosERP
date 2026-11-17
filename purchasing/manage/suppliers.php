@@ -132,7 +132,7 @@ function handle_submit(&$supplier_id) {
 	if ($supplier_id)  {
 		if (!update_supplier($_POST['supplier_id'], $_POST['supp_name'], $_POST['supp_ref'], $_POST['address'], $_POST['supp_address'], $_POST['gst_no'], $_POST['website'], $_POST['supp_account_no'], $_POST['bank_account'], input_num('credit_limit', 0), $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['curr_code'], $_POST['payment_terms'], $_POST['payable_account'], $_POST['purchase_account'], $_POST['payment_discount_account'], $_POST['notes'], $_POST['tax_group_id'], check_value('tax_included'), get_post('vendor_tier', 'standard'), get_post('vendor_category', ''), input_num('evaluation_frequency_months', 6), get_post('certifications', ''), get_post('approved_categories', ''))) {
 			cancel_transaction();
-			display_error(_("The supplier could not be saved. Check the Dimension selections and retry."));
+			display_error(_("The supplier could not be saved. Check the tracking selections and retry."));
 			return;
 		}
 		update_record_status($_POST['supplier_id'], $_POST['inactive'], 'suppliers', 'supplier_id');
@@ -142,7 +142,7 @@ function handle_submit(&$supplier_id) {
 	else {
 		if (!add_supplier($_POST['supp_name'], $_POST['supp_ref'], $_POST['address'], $_POST['supp_address'], $_POST['gst_no'], $_POST['website'], $_POST['supp_account_no'], $_POST['bank_account'], input_num('credit_limit',0), $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['curr_code'], $_POST['payment_terms'], $_POST['payable_account'], $_POST['purchase_account'], $_POST['payment_discount_account'], $_POST['notes'], $_POST['tax_group_id'], check_value('tax_included'), get_post('vendor_tier', 'standard'), get_post('vendor_category', ''), input_num('evaluation_frequency_months', 6), get_post('certifications', ''), get_post('approved_categories', ''))) {
 			cancel_transaction();
-			display_error(_("The supplier could not be saved. Check the Dimension selections and retry."));
+			display_error(_("The supplier could not be saved. Check the tracking selections and retry."));
 			return;
 		}
 
@@ -336,10 +336,10 @@ function supplier_settings(&$supplier_id) {
 		table_section(2);
 	$dim = get_company_pref('use_dimension');
 	if ($dim >= 1) {
-		table_section_title(_('Dimension'));
-		dimensions_list_row(_('Dimension').' 1:', 'dimension_id', null, true, ' ', false, 1);
+		table_section_title(dimension_term_module_name());
+		dimensions_list_row(dimension_axis_label_html(1, ':'), 'dimension_id', null, true, ' ', false, 1);
 		if ($dim > 1)
-			dimensions_list_row(_('Dimension').' 2:', 'dimension2_id', null, true, ' ', false, 2);
+			dimensions_list_row(dimension_axis_label_html(2, ':'), 'dimension2_id', null, true, ' ', false, 2);
 	}
 	if ($dim < 1)
 		hidden('dimension_id', 0);

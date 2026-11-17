@@ -1,6 +1,6 @@
 <?php
 /** Retained vendor-price custody using the existing ordinary writer protocol. */
-require_once __DIR__.'/../../../dimensions/includes/dimension_master_metadata_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_master_metadata_writer.inc';
 
 /** Admit every currency row before native last-purchase bulk SQL and verify the whole group. */
 function vendor_pricelist_dimension_group_write($supplier_id,$stock_id,$persist)

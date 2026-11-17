@@ -13,7 +13,7 @@ include_once($path_to_root . '/admin/db/voiding_db.inc');
 include_once($path_to_root . '/includes/types.inc');
 include_once($path_to_root . '/taxes/db/tax_types_entity.inc');
 include_once($path_to_root . '/taxes/db/tax_groups_db.inc');
-include_once($path_to_root . '/dimensions/includes/dimension_derived_posting_policy.inc');
+include_once($path_to_root . '/tracking/includes/tracking_derived_posting_policy.inc');
 
 //--------------------------------------------------------------------------------------
 
@@ -158,7 +158,7 @@ function get_manufacturing_trans_view_str($type, $trans_no, $label='', $icon=fal
 
 function get_dimensions_trans_view_str($type, $trans_no, $label='', $icon=false, $class='', $id='') {
 	if ($type == ST_DIMENSION)
-		$viewer = 'dimensions/view/view_dimension.php?trans_no='.$trans_no;
+		$viewer = 'tracking/view/view_tracking_value.php?trans_no='.$trans_no;
 	else
 		return null;
 

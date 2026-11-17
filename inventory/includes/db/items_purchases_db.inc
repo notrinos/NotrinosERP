@@ -10,7 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-require_once __DIR__.'/../../../dimensions/includes/dimension_composite_metadata_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_composite_metadata_writer.inc';
 
 function add_item_purchasing_data($supplier_id, $stock_id, $price, $suppliers_uom, $conversion_factor, $supplier_description) {
 	$supp_desc = db_escape($supplier_description);

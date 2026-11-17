@@ -176,7 +176,7 @@ if (isset($_POST['bulk_create']) && $_POST['bulk_create'] != '') {
 		}
 		} catch (DimensionFinancialReferenceWriteException $e) {
 			$input_error = 1;
-			display_error(_('The locations were not created: retained Dimension metadata could not be certified.'));
+			display_error(_('The locations were not created: retained tracking metadata could not be certified.'));
 		}
 		if ($input_error == 0) {
 			commit_transaction();
@@ -375,7 +375,7 @@ if ($Mode == 'ADD_ITEM' || $Mode == 'UPDATE_ITEM') {
 
 		$Mode = 'RESET';
 		} catch (DimensionFinancialReferenceWriteException $e) {
-			display_error(_('The location was not saved: retained Dimension metadata could not be certified.'));
+			display_error(_('The location was not saved: retained tracking metadata could not be certified.'));
 		}
 	}
 }
@@ -396,7 +396,7 @@ if ($Mode == 'Delete' && $selected_id != -1) {
 				if (delete_warehouse_location($selected_id))
 					display_notification(_('Location has been deleted.'));
 			} catch (DimensionFinancialReferenceWriteException $e) {
-				display_error(_('The location was not deleted: it retains Dimension metadata that cannot be erased.'));
+				display_error(_('The location was not deleted: it retains tracking metadata that cannot be erased.'));
 			}
 		} else {
 			display_error($can);

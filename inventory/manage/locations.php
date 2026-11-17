@@ -90,7 +90,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 
 		$Mode = 'RESET';
 		} catch (DimensionFinancialReferenceWriteException $e) {
-			display_error(_('The location was not saved: retained Dimension metadata could not be certified.'));
+			display_error(_('The location was not saved: retained tracking metadata could not be certified.'));
 		}
 	}
 } 
@@ -144,7 +144,7 @@ if ($Mode == 'Delete') {
 			delete_item_location($selected_id);
 			display_notification(_('Selected location has been deleted'));
 		} catch (DimensionFinancialReferenceWriteException $e) {
-			display_error(_('The location was not deleted: it retains Dimension metadata that cannot be erased.'));
+			display_error(_('The location was not deleted: it retains tracking metadata that cannot be erased.'));
 		}
 	}
 	$Mode = 'RESET';

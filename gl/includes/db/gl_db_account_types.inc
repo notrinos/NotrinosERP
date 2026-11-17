@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-require_once __DIR__.'/../../../dimensions/includes/dimension_master_metadata_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_master_metadata_writer.inc';
 
 function add_account_type($id, $name, $class_id, $parent) {
 	$sql = "INSERT INTO ".TB_PREF."chart_types (id, name, class_id, parent) VALUES (".db_escape($id).", ".db_escape($name).", ".db_escape($class_id).", ".db_escape($parent).")";

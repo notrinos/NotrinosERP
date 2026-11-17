@@ -112,7 +112,7 @@ if (isset($_GET['sel_app'])) {
 	$dashboard->addWidget(DA_FIXEDASSETS, 501, WIDGET_HALF);
 	$dashboard->addWidget(DA_FIXEDASSETS, 502, WIDGET_HALF);
 
-	$dashboard->addDashboard(_('Dimensions'), DA_DIMENSIONS);
+	$dashboard->addDashboard(dimension_term_module_name(), DA_DIMENSIONS);
 	$dashboard->addWidgetWithClass(DA_DIMENSIONS, 611, WIDGET_QUARTER, 'widget-small-stat');
 	$dashboard->addWidgetWithClass(DA_DIMENSIONS, 612, WIDGET_QUARTER, 'widget-small-stat');
 	$dashboard->addWidgetWithClass(DA_DIMENSIONS, 613, WIDGET_QUARTER, 'widget-small-stat');

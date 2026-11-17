@@ -16,7 +16,7 @@
  */
 
 /** @return bool */
-include_once(dirname(__FILE__).'/hrm_dimension_reference_writer_db.inc');
+include_once(dirname(__FILE__).'/hrm_tracking_reference_writer_db.inc');
 
 function hrm_organization_unit_table_ready()
 {

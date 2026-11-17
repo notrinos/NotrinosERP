@@ -1,7 +1,7 @@
 <?php
 /** Inventory-owned saved movement/workflow metadata; presence never authorizes deletion. */
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_lifecycle_db.inc';
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_registry.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_lifecycle_db.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_reference_registry.inc';
 
 /** Return fixed retained owners and source-verified ordinary transaction discriminators. */
 function inventory_retained_dimension_reference_sources()

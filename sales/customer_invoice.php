@@ -489,14 +489,14 @@ date_row(_('Due Date:'), 'due_date', '', null, 0, 0, 0);
 $dim = get_company_pref('use_dimension');
 if ($dim > 0) {
 	$_POST['dimension_id'] = $_SESSION['Items']->dimension_id;
-	dimensions_list_row(_('Dimension:'), 'dimension_id', null, true, ' ', false, 1, false);
+	dimensions_list_row(dimension_axis_label_html(1, ':'), 'dimension_id', null, true, ' ', false, 1, false);
 }		
 else
 	hidden('dimension_id', 0);
 
 if ($dim > 1) {
 	$_POST['dimension2_id'] = $_SESSION['Items']->dimension2_id;
-	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', null, true, ' ', false, 2, false);
+	dimensions_list_row(dimension_axis_label_html(2, ':'), 'dimension2_id', null, true, ' ', false, 2, false);
 }		
 else
 	hidden('dimension2_id', 0);

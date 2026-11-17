@@ -12,7 +12,7 @@
 include_once($path_to_root.'/includes/banking.inc');
 include_once($path_to_root.'/includes/types.inc');
 include_once($path_to_root.'/includes/current_user.inc');
-include_once($path_to_root.'/includes/dimension_history.inc');
+include_once($path_to_root.'/includes/tracking_history.inc');
 
 define('SEARCH_BUTTON', "<input %s type='submit' class='combo_submit' style='border:0;background:url($path_to_root/themes/"
 	."%s/images/locate.png) no-repeat;%s' aspect='fallback' name='%s' value=' ' title='"._('Set filter')."'> ");
@@ -888,7 +888,7 @@ function dimensions_list($name, $selected_id=null, $no_option=false, $showname='
 	$retained_id = is_numeric($retained_id) && (int)$retained_id > 0 ? (int)$retained_id : 0;
 	if ($retained_id) {
 		$sql = "SELECT id, CONCAT(reference,'  ',name) as ref FROM (SELECT id,reference,name,type_,closed FROM ".TB_PREF."dimensions"
-			." UNION ALL SELECT ".$retained_id.",'',".db_escape(_('Retained Dimension').' #'.$retained_id).",0,1 WHERE NOT EXISTS (SELECT 1 FROM ".TB_PREF."dimensions WHERE id=".$retained_id.")) retained_dimensions WHERE 1=1";
+			." UNION ALL SELECT ".$retained_id.",'',".db_escape(_('Retained tracking value').' #'.$retained_id).",0,1 WHERE NOT EXISTS (SELECT 1 FROM ".TB_PREF."dimensions WHERE id=".$retained_id.")) retained_dimensions WHERE 1=1";
 	}
 
 	$options = array(

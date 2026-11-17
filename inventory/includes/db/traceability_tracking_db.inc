@@ -7,7 +7,7 @@
  * adjustments, transfers, putaway, production, mobile scanning), so a refusal throws
  * after the fence has rolled the whole surrounding operation back.
  */
-require_once __DIR__.'/../../../dimensions/includes/dimension_master_metadata_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_master_metadata_writer.inc';
 
 /**
  * Fixed traceability owners admitted by this helper; no caller-selected table.

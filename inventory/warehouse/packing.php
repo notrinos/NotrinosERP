@@ -175,7 +175,7 @@ if ($Mode == 'Delete') {
 		if (delete_package($selected_id))
 			display_notification(_('Package has been deleted.'));
 		else
-			display_error(_('The package cannot be deleted while it retains a Dimension reference.'));
+			display_error(_('The package cannot be deleted while it retains a tracking reference.'));
 	} else {
 		display_error(_('Cannot delete this package — it has contents or is not open.'));
 	}

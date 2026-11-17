@@ -57,7 +57,7 @@ if ($Mode == 'Delete') {
 		if (delete_overtime($selected_id))
 			display_notification(_('Selected overtime has been deleted'));
 		else
-			display_error(_('The selected overtime cannot be deleted because it retains a Dimension reference.'));
+			display_error(_('The selected overtime cannot be deleted because it retains a tracking reference.'));
 	}
 	$Mode = 'RESET';
 }

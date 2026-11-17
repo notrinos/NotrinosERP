@@ -10,8 +10,8 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 
-require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
-require_once __DIR__.'/../../../dimensions/includes/dimension_document_classification.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_financial_reference_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_document_classification.inc';
 
 /**
  * Insert one bank ledger row for a payment, deposit, transfer or journal bank line.

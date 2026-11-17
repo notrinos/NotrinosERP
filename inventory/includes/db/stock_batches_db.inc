@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-require_once __DIR__ . '/traceability_dimension_db.inc';
+require_once __DIR__ . '/traceability_tracking_db.inc';
 
 /**
  * Batch/Lot CRUD, queries, FEFO/FIFO allocation, expiry management,

@@ -37,8 +37,8 @@ include_once($path_to_root . '/admin/db/approval_rules_setup_db.inc');
 include_once($path_to_root . '/admin/db/approval_dashboard_db.inc');
 include_once($path_to_root . '/includes/approval/approval_delegation.inc');
 include_once($path_to_root . '/includes/approval/approval_escalation.inc');
-include_once($path_to_root . '/includes/approval/approval_dimension_snapshot.inc');
-include_once($path_to_root . '/dimensions/includes/dimension_budget_availability.inc');
+include_once($path_to_root . '/includes/approval/approval_tracking_snapshot.inc');
+include_once($path_to_root . '/tracking/includes/tracking_budget_availability.inc');
 
 // =====================================================
 // Get draft ID from request
@@ -362,8 +362,8 @@ if ((int)$draft['trans_type'] === ST_SALESORDER && is_array($draft_data) && isse
 		'requisition_no'    => _('Requisition No'),
 		'into_stock_location' => _('Into Stock Location'),
 		'grn_item_id'       => _('GRN Item'),
-		'dimension_name'    => _('Dimension'),
-		'dimension2_name'   => _('Dimension 2'),
+		'dimension_name'    => dimension_axis_label(1),
+		'dimension2_name'   => dimension_axis_label(2),
 	);
 
 	// Fields to skip (internal/technical or duplicate code-level fields)

@@ -53,7 +53,7 @@ if ($Mode == 'Delete') {
 				if (delete_recall_campaign($selected_id))
 			display_notification(_('Recall campaign has been deleted.'));
 		else
-			display_error(_('The recall campaign cannot be deleted while it retains a Dimension reference.'));
+			display_error(_('The recall campaign cannot be deleted while it retains a tracking reference.'));
 	}
 	$Mode = 'RESET';
 }
@@ -140,7 +140,7 @@ if (get_post('update_item_status')) {
 			display_notification(sprintf(_('Recall item status updated to %s.'),
 				get_recall_item_status_label($new_item_status)));
 		} catch (DimensionFinancialReferenceWriteException $e) {
-			display_error(_('The recall item could not be updated: the campaign retained Dimension metadata could not be certified.'));
+			display_error(_('The recall item could not be updated: the campaign retained tracking metadata could not be certified.'));
 		}
 	} else {
 		display_error($can_update_item);

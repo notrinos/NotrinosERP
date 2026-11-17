@@ -106,7 +106,7 @@ function delete_tag($id) {
 }
 
 function add_tag_associations($recordid, $tagids) {
-	require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_shared_record_authority.inc';
+	require_once dirname(dirname(__DIR__)).'/tracking/includes/tracking_shared_record_authority.inc';
 	foreach($tagids as $tagid) {
 		if (!$tagid)
 			continue;

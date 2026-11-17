@@ -11,7 +11,7 @@
 ***********************************************************************/
 
 include_once($path_to_root . '/purchasing/includes/db/suppliers_entity.inc');
-require_once($path_to_root . '/dimensions/includes/dimension_reference_writer_fence.inc');
+require_once($path_to_root . '/tracking/includes/tracking_reference_writer_fence.inc');
 
 function add_supplier($supp_name, $supp_ref, $address, $supp_address, $gst_no, $website, $supp_account_no, $bank_account, $credit_limit, $dimension_id, $dimension2_id, $curr_code, $payment_terms, $payable_account, $purchase_account, $payment_discount_account, $notes, $tax_group_id, $tax_included, $vendor_tier = 'standard', $vendor_category = '', $evaluation_frequency_months = 6, $certifications = '', $approved_categories = '') {
 	$data = array(

@@ -85,9 +85,9 @@ if (db_num_rows($result) == 0) {
 $dim = get_company_pref('use_dimension');
 
 if ($dim == 2)
-	$th = array(_('Journal Date'), _('Account Code'), _('Account Name'), _('Dimension').' 1', _('Dimension').' 2', _('Debit'), _('Credit'), _('Memo'));
+	$th = array(_('Journal Date'), _('Account Code'), _('Account Name'), dimension_axis_label_html(1), dimension_axis_label_html(2), _('Debit'), _('Credit'), _('Memo'));
 elseif ($dim == 1)
-	$th = array(_('Journal Date'), _('Account Code'), _('Account Name'), _('Dimension'), _('Debit'), _('Credit'), _('Memo'));
+	$th = array(_('Journal Date'), _('Account Code'), _('Account Name'), dimension_axis_label_html(1), _('Debit'), _('Credit'), _('Memo'));
 else		
 	$th = array(_('Journal Date'), _('Account Code'), _('Account Name'), _('Debit'), _('Credit'), _('Memo'));
 

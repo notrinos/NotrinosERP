@@ -3,7 +3,7 @@
 if (!function_exists('hrm_typed_attribute_legacy_mapping_key'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_legacy_mapping_db.inc');
 if (!function_exists('hrm_dimension_legacy_key_is_coordinate'))
-    include_once(dirname(__FILE__).'/hrm_dimension_retained_evidence_db.inc');
+    include_once(dirname(__FILE__).'/hrm_tracking_retained_evidence_db.inc');
 
 function hrm_typed_attribute_legacy_mapping_user_can_manage()
 {

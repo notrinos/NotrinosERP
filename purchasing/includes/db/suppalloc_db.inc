@@ -9,9 +9,9 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-require_once __DIR__.'/purchase_document_dimension_db.inc';
+require_once __DIR__.'/purchase_document_tracking_db.inc';
 
-require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_financial_reference_writer.inc';
 
 function add_supp_allocation($amount, $trans_type_from, $trans_no_from, $trans_type_to, $trans_no_to, $person_id, $date_) {
 	$sql = "INSERT INTO ".TB_PREF."supp_allocations (

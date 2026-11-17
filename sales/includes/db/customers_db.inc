@@ -11,7 +11,7 @@
 ***********************************************************************/
 
 include_once($path_to_root . '/sales/includes/db/debtors_master_entity.inc');
-require_once($path_to_root . '/dimensions/includes/dimension_reference_writer_fence.inc');
+require_once($path_to_root . '/tracking/includes/tracking_reference_writer_fence.inc');
 
 function add_customer($CustName, $cust_ref, $address, $tax_id, $curr_code, $dimension_id, $dimension2_id, $credit_status, $payment_terms, $discount, $pymt_discount, $credit_limit, $sales_type, $notes) {
 	$data = array(

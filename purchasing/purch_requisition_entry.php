@@ -19,7 +19,7 @@ include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/includes/ui.inc');
 include_once($path_to_root . '/includes/ui/ui_lists.inc');
 include_once($path_to_root . '/purchasing/includes/purchasing_db.inc');
-include_once($path_to_root . '/dimensions/includes/dimension_budget_availability.inc');
+include_once($path_to_root . '/tracking/includes/tracking_budget_availability.inc');
 include_once($path_to_root . '/purchasing/includes/db/purch_requisition_refresh_db.inc');
 
 $js = '';
@@ -410,10 +410,10 @@ if ($editable) {
 	echo '</td></tr>';
 	table_section(2);
 	text_row(_('Reference:'), 'reference', get_post('reference'), 20, 60);
-	dimensions_list_row(_('Dimension:'), 'dimension_id', get_post('dimension_id'), true);
+	dimensions_list_row(dimension_axis_label_html(1, ':'), 'dimension_id', get_post('dimension_id'), true);
 	check_row(_('Leave this category explicitly unassigned'), '_classification_unassigned_1',
 		get_post('_classification_unassigned_1', 0));
-	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', get_post('dimension2_id'), true);
+	dimensions_list_row(dimension_axis_label_html(2, ':'), 'dimension2_id', get_post('dimension2_id'), true);
 	check_row(_('Leave this category explicitly unassigned'), '_classification_unassigned_2',
 		get_post('_classification_unassigned_2', 0));
 	text_row(_('Purpose:'), 'purpose', get_post('purpose'), 50, 255);

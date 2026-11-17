@@ -189,7 +189,7 @@ if ($Mode == 'Delete') {
 				if (delete_serial_number($selected_id))
 			display_notification(_('Selected serial number has been deleted.'));
 		else
-			display_error(_('The serial number cannot be deleted while it retains a Dimension reference.'));
+			display_error(_('The serial number cannot be deleted while it retains a tracking reference.'));
 	} else {
 		display_error($can);
 	}

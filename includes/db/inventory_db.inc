@@ -404,7 +404,7 @@ function handle_negative_inventory($stock_id, $quantity, $standard_cost, $date_)
 // $std_cost - in HOME currency
 // $price - in transaction currency
 
-require_once __DIR__.'/../../dimensions/includes/dimension_financial_reference_writer.inc';
+require_once __DIR__.'/../../tracking/includes/tracking_financial_reference_writer.inc';
 require_once __DIR__.'/../../inventory/includes/db/inventory_classification_db.inc';
 
 function add_stock_move($type, $stock_id, $trans_no, $location, $date_, $reference, $quantity, $std_cost, $price=0) {

@@ -1,6 +1,6 @@
 <?php
 /** Fixed item/alias maintenance commands using the existing ordinary reference fence. */
-require_once __DIR__.'/../../../dimensions/includes/dimension_master_metadata_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_master_metadata_writer.inc';
 
 /** Read native stock identity and all retained coordinates under the caller's transaction. */
 function item_dimension_stock_metadata_row($stock_id)

@@ -49,9 +49,9 @@ $dim = get_company_pref('use_dimension');
 
 $first_cols = array(_('Type'), '#', _('Date'));
 if ($dim == 2)
-	$dim_cols = array(_('Dimension').' 1', _('Dimension').' 2');
+	$dim_cols = array(dimension_axis_label_html(1), dimension_axis_label_html(2));
 elseif ($dim == 1)
-	$dim_cols = array(_('Dimension'));
+	$dim_cols = array(dimension_axis_label_html(1));
 else
 	$dim_cols = array();
 

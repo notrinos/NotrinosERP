@@ -588,10 +588,10 @@ if ($editable) {
 	text_row(_('Renewal Period (Months):'), 'renewal_period_months', get_post('renewal_period_months'), 6, 6);
 	text_row(_('Reference:'), 'reference', get_post('reference'), 20, 60);
 	text_row(_('Linked RFQ ID:'), 'rfq_id', get_post('rfq_id'), 10, 10);
-	dimensions_list_row(_('Dimension:'), 'dimension_id', get_post('dimension_id'), true);
+	dimensions_list_row(dimension_axis_label_html(1, ':'), 'dimension_id', get_post('dimension_id'), true);
 	check_row(_('Leave this category explicitly unassigned'), '_classification_unassigned_1',
 		get_post('_classification_unassigned_1', 0));
-	dimensions_list_row(_('Dimension 2:'), 'dimension2_id', get_post('dimension2_id'), true);
+	dimensions_list_row(dimension_axis_label_html(2, ':'), 'dimension2_id', get_post('dimension2_id'), true);
 	check_row(_('Leave this category explicitly unassigned'), '_classification_unassigned_2',
 		get_post('_classification_unassigned_2', 0));
 	textarea_row(_('Terms and Conditions:'), 'terms_and_conditions', get_post('terms_and_conditions'), 35, 5);

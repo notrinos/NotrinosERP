@@ -167,9 +167,9 @@ function print_trial_balance() {
 
 	$params =   array( 	0 => $comments,
 					1 => array('text' => _('Period'),'from' => $from, 'to' => $to),
-					2 => array('text' => _('Dimension').' 1',
+					2 => array('text' => dimension_axis_label(1),
 						'from' => get_dimension_string($dimension), 'to' => ''),
-					3 => array('text' => _('Dimension').' 2',
+					3 => array('text' => dimension_axis_label(2),
 						'from' => get_dimension_string($dimension2), 'to' => ''));
 
 	$rep = new FrontReport(_('Trial Balance'), 'TrialBalance', user_pagesize(), 9, $orientation);

@@ -23,7 +23,7 @@
  *
  * PHP 5.6 compatible.
  */
-require_once __DIR__.'/../../../dimensions/includes/dimension_validation_contract.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_validation_contract.inc';
 require_once __DIR__.'/../../../includes/pay_gl_001_contract.inc';
 
 if (!defined('PAY_NATIVE_CLASSIFICATION_VERSION'))
@@ -80,7 +80,7 @@ function pay_native_classification_record_failure($kind, $code, $codes, $states,
 function pay_native_classification_pair_admission($dimension_id, $dimension2_id)
 {
 	if (!function_exists('dimension_posting_admission'))
-		return array('ok' => false, 'codes' => array('unavailable'), 'errors' => array(_('The shared Dimension admission is unavailable, so the payroll posting is refused.')),
+		return array('ok' => false, 'codes' => array('unavailable'), 'errors' => array(_('The shared tracking admission is unavailable, so the payroll posting is refused.')),
 			'states' => array(), 'ids' => array('dimension_id' => 0, 'dimension2_id' => 0));
 	$admission = dimension_posting_admission($dimension_id, $dimension2_id);
 	return array('ok' => !empty($admission['ok']), 'codes' => isset($admission['codes']) ? $admission['codes'] : array(),

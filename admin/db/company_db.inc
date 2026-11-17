@@ -32,7 +32,7 @@ function update_company_prefs($params) {
 		$requested_axis_count = (int)$params['use_dimension'];
 		if ($requested_axis_count >= 0 && $requested_axis_count <= 2
 			&& $requested_axis_count < $current_axis_count) {
-			require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_category_policy.inc';
+			require_once dirname(dirname(__DIR__)).'/tracking/includes/tracking_category_policy.inc';
 			$conflicts = dimension_category_transition_refusal($current_axis_count, $requested_axis_count);
 			if (count($conflicts)) {
 				$GLOBALS['dimension_category_transition_error'] = $conflicts;

@@ -642,7 +642,7 @@ class Entity extends record_set {
 		if (preg_match('/^\s*`?(?:bom|purch_data)\b/i',$this->name)) {
 			if (!in_array($this->name,array('bom','purch_data'),true) || !is_array($data) || !is_array($this->key)
 				|| ($this->subset!==null && $this->subset!==false && $this->subset!=='')) return false;
-			require_once __DIR__.'/../../dimensions/includes/dimension_composite_metadata_writer.inc';
+			require_once __DIR__.'/../../tracking/includes/tracking_composite_metadata_writer.inc';
 			$columns=dimension_composite_metadata_columns($this->name);$declared=$this->key;sort($columns);sort($declared);
 			if ($columns!==$declared) return false;
 			$identity=dimension_composite_metadata_key($this->name,$operation==='insert'?$data:$key);
@@ -687,7 +687,7 @@ class Entity extends record_set {
 			if (preg_match('/^\s*(?:suppliers|debtors_master|quick_entry_lines|stock_category|stock_master|chart_master|bank_accounts|budget_trans|purch_rfq|purch_rfq_items|purch_rfq_vendors|purch_rfq_vendor_lines|purch_requisitions|purch_requisition_lines)\b/i', $this->name)) return false;
 			return $this->ordinary_dimension_persist($operation, $key, $data);
 		}
-		require_once __DIR__.'/../../dimensions/includes/dimension_reference_writer_fence.inc';
+		require_once __DIR__.'/../../tracking/includes/tracking_reference_writer_fence.inc';
 		$primary = $keys[$owner];
 		if ($this->key !== $primary || !is_array($data)) return false;
 		$string_key = in_array($owner,array('stock_master','chart_master','chart_types','chart_class'),true);
@@ -713,12 +713,12 @@ class Entity extends record_set {
 		// Match native field filtering before interpreting any serialized payload.
 		$next = array_intersect_key($data, array_flip($this->fields));
 		if(in_array($owner,array('areas','tax_types','chart_types','chart_class','sales_pos','sales_types','salesman','prices','item_codes','vendor_pricelists'),true)){
-			require_once __DIR__.'/../../dimensions/includes/dimension_master_metadata_writer.inc';
+			require_once __DIR__.'/../../tracking/includes/tracking_master_metadata_writer.inc';
 			if($this->subset!==null && $this->subset!==false && $this->subset!=='')return false;
 			return dimension_master_metadata_write($owner,$key,$next,function($admitted)use($operation,$key,$data){return $this->ordinary_dimension_persist($operation,$key,$admitted+$data);},$operation==='delete');
 		}
 		if ($owner === 'sales_agreements' || $owner === 'sales_agreement_lines') {
-			require_once __DIR__.'/../../sales/includes/db/sales_agreement_dimension_db.inc';
+			require_once __DIR__.'/../../sales/includes/db/sales_agreement_tracking_db.inc';
 			if ($this->subset !== null && $this->subset !== false && $this->subset !== '') return false;
 			return sales_agreement_dimension_entity_write($owner, $operation, $key, $next,
 				function() use ($operation, $key, $data) {
@@ -729,7 +729,7 @@ class Entity extends record_set {
 		}
 
 		if ($owner === 'purch_agreements' || $owner === 'purch_agreement_lines') {
-			require_once __DIR__.'/../../purchasing/includes/db/purch_agreement_dimension_db.inc';
+			require_once __DIR__.'/../../purchasing/includes/db/purch_agreement_tracking_db.inc';
 			if ($this->subset !== null && $this->subset !== false && $this->subset !== '') return false;
 			return purch_agreement_dimension_entity_write($owner, $operation, $key, $next,
 				function() use ($operation, $key, $data) {
@@ -786,7 +786,7 @@ class Entity extends record_set {
 		if ($operation === 'insert') $next += $defaults;
 		if ($operation === 'delete') $next = $defaults;
         if($owner==='stock_master'){
-            require_once __DIR__.'/../../inventory/includes/db/item_dimension_maintenance_db.inc';
+            require_once __DIR__.'/../../inventory/includes/db/item_tracking_maintenance_db.inc';
             return item_dimension_stock_entity_write($operation,$key,$next,function($admitted)use($operation,$key,$data){return $this->ordinary_dimension_persist($operation,$key,$admitted+$data);},isset($data[$primary])?$data[$primary]:null);
         }
 		return dimension_ordinary_master_write($owner, $key, $next,

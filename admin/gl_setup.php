@@ -161,9 +161,9 @@ gl_all_accounts_list_row(_('Exchange Variances Account:'), 'exchange_diff_act', 
 gl_all_accounts_list_row(_('Bank Charges Account:'), 'bank_charge_act', $_POST['bank_charge_act']);
 tax_algorithm_list_row(_('Tax Algorithm:'), 'tax_algorithm', $_POST['tax_algorithm']);
 
-table_section_title(_('Dimension Defaults'));
+table_section_title(_('Tracking Defaults'));
 
-text_row(_('Dimension Required By After:'), 'default_dim_required', $_POST['default_dim_required'], 6, 6, '', '', _('days'));
+text_row(_('Tracking Value Required By After:'), 'default_dim_required', $_POST['default_dim_required'], 6, 6, '', '', _('days'));
 
 
 table_section_title(_('Customers and Sales'));

@@ -267,7 +267,7 @@ if (isset($_POST['ADD_ITEM']) && can_process()) {
 	} catch (DimensionFinancialReferenceWriteException $e) {
 		// The fence (or the classification capture) has already rolled the whole creation back.
 		display_error($e->getMessage() !== '' ? $e->getMessage()
-			: _('The work order could not be created: its retained Dimension metadata could not be certified.'));
+			: _('The work order could not be created: its retained tracking metadata could not be certified.'));
 		$id = 0;
 	}
 
@@ -287,7 +287,7 @@ if (isset($_POST['UPDATE_ITEM']) && can_process()) {
 		new_doc_date($_POST['date_']);
 		meta_forward($_SERVER['PHP_SELF'], 'UpdatedID='.$selected_id);
 	} catch (DimensionFinancialReferenceWriteException $e) {
-		display_error(_('The work order could not be updated: its retained Dimension metadata could not be certified.'));
+		display_error(_('The work order could not be updated: its retained tracking metadata could not be certified.'));
 	}
 }
 
@@ -310,7 +310,7 @@ if (isset($_POST['delete'])) {
 			delete_work_order($selected_id, $_POST['stock_id'], $_POST['quantity'], $_POST['date_']);
 			meta_forward($_SERVER['PHP_SELF'], 'DeletedID='.$selected_id);
 		} catch (DimensionFinancialReferenceWriteException $e) {
-			display_error(_('The work order cannot be deleted while it retains a Dimension reference.'));
+			display_error(_('The work order cannot be deleted while it retains a tracking reference.'));
 		}
 	}
 }
@@ -323,7 +323,7 @@ if (isset($_POST['close'])) {
 		close_work_order($selected_id);
 		meta_forward($_SERVER['PHP_SELF'], 'ClosedID='.$selected_id);
 	} catch (DimensionFinancialReferenceWriteException $e) {
-		display_error(_('The work order could not be closed: its retained Dimension metadata could not be certified.'));
+		display_error(_('The work order could not be closed: its retained tracking metadata could not be certified.'));
 	}
 }
 

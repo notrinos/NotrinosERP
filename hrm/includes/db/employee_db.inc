@@ -29,7 +29,7 @@ include_once($path_to_root . '/hrm/includes/db/employee_person_canonical_link_db
 include_once($path_to_root . '/hrm/includes/db/employee_employment_rehire_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_projection_command_db.inc');
 include_once($path_to_root . '/hrm/includes/db/employee_projection_control_db.inc');
-include_once($path_to_root . '/hrm/includes/db/hrm_dimension_reference_writer_db.inc');
+include_once($path_to_root . '/hrm/includes/db/hrm_tracking_reference_writer_db.inc');
 
 /**
  * Enhanced Employee CRUD

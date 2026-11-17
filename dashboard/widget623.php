@@ -2,7 +2,7 @@
 /**
  * DIM-BUD-004: dashboard list of the cost budgets closest to or over their limit, with a link to the alerts page.
  */
-include_once dirname(__DIR__).'/dimensions/includes/dimension_budget_alert.inc';
+include_once dirname(__DIR__).'/tracking/includes/tracking_budget_alert.inc';
 
 $widget = new Widget();
 $widget->setTitle(_('Budget overrun alerts'));
@@ -22,7 +22,7 @@ if ($widget->checkSecurity('SA_DIMTRANSVIEW')) {
 		else
 			echo dimension_alert_rows_html($flagged, 10);
 		echo '<p style="font-size:90%;">'.dimension_alert_h(dimension_alert_threshold_text($alerts['thresholds'])).' <a href="'
-			.dimension_alert_h($path_to_root.'/dimensions/inquiry/dimension_budget_alerts.php').'">'.dimension_alert_h(_('All budget alerts')).'</a></p>';
+			.dimension_alert_h($path_to_root.'/tracking/inquiry/budget_alerts.php').'">'.dimension_alert_h(_('All budget alerts')).'</a></p>';
 	}
 }
 

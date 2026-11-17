@@ -633,14 +633,14 @@ function render_sales_agreement_draft($draft_data)
 {
 	$classification = array(); $opaque = false;
 	foreach (array('dimension_id'=>1,'dimension2_id'=>2) as $field=>$axis)
-		if (!empty($draft_data[$field])) $classification[$axis.':'.(int)$draft_data[$field]] = sprintf(_('Dimension %d: #%d'),$axis,(int)$draft_data[$field]);
+		if (!empty($draft_data[$field])) $classification[$axis.':'.(int)$draft_data[$field]] = sprintf(_('Tracking category %d: #%d'),$axis,(int)$draft_data[$field]);
 	$payloads = array(isset($draft_data['custom_data']) ? $draft_data['custom_data'] : null);
 	foreach (isset($draft_data['line_items']) ? $draft_data['line_items'] : array() as $line)
 		$payloads[] = isset($line['custom_data']) ? $line['custom_data'] : null;
 	foreach ($payloads as $payload) {
 		$references = dimension_master_payload_references(is_array($payload) ? json_encode($payload) : $payload);
 		if ($references === false) { $opaque = true; continue; }
-		foreach ($references as $reference) $classification[$reference[1].':'.$reference[0]] = sprintf(_('Dimension %d: #%d'),$reference[1],$reference[0]);
+		foreach ($references as $reference) $classification[$reference[1].':'.$reference[0]] = sprintf(_('Tracking category %d: #%d'),$reference[1],$reference[0]);
 	}
 	$html = '<table class="tablestyle" width="100%">';
 	$html .= '<tr><th>' . _('Reference') . '</th><td>' . htmlspecialchars(isset($draft_data['reference']) ? $draft_data['reference'] : '') . '</td>';

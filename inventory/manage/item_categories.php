@@ -65,7 +65,7 @@ if ($Mode=='ADD_ITEM' || $Mode=='UPDATE_ITEM') {
 			if ($saved) display_notification(_('New item category has been added'));
 		}
 		if ($saved) $Mode = 'RESET';
-		else display_error(_('The item category could not be saved. Check current Dimension defaults and retry.'));
+		else display_error(_('The item category could not be saved. Check current tracking defaults and retry.'));
 	}
 }
 
@@ -236,9 +236,9 @@ else
 
 $dim = get_company_pref('use_dimension');
 if ($dim >= 1) {
-	dimensions_list_row(_('Dimension').' 1', 'dim1', null, true, ' ', false, 1);
+	dimensions_list_row(dimension_axis_label_html(1), 'dim1', null, true, ' ', false, 1);
 	if ($dim > 1)
-		dimensions_list_row(_('Dimension').' 2', 'dim2', null, true, ' ', false, 2);
+		dimensions_list_row(dimension_axis_label_html(2), 'dim2', null, true, ' ', false, 2);
 }
 if ($dim < 1)
 	hidden('dim1', 0);

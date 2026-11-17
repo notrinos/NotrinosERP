@@ -16,7 +16,7 @@ include_once($path_to_root . '/purchasing/includes/po_class.inc');
 include_once($path_to_root . '/purchasing/includes/db/po_db.inc');
 include_once($path_to_root . '/purchasing/includes/db/suppliers_db.inc');
 include_once(__DIR__.'/purch_agreement_po_approval_db.inc');
-require_once __DIR__.'/purch_agreement_dimension_db.inc';
+require_once __DIR__.'/purch_agreement_tracking_db.inc';
 require_once __DIR__.'/purch_agreement_lifecycle_db.inc';
 
 /**

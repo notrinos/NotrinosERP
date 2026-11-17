@@ -38,7 +38,7 @@ $systypes_array = array (
 	ST_SALESORDER => _('Sales Order'),
 	ST_SALESQUOTE => _('Sales Quotation'),
 	ST_COSTUPDATE => _('Cost Update'),
-	ST_DIMENSION => _('Dimension'),
+	ST_DIMENSION => _('Tracking value'),
 	ST_CUSTOMER => _('Customer'),
 	ST_SUPPLIER => _('Supplier'),
 	ST_ITEM => _('Item'),
@@ -227,7 +227,7 @@ $stock_types = array(
 
 $tag_types = array (
 	TAG_ACCOUNT   => _('Account'),
-	TAG_DIMENSION => _('Dimension')
+	TAG_DIMENSION => _('Tracking value')
 );
 
 //----------------------------------------------------------------------------------

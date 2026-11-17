@@ -32,7 +32,7 @@ include_once(dirname(__FILE__) . '/db/approval_history_db.inc');
 include_once(dirname(__FILE__) . '/approval_number.inc');
 include_once(dirname(__FILE__) . '/approval_notify.inc');
 include_once(dirname(__FILE__) . '/approval_conditions.inc');
-include_once(dirname(__FILE__) . '/approval_dimension_snapshot.inc');
+include_once(dirname(__FILE__) . '/approval_tracking_snapshot.inc');
 
 class ApprovalWorkflow {
 
@@ -173,12 +173,12 @@ class ApprovalWorkflow {
 	 */
 	public function observeDimensionReferences($id, $locked = false)
 	{
-		require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_lifecycle_db.inc';
-		require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_reference_registry.inc';
+		require_once dirname(dirname(__DIR__)).'/tracking/includes/tracking_lifecycle_db.inc';
+		require_once dirname(dirname(__DIR__)).'/tracking/includes/tracking_reference_registry.inc';
 		$result = array('approval_drafts'=>'unknown', 'approval_actions'=>'unknown');
 		if (!dimension_lifecycle_authorized() || !dimension_lifecycle_valid_id($id)
 			|| !defined('ST_JOURNAL') || !defined('ST_BANKPAYMENT') || !defined('ST_BANKDEPOSIT')) return $result;
-		require_once dirname(dirname(__DIR__)).'/purchasing/includes/db/purch_dimension_references_db.inc';
+		require_once dirname(dirname(__DIR__)).'/purchasing/includes/db/purch_tracking_references_db.inc';
 		$types = implode(',', self::dimensionOrdinaryTypes());
 		// B03: locked mode reads the latest committed rows and keeps shared locks to the
 		// caller's transaction end, so no draft/snapshot can appear after "unused".
@@ -188,11 +188,11 @@ class ApprovalWorkflow {
 			$suffix = ' LOCK IN SHARE MODE';
 		}
 		// B04: HRM approval families are decoded by the HRM-owned minimized authority.
-		require_once dirname(dirname(__DIR__)).'/hrm/includes/db/hrm_dimension_retained_evidence_db.inc';
+		require_once dirname(dirname(__DIR__)).'/hrm/includes/db/hrm_tracking_retained_evidence_db.inc';
 		$hrm_types = hrm_dimension_approval_family_types();
 		$hrm = $hrm_types ? implode(',', $hrm_types) : '0';
 		// B05: the payroll family is decoded by the payroll-owned minimized authority.
-		require_once dirname(dirname(__DIR__)).'/hrm/includes/db/pay_dimension_reference_authority_db.inc';
+		require_once dirname(dirname(__DIR__)).'/hrm/includes/db/pay_tracking_reference_authority_db.inc';
 		$pay_types = pay_dimension_approval_family_types();
 		$pay = $pay_types ? implode(',', $pay_types) : '0';
 		$queries = array(

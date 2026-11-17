@@ -164,7 +164,7 @@ if ($Mode == 'Delete') {
 			}, true))
 				display_notification(_('Shipment deleted.'));
 			else
-				display_error(_('The shipment cannot be deleted while it retains a Dimension reference.'));
+				display_error(_('The shipment cannot be deleted while it retains a tracking reference.'));
 		} else {
 			display_error(_('Cannot delete shipment with packages. Remove packages first.'));
 		}
@@ -175,7 +175,7 @@ if ($Mode == 'Delete') {
 }
 
 } catch (DimensionFinancialReferenceWriteException $e) {
-	display_error(_('The shipment action was refused: retained Dimension metadata of the shipment or one of its lines could not be certified.'));
+	display_error(_('The shipment action was refused: retained tracking metadata of the shipment or one of its lines could not be certified.'));
 	$Ajax->activate('_page_body');
 }
 

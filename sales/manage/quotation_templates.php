@@ -153,7 +153,7 @@ elseif ($Mode == 'DELETE_ITEM' || $Mode == 'Delete') {
 			display_notification(_('Quotation template has been deleted.'));
 			$selected_id = -1;
 		} else {
-			display_error(_('The quotation template cannot be deleted while it retains a Dimension reference.'));
+			display_error(_('The quotation template cannot be deleted while it retains a tracking reference.'));
 		}
 	}
 	if ($in_use && $in_use['cnt'] > 0)
@@ -173,7 +173,7 @@ if ($selected_id != -1) {
 		if (delete_quotation_template_line($del_line_id))
 			display_notification(_('Template line has been removed.'));
 		else
-			display_error(_('The template line cannot be removed while it retains a Dimension reference.'));
+			display_error(_('The template line cannot be removed while it retains a tracking reference.'));
 	}
 	elseif ($add_line_id != -1 || $edit_line_id != -1) {
 		if (can_process_line()) {

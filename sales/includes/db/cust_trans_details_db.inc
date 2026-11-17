@@ -11,7 +11,7 @@
 ***********************************************************************/
 //----------------------------------------------------------------------------------------
 
-require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_financial_reference_writer.inc';
 
 function get_customer_trans_details($debtor_trans_type, $debtor_trans_no) {
 	if (!is_array($debtor_trans_no))

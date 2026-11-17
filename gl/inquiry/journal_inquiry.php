@@ -55,7 +55,7 @@ users_list_cells(_('User:'), 'userid', null, false);
 // DIM-LFC-002: a journal drilldown may carry an axis-2 identity even when axis 2 is no longer enabled
 // for new postings, so the historical list (closed/retained included) is used.
 if (isset($_POST['dimension']))
-	dimensions_history_list_cells(_('Dimension:'), 'dimension', null, true, _('All Dimensions'));
+	dimensions_history_list_cells(dimension_term_value().':', 'dimension', null, true, _('All tracking values'));
 check_cells( _('Show closed:'), 'AlsoClosed', null);
 submit_cells('Search', _('Apply Filter'), '', '', 'default');
 end_row();

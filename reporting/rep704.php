@@ -55,14 +55,14 @@ function print_GL_transactions() {
 
 	$cols = array(0, 65, 105, 125, 175, 230, 290, 345, 405, 465, 525);
 	//------------0--1---2----3----4----5----6----7----8----9----10-------
-	$headers = array(_('Type'),	_('Ref'), _('#'),	_('Date'), _('Dimension').' 1', _('Dimension').' 2', _('Person/Item'), _('Debit'),	_('Credit'), _('Balance'));
+	$headers = array(_('Type'),	_('Ref'), _('#'),	_('Date'), dimension_axis_label(1), dimension_axis_label(2), _('Person/Item'), _('Debit'),	_('Credit'), _('Balance'));
 	$aligns = array('left', 'left', 'left',	'left',	'left',	'left',	'left',	'right', 'right', 'right');
 
 	$params =   array( 	0 => $comments,
 					1 => array('text' => _('Period'), 'from' => $from, 'to' => $to),
 					2 => array('text' => _('Accounts'),'from' => $fromacc,'to' => $toacc),
-					3 => array('text' => _('Dimension').' 1', 'from' => get_dimension_string($dimension), 'to' => ''),
-					4 => array('text' => _('Dimension').' 2', 'from' => get_dimension_string($dimension2), 'to' => ''));
+					3 => array('text' => dimension_axis_label(1), 'from' => get_dimension_string($dimension), 'to' => ''),
+					4 => array('text' => dimension_axis_label(2), 'from' => get_dimension_string($dimension2), 'to' => ''));
 	if ($orientation == 'L')
 		recalculate_cols($cols);
 

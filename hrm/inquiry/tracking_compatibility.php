@@ -23,13 +23,14 @@ $page_security = 'SA_DEPARTMENT';
 $path_to_root = '../..';
 include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/ui.inc');
-include_once($path_to_root.'/hrm/includes/db/hrm_dimension_compatibility_diagnostics_db.inc');
+include_once($path_to_root.'/hrm/includes/db/hrm_tracking_compatibility_diagnostics_db.inc');
 
-page(_($help_context = 'HRM Dimension Compatibility'));
+$help_context = 'HRM Dimension Compatibility';
+page(_('HRM Tracking Compatibility'));
 
 $report = hrm_dimension_compat_report();
 if (empty($report['authorized'])) {
-	display_error(_('You are not authorized to read HRM Dimension compatibility diagnostics.'));
+	display_error(_('You are not authorized to read HRM tracking compatibility diagnostics.'));
 	end_page();
 	exit;
 }
@@ -71,10 +72,10 @@ if (!is_array($report['departments'])) {
 	display_note(_('The Department table could not be read for this company.'));
 } else {
 	$counts = $report['department_counts'];
-	display_note(sprintf(_('%d departments: %d aligned with the Organization Unit projection, %d differ, %d without a projection, %d with a coordinate that is not an open category-1 Dimension.'),
+	display_note(sprintf(_('%d departments: %d aligned with the Organization Unit projection, %d differ, %d without a projection, %d with a coordinate that is not an open category-1 tracking value.'),
 		$counts['departments'], $counts['aligned'], $counts['mismatch'], $counts['org_unit_missing'], $counts['coordinate_problem']));
 	start_table(TABLESTYLE, "width='80%'");
-	table_header(array(_('Code'), _('Department'), _('Coordinate'), _('Dimension state'), _('Organization Unit'), _('Alignment')));
+	table_header(array(_('Code'), _('Department'), _('Coordinate'), _('Tracking value state'), _('Organization Unit'), _('Alignment')));
 	$k = 0;
 	foreach ($report['departments'] as $row) {
 		alt_table_row_color($k);
@@ -96,8 +97,8 @@ if (!empty($report['employee_aggregate_authorized'])) {
 		display_note(_('The Employee table could not be read for this company.'));
 	} else {
 		start_table(TABLESTYLE2);
-		foreach (array('total' => _('Employees'), 'with_coordinate' => _('With a stored coordinate'), 'coordinate_missing' => _('Coordinate refers to no Dimension'),
-			'coordinate_wrong_axis' => _('Coordinate is not a category-1 Dimension'), 'coordinate_closed' => _('Coordinate is a closed Dimension'),
+		foreach (array('total' => _('Employees'), 'with_coordinate' => _('With a stored coordinate'), 'coordinate_missing' => _('Coordinate refers to no tracking value'),
+			'coordinate_wrong_axis' => _('Coordinate is not a category-1 tracking value'), 'coordinate_closed' => _('Coordinate is a closed tracking value'),
 			'assignment_missing' => _('Without a current Assignment'), 'axis1_drift' => _('Category 1 differs from the Assignment'),
 			'axis2_drift' => _('Category 2 differs from the Assignment')) as $key => $label)
 			label_row($label.':', (int)$summary[$key]);

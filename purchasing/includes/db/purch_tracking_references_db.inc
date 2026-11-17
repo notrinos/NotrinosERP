@@ -1,7 +1,7 @@
 <?php
 /** Purchasing-owned retained source observation (DIM-LFC-001B3c3a). */
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_lifecycle_db.inc';
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_registry.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_lifecycle_db.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_reference_registry.inc';
 
 /**
  * Fixed saved-source owners and their existing legacy HTML-envelope support.

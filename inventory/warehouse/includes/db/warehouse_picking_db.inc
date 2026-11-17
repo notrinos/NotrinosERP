@@ -9,7 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-require_once __DIR__ . '/warehouse_config_dimension_db.inc';
+require_once __DIR__ . '/warehouse_config_tracking_db.inc';
 
 /**
  * Warehouse Picking Operations — Wave/Pick CRUD, pick generation, path optimization.
@@ -474,7 +474,7 @@ function release_picking_wave($wave_id) {
 		return db_query($sql, 'could not update wave to released') ? true : false;
 	})) {
 		cancel_transaction();
-		return array('success' => false, 'message' => _('The wave could not be released: its retained Dimension metadata could not be certified.'));
+		return array('success' => false, 'message' => _('The wave could not be released: its retained tracking metadata could not be certified.'));
 	}
 
 	commit_transaction();

@@ -313,7 +313,7 @@ if (isset($_POST['DELETE_LINE'])) {
 			if (delete_rma_line($line_id))
 				display_notification(_('Line removed.'));
 			else
-				display_error(_('The line cannot be removed while it retains a Dimension reference.'));
+				display_error(_('The line cannot be removed while it retains a tracking reference.'));
 		}
 		$Ajax->activate('_page_body');
 	}

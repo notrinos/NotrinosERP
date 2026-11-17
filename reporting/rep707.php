@@ -17,7 +17,7 @@ include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/gl/includes/gl_db.inc');
 include_once($path_to_root . '/admin/db/tags_db.inc');
-include_once($path_to_root . '/dimensions/includes/dimension_budget_basis.inc');
+include_once($path_to_root . '/tracking/includes/tracking_budget_basis.inc');
 
 check_page_security('SA_GLANALYTIC');
 
@@ -197,9 +197,9 @@ function print_profit_and_loss_statement() {
 
 	$params =   array( 	0 => $comments,
 					1 => array('text' => _('Period'),'from' => $from, 'to' => $to),
-					2 => array('text' => _('Dimension').' 1',
+					2 => array('text' => dimension_axis_label(1),
 						'from' => get_dimension_string($dimension), 'to' => ''),
-					3 => array('text' => _('Dimension').' 2',
+					3 => array('text' => dimension_axis_label(2),
 						'from' => get_dimension_string($dimension2), 'to' => ''),
 					4 => array('text' => _('Tags'), 'from' => get_tag_names($tags), 'to' => ''));
 

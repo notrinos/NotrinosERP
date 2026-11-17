@@ -116,7 +116,7 @@ if ($Mode2=='ADD_ITEM2' || $Mode2=='UPDATE_ITEM2') {
 		if ($line_saved) display_notification(_('New quick entry line has been added'));
 	}
 	if ($line_saved) $Mode2 = 'RESET2';
-	elseif (get_post('dest_id')) display_error(_('The quick entry line could not be saved. Reload and check its dimensions before retrying.'));
+	elseif (get_post('dest_id')) display_error(_('The quick entry line could not be saved. Reload and check its tracking values before retrying.'));
 }
 
 //-----------------------------------------------------------------------------------
@@ -238,9 +238,9 @@ if ($selected_id != -1) {
 	start_table(TABLESTYLE2);
 	$dim = get_company_pref('use_dimension');
 	if ($dim == 2)
-		$th = array(_('Post'), _('Account/Tax Type'), _('Amount'), _('Memo'), _('Dimension'), _('Dimension').' 2', '', '');
+		$th = array(_('Post'), _('Account/Tax Type'), _('Amount'), _('Memo'), dimension_axis_label_html(1), dimension_axis_label_html(2), '', '');
 	elseif ($dim == 1)	
-		$th = array(_('Post'), _('Account/Tax Type'), _('Amount'), _('Memo'), _('Dimension'), '', '');
+		$th = array(_('Post'), _('Account/Tax Type'), _('Amount'), _('Memo'), dimension_axis_label_html(1), '', '');
 	else	
 		$th = array(_('Post'), _('Account/Tax Type'), _('Amount'), _('Memo'), '', '');
 
@@ -315,9 +315,9 @@ if ($selected_id != -1) {
 		text_row_ex(_('Line memo').':', 'memo', 50, 256, '');
 	}
 	if ($dim >= 1) 
-		dimensions_list_row(_('Dimension').':', 'dimension_id', null, true, ' ', false, 1);
+		dimensions_list_row(dimension_axis_label_html(1, ':'), 'dimension_id', null, true, ' ', false, 1);
 	if ($dim > 1) 
-		dimensions_list_row(_('Dimension').' 2:', 'dimension2_id', null, true, ' ', false, 2);
+		dimensions_list_row(dimension_axis_label_html(2, ':'), 'dimension2_id', null, true, ' ', false, 2);
 	
 	end_table(1);
 	if ($dim < 2)

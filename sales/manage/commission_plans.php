@@ -92,7 +92,7 @@ if ($tab == 0) {
 
     if ($Mode == 'Delete') {
         if (!delete_commission_plan($selected_id)) {
-            display_error(_('Cannot delete this plan because commission entries already reference it or it retains a Dimension reference.'));
+            display_error(_('Cannot delete this plan because commission entries already reference it or it retains a tracking reference.'));
         } else {
             display_notification(_('Commission plan has been deleted.'));
         }

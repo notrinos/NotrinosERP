@@ -9,6 +9,8 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+// DIM-NAM-003: the company name of each tracking category (also when this file is loaded without a page).
+include_once(dirname(dirname(dirname(__FILE__))).'/tracking/includes/tracking_axis_label.inc');
 include_once($path_to_root.'/sales/includes/cart_class.inc');
 
 $serial_batch_db_path = $path_to_root . '/inventory/includes/db/serial_batch_db.inc';
@@ -471,11 +473,11 @@ function display_order_header(&$order, $editable, $date_text) {
 		if ($order->trans_type != ST_SALESORDER && $order->trans_type != ST_SALESQUOTE) {
 			$dim = get_company_pref('use_dimension');
 			if ($dim > 0)
-				dimensions_list_row(_('Dimension').':', 'dimension_id', null, true, ' ', false, 1, false);
+				dimensions_list_row(dimension_axis_label_html(1, ':'), 'dimension_id', null, true, ' ', false, 1, false);
 			else
 				hidden('dimension_id', 0);
 			if ($dim > 1)
-				dimensions_list_row(_('Dimension').' 2:', 'dimension2_id', null, true, ' ', false, 2, false);
+				dimensions_list_row(dimension_axis_label_html(2, ':'), 'dimension2_id', null, true, ' ', false, 2, false);
 			else
 				hidden('dimension2_id', 0);
 		} else {

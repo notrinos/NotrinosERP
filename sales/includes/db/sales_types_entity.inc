@@ -37,7 +37,7 @@ class sales_types_entity extends Entity {
 	 * @return bool True on success
 	 */
 	public static function remove($key) {
-        require_once __DIR__.'/../../../dimensions/includes/dimension_master_metadata_writer.inc';
+        require_once __DIR__.'/../../../tracking/includes/tracking_master_metadata_writer.inc';
         $context=dimension_financial_reference_context();if(!$context || !begin_transaction())return false;
         try{
             $parent=dimension_master_metadata_row('sales_types',$key);if(!$parent){cancel_transaction();return false;}$key=$parent['id'];

@@ -43,8 +43,9 @@ switch ($_POST['type']) {
 		$_SESSION['page_title'] = _($help_context = 'Account Tags');
 		break;
 	case TAG_DIMENSION:
-		// Dimension tags
-		$_SESSION['page_title'] = _($help_context = 'Dimension Tags');
+		// Tracking tags (internal type TAG_DIMENSION); the help key keeps its old value.
+		$help_context = 'Dimension Tags';
+		$_SESSION['page_title'] = _('Tracking Tags');
 		break;
 	case TAG_CRM:
 		// CRM tags

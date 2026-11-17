@@ -1,8 +1,8 @@
 <?php
 /** Sales-owned saved order/quotation presence observation (DIM-LFC-001B3c2). */
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_lifecycle_db.inc';
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_registry.inc';
-require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_reference_schema.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_lifecycle_db.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_reference_registry.inc';
+require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_reference_schema.inc';
 
 /**
  * Fixed retained Sales JSON owners and their transaction-family discriminators.

@@ -17,7 +17,7 @@ include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/data_checks.inc');
 include_once($path_to_root . '/gl/includes/gl_db.inc');
 include_once($path_to_root . '/reporting/includes/report_access_scope.inc');
-include_once($path_to_root . '/dimensions/includes/dimensions_db.inc');
+include_once($path_to_root . '/tracking/includes/tracking_values_db.inc');
 
 //----------------------------------------------------------------------------------------------------
 
@@ -42,7 +42,7 @@ function print_dimension_exceptions() {
 		display_error(report_access_aggregate_state_text($access));
 		return;
 	}
-	include_once($path_to_root . '/dimensions/includes/dimension_exception_workspace.inc');
+	include_once($path_to_root . '/tracking/includes/tracking_exception_workspace.inc');
 
 	$parameter = array();
 	for ($index = 0; $index <= 9; $index++)
@@ -55,7 +55,7 @@ function print_dimension_exceptions() {
 	}
 	foreach (array(2, 3, 4, 5, 6, 8, 9) as $index) {
 		if ((!is_int($parameter[$index]) && !is_string($parameter[$index])) || !preg_match('/^(?:0|[1-9][0-9]{0,9})$/D', (string)$parameter[$index])) {
-			display_error($index === 2 ? _('Invalid comparison.') : ($index === 3 || $index === 4 ? _('Invalid dimension.') : _('Invalid report option.')));
+			display_error($index === 2 ? _('Invalid comparison.') : ($index === 3 || $index === 4 ? _('Invalid tracking value.') : _('Invalid report option.')));
 			return;
 		}
 	}
@@ -77,7 +77,11 @@ function print_dimension_exceptions() {
 		return;
 	}
 	$enabled = (int)get_company_pref('use_dimension');
+	// DIM-PERM-001: customer names and amounts need the same three areas as the Customer Economics page. This report's own
+	// aggregate does not include the sales view area, so the customer-based reason is withheld unless that aggregate also passes.
+	$customer_access = report_access_aggregate_scope('dimension_customer_economics');
 	$dataset = dimension_export_dataset(array(
+		'customer_access' => !empty($customer_access['allowed']),
 		'from' => date2sql($parameter[0]), 'to' => date2sql($parameter[1]), 'scope1' => (int)$parameter[3], 'scope2' => (int)$parameter[4],
 		'mode' => $modes[$mode_index], 'fiscal_start' => date2sql($fiscal_start), 'matrix' => (int)$parameter[5] === 1, 'queue' => (int)$parameter[6] === 1,
 		'axes' => array(1, 2), 'queue_axes' => $enabled >= 2 ? array(1, 2) : ($enabled === 1 ? array(1) : array())));
@@ -97,11 +101,11 @@ function print_dimension_exceptions() {
 
 	$params = array(0 => $parameter[7],
 		1 => array('text' => _('Period'), 'from' => $parameter[0], 'to' => $parameter[1]),
-		2 => array('text' => _('Dimension').' 1', 'from' => get_dimension_string((int)$parameter[3]), 'to' => ''),
-		3 => array('text' => _('Dimension').' 2', 'from' => get_dimension_string((int)$parameter[4]), 'to' => ''),
+		2 => array('text' => dimension_axis_label(1), 'from' => get_dimension_string((int)$parameter[3]), 'to' => ''),
+		3 => array('text' => dimension_axis_label(2), 'from' => get_dimension_string((int)$parameter[4]), 'to' => ''),
 		4 => array('text' => _('Compare to'), 'from' => $comparison_names[$mode_index], 'to' => ''));
 
-	$rep = new FrontReport(_('Dimension Comparison and Exceptions'), 'DimensionExceptions', user_pagesize(), 9, $orientation);
+	$rep = new FrontReport(_('Tracking Comparison and Exceptions'), 'DimensionExceptions', user_pagesize(), 9, $orientation);
 	$rep->Font();
 	foreach ($dataset['sections'] as $section) {
 		$cols = dimension_export_column_positions($section['aligns']);

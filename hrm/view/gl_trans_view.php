@@ -35,9 +35,9 @@ if (!$result || db_num_rows($result) == 0) {
 $dim = (int)get_company_pref('use_dimension');
 $th = array(_('Date'), _('Account Code'), _('Account Name'));
 if ($dim >= 1)
-    $th[] = _('Dimension 1');
+    $th[] = dimension_axis_label_html(1);
 if ($dim >= 2)
-    $th[] = _('Dimension 2');
+    $th[] = dimension_axis_label_html(2);
 $th[] = _('Debit');
 $th[] = _('Credit');
 $th[] = _('Memo');

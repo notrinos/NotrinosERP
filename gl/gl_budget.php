@@ -19,7 +19,7 @@ page(_($help_context = 'Budget Entry'));
 
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/gl/includes/gl_db.inc');
-include_once($path_to_root.'/dimensions/includes/dimension_budget_basis.inc');
+include_once($path_to_root.'/tracking/includes/tracking_budget_basis.inc');
 include_once($path_to_root.'/includes/data_checks.inc');
 include_once($path_to_root.'/admin/db/fiscalyears_db.inc');
 include_once($path_to_root.'/admin/db/fiscal_years_entity.inc');
@@ -48,7 +48,7 @@ if (isset($_POST['add']) || isset($_POST['delete'])) {
 	if ($budget_saved) $budget_saved = commit_transaction();
 	if (!$budget_saved) {
 		cancel_transaction();
-		display_error(_('The Budget could not be saved or deleted. Reload and check the selected dimensions and retained history.'));
+		display_error(_('The Budget could not be saved or deleted. Reload and check the selected tracking values and retained history.'));
 	}
 
 	elseif (isset($_POST['add']))
@@ -75,11 +75,11 @@ if (db_has_gl_accounts()) {
 	if (!isset($_POST['dim2']))
 		$_POST['dim2'] = 0;
 	if ($dim == 2) {
-		dimensions_list_row(_('Dimension').' 1', 'dim1', $_POST['dim1'], true, null, false, 1);
-		dimensions_list_row(_('Dimension').' 2', 'dim2', $_POST['dim2'], true, null, false, 2);
+		dimensions_list_row(dimension_axis_label_html(1), 'dim1', $_POST['dim1'], true, null, false, 1);
+		dimensions_list_row(dimension_axis_label_html(2), 'dim2', $_POST['dim2'], true, null, false, 2);
 	}
 	elseif ($dim == 1) {
-		dimensions_list_row(_('Dimension'), 'dim1', $_POST['dim1'], true, null, false, 1);
+		dimensions_list_row(dimension_axis_label_html(1), 'dim1', $_POST['dim1'], true, null, false, 1);
 		hidden('dim2', 0);
 	}
 	else {

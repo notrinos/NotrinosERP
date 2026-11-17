@@ -526,7 +526,7 @@ function dashboard_count_fixed_asset_classes() {
  */
 function dashboard_count_dimensions_type1() {
 	$sql = "SELECT COUNT(*) FROM ".TB_PREF."dimensions WHERE type_=1";
-	return (int)get_dashboard_scalar_value($sql, _('Could not count dimensions'));
+	return (int)get_dashboard_scalar_value($sql, _('Could not count the tracking values of category 1'));
 }
 
 /**
@@ -536,7 +536,7 @@ function dashboard_count_dimensions_type1() {
  */
 function dashboard_count_dimensions_type2() {
 	$sql = "SELECT COUNT(*) FROM ".TB_PREF."dimensions WHERE type_=2";
-	return (int)get_dashboard_scalar_value($sql, _('Could not count type 2 dimensions'));
+	return (int)get_dashboard_scalar_value($sql, _('Could not count the tracking values of category 2'));
 }
 
 /**
@@ -561,7 +561,7 @@ function dashboard_dimensions_total_balance_text() {
 			AND t.tran_date >= '".$begin."'
 			AND t.tran_date <= '".$today."'";
 
-	return number_format2(get_dashboard_scalar_value($sql, _('Could not calculate dimensions total balance')), user_price_dec());
+	return number_format2(get_dashboard_scalar_value($sql, _('Could not calculate the total balance of the tracking values')), user_price_dec());
 }
 
 /**
@@ -585,7 +585,7 @@ function dashboard_dimensions_total_result_text() {
 			AND t.tran_date >= '".$begin."'
 			AND t.tran_date <= '".$today."'";
 
-	return number_format2(get_dashboard_scalar_value($sql, _('Could not calculate dimensions total result')), user_price_dec());
+	return number_format2(get_dashboard_scalar_value($sql, _('Could not calculate the total result of the tracking values')), user_price_dec());
 }
 
 /**

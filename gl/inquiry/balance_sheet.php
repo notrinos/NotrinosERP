@@ -110,8 +110,8 @@ function inquiry_controls() {
 	start_row();
 	date_cells(_('As at:'), 'TransToDate');
 	// DIM-LFC-002: report history independently of the current posting preference.
-	dimensions_history_list_cells(_('Dimension').' 1:', 'Dimension', null, true, _('All Dimensions'));
-	dimensions_history_list_cells(_('Dimension').' 2:', 'Dimension2', null, true, _('All Dimensions'));
+	dimensions_history_list_cells(dimension_axis_label_html(1, ':'), 'Dimension', null, true, sprintf(_('%s: all'), dimension_axis_label_html(1)));
+	dimensions_history_list_cells(dimension_axis_label_html(2, ':'), 'Dimension2', null, true, sprintf(_('%s: all'), dimension_axis_label_html(2)));
 	submit_cells('Show',_('Show'),'','', 'default');
 	end_row();
 	end_table();

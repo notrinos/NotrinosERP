@@ -438,19 +438,19 @@ class BoxReports {
 				return dimensions_history_list($name, null, false, ' ', false);
 
 			case 'DIMENSIONS':
-				return dimensions_history_list($name, null, true, _('No Dimension Filter'), false);
+				return dimensions_history_list($name, null, true, _('No Tracking Filter'), false);
 
 			case 'DIMENSION1':
 				return dimensions_history_list($name, null, false, ' ', false);
 
 			case 'DIMENSIONS1':
-				return dimensions_history_list($name, null, true, _('No Dimension Filter'), false);
+				return dimensions_history_list($name, null, true, _('No Tracking Filter'), false);
 
 			case 'DIMENSION2':
 				return dimensions_history_list($name, null, false, ' ', false);
 
 			case 'DIMENSIONS2':
-				return dimensions_history_list($name, null, true, _('No Dimension Filter'), false);
+				return dimensions_history_list($name, null, true, _('No Tracking Filter'), false);
 
 			case 'CUSTOMERS_NO_FILTER':
 			case 'CUSTOMERS':

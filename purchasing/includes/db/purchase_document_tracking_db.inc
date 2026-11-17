@@ -1,6 +1,6 @@
 <?php
 /** PO/GRN retained metadata joins the existing lifecycle protocol, without granting document authority. */
-require_once __DIR__.'/../../../dimensions/includes/dimension_master_metadata_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_master_metadata_writer.inc';
 
 /** Fixed physical document owners; generic Entity CRUD cannot authorize their native commands. */
 function purchase_document_dimension_sources()

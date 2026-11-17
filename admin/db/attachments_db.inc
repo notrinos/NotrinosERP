@@ -11,7 +11,7 @@
 ***********************************************************************/
 
 function add_attachment($filterType, $trans_no, $description, $filename, $unique_name, $filesize, $filetype) {
-	require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_shared_record_authority.inc';
+	require_once dirname(dirname(__DIR__)).'/tracking/includes/tracking_shared_record_authority.inc';
 	return dimension_shared_record_bound_write($filterType, $trans_no, function() use ($filterType, $trans_no, $description, $filename, $unique_name, $filesize, $filetype) {
 	$sql = "INSERT INTO ".TB_PREF."attachments (type_no, trans_no, description, filename, unique_name, filesize, filetype, tran_date) VALUES (".db_escape($filterType).", ".db_escape($trans_no).",".db_escape($description).", ".db_escape($filename).", ".db_escape($unique_name).", ".db_escape($filesize).", ".db_escape($filetype).", '".date2sql(Today())."')";
 	db_query($sql, 'Attachment could not be inserted');
@@ -19,7 +19,7 @@ function add_attachment($filterType, $trans_no, $description, $filename, $unique
 }
 
 function update_attachment($selected_id, $filterType, $trans_no, $description, $filename, $unique_name, $filesize, $filetype) {
-	require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_shared_record_authority.inc';
+	require_once dirname(dirname(__DIR__)).'/tracking/includes/tracking_shared_record_authority.inc';
 	return dimension_shared_record_bound_write($filterType, $trans_no, function() use ($selected_id, $filterType, $trans_no, $description, $filename, $unique_name, $filesize, $filetype) {
 
 	$sql = "UPDATE ".TB_PREF."attachments SET
@@ -93,7 +93,7 @@ function get_sql_for_attached_documents($type, $id_no) {
 }
 
 function move_trans_attachments($type, $trans_from, $trans_to) {
-	require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_shared_record_authority.inc';
+	require_once dirname(dirname(__DIR__)).'/tracking/includes/tracking_shared_record_authority.inc';
 	return dimension_shared_record_bound_write($type, $trans_to, function() use ($type, $trans_from, $trans_to) {
 	$sql = "UPDATE ".TB_PREF."attachments SET trans_no=".db_escape($trans_to)." WHERE type_no=".db_escape($type)." AND trans_no=".db_escape($trans_from);
 	db_query($sql, 'cannot move atachments');

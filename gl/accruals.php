@@ -69,9 +69,9 @@ if (isset($_POST['go']) || isset($_POST['show'])) {
 
 		$first_cols = array(_('Date'), _('Account'));
 		if ($dim == 2)
-			$dim_cols = array(_('Dimension').' 1', _('Dimension').' 2');
+			$dim_cols = array(dimension_axis_label_html(1), dimension_axis_label_html(2));
 		elseif ($dim == 1)
-			$dim_cols = array(_('Dimension'));
+			$dim_cols = array(dimension_axis_label_html(1));
 		else
 			$dim_cols = array();
 
@@ -137,9 +137,9 @@ end_row();
 gl_all_accounts_list_row(_('Revenue / Cost Account').':', 'res_act', null, true);
 
 if ($dim >= 1)
-	dimensions_list_row(_('Dimension').':', 'dimension_id', null, true, ' ', false, 1);
+	dimensions_list_row(dimension_axis_label_html(1, ':'), 'dimension_id', null, true, ' ', false, 1);
 if ($dim > 1)
-	dimensions_list_row(_('Dimension').' 2'.':', 'dimension2_id', null, true, ' ', false, 2);
+	dimensions_list_row(dimension_axis_label_html(2, ':'), 'dimension2_id', null, true, ' ', false, 2);
 
 $url = 'gl/view/accrual_trans.php?act='.get_post('acc_act').'&date='.get_post('date_');
 amount_row(_('Amount').':', 'amount', null, null, viewer_link(_('Search Amount'), $url, '', '', ICON_VIEW));

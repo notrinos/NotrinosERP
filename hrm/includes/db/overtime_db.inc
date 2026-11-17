@@ -47,7 +47,7 @@ function get_all_overtime($all=false) {
  * @return bool True when the row was deleted or absent; false when it is retained evidence
  */
 function delete_overtime($overtime_id) {
-	require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_retention_authority.inc';
+	require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_retention_authority.inc';
 	begin_transaction();
 	if (!dimension_retention_row_delete_admit('overtime', 't.overtime_id = '.db_escape($overtime_id))) {
 		cancel_transaction();

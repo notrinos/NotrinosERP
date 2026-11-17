@@ -64,7 +64,7 @@ if ($Mode == 'Delete') {
 				if (delete_replenishment_rule($selected_id))
 			display_notification(_('Replenishment rule has been deleted.'));
 		else
-			display_error(_('The replenishment rule cannot be deleted while it retains a Dimension reference.'));
+			display_error(_('The replenishment rule cannot be deleted while it retains a tracking reference.'));
 	}
 	$Mode = 'RESET';
 	$Ajax->activate('_page_body');

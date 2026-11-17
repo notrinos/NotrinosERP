@@ -5,7 +5,7 @@
  * Native SQL keeps its business authority; this only joins the existing ordinary
  * Dimension lifecycle protocol (lock, transition check, exact completion check).
  */
-require_once __DIR__.'/../../dimensions/includes/dimension_master_metadata_writer.inc';
+require_once __DIR__.'/../../tracking/includes/tracking_master_metadata_writer.inc';
 
 /**
  * Fixed regulatory owners admitted by this helper; no caller-selected table.

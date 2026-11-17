@@ -63,7 +63,7 @@ if (isset($_POST['release'])) {
 		release_work_order($selected_id, $_POST['released_date'], $_POST['memo_']);
 		display_notification(_('The work order has been released to manufacturing.'));
 	} catch (DimensionFinancialReferenceWriteException $e) {
-		display_error(_('The work order could not be released: its retained Dimension metadata could not be certified.'));
+		display_error(_('The work order could not be released: its retained tracking metadata could not be certified.'));
 	}
 
 

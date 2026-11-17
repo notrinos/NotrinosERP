@@ -27,9 +27,9 @@
  * failure are unknown, never unused. This is NOT a deletion certificate.
  */
 if (!function_exists('dimension_master_payload_references'))
-    require_once dirname(dirname(dirname(__DIR__))).'/dimensions/includes/dimension_master_payload_guard.inc';
+    require_once dirname(dirname(dirname(__DIR__))).'/tracking/includes/tracking_master_payload_guard.inc';
 if (!function_exists('hrm_dimension_retained_coordinate_key'))
-    require_once __DIR__.'/hrm_dimension_retained_evidence_db.inc';
+    require_once __DIR__.'/hrm_tracking_retained_evidence_db.inc';
 
 /**
  * The PAY-GLB native receipt tables and their JSON columns.
@@ -278,7 +278,7 @@ function pay_dimension_reference_observe($id, $columns)
 function pay_gl_001_dimension_writer_admit($axes_by_allocation)
 {
     if (!is_array($axes_by_allocation) || empty($GLOBALS['transaction_level'])) return false;
-    if (!function_exists('hrm_dimension_writer_admit')) require_once __DIR__.'/hrm_dimension_reference_writer_db.inc';
+    if (!function_exists('hrm_dimension_writer_admit')) require_once __DIR__.'/hrm_tracking_reference_writer_db.inc';
     $coordinates = array();
     foreach ($axes_by_allocation as $entry) {
         if (!is_array($entry) || !isset($entry['axes'], $entry['rule']) || !is_array($entry['axes']) || !is_array($entry['rule'])) return false;
@@ -306,7 +306,7 @@ function pay_gl_001_dimension_writer_admit($axes_by_allocation)
 function pay_dimension_inverse_copy_lock($lines)
 {
     if (!is_array($lines) || empty($GLOBALS['transaction_level'])) return false;
-    if (!function_exists('hrm_dimension_writer_admit')) require_once __DIR__.'/hrm_dimension_reference_writer_db.inc';
+    if (!function_exists('hrm_dimension_writer_admit')) require_once __DIR__.'/hrm_tracking_reference_writer_db.inc';
     $coordinates = array();
     foreach ($lines as $line) {
         if (!is_array($line) || !array_key_exists('dimension_id', $line) || !array_key_exists('dimension2_id', $line)) return false;

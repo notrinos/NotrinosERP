@@ -1,7 +1,7 @@
 <?php
 /** Sales-agreement reference custody shared by native and generic writers. */
-require_once __DIR__.'/../../../dimensions/includes/dimension_reference_writer_fence.inc';
-require_once __DIR__.'/../../../dimensions/includes/dimension_financial_reference_writer.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_reference_writer_fence.inc';
+require_once __DIR__.'/../../../tracking/includes/tracking_financial_reference_writer.inc';
 
 /** Bind maintenance to the authenticated actor and active company prefix. */
 function sales_agreement_dimension_context()

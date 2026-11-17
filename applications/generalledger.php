@@ -19,9 +19,9 @@ class GeneralLedgerApp extends application {
 		$this->add_lapp_function(0, _('Bank Account &Transfers'), 'gl/bank_transfer.php?', 'SA_BANKTRANSFER', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('&Journal Entry'), 'gl/gl_journal.php?NewJournal=Yes', 'SA_JOURNALENTRY', MENU_TRANSACTION);
 		// DIM-ALC-001: guided approved Dimension allocation and reclassification journals (same journal authority).
-		$this->add_rapp_function(0, _('&Dimension Allocation Journal'), 'gl/gl_allocation.php?', 'SA_JOURNALENTRY', MENU_TRANSACTION);
+		$this->add_rapp_function(0, _('Cost &Allocation Journal'), 'gl/gl_allocation.php?', 'SA_JOURNALENTRY', MENU_TRANSACTION);
 		// DIM-ALC-002: versioned measured drivers (overhead and labor) and driver-based allocation runs.
-		$this->add_rapp_function(0, _('Dimension Allocation &Drivers'), 'gl/gl_allocation_driver.php?', 'SA_JOURNALENTRY', MENU_TRANSACTION);
+		$this->add_rapp_function(0, _('Cost Allocation &Drivers'), 'gl/gl_allocation_driver.php?', 'SA_JOURNALENTRY', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('&Budget Entry'), 'gl/gl_budget.php?', 'SA_BUDGETENTRY', MENU_TRANSACTION);
 		$this->add_rapp_function(0, _('Budget Baselines and &Revisions'), 'gl/gl_budget_version.php?', 'SA_BUDGETENTRY', MENU_TRANSACTION);
 		// DIM-ADV-001: advisory purchase commitments, separately activated reservations and the forecast.
@@ -34,8 +34,8 @@ class GeneralLedgerApp extends application {
 		$this->add_lapp_function(1, _('GL &Inquiry'), 'gl/inquiry/gl_account_inquiry.php?', 'SA_GLTRANSVIEW', MENU_INQUIRY);
 		$this->add_lapp_function(1, _('Bank Account &Inquiry'), 'gl/inquiry/bank_inquiry.php?', 'SA_BANKTRANSVIEW', MENU_INQUIRY);
 		$this->add_lapp_function(1, _('Ta&x Inquiry'), 'gl/inquiry/tax_inquiry.php?', 'SA_TAXREP', MENU_INQUIRY);
-		// DIM-UX-002: the home page of the Financial Tracking pages that live in this menu and in Dimensions.
-		$this->add_lapp_function(1, _('Financial &Tracking Home'), 'dimensions/financial_tracking_home.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
+		// DIM-UX-002: the Overview of the Cost & Profit Tracking pages that live in this menu and in Cost & Profit Tracking.
+		$this->add_lapp_function(1, _('Cost & Profit &Tracking Overview'), 'tracking/overview.php?', 'SA_DIMTRANSVIEW', MENU_INQUIRY);
 
 		$this->add_rapp_function(1, _('Trial &Balance'), 'gl/inquiry/gl_trial_balance.php?', 'SA_GLANALYTIC', MENU_INQUIRY);
 		$this->add_rapp_function(1, _('Balance &Sheet Drilldown'), 'gl/inquiry/balance_sheet.php?', 'SA_GLANALYTIC', MENU_INQUIRY);

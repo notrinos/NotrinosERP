@@ -33,7 +33,7 @@
  *
  * PHP 5.6 compatible syntax.
  */
-require_once dirname(dirname(__DIR__)).'/dimensions/includes/dimension_derived_posting_policy.inc';
+require_once dirname(dirname(__DIR__)).'/tracking/includes/tracking_derived_posting_policy.inc';
 
 /**
  * Reviewed period split of one accrual schedule.

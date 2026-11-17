@@ -690,7 +690,7 @@ if (isset($_POST['ProcessOrder']) && can_process()) {
 		set_focus('ref');
 	}
 	elseif ($ret == -3) {
-		display_error(_('Financial or warranty provision validation failed. No document changes were saved. Review its accounts, Dimensions and retained provision history.'));
+		display_error(_('Financial or warranty provision validation failed. No document changes were saved. Review its accounts, tracking values and retained provision history.'));
 	}
 	elseif ($ret == -2) {
 		display_error(_('Delivery tracking validation failed. Please correct serial/batch input and try again.'));

@@ -89,9 +89,9 @@ else {
 	start_table(TABLESTYLE, "width='80%'");
 	$dim = get_company_pref('use_dimension');
 	if ($dim == 2)
-		$th = array(_('Account Code'), _('Account Description'), _('Dimension').' 1', _('Dimension').' 2', _('Amount'), _('Memo'));
+		$th = array(_('Account Code'), _('Account Description'), dimension_axis_label_html(1), dimension_axis_label_html(2), _('Amount'), _('Memo'));
 	elseif ($dim == 1)
-		$th = array(_('Account Code'), _('Account Description'), _('Dimension'), _('Amount'), _('Memo'));
+		$th = array(_('Account Code'), _('Account Description'), dimension_axis_label_html(1), _('Amount'), _('Memo'));
 	else
 		$th = array(_('Account Code'), _('Account Description'), _('Amount'), _('Memo'));
 	table_header($th);
