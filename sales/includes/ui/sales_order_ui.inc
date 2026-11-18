@@ -10,7 +10,7 @@
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
 // DIM-NAM-003: the company name of each tracking category (also when this file is loaded without a page).
-include_once(dirname(dirname(dirname(__FILE__))).'/tracking/includes/tracking_axis_label.inc');
+include_once(dirname(dirname(dirname(dirname(__FILE__)))).'/tracking/includes/tracking_axis_label.inc');
 include_once($path_to_root.'/sales/includes/cart_class.inc');
 
 $serial_batch_db_path = $path_to_root . '/inventory/includes/db/serial_batch_db.inc';

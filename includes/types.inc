@@ -22,9 +22,9 @@ define('ST_BANKPAYMENT', 1);
 define('ST_BANKDEPOSIT', 2);
 define('ST_BANKTRANSFER', 4);
 
-define('ST_SALESINVOICE', 10);
-define('ST_CUSTCREDIT', 11);
-define('ST_CUSTPAYMENT', 12);
+if (!defined('ST_SALESINVOICE')) define('ST_SALESINVOICE', 10);
+if (!defined('ST_CUSTCREDIT')) define('ST_CUSTCREDIT', 11);
+if (!defined('ST_CUSTPAYMENT')) define('ST_CUSTPAYMENT', 12);
 if (!defined('ST_CUSTDELIVERY'))
 define('ST_CUSTDELIVERY', 13);
 
@@ -76,7 +76,7 @@ define('ST_HRM_COMPENSATION_AWARD', 103);
 define('FA_MONTHLY', 0);
 define('FA_YEARLY', 1);
 
-define('ST_SALESORDER', 30);
+if (!defined('ST_SALESORDER')) define('ST_SALESORDER', 30);
 define('ST_SALESQUOTE', 32);
 if (!defined('ST_COSTUPDATE'))
 define('ST_COSTUPDATE', 35);
