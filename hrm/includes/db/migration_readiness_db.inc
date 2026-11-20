@@ -31,16 +31,6 @@ if (!defined('HRM_MIGRATION_DUPLICATE_AUDIT'))
 if (!defined('HRM_MIGRATION_TAMPER_SUSPECT'))
     define('HRM_MIGRATION_TAMPER_SUSPECT', 'TAMPER_SUSPECT');
 
-/** @param object $patch @param string $name @return bool */
-function hrm_migration_require_registered_edge($patch, $name)
-{
-    if (is_object($patch) && isset($patch->previous) && isset($patch->version)
-        && hrm_migration_registered_edge_matches($name, $patch->previous, $patch->version))
-        return true;
-    return hrm_migration_fail($patch, HRM_MIGRATION_TAMPER_SUSPECT,
-        'Immutable HRM migration edge registry mismatch for '.(string)$name.'.');
-}
-
 /**
  * Return every stable HRM migration preflight state.
  *
@@ -131,24 +121,6 @@ function hrm_migration_table_exists($table)
 }
 
 /**
- * Require an exact set of predecessor base tables and identify the first gap.
- *
- * @param object $patch Patch instance.
- * @param array $tables Unprefixed table suffixes.
- * @param string $context Migration/predecessor label.
- * @return bool
- */
-function hrm_migration_require_tables($patch, $tables, $context)
-{
-    foreach ($tables as $table) {
-        if (!hrm_migration_table_exists($table))
-            return hrm_migration_fail($patch, HRM_MIGRATION_MISSING_SCHEMA,
-                (string)$context.' requires table '.(string)$table.'.');
-    }
-    return true;
-}
-
-/**
  * Return physical index names for one table.
  *
  * @param string $table Unprefixed table suffix.
@@ -167,78 +139,6 @@ function hrm_migration_index_names($table)
     while ($row = db_fetch_assoc($result))
         $names[(string)$row['index_name']] = true;
     return $names;
-}
-
-/**
- * Return physical foreign-key constraint names for one table.
- *
- * @param string $table Unprefixed table suffix.
- * @return array|false
- */
-function hrm_migration_foreign_key_names($table)
-{
-    $physical = hrm_migration_physical_table_name($table);
-    if ($physical === false)
-        return false;
-    $result = db_query("SELECT CONSTRAINT_NAME constraint_name FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS "
-        ."WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME=".db_escape($physical));
-    if (!$result)
-        return false;
-    $names = array();
-    while ($row = db_fetch_assoc($result))
-        $names[(string)$row['constraint_name']] = true;
-    return $names;
-}
-
-/**
- * Classify a conflicting existing schema as index, FK, or other tamper.
- *
- * The caller invokes this only after its complete immutable schema contract
- * has failed. Missing target tables are reported separately as MISSING_SCHEMA.
- *
- * @param string $table Unprefixed table suffix.
- * @param array $required_indexes Physical-independent index names.
- * @param array $required_foreign_keys Unprefixed FK constraint suffixes.
- * @return string
- */
-function hrm_migration_schema_failure_state($table, $required_indexes = array(), $required_foreign_keys = array())
-{
-    if (!hrm_migration_table_exists($table))
-        return HRM_MIGRATION_MISSING_SCHEMA;
-    $indexes = hrm_migration_index_names($table);
-    if (!is_array($indexes))
-        return HRM_MIGRATION_TAMPER_SUSPECT;
-    foreach ($required_indexes as $name) {
-        if (!isset($indexes[(string)$name]))
-            return HRM_MIGRATION_INDEX_MISMATCH;
-    }
-    $foreign_keys = hrm_migration_foreign_key_names($table);
-    if (!is_array($foreign_keys))
-        return HRM_MIGRATION_TAMPER_SUSPECT;
-    foreach ($required_foreign_keys as $suffix) {
-        $physical = hrm_migration_physical_table_name($suffix);
-        if ($physical === false || !isset($foreign_keys[$physical]))
-            return HRM_MIGRATION_FK_MISMATCH;
-    }
-    return HRM_MIGRATION_TAMPER_SUSPECT;
-}
-
-/**
- * Log the most specific state available for a conflicting schema contract.
- *
- * @param object $patch Patch instance.
- * @param string $table Unprefixed table suffix.
- * @param array $required_indexes Required index names.
- * @param array $required_foreign_keys Required FK suffixes.
- * @param string $detail Human-readable invariant detail.
- * @return false
- */
-function hrm_migration_fail_schema_contract($patch, $table, $required_indexes,
-    $required_foreign_keys, $detail)
-{
-    return hrm_migration_fail($patch,
-        hrm_migration_schema_failure_state($table, $required_indexes, $required_foreign_keys),
-        $detail);
 }
 
 /**
@@ -274,20 +174,4 @@ function hrm_migration_fail($patch, $state, $detail)
     if (!hrm_migration_record_state($patch, $state, $detail))
         return false;
     return $patch->log_error((string)$state.': '.(string)$detail);
-}
-
-/**
- * Record a non-error terminal preflight state.
- *
- * @param object $patch Patch instance exposing log_error().
- * @param string $state Stable preflight state.
- * @param string $detail Human-readable invariant detail.
- * @return bool
- */
-function hrm_migration_info($patch, $state, $detail)
-{
-    if (!hrm_migration_record_state($patch, $state, $detail))
-        return false;
-    $patch->log_error((string)$state.': '.(string)$detail, 'Info');
-    return true;
 }

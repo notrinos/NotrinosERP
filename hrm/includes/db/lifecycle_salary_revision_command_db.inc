@@ -19,6 +19,7 @@ $hrm_lifecycle_salary_dependencies = array(
     array('/includes/db/domain_audit_db.inc', 'function', 'append_domain_audit_event'),
     array('/hrm/includes/db/employee_db.inc', 'function', 'update_employee'),
     array('/hrm/includes/db/employee_salary_db.inc', 'function', 'get_employee_total_salary'),
+    array('/hrm/includes/db/hrm_cmp_001_legacy_guard_db.inc', 'function', 'hrm_cmp_001_legacy_salary_revision_allowed'),
     array('/hrm/includes/db/employee_history_db.inc', 'function', 'add_employee_history'),
     array('/hrm/includes/db/employee_person_worker_db.inc', 'function', 'get_hrm_person_worker_binding'),
     array('/hrm/includes/db/employee_employment_db.inc', 'function', 'get_hrm_legacy_current_employment'),

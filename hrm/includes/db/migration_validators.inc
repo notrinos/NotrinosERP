@@ -27,12 +27,15 @@ function hrm_migration_result($title, $status, $details) {
 }
 
 /**
- * Check whether an HRM table exists.
+ * Check whether an HRM table exists for the migration validation page.
+ *
+ * Named apart from hrm_migration_table_exists() in migration_readiness_db.inc,
+ * which payroll_db.inc already loads on the same page.
  *
  * @param string $table_name
  * @return bool
  */
-function hrm_migration_table_exists($table_name) {
+function hrm_migration_validation_table_exists($table_name) {
 	if (function_exists('employee_table_exists'))
 		return employee_table_exists($table_name);
 	if (function_exists('payroll_table_exists'))
@@ -50,7 +53,7 @@ function hrm_migration_table_exists($table_name) {
  * @return int
  */
 function hrm_migration_count_rows($table_name) {
-	if (!hrm_migration_table_exists($table_name))
+	if (!hrm_migration_validation_table_exists($table_name))
 		return 0;
 
 	$result = db_query("SELECT COUNT(*) FROM ".TB_PREF.$table_name, 'could not count table rows');
@@ -69,7 +72,7 @@ function hrm_migration_count_rows($table_name) {
  * @return array
  */
 function hrm_validate_orphan_links($child_table, $child_column, $parent_table, $parent_column, $title) {
-	if (!hrm_migration_table_exists($child_table) || !hrm_migration_table_exists($parent_table)) {
+	if (!hrm_migration_validation_table_exists($child_table) || !hrm_migration_validation_table_exists($parent_table)) {
 		return hrm_migration_result($title, 'warn', _('Skipped because one or more tables are not available.'));
 	}
 
@@ -99,7 +102,7 @@ function hrm_validate_required_tables() {
 	$missing = array();
 
 	foreach ($required as $table_name) {
-		if (!hrm_migration_table_exists($table_name))
+		if (!hrm_migration_validation_table_exists($table_name))
 			$missing[] = TB_PREF.$table_name;
 	}
 
@@ -115,7 +118,7 @@ function hrm_validate_required_tables() {
  * @return array
  */
 function hrm_validate_salary_structure_references() {
-	if (!hrm_migration_table_exists('salary_structure'))
+	if (!hrm_migration_validation_table_exists('salary_structure'))
 		return hrm_migration_result(_('Salary structure references'), 'warn', _('Salary structure table is not available.'));
 
 	$sql = "SELECT COUNT(*)
@@ -149,7 +152,7 @@ function hrm_validate_employee_attachment_integrity() {
 	$title = _('Employee document attachment integrity');
 	$issues = array();
 
-	if (!hrm_migration_table_exists('employee_documents') || !hrm_migration_table_exists('attachments')) {
+	if (!hrm_migration_validation_table_exists('employee_documents') || !hrm_migration_validation_table_exists('attachments')) {
 		return hrm_migration_result($title, 'warn', _('Skipped because required tables are not available.'));
 	}
 

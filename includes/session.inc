@@ -263,8 +263,106 @@ function check_page_security($page_security) {
 	}
 
 }
+
+/**
+ * Entry scripts that the bootstrap must not check against the area they declare before including session.inc.
+ *
+ * Each one either picks its final area only after the session has started (from the cart in the session or a
+ * GET switch), or authorizes the request itself and answers in JSON. page() still checks the first group.
+ * None of them outputs data before its own check. Paths are relative to the application root.
+ *
+ * @return array List of script paths with forward slashes
+ */
+function page_security_bootstrap_exempt_scripts() {
+	return array(
+		// Area refined after the session starts; page() checks the final area.
+		'sales/sales_order_entry.php',
+		'purchasing/po_entry_items.php',
+		'inventory/adjustments.php',
+		'inventory/transfers.php',
+		'inventory/inquiry/stock_movements.php',
+		'inventory/manage/items.php',
+		'inventory/manage/item_categories.php',
+		'modules/trade_finance/manage/sales_quotation_entry.php',
+		// Declare SA_DENIED and enforce their own authorization with a JSON answer.
+		'formula_designer_api.php',
+		'hrm/employee_selector_search.php',
+	);
+}
+
+/**
+ * Return the requested entry script relative to the application root, or '' when it lies outside the root.
+ *
+ * @return string Script path with forward slashes, for example 'admin/backups.php'
+ */
+function page_security_requested_script() {
+	if (empty($_SERVER['SCRIPT_FILENAME']))
+		return '';
+	$root = realpath(dirname(__FILE__).'/..');
+	$script = realpath($_SERVER['SCRIPT_FILENAME']);
+	if ($root === false || $script === false)
+		return '';
+	$root = str_replace('\\', '/', $root).'/';
+	$script = str_replace('\\', '/', $script);
+	if (strncasecmp($script, $root, strlen($root)) !== 0)
+		return '';
+	return substr($script, strlen($root));
+}
+
+/**
+ * Tell whether check_page_security() would refuse the current user for the given area.
+ *
+ * Mirrors the four refusals of check_page_security(): account security not defined, database upgrade pending,
+ * area not granted, and area blocked until the database upgrade.
+ *
+ * @param string $page_security Security area declared by the page
+ * @return bool True when the request must be refused
+ */
+function page_security_request_is_refused($page_security) {
+	global $SysPrefs;
+
+	$user = $_SESSION['wa_current_user'];
+	if (!$user->check_user_access())
+		return true;
+	if (!$SysPrefs->db_ok && !$user->can_access('SA_SOFTWAREUPGRADE'))
+		return true;
+	if (!$user->can_access_page($page_security))
+		return true;
+	return !$SysPrefs->db_ok && !in_array($page_security, array('SA_SOFTWAREUPGRADE', 'SA_OPEN', 'SA_BACKUP'), true);
+}
+
+/**
+ * Enforce the security area a page declares, right after the session bootstrap.
+ *
+ * Code that runs before page() (downloads, exports, redirects, ajax actions) is then covered by the same check
+ * as the page body. page() repeats the check as defence in depth. Pages without a declared area, SA_OPEN pages
+ * and page_security_bootstrap_exempt_scripts() keep relying on page() and their own checks.
+ *
+ * @param mixed $page_security Security area the page declared before including session.inc
+ * @return void Returns when access is allowed; otherwise renders the standard refusal and exits
+ */
+function enforce_declared_page_security($page_security) {
+	global $security_areas;
+
+	if (!is_string($page_security) || $page_security === '' || $page_security === 'SA_OPEN')
+		return;
+	if (in_array(page_security_requested_script(), page_security_bootstrap_exempt_scripts(), true))
+		return;
+	// Extension pages declare areas that exist only once the extensions have registered them.
+	if (!isset($security_areas[$page_security]))
+		add_access_extensions();
+	if (!page_security_request_is_refused($page_security))
+		return;
+
+	if (!in_ajax() && !headers_sent())
+		http_response_code(403);
+	// page() runs check_page_security(), which renders the refusal inside the normal page frame and exits.
+	page(_('Access denied'), !empty($_REQUEST['popup']));
+	end_page(!empty($_REQUEST['popup']));
+	exit;
+}
 /*
-	Helper function for setting page security level depeding on 
+	Helper function for setting page security level depeding on
 	GET start variable and/or some value stored in session variable.
 	Before the call $page_security should be set to default page_security value.
 */
@@ -682,6 +780,9 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 				new PayCtry007NotificationProvider((int)$_SESSION['wa_current_user']->user)
 			);
 		}
+
+		// Check the declared area before any page code runs, not only inside page().
+		enforce_declared_page_security(isset($page_security) ? $page_security : null);
 	}
 }
 

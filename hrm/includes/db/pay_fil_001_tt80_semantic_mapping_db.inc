@@ -8,56 +8,6 @@ function pay_fil_001_tt80_semantic_mapping_authority_required_for_database_versi
 function pay_fil_001_tt80_semantic_mapping_custody_required_for_database_version($version){return version_compare((string)$version,'1.0.1038','>=');}
 function pay_fil_001_tt80_semantic_mapping_writer_required_for_database_version($version){return version_compare((string)$version,'1.0.1039','>=');}
 
-function pay_fil_001_tt80_semantic_mapping_table()
-{
-    return array('hrm_pay_fil_001_tt80_semantic_mappings'=>array(
-        'tt80_semantic_mapping_id','tt80_semantic_review_id','filing_obligation_id','filing_source_set_id','review_sha256',
-        'mapping_contract_sha256','taxpayer_profile_sha256','person_fact_set_sha256','indicator_values_json',
-        'indicator_values_sha256','mapping_sha256','published_by','published_at','created_at'
-    ));
-}
-function pay_fil_001_tt80_semantic_mapping_index_specs()
-{
-    return array('hrm_pay_fil_001_tt80_semantic_mappings'=>array(
-        'PRIMARY'=>array('non_unique'=>0,'index_type'=>'BTREE','columns'=>pay_fil_001_schema_index_columns(array('tt80_semantic_mapping_id'))),
-        'uq_pfl1_sm_sha'=>array('non_unique'=>0,'index_type'=>'BTREE','columns'=>pay_fil_001_schema_index_columns(array('mapping_sha256'))),
-        'uq_pfl1_sm_review'=>array('non_unique'=>0,'index_type'=>'BTREE','columns'=>pay_fil_001_schema_index_columns(array('tt80_semantic_review_id'))),
-        'ix_pfl1_sm_set'=>array('non_unique'=>1,'index_type'=>'BTREE','columns'=>pay_fil_001_schema_index_columns(array('filing_source_set_id','tt80_semantic_mapping_id'))),
-        'fk_pfl1_sm_ob'=>array('non_unique'=>1,'index_type'=>'BTREE','columns'=>pay_fil_001_schema_index_columns(array('filing_obligation_id')))
-    ));
-}
-function pay_fil_001_tt80_semantic_mapping_foreign_keys()
-{
-    return array('hrm_pay_fil_001_tt80_semantic_mappings'=>array(
-        'fk_pfl1_sm_ob'=>array('referenced_table'=>'hrm_pay_fil_001_obligations','update_rule'=>'RESTRICT','delete_rule'=>'RESTRICT','columns'=>array(array('sequence'=>1,'column_name'=>'filing_obligation_id','referenced_column_name'=>'filing_obligation_id'))),
-        'fk_pfl1_sm_review'=>array('referenced_table'=>'hrm_pay_fil_001_tt80_semantic_reviews','update_rule'=>'RESTRICT','delete_rule'=>'RESTRICT','columns'=>array(array('sequence'=>1,'column_name'=>'tt80_semantic_review_id','referenced_column_name'=>'tt80_semantic_review_id'))),
-        'fk_pfl1_sm_set'=>array('referenced_table'=>'hrm_pay_fil_001_source_sets','update_rule'=>'RESTRICT','delete_rule'=>'RESTRICT','columns'=>array(array('sequence'=>1,'column_name'=>'filing_source_set_id','referenced_column_name'=>'filing_source_set_id')))
-    ));
-}
-function pay_fil_001_tt80_semantic_mapping_trigger_valid($operation)
-{
-    $prefix=hrm_migration_active_table_prefix();$physical=hrm_migration_physical_table_name('hrm_pay_fil_001_tt80_semantic_mappings');if($prefix===false||$physical===false)return false;
-    $name=$prefix.'pfl1_sm_'.(strtoupper($operation)==='UPDATE'?'u':'d');
-    $q=db_query('SELECT EVENT_MANIPULATION,EVENT_OBJECT_TABLE,ACTION_TIMING,ACTION_STATEMENT FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME='.db_escape($name).' LIMIT 2');if(!$q||db_num_rows($q)!==1)return false;$r=db_fetch_assoc($q);
-    return strtoupper((string)$r['EVENT_MANIPULATION'])===strtoupper($operation)&&(string)$r['EVENT_OBJECT_TABLE']===$physical&&strtoupper((string)$r['ACTION_TIMING'])==='BEFORE'&&pay_fil_001_tt80_semantic_source_trigger_action_matches($r['ACTION_STATEMENT'],'hrm_pay_fil_001_tt80_semantic_mappings',$operation);
-}
-function pay_fil_001_tt80_semantic_mapping_require_authority_source($patch)
-{
-    global $path_to_root;if(!pay_fil_001_tt80_semantic_source_admission_require_writer_source($patch))return false;$c=pay_fil_001_tt80_semantic_mapping_contract();
-    if($c['publish_permission']!==PAY_FIL_001_AUTHORIZE_PERMISSION||$c['required_review_status']!=='complete'||$c['mapping_publication_allowed']!==true||$c['runtime_generation_allowed']!==false||$c['automatic_inference_allowed']!==false||$c['production_transmission_allowed']!==false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 TT80 semantic mapping authority invalid.');
-    $raw=@file_get_contents($path_to_root.'/includes/pay_fil_001_tt80_semantic_mapping_contract.inc');foreach(array('PAY_FIL_001_AUTHORIZE_PERMISSION','one_exact_immutable_tt80_semantic_review','publisher_distinct_from_source_makers_and_reviewer','ct16','ct32','runtime_generation_allowed') as $token)if(!is_string($raw)||strpos($raw,$token)===false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 TT80 semantic mapping contract incomplete: '.$token.'.');
-    foreach(array('db_query(','INSERT INTO','UPDATE ','DELETE FROM','curl_','fsockopen(','stream_socket_client(','file_put_contents(','openssl_sign(') as $token)if(stripos($raw,$token)!==false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 TT80 semantic mapping contract acquired forbidden authority: '.$token.'.');return true;
-}
-function pay_fil_001_tt80_semantic_mapping_require_schema($patch)
-{
-    if(!pay_fil_001_tt80_semantic_source_review_require_schema($patch))return false;$tables=pay_fil_001_tt80_semantic_mapping_table();$indexes=pay_fil_001_tt80_semantic_mapping_index_specs();$fks=pay_fil_001_tt80_semantic_mapping_foreign_keys();$prefix=hrm_migration_active_table_prefix();if($prefix===false)return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-FIL-001 TT80 semantic mapping table prefix unavailable.');
-    foreach($tables as $table=>$columns){if(pay_fil_001_table_columns($table)!==$columns||!pay_fil_001_table_innodb($table))return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-FIL-001 TT80 semantic mapping table projection mismatch: '.$table);$actual=pay_fil_001_table_index_projection($table);$want=$indexes[$table];ksort($want,SORT_STRING);if(!is_array($actual)||$actual!==$want)return hrm_migration_fail($patch,HRM_MIGRATION_INDEX_MISMATCH,'PAY-FIL-001 TT80 semantic mapping index projection mismatch: '.$table);$actual_fk=pay_fil_001_table_foreign_key_projection($table);$want_fk=$fks[$table];foreach($want_fk as $name=>$spec)$want_fk[$name]['referenced_table']=$prefix.$spec['referenced_table'];ksort($want_fk,SORT_STRING);if(!is_array($actual_fk)||$actual_fk!==$want_fk)return hrm_migration_fail($patch,HRM_MIGRATION_FK_MISMATCH,'PAY-FIL-001 TT80 semantic mapping foreign-key projection mismatch: '.$table);foreach(array('UPDATE','DELETE') as $operation)if(!pay_fil_001_tt80_semantic_mapping_trigger_valid($operation))return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-FIL-001 TT80 semantic mapping immutable trigger mismatch: '.$operation);}return true;
-}
-function pay_fil_001_tt80_semantic_mapping_require_zero_rows($patch){$q=db_query('SELECT COUNT(*) AS c FROM '.TB_PREF.'hrm_pay_fil_001_tt80_semantic_mappings');$r=$q?db_fetch_assoc($q):false;return $r&&(int)$r['c']===0?true:hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-FIL-001 TT80 semantic mapping custody must activate zero-seed.');}
-function pay_fil_001_tt80_semantic_mapping_install_schema($patch)
-{
-    global $path_to_root;if(!pay_fil_001_tt80_semantic_mapping_require_authority_source($patch))return false;$raw=@file_get_contents($path_to_root.'/sql/upgrade_pay_fil_001_tt80_semantic_mapping_publication.sql');if(!is_string($raw)||strpos($raw,'-- PAY-FIL-001 GROUP tt80_semantic_mapping_publication')===false)return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-FIL-001 TT80 semantic mapping schema source missing.');$prefix=hrm_migration_active_table_prefix();if($prefix===false)return false;$clean=preg_replace('/^--.*$/m','',$raw);$statements=preg_split('/;\s*(?:\r?\n|$)/',$clean);foreach($statements as $statement){$statement=trim($statement);if($statement===''||strpos($statement,'CREATE TRIGGER')===0)continue;$statement=str_replace('`0_','`'.$prefix,$statement);if(!db_query($statement))return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-FIL-001 TT80 semantic mapping schema statement failed.');}foreach(array('UPDATE','DELETE') as $operation){if(pay_fil_001_tt80_semantic_mapping_trigger_valid($operation))continue;$name=$prefix.'pfl1_sm_'.($operation==='UPDATE'?'u':'d');$physical=hrm_migration_physical_table_name('hrm_pay_fil_001_tt80_semantic_mappings');$message='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_semantic_mappings row cannot be '.strtolower($operation).'d';if(!db_query('CREATE TRIGGER `'.$name.'` BEFORE '.$operation.' ON `'.$physical.'` FOR EACH ROW SIGNAL SQLSTATE \'45000\' SET MESSAGE_TEXT='.db_escape($message)))return false;}return pay_fil_001_tt80_semantic_mapping_require_schema($patch)&&pay_fil_001_tt80_semantic_mapping_require_zero_rows($patch);
-}
 function pay_fil_001_tt80_semantic_mapping_safe_add($a,$b,&$error){$a=(int)$a;$b=(int)$b;if($a<0||$b<0||$a>PHP_INT_MAX-$b)return pay_fil_001_runtime_fail($error,'tt80_semantic_mapping_amount_overflow');return $a+$b;}
 function pay_fil_001_tt80_semantic_mapping_derive_indicators(array $facts,&$error=null)
 {
@@ -82,15 +32,5 @@ function pay_fil_001_tt80_publish_semantic_mapping($filing_source_set_id,$tt80_s
 function pay_fil_001_tt80_semantic_mapping_status($filing_source_set_id,&$error=null)
 {
     $error=null;$id=pay_fil_001_posint($filing_source_set_id);if($id===false)return pay_fil_001_runtime_fail($error,'filing_source_set_invalid');$q=db_query('SELECT tt80_semantic_mapping_id,tt80_semantic_review_id,review_sha256,mapping_contract_sha256,taxpayer_profile_sha256,person_fact_set_sha256,indicator_values_json,indicator_values_sha256,mapping_sha256,published_by,published_at FROM '.TB_PREF.'hrm_pay_fil_001_tt80_semantic_mappings WHERE filing_source_set_id='.(int)$id.' ORDER BY tt80_semantic_mapping_id DESC LIMIT 1');if(!$q)return pay_fil_001_runtime_fail($error,'semantic_mapping_custody_unavailable');if(db_num_rows($q)===0){$error='semantic_mapping_unpublished';return false;}return db_fetch_assoc($q);
-}
-function pay_fil_001_tt80_semantic_mapping_require_writer_source($patch)
-{
-    global $path_to_root;if(!pay_fil_001_tt80_semantic_mapping_require_authority_source($patch))return false;
-    $raw=@file_get_contents($path_to_root.'/hrm/includes/db/pay_fil_001_tt80_semantic_mapping_db.inc');
-    $start=is_string($raw)?strpos($raw,'function pay_fil_001_tt80_semantic_mapping_safe_add'):false;
-    $cut=is_string($raw)?strpos($raw,'function pay_fil_001_tt80_semantic_mapping_require_writer_source'):false;
-    $writer=($start===false||$cut===false||$cut<=$start)?false:substr($raw,$start,$cut-$start);
-    foreach(array('pay_fil_001_tt80_publish_semantic_mapping','PAY_FIL_001_AUTHORIZE_PERMISSION','tt80_semantic_mapping_publisher_reviewer_conflict','tt80_semantic_mapping_publisher_maker_conflict','pay_fil_001_tt80_semantic_mapping_derive_indicators','runtime_generation_allowed'=>false) as $key=>$value){$token=is_int($key)?$value:$key;if(!is_string($writer)||strpos($writer,(string)$token)===false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 TT80 semantic mapping writer source incomplete: '.$token.'.');}
-    foreach(array('curl_','fsockopen(','stream_socket_client(','file_put_contents(','openssl_sign(') as $token)if(stripos($writer,$token)!==false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 TT80 semantic mapping writer acquired forbidden external authority: '.$token.'.');return true;
 }
 ?>

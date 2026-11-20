@@ -291,8 +291,13 @@ function authenticate_user($login_id, $password) {
 
 	$hash = db_fetch($result)[0];
 
-	// The user's password hash may have been created long ago by md5 password algorithm on the old NotrinosERP versions
-	if(password_verify($password, $hash) || $hash == md5($password)) {
+	// The user's password hash may have been created long ago by md5 password algorithm on the old NotrinosERP versions.
+	// Accept that legacy hash only when it really is a 32-digit hex digest, and compare it in constant time with
+	// hash_equals(): a loose == would treat two different "0e<digits>" digests as equal numbers.
+	$legacy_md5_matches = is_string($hash) && preg_match('/^[a-f0-9]{32}$/Di', $hash) === 1
+		&& hash_equals(strtolower($hash), md5((string)$password));
+
+	if(password_verify($password, $hash) || $legacy_md5_matches) {
 		if(password_needs_rehash($hash, PASSWORD_DEFAULT) === true) {
 			$new_hash = password_hash($password, PASSWORD_DEFAULT);
 			$sql2 = "UPDATE ".TB_PREF."users SET password = ".db_escape($new_hash)." WHERE login_id = ".db_escape($login_id);

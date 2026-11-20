@@ -7,14 +7,6 @@ function pay_fil_001_tt80_render_model_contract_required_for_database_version($v
 function pay_fil_001_tt80_render_model_runtime_required_for_database_version($version){return version_compare((string)$version,'1.0.1041','>=');}
 function pay_fil_001_tt80_runtime_generation_required_for_database_version($version){return version_compare((string)$version,'1.0.1042','>=');}
 
-function pay_fil_001_tt80_render_model_require_contract_source($patch)
-{
-    global $path_to_root;if(!pay_fil_001_tt80_semantic_mapping_require_writer_source($patch))return false;$a=pay_fil_001_tt80_render_model_activation_profile();
-    if($a['required_mapping_status']!=='PUBLISHED_REVIEW_BOUND'||$a['required_permission']!==PAY_FIL_001_PREPARE_PERMISSION||$a['development_runtime_generation_allowed']!==true||$a['production_generation_allowed']!==false||$a['artifact_publication_allowed']!==false||$a['production_signing_allowed']!==false||$a['production_credentials_allowed']!==false||$a['production_transmission_allowed']!==false||$a['network_authority_allowed']!==false||$a['portal_submission_allowed']!==false||$a['historical_mutation_allowed']!==false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 TT80 render-model activation authority invalid.');
-    $raw=@file_get_contents($path_to_root.'/includes/pay_fil_001_tt80_render_model_contract.inc');foreach(array('pay_fil_001_tt80_validate_render_context','pay_fil_001_tt80_build_render_model','immutable_obligation_source_set_taxpayer_profile_and_published_semantic_mapping_plus_explicit_render_context','development_runtime_generation_allowed','portal_submission_allowed') as $token)if(!is_string($raw)||strpos($raw,$token)===false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 TT80 render-model contract source incomplete: '.$token.'.');
-    foreach(array('db_query(','INSERT INTO','UPDATE ','DELETE FROM','file_put_contents(','curl_','fsockopen(','stream_socket_client(','openssl_sign(') as $token)if(stripos($raw,$token)!==false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 TT80 render-model contract acquired forbidden authority: '.$token.'.');return true;
-}
-
 /** Construct a model only from immutable published mapping/profile custody plus explicit non-payroll context. */
 function pay_fil_001_tt80_construct_render_model($filing_source_set_id,array $context,&$error=null)
 {
@@ -29,11 +21,6 @@ function pay_fil_001_tt80_construct_render_model($filing_source_set_id,array $co
     $model=pay_fil_001_tt80_build_render_model($source,$p,$mapping,$context,$error);if($model===false)return false;return array('model'=>$model,'model_sha256'=>pay_fil_001_hash($model),'mapping_sha256'=>(string)$m['mapping_sha256'],'review_sha256'=>(string)$m['review_sha256'],'activation_contract_sha256'=>pay_fil_001_tt80_render_model_activation_contract_sha256());
 }
 
-function pay_fil_001_tt80_render_model_require_runtime_source($patch)
-{
-    global $path_to_root;if(!pay_fil_001_tt80_render_model_require_contract_source($patch))return false;$raw=@file_get_contents($path_to_root.'/hrm/includes/db/pay_fil_001_tt80_render_model_db.inc');$start=is_string($raw)?strpos($raw,'function pay_fil_001_tt80_construct_render_model'):false;$cut=is_string($raw)?strpos($raw,'function pay_fil_001_tt80_render_model_require_runtime_source'):false;$body=($start===false||$cut===false||$cut<=$start)?false:substr($raw,$start,$cut-$start);foreach(array('PAY_FIL_001_PREPARE_PERMISSION','pay_fil_001_tt80_semantic_mapping_status','mapping_contract_sha256','tt80_semantic_reviews','tt80_taxpayer_profiles','pay_fil_001_tt80_build_render_model','model_sha256') as $token)if(!is_string($body)||strpos($body,$token)===false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 TT80 render-model runtime source incomplete: '.$token.'.');foreach(array('INSERT INTO','UPDATE ','DELETE FROM','begin_transaction(','commit_transaction(','rollback_transaction(','file_put_contents(','curl_','fsockopen(','stream_socket_client(','openssl_sign(') as $token)if(stripos($body,$token)!==false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 TT80 render-model runtime acquired forbidden authority: '.$token.'.');return true;
-}
-
 /** Local-development XML generation only. No persistence, signing, credentials, network, or submission authority. */
 function pay_fil_001_generate_tt80_local_validation_xml($filing_source_set_id,array $context,&$error=null)
 {
@@ -41,8 +28,4 @@ function pay_fil_001_generate_tt80_local_validation_xml($filing_source_set_id,ar
     $render['model_sha256']=$built['model_sha256'];$render['semantic_mapping_sha256']=$built['mapping_sha256'];$render['semantic_review_sha256']=$built['review_sha256'];$render['activation_contract_sha256']=$built['activation_contract_sha256'];$render['generation_authority']='LOCAL_DEVELOPMENT_VALIDATOR_ONLY';$render['development_runtime_generation_allowed']=true;$render['artifact_publication_allowed']=false;$render['production_generation_allowed']=false;$render['production_signing_allowed']=false;$render['production_credentials_allowed']=false;$render['production_transmission_allowed']=false;$render['network_authority_allowed']=false;$render['portal_submission_allowed']=false;$render['historical_mutation_allowed']=false;return $render;
 }
 
-function pay_fil_001_tt80_runtime_generation_require_activation_source($patch)
-{
-    global $path_to_root;if(!pay_fil_001_tt80_render_model_require_runtime_source($patch))return false;$raw=@file_get_contents($path_to_root.'/hrm/includes/db/pay_fil_001_tt80_render_model_db.inc');$start=is_string($raw)?strpos($raw,'function pay_fil_001_generate_tt80_local_validation_xml'):false;$cut=is_string($raw)?strpos($raw,'function pay_fil_001_tt80_runtime_generation_require_activation_source'):false;$body=($start===false||$cut===false||$cut<=$start)?false:substr($raw,$start,$cut-$start);foreach(array('pay_fil_001_tt80_construct_render_model','pay_fil_001_render_tt80_xml_candidate','LOCAL_DEVELOPMENT_VALIDATOR_ONLY','portal_submission_allowed','production_transmission_allowed','historical_mutation_allowed') as $token)if(!is_string($body)||strpos($body,$token)===false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 TT80 runtime generation activation source incomplete: '.$token.'.');foreach(array('db_query(','INSERT INTO','UPDATE ','DELETE FROM','begin_transaction(','commit_transaction(','rollback_transaction(','file_put_contents(','curl_','fsockopen(','stream_socket_client(','openssl_sign(') as $token)if(stripos($body,$token)!==false)return pay_fil_001_fail_patch($patch,'PAY-FIL-001 TT80 runtime generation activation acquired forbidden authority: '.$token.'.');return true;
-}
 ?>

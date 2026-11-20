@@ -15,7 +15,7 @@ function hrm_pay_rule_006_audit($entity_type,$entity_key,$action,$reason,$restri
 
 function hrm_pay_rule_006_synthetic_contexts(&$error=null)
 {
-    $path=dirname(__FILE__).'/../../../tests/fixtures/payroll/formula_migration/corpus.json';
+    $path=dirname(__FILE__).'/../../config/payroll_formula_differential_corpus.json';
     $corpus=hrm_legacy_formula_load_json_artifact($path,$error);if($corpus===false)return false;$v=hrm_legacy_formula_validate_corpus($corpus,$error);if($v===false)return false;return array_values($v['migration_contexts']);
 }
 function hrm_pay_rule_006_target_eval($formula,$variables)

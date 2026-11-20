@@ -330,37 +330,3 @@ function pay_glb_001_native_require_schema($patch,$zero_seed=false)
     }
     return true;
 }
-
-/** Resume missing exact additive DDL and deny drift without overwriting history. */
-function pay_glb_001_native_install_schema($patch)
-{
-    global $path_to_root;
-    $prefix=pay_glb_001_native_schema_prefix();
-    $sql=file_get_contents($path_to_root.'/sql/upgrade_pay_glb_001_native_custody.sql');
-    if ($prefix===false || !is_string($sql))
-        return hrm_migration_fail($patch,HRM_MIGRATION_MISSING_SCHEMA,'native_schema_source_missing');
-    preg_match_all('/CREATE TABLE \x600_([^\x60]+)\x60.*?;(?=\s|$)/s',$sql,$tables,PREG_SET_ORDER);
-    $models=pay_glb_001_native_schema_definitions();
-    if (count($tables)!==count($models))
-        return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'native_schema_source_count');
-    foreach ($models as $index=>$model) {
-        if ($tables[$index][1]!==$model['name'])
-            return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'native_schema_source_order');
-        if (!hrm_migration_table_exists($model['name'])
-            && !db_query(str_replace(chr(96).'0_',chr(96).$prefix,$tables[$index][0])))
-            return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'native_table_create_failed');
-        if (!pay_glb_001_native_schema_table_valid($model,$error))
-            return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,$error);
-    }
-    preg_match_all('/CREATE TRIGGER \x600_([^\x60]+)\x60.*?;(?=\s|$)/s',$sql,$triggers,PREG_SET_ORDER);
-    if (count($triggers)!==12)
-        return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'native_trigger_source_count');
-    foreach ($triggers as $trigger) {
-        if (!preg_match('/BEFORE (?:UPDATE|DELETE) ON \x600_([^\x60]+)\x60/',$trigger[0],$target))
-            return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'native_trigger_source_table');
-        $rows=pay_glb_001_native_schema_rows("SELECT TRIGGER_NAME FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND EVENT_OBJECT_TABLE=".db_escape($prefix.$target[1])." AND TRIGGER_NAME=".db_escape($prefix.$trigger[1]));
-        if ($rows===false) return false;
-        if (count($rows)===0 && !db_query(str_replace(chr(96).'0_',chr(96).$prefix,$trigger[0]))) return false;
-    }
-    return pay_glb_001_native_require_schema($patch,true);
-}

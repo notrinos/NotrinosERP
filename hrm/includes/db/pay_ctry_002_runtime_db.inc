@@ -8,7 +8,6 @@
  */
 $pay_ctry_002_runtime_root = isset($path_to_root) ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 if (!function_exists('pay_ctry_002_validate_runtime_snapshot')) include_once($pay_ctry_002_runtime_root.'/includes/pay_ctry_002_contract.inc');
-if (!function_exists('pay_ctry_002_schema_groups')) include_once($pay_ctry_002_runtime_root.'/hrm/includes/db/pay_ctry_002_schema_db.inc');
 if (!function_exists('pay_ctry_002_activation_actor_id')) include_once($pay_ctry_002_runtime_root.'/hrm/includes/db/pay_ctry_002_activation_db.inc');
 unset($pay_ctry_002_runtime_root);
 

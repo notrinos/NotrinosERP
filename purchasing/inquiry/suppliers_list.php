@@ -55,9 +55,9 @@ while ($myrow = db_fetch_assoc($result)) {
 	alt_table_row_color($k);
 	
 	if ($mode != 0)
-		ahref_cell(_('Select'), 'javascript:void(0)', '', 'setComboItem(window.opener.document, "'.$_GET['client_id'].'",  "'.$myrow['supplier_id'].'", "'.$myrow['supp_name'].'")');
+		ahref_cell(_('Select'), 'javascript:void(0)', '', popup_select_callback('setComboItem', array($myrow['supplier_id'], $myrow['supp_name'])));
 	else
-		ahref_cell(_('Select'), 'javascript:void(0)', '', 'selectComboItem(window.opener.document, "'.$_GET['client_id'].'", "'.$myrow['supplier_id'].'")');
+		ahref_cell(_('Select'), 'javascript:void(0)', '', popup_select_callback('selectComboItem', array($myrow['supplier_id'])));
 	
 	label_cell($myrow['supp_name']);
 	label_cell($myrow['supp_ref']);

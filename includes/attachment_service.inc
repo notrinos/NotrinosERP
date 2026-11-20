@@ -1497,6 +1497,25 @@ function attachment_is_hr_employee_document($attachment) {
 }
 
 /**
+ * Check whether the Attach Documents page may serve an attachment row looked up by id.
+ *
+ * The page lists attachments only for the document types in $systypes_array, and never employee documents.
+ * An id taken from the request must resolve to a row that the same list could show, so a guessed id cannot
+ * reach rows of other types.
+ *
+ * @param array|false $attachment  The attachment row from get_attachment().
+ * @return bool  True if the row exists, has a stored file and belongs to a listed, non-employee document type.
+ */
+function general_attachment_record_is_listed($attachment) {
+    global $systypes_array;
+
+    if (!is_array($attachment) || !isset($attachment['type_no'], $attachment['filename'])
+        || (string)$attachment['filename'] === '' || attachment_is_hr_employee_document($attachment))
+        return false;
+    return is_array($systypes_array) && array_key_exists((int)$attachment['type_no'], $systypes_array);
+}
+
+/**
  * Canonicalize and safely validate a legacy employee document file_path.
  *
  * Only accepts paths strictly inside company_path()/documents/employees/.

@@ -10,7 +10,7 @@ $pay_ctry_007_runtime_root = isset($path_to_root) ? $path_to_root : dirname(dirn
 if (!function_exists('pay_ctry_007_validate_audience')) {
     include_once($pay_ctry_007_runtime_root.'/includes/pay_ctry_007_contract.inc');
 }
-if (!function_exists('pay_ctry_007_schema_groups')) {
+if (!function_exists('pay_ctry_007_schema_columns')) {
     include_once($pay_ctry_007_runtime_root.'/hrm/includes/db/pay_ctry_007_schema_db.inc');
 }
 if (!function_exists('append_domain_audit_event')) {

@@ -2,7 +2,6 @@
 /** PAY-API-001 governed provisioning and atomic read-rate runtime service. */
 include_once($path_to_root.'/includes/pay_api_001_provisioning.inc');
 include_once($path_to_root.'/includes/pay_api_001_rate_limit.inc');
-include_once(dirname(__FILE__).'/pay_api_001_schema_db.inc');
 include_once($path_to_root.'/includes/pay_api_001_contract.inc');
 
 function pay_api_001_runtime_actor(){return isset($_SESSION['wa_current_user']->user)?(int)$_SESSION['wa_current_user']->user:0;}

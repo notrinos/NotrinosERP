@@ -1238,12 +1238,87 @@ function bank_balance_row($bank_acc, $parms='') {
 		."</a>", $parms);
 }
 
-function ahref($label, $href, $target='', $onclick='') {
-	echo "<a href='$href' target='$target' onclick='$onclick'>".$label."</a>";
+/**
+ * Escape a value for use inside a quoted HTML attribute.
+ *
+ * @param string $value Raw attribute text
+ * @return string Attribute-safe text
+ */
+function html_attribute_escape($value) {
+	return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/**
+ * Print a link. href, target and onclick are attribute-escaped here, so callers pass raw text;
+ * the label is trusted markup.
+ *
+ * @param string $label Link markup
+ * @param string $href Link target URL
+ * @param string $target Window target
+ * @param string $onclick JavaScript run on click
+ * @return void
+ */
+function ahref($label, $href, $target='', $onclick='') {
+	echo "<a href='".html_attribute_escape($href)."' target='".html_attribute_escape($target)
+		."' onclick='".html_attribute_escape($onclick)."'>".$label."</a>";
+}
+
+/**
+ * Print a link in a centred table cell. See ahref().
+ *
+ * @param string $label Link markup
+ * @param string $href Link target URL
+ * @param string $target Window target
+ * @param string $onclick JavaScript run on click
+ * @return void
+ */
 function ahref_cell($label, $href, $target='', $onclick='') {
 	echo "<td align='center'>&nbsp;&nbsp;";
 	ahref($label, $href, $target, $onclick);
 	echo "&nbsp;&nbsp;</td>";
+}
+
+/**
+ * Encode a value as a JavaScript string literal.
+ *
+ * Request and database text is stored HTML-entity encoded, so it is decoded first: otherwise the browser would
+ * turn an entity such as &quot; back into a quote inside an event attribute before the script runs. The result
+ * contains no quote, apostrophe, ampersand or angle bracket, but it must still be attribute-escaped (ahref() does).
+ *
+ * @param string $value Text, possibly HTML-entity encoded
+ * @return string Double-quoted JavaScript string literal
+ */
+function javascript_string_literal($value) {
+	$text = html_entity_decode((string)$value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+	$literal = json_encode($text, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP
+		| JSON_INVALID_UTF8_SUBSTITUTE);
+	return $literal === false ? '""' : $literal;
+}
+
+/**
+ * Return the opener field id that a popup search list fills in, or '' when the request carries no plain field id.
+ *
+ * Only letters, digits, '_', '-', '[' and ']' (field names such as stock_id or Items[0]) are accepted.
+ *
+ * @return string Field id from $_GET['client_id'], or ''
+ */
+function get_popup_client_id() {
+	$client_id = isset($_GET['client_id']) && is_string($_GET['client_id']) ? $_GET['client_id'] : '';
+	return preg_match('/^[A-Za-z0-9_\-\[\]]{1,100}$/', $client_id) ? $client_id : '';
+}
+
+/**
+ * Build the onclick script that hands a popup selection back to the opener window.
+ *
+ * @param string $function Opener helper, 'selectComboItem' or 'setComboItem'
+ * @param array $values Selected value, and for setComboItem its display text
+ * @return string JavaScript call; ahref() attribute-escapes it
+ */
+function popup_select_callback($function, $values) {
+	if (!in_array($function, array('selectComboItem', 'setComboItem'), true))
+		return '';
+	$arguments = array('window.opener.document', javascript_string_literal(get_popup_client_id()));
+	foreach ($values as $value)
+		$arguments[] = javascript_string_literal($value);
+	return $function.'('.implode(', ', $arguments).')';
 }

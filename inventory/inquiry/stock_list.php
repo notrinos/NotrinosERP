@@ -44,15 +44,9 @@ table_header($th);
 
 $k = 0;
 $result = get_items_search(get_post('description'), @$_GET['type']);
-$client_id = isset($_GET['client_id']) ? $_GET['client_id'] : '';
-
 while ($myrow = db_fetch_assoc($result)) {
 	alt_table_row_color($k);
-	$select_callback = 'selectComboItem(window.opener.document, "'
-		. addslashes($client_id) . '", "'
-		. addslashes($myrow['item_code']) . '")';
-
-	ahref_cell(_('Select'), 'javascript:void(0)', '', $select_callback);
+	ahref_cell(_('Select'), 'javascript:void(0)', '', popup_select_callback('selectComboItem', array($myrow['item_code'])));
 	
 	label_cell($myrow['item_code']);
 	label_cell($myrow['description']);

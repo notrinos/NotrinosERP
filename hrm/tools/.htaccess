@@ -1,0 +1,11 @@
+# Command-line tools: never served over HTTP. extract_translations.php writes hrm/lang/hrm.pot and also refuses
+# any non-CLI run. Verified by tests/php/test_release_web_deny_contract.php and tests/run_release_web_deny_probe.py.
+#
+<IfModule mod_authz_core.c>
+	Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+	Order allow,deny
+	Deny from All
+	Satisfy All
+</IfModule>

@@ -69,6 +69,11 @@ if ($view_id != -1) {
 		display_error(_('Employee documents must be accessed through the HR module.'));
 		exit();
 	}
+	// Serve only rows that the attachment list itself could show.
+	if (!general_attachment_record_is_listed($row)) {
+		display_error(_('The selected attachment does not exist.'));
+		exit();
+	}
 
 	if ($row['filename'] != '') {
 		if(in_ajax())
@@ -110,6 +115,11 @@ if ($download_id != -1) {
 	// Block generic access to employee document attachments.
 	if (attachment_is_hr_employee_document($row)) {
 		display_error(_('Employee documents must be accessed through the HR module.'));
+		exit();
+	}
+	// Serve only rows that the attachment list itself could show.
+	if (!general_attachment_record_is_listed($row)) {
+		display_error(_('The selected attachment does not exist.'));
 		exit();
 	}
 
@@ -226,14 +236,20 @@ if ($Mode == 'Delete') {
 		display_error(_('Employee documents must be managed through the HR module.'));
 		reset_form();
 		$Mode = 'RESET';
-	} elseif ($row['unique_name']) {
-		$safe_path = safe_attachment_file_path($row['unique_name']);
-		if ($safe_path !== false && file_exists($safe_path))
-			unlink($safe_path);
+	} elseif (!is_array($row)) {
+		display_error(_('The selected attachment does not exist.'));
+		reset_form();
+		$Mode = 'RESET';
+	} else {
+		if ($row['unique_name']) {
+			$safe_path = safe_attachment_file_path($row['unique_name']);
+			if ($safe_path !== false && file_exists($safe_path))
+				unlink($safe_path);
+		}
+		delete_attachment($selected_id);
+		display_notification(_('Attachment has been deleted.'));
+		reset_form();
 	}
-	delete_attachment($selected_id);	
-	display_notification(_('Attachment has been deleted.'));
-	reset_form();
 	}
 }
 

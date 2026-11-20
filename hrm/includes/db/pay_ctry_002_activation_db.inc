@@ -10,7 +10,6 @@
 $pay_ctry_002_activation_root = isset($path_to_root) ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $pay_ctry_002_activation_dependencies = array(
     array('/includes/pay_ctry_002_contract.inc', 'pay_ctry_002_validate_execution_descriptor'),
-    array('/hrm/includes/db/pay_ctry_002_schema_db.inc', 'pay_ctry_002_schema_groups'),
     array('/includes/federation_assurance_consumer.inc', 'federation_assurance_consumer_current_session_id'),
     array('/includes/db/domain_audit_db.inc', 'append_domain_audit_event'),
 );
