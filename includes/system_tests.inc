@@ -52,6 +52,21 @@ function tst_php() {
 	return $test;
 }
 
+/**
+ * Checks the PHP curl extension, which the PDF report library (TCPDF) requires.
+ *
+ * @return array System test result.
+ */
+function tst_curl() {
+	$test['descr'] = _('PHP curl extension');
+	$test['type'] = 3;
+	$test['result'] = extension_loaded('curl');
+	$test['test'] = $test['result'] ? _('Yes') : _('No');
+	$test['comments'] = _('Enable the PHP curl extension; PDF reports need it.');
+
+	return $test;
+}
+
 function tst_system() {
 	$test['descr'] = _('Server system');
 	$test['type'] = 0;
@@ -383,12 +398,12 @@ function display_system_tests($install = false) {
 	global $test_level;
 
 	if ($install)
-		$system_tests = array('tst_php', 'tst_phpmysql', 'tst_system', 'tst_dbconfig', 
+		$system_tests = array('tst_php', 'tst_curl', 'tst_phpmysql', 'tst_system', 'tst_dbconfig', 
 			'tst_config',
 			'tst_subdirs', 'tst_langs', 'tst_tmpdir', 'tst_sessionpath', 'tst_extconfig'
 		);
 	else
-		$system_tests = array('tst_mysql', 'tst_php', 'tst_server', 'tst_system', 'tst_browser',
+		$system_tests = array('tst_mysql', 'tst_php', 'tst_curl', 'tst_server', 'tst_system', 'tst_browser',
 			'tst_gettext', 'tst_debug', 'tst_logging',
 			'tst_dbversion', 'tst_subdirs', 'tst_langs', 'tst_tmpdir', 'tst_sessionpath',
 			'tst_install', 'tst_dbconfig', 'tst_config', 'tst_extconfig'

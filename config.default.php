@@ -121,7 +121,7 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
     $dflt_date_fmt = 0;
     $dflt_date_sep = 0;
 
-    // default PDF pagesize taken from /reporting/includes/tcpdf.php
+    // PDF page sizes offered to users; any page format name known to the TCPDF library (vendor/tecnickcom/tcpdf) works
     $pagesizes = array('Letter', 'A4');
 
 /*  

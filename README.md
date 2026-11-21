@@ -1,7 +1,7 @@
 # NotrinosERP 1.0
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![PHP](https://img.shields.io/badge/PHP-5.6%20–%208.4-blue.svg)](https://php.net)
+[![PHP](https://img.shields.io/badge/PHP-8.1%20–%208.4-blue.svg)](https://php.net)
 [![MySQL](https://img.shields.io/badge/MySQL-4.1%2B%20%2F%20MariaDB-blue.svg)](https://mariadb.org)
 
 [<img src="https://github.com/notrinos/NotrinosERP/raw/master/themes/default/images/notrinos_erp.jpg" width="350" />](http://notrinos.com)
@@ -41,7 +41,7 @@ NotrinosERP is an open-source, web-based Enterprise Resource Planning (ERP) syst
 - **Multi-language** — i18n/l10n via `.po`/`.mo` gettext files
 - **Multi-user** — role-based access control with granular per-module permissions
 - **Extensible** — hook/extension system; add functionality without patching core files
-- **PHP 5.6 – 8.4 compatible** — runs on modern and legacy server stacks
+- **PHP 8.1 – 8.4** — PHP 8.1 is the minimum supported version
 - **Composer support** — installable as a Composer project
 
 ---
@@ -51,7 +51,7 @@ NotrinosERP is an open-source, web-based Enterprise Resource Planning (ERP) syst
 | Component | Minimum |
 |---|---|
 | Web server | Apache, Nginx, or IIS with `mod_rewrite` or equivalent |
-| PHP | 5.6 – 8.4 (InnoDB PDO extension required) |
+| PHP | 8.1 – 8.4 (PDO MySQL or mysqli extension and the `curl` extension required) |
 | Database | MySQL 4.1+ or any MariaDB version (InnoDB engine enabled) |
 | Browser | Any modern browser with HTML5 support |
 

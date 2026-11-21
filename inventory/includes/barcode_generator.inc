@@ -17,7 +17,7 @@
  * Supports: Code128, Code39, EAN-13, EAN-8, QR Code (via GD)
  * Uses TCPDF's TCPDFBarcode class for 1D barcodes.
  *
- * Dependencies: reporting/includes/barcodes.php (TCPDFBarcode class)
+ * Dependencies: reporting/includes/tcpdf.php (loads the TCPDFBarcode class)
  *               GD extension for PNG output
  */
 
@@ -85,10 +85,8 @@ function generate_1d_barcode($code, $type = 'C128B', $width = 300, $height = 80,
 		$type = 'C128C';
 	}
 
-	// Include TCPDF barcode class
-	if (!class_exists('TCPDFBarcode')) {
-		include_once($path_to_root . '/reporting/includes/barcodes.php');
-	}
+	// Load the PDF library, which provides the TCPDFBarcode class
+	include_once($path_to_root . '/reporting/includes/tcpdf.php');
 
 	$barcode_obj = new TCPDFBarcode($code, $type);
 	$barcode_array = $barcode_obj->getBarcodeArray();
@@ -729,14 +727,21 @@ function generate_barcode_labels_pdf($labels, $barcode_type = 'C128B', $label_si
 	$v_gap = ($page_h - 2 * $margin - $rows_per_page * $sz['h']) / max(1, $rows_per_page);
 
 	// Use raw TCPDF for label layout
-	if (!class_exists('TCPDF')) {
-		include_once($path_to_root . '/reporting/includes/tcpdf.php');
-	}
-	if (!class_exists('TCPDFBarcode')) {
-		include_once($path_to_root . '/reporting/includes/barcodes.php');
-	}
+	include_once($path_to_root . '/reporting/includes/tcpdf.php');
 
-	$pdf = new TCPDF('P', 'pt', 'A4');
+	$pdf = new class('P', 'pt', 'A4') extends TCPDF {
+		/**
+		 * Creates the label document without the library credit line on the last page.
+		 *
+		 * @param string $orientation Page orientation.
+		 * @param string $unit Measure unit.
+		 * @param string $format Page format.
+		 */
+		public function __construct($orientation, $unit, $format) {
+			parent::__construct($orientation, $unit, $format);
+			$this->tcpdflink = false;
+		}
+	};
 	$pdf->SetAutoPageBreak(false);
 	$pdf->SetMargins($margin, $margin, $margin);
 	$pdf->setPrintHeader(false);

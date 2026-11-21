@@ -17,60 +17,47 @@
 *	Wrapper for use R&OSpdf API with tcpdf.org class
 */
 
-define("K_RE_PATTERN_RTL", "/(
-	  \xD6\xBE																							# R
-	| \xD7[\x80\x83\x86\x90-\xAA\xB0-\xB4]									# R
-	| \xDF[\x80-\xAA\xB4\xB5\xBA]														# R
-	| \xE2\x80\x8F																					# R
-	| \xEF\xAC[\x9D\x9F\xA0-\xA8\xAA-\xB6\xB8-\xBC\xBE]			# R
-	| \xEF\xAD[\x80\x81\x83\x84\x86-\x8F]										# R
-	| \xF0\x90\xA0[\x80-\x85\x88\x8A-\xB5\xB7\xB8\xBC\xBF]	# R
-	| \xF0\x90\xA4[\x80-\x99]																# R
-	| \xF0\x90\xA8[\x80\x90-\x93\x95-\x97\x99-\xB3]					# R
-	| \xF0\x90\xA9[\x80-\x87\x90-\x98]											# R
-	| \xE2\x80[\xAB\xAE]																		# RLE & RLO
-	)/x");
+include_once(dirname(__FILE__).'/tcpdf.php');
 
-/*
- * Pattern to test Arabic strings using regular expressions.
- * source: http://www.w3.org/International/questions/qa-forms-utf-8
- */
-define("K_RE_PATTERN_ARABIC", "/(
-			  \xD8[\x80-\x83\x8B\x8D\x9B\x9E\x9F\xA1-\xBA]	# AL
-			| \xD9[\x80-\x8A\xAD-\xAF\xB1-\xBF]							# AL
-			| \xDA[\x80-\xBF]																# AL
-			| \xDB[\x80-\x95\x9D\xA5\xA6\xAE\xAF\xBA-\xBF]	# AL
-			| \xDC[\x80-\x8D\x90\x92-\xAF]									# AL
-			| \xDD[\x8D-\xAD]																# AL
-			| \xDE[\x80-\xA5\xB1]														# AL
-			| \xEF\xAD[\x90-\xBF]														# AL
-			| \xEF\xAE[\x80-\xB1]														# AL
-			| \xEF\xAF[\x93-\xBF]														# AL
-			| \xEF[\xB0-\xB3][\x80-\xBF]										# AL
-			| \xEF\xB4[\x80-\xBD]														# AL
-			| \xEF\xB5[\x90-\xBF]														# AL
-			| \xEF\xB6[\x80-\x8F\x92-\xBF]									# AL
-			| \xEF\xB7[\x80-\x87\xB0-\xBC]									# AL
-			| \xEF\xB9[\xB0-\xB4\xB6-\xBF]									# AL
-			| \xEF\xBA[\x80-\xBF]														# AL
-			| \xEF\xBB[\x80-\xBC]														# AL
-			| \xD9[\xA0-\xA9\xAB\xAC]												# AN
-			)/x");
+class Cpdf extends \setasign\Fpdi\Tcpdf\Fpdi {
 
-include_once (dirname(__FILE__).'/tcpdf.php');
-include_once (dirname(__FILE__).'/fpdi/fpdi.php');
+	/**
+	 * Left and right cell padding in points, kept for reports that read it.
+	 * @var float
+	 */
+	public $cMargin = 0;
 
-class Cpdf extends FPDI {
 
 	function __construct($pageSize='A4', $lang=null, $pageOrientation='P') {
 		parent::__construct($pageOrientation, 'pt', $pageSize);//, $uni, $enc);
+		$this->tcpdflink = false; // no library credit line on the last page
 		$this->SetLang($lang);
 		$this->setPrintHeader(false);
 		$this->setPrintFooter(false);
 		$this->setPDFVersion("1.3");
 		$this->setAutoPageBreak(0);
 		$this->SetLineWidth(1);
-		$this->cMargin = 0;
+		$this->SetCellPadding(0);
+	}
+
+	/**
+	 * Sets the left and right cell padding (the report "cell margin").
+	 *
+	 * @param float $pad Padding in points.
+	 * @return void
+	 */
+	function SetCellPadding($pad) {
+		$this->cMargin = $pad;
+		$this->setCellPaddings($pad, 0, $pad, 0);
+	}
+
+	/**
+	 * Kept for reports written for the old library; the total page count alias
+	 * returned by getAliasNbPages() is always replaced on output.
+	 *
+	 * @return void
+	 */
+	function AliasNbPages() {
 	}
 	/*
 		Set lamguage for next report
@@ -105,14 +92,10 @@ class Cpdf extends FPDI {
 		$enc = $l['a_meta_charset'];
 		$uni = ($enc == 'UTF-8' || $enc == 'GB2312' ? true : false);
 		if ($uni)
-			ini_set("memory_limit", "48M");
+			$this->raiseMemoryLimit(48 * 1024 * 1024);
 
 		$this->isunicode = $uni;
 		$this->setLanguageArray($l);
-		if ($uni) {
-			global $unicode, $unicode_mirror, $unicode_arlet, $laa_array, $diacritics;
-			include_once(dirname(__FILE__)."/unicode_data2.php");
-		}
 		$this->encoding = strtoupper($lang['encoding']);
 
 		$this->FontFamily = 'helvetica';
@@ -172,6 +155,26 @@ class Cpdf extends FPDI {
 			// else use built-in adobe fonts helvetica.
 		}
 		$this->SetFont($fontname, $style);
+	}
+
+	/**
+	 * Raises the PHP memory limit for unicode reports; never lowers it.
+	 *
+	 * @param int $bytes Minimum memory limit in bytes.
+	 * @return void
+	 */
+	function raiseMemoryLimit($bytes) {
+		$current = trim((string) ini_get('memory_limit'));
+		if ($current === '' || $current === '-1')
+			return;
+		$value = (int) $current;
+		switch (strtolower(substr($current, -1))) {
+			case 'g': $value *= 1024;
+			case 'm': $value *= 1024;
+			case 'k': $value *= 1024;
+		}
+		if ($value < $bytes)
+			ini_set('memory_limit', (string) $bytes);
 	}
 
 	function Header1() {
@@ -236,7 +239,7 @@ class Cpdf extends FPDI {
 	* pretty crappy shape at 2, as we are approximating with bezier curves.
 	*/
 	function ellipse($x0, $y0, $r1, $r2=0, $angle=0, $nSeg=8, $astart=0, $afinish=360, $close=1, $fill=0, $dummy=null) {
-		parent::Ellipse($x0, $y0, $r1, $r2, $angle, $astart.$afinish, ($close ? 'C' : ''), '', '', $nSeg);
+		parent::Ellipse($x0, $y0, $r1, $r2, $angle, $astart, $afinish, ($close ? 'C' : ''), array(), array(), $nSeg);
 	}
 
 	function Stream($fname='') {
@@ -305,7 +308,7 @@ class Cpdf extends FPDI {
 		return $ret;
 	}
 
-	function Text($x, $y, $txt, $stroke=0, $clip=false) {
-		parent::Text($x,$y, parent::unhtmlentities($txt), $stroke, $clip);
+	function Text($x, $y, $txt, $stroke=0, $clip=false, $ffill=true, $border=0, $ln=0, $align='', $fill=false, $link='', $stretch=0, $ignore_min_height=false, $calign='T', $valign='M', $rtloff=false) {
+		parent::Text($x, $y, parent::unhtmlentities($txt), $stroke, $clip, $ffill, $border, $ln, $align, $fill, $link, $stretch, $ignore_min_height, $calign, $valign, $rtloff);
 	}
 }

@@ -25,6 +25,7 @@
     },
     "require" : {
         "php" : ">=8.1.0",
+        "ext-curl": "*",
         "setasign/fpdi": "^2.6",
         "tecnickcom/tcpdf": "^6.11"
     },

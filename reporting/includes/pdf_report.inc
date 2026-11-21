@@ -672,7 +672,11 @@ class FrontReport extends Cpdf {
 		parent::SetCellPadding($pad);
 	}
 	
-	function Text($c, $txt, $n=0, $corr=0, $r=0, $align='left', $border=0, $fill=0, $link=NULL, $stretch=1) {
+	/**
+	 * Prints text from column position $c to $n on the current report row.
+	 * The trailing unused parameters keep the signature compatible with the PDF library's Text().
+	 */
+	function Text($c, $txt, $n=0, $corr=0, $r=0, $align='left', $border=0, $fill=0, $link=NULL, $stretch=1, $unused1=null, $unused2=null, $unused3=null, $unused4=null, $unused5=null, $unused6=null) {
 		if ($n == 0)
 			$n = $this->pageWidth - $this->rightMargin;
 
@@ -764,8 +768,8 @@ class FrontReport extends Cpdf {
 	 * phase (integer) - a modifier on the dash pattern which is used to shift the point at which the pattern starts.
 	 * color (array) - draw color.  Format: array(GREY), or array(R,G,B) or array(C,M,Y,K).
 	 */
-	function SetLineStyle($style) {
-		parent::SetLineStyle($style);
+	function SetLineStyle($style, $ret=false) {
+		return parent::SetLineStyle($style, $ret);
 	}
 
 	/**

@@ -208,7 +208,7 @@ function print_salesman_list_advanced() {
 	$sum = $summary == 0 ? _('No') : _('Yes');
 	$dec = user_price_dec();
 
-	$cols    = array(0, 60, 200, 290, 360, 430, 515);
+	$cols    = array(0, 60, 190, 270, 330, 410, 455, 515); // 7 columns need 8 boundaries
 	$headers = array(_('Trans#'), _('Customer'), _('Plan'), _('Date'), _('Base Amt'), _('Rate %'), _('Commission'));
 	$aligns  = array('left', 'left', 'left', 'left', 'right', 'right', 'right');
 
