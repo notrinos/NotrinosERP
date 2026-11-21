@@ -59,6 +59,11 @@ if (!isset($path_to_root) || isset($_GET['path_to_root']) || isset($_POST['path_
     $power_by       = 'NotrinosERP';
     $power_url      = 'https://notrinos.com';
 
+    /* Extension repository. The default (public repo.notrinos.com, no login) is set in version.php.
+       To use a private repository, set it in config.php, for example:
+       $repo_auth = array('host' => 'repo.example.com', 'branch' => '1.0', 'login' => 'user', 'pass' => 'secret');
+    */
+
     /* No check on edit conflicts. Maybe needed to be set to 1 in certains Windows Servers */
     $no_check_edit_conflicts = 0;
     

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ec33584bafc94fc882cda1f4ae42cdce",
+    "content-hash": "ffb6064430feef2e9a73feaee669ca0d",
     "packages": [
         {
             "name": "setasign/fpdi",
@@ -165,7 +165,8 @@
     "prefer-lowest": false,
     "platform": {
         "php": ">=8.1.0",
-        "ext-curl": "*"
+        "ext-curl": "*",
+        "ext-zip": "*"
     },
     "platform-dev": {},
     "platform-overrides": {

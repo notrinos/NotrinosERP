@@ -67,6 +67,16 @@ function tst_curl() {
 	return $test;
 }
 
+function tst_zip() {
+	$test['descr'] = _('PHP zip extension');
+	$test['type'] = 3;
+	$test['result'] = class_exists('ZipArchive');
+	$test['test'] = $test['result'] ? _('Yes') : _('No');
+	$test['comments'] = _('Enable the PHP zip extension; Excel reports need it.');
+
+	return $test;
+}
+
 function tst_system() {
 	$test['descr'] = _('Server system');
 	$test['type'] = 0;
@@ -398,12 +408,12 @@ function display_system_tests($install = false) {
 	global $test_level;
 
 	if ($install)
-		$system_tests = array('tst_php', 'tst_curl', 'tst_phpmysql', 'tst_system', 'tst_dbconfig', 
+		$system_tests = array('tst_php', 'tst_curl', 'tst_zip', 'tst_phpmysql', 'tst_system', 'tst_dbconfig', 
 			'tst_config',
 			'tst_subdirs', 'tst_langs', 'tst_tmpdir', 'tst_sessionpath', 'tst_extconfig'
 		);
 	else
-		$system_tests = array('tst_mysql', 'tst_php', 'tst_curl', 'tst_server', 'tst_system', 'tst_browser',
+		$system_tests = array('tst_mysql', 'tst_php', 'tst_curl', 'tst_zip', 'tst_server', 'tst_system', 'tst_browser',
 			'tst_gettext', 'tst_debug', 'tst_logging',
 			'tst_dbversion', 'tst_subdirs', 'tst_langs', 'tst_tmpdir', 'tst_sessionpath',
 			'tst_install', 'tst_dbconfig', 'tst_config', 'tst_extconfig'

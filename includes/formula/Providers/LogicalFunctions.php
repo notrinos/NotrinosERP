@@ -14,7 +14,7 @@
  * LogicalFunctions — Built-in logical and information formula functions.
  *
  * Implements the logical function category from the 150+ Excel function
- * registry (Workbook.php::$_functions). Each function is registered
+ * registry (the PEAR Spreadsheet_Excel_Writer function list). Each function is registered
  * as an independent class implementing FormulaFunctionInterface.
  *
  * Functions in this category:

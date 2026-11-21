@@ -51,7 +51,7 @@ NotrinosERP is an open-source, web-based Enterprise Resource Planning (ERP) syst
 | Component | Minimum |
 |---|---|
 | Web server | Apache, Nginx, or IIS with `mod_rewrite` or equivalent |
-| PHP | 8.1 – 8.4 (PDO MySQL or mysqli extension and the `curl` extension required) |
+| PHP | 8.1 – 8.4 (PDO MySQL or mysqli extension, and the `curl` and `zip` extensions required) |
 | Database | MySQL 4.1+ or any MariaDB version (InnoDB engine enabled) |
 | Browser | Any modern browser with HTML5 support |
 

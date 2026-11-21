@@ -15,8 +15,8 @@
  * into a stream of Token objects.
  *
  * The lexer performs single-pass, left-to-right scanning of the formula
- * source. It is modeled after Spreadsheet_Excel_Writer_Parser::_advance()
- * (reporting/includes/Workbook.php ~line 3310) but enhanced with precise
+ * source. It is modeled after the PEAR Spreadsheet_Excel_Writer_Parser::_advance()
+ * scanner but enhanced with precise
  * line/column position tracking, keyword recognition, namespace-qualified
  * identifier support, and comprehensive error reporting.
  *

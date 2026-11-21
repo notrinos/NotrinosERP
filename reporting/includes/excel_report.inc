@@ -9,15 +9,18 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
-include_once($path_to_root . '/reporting/includes/Workbook.php');
+include_once($path_to_root . '/reporting/includes/xlsx_writer.inc');
 include_once($path_to_root . '/admin/db/company_db.inc');
 include_once($path_to_root . '/admin/db/fiscalyears_db.inc');
 include_once($path_to_root . '/reporting/includes/report_artifact_security.inc');
 include_once($path_to_root . '/config.php');
 include_once($path_to_root . '/includes/ui/ui_globals.inc');
 define('MAX_ROW_SHEET', 65530);
-// xls version
-class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
+define('EXCEL_REPORT_MIME_TYPE', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+// Excel (.xlsx) version of the report page API; the PDF version is in pdf_report.inc.
+class FrontReport {
+	/** @var XlsxWorkbookWriter */
+	var $workbook;
 	var $size;
 	var $company;
 	var $user;
@@ -88,25 +91,23 @@ class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
 		$this->excelColWidthFactor = $excelColWidthFactor;
 		$rtl = ($_SESSION['language']->dir == 'rtl');
 		$this->code = strtolower($_SESSION['language']->encoding);
-		$this->filename = $filename.'.xls';
+		$this->filename = $filename.'.xlsx';
 		$this->rep_id = isset($_POST['REP_ID']) ? $_POST['REP_ID'] : 'unknown';
 		$this->security_area = $page_security;
-		$this->unique_name = random_id().'.xls';
+		$this->unique_name = random_id().'.xlsx';
 		$this->path = report_artifact_private_directory();
 		if ($this->path === false) {
 			display_error(_('The private report directory is unavailable.'));
 			end_page();
 			exit;
 		}
-		parent::__construct($this->path.'/'.$this->unique_name);
-		if ($this->code != 'iso-8859-1')
-			$this->setVersion(8); // set biff version to 8 (0x0006 internal)
+		$this->workbook = new XlsxWorkbookWriter($this->path.'/'.$this->unique_name);
+		$this->workbook->setTitle($title);
 		$this->sheet = $this->addWorksheet($this->worksheetNameGenerator($this->title));
-		if ($this->code != 'iso-8859-1')
-			$this->sheet->setInputEncoding($this->code); // set sheet encoding
+		$this->sheet->setInputEncoding($this->code); // text arrives in the language encoding
 		if ($rtl)
 			$this->sheet->setRTL();
-		$this->formatTitle =& $this->addFormat();	
+		$this->formatTitle = $this->addFormat();	
 		$this->formatTitle->setSize(16);
 		$this->formatTitle->setBold();
 		$this->formatTitle->setAlign($rtl ? 'right' : 'left');
@@ -129,36 +130,36 @@ class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
 			$dateformat_long = "yyyy{$sep}mm{$sep}dd\ \ hh:mm";
 			$dateformat = "yyyy{$sep}mm{$sep}dd";
 		}	
-		$this->formatDateTime =& $this->addFormat();
+		$this->formatDateTime = $this->addFormat();
 		$this->formatDateTime->setNumFormat($dateformat_long);
 		$this->formatDateTime->setAlign($rtl ? 'right' : 'left');
-		$this->formatDate =& $this->addFormat();
+		$this->formatDate = $this->addFormat();
 		$this->formatDate->setNumFormat($dateformat);
 		$this->formatDate->setAlign($rtl ? 'right' : 'left');
-		$this->formatRight =& $this->addFormat();
+		$this->formatRight = $this->addFormat();
 		$this->formatRight->setAlign($rtl ? 'left' : 'right');
-		$this->formatLeft =& $this->addFormat();
+		$this->formatLeft = $this->addFormat();
 		$this->formatLeft->setAlign($rtl ? 'right' : 'left');
 		
-		$this->formatHeaderLeft =& $this->addFormat();
+		$this->formatHeaderLeft = $this->addFormat();
 		$this->formatHeaderLeft->setItalic();
 		$this->formatHeaderLeft->setTop(2);
 		$this->formatHeaderLeft->setTopColor('gray');
 		$this->formatHeaderLeft->setBottom(2);
 		$this->formatHeaderLeft->setBottomColor('gray');
 		$this->formatHeaderLeft->setAlign('vcenter');
-		$this->formatTopHeaderLeft =& $this->addFormat();
+		$this->formatTopHeaderLeft = $this->addFormat();
 		$this->formatTopHeaderLeft->setItalic();
 		$this->formatTopHeaderLeft->setTop(2);
 		$this->formatTopHeaderLeft->setTopColor('gray');
 		$this->formatTopHeaderLeft->setAlign('vcenter');
-		$this->formatBottomHeaderLeft =& $this->addFormat();
+		$this->formatBottomHeaderLeft = $this->addFormat();
 		$this->formatBottomHeaderLeft->setItalic();
 		$this->formatBottomHeaderLeft->setBottom(2);
 		$this->formatBottomHeaderLeft->setBottomColor('gray');
 		$this->formatBottomHeaderLeft->setAlign('vcenter');
 		$this->formatDate->setAlign($rtl ? 'right' : 'left');
-		$this->formatHeaderRight =& $this->addFormat();
+		$this->formatHeaderRight = $this->addFormat();
 		$this->formatHeaderRight->setItalic();
 		$this->formatHeaderRight->setTop(2);
 		$this->formatHeaderRight->setTopColor('gray');
@@ -166,19 +167,19 @@ class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
 		$this->formatHeaderRight->setBottomColor('gray');
 		$this->formatHeaderRight->setAlign('vcenter');
 		$this->formatHeaderRight->setAlign('right');
-		$this->formatTopHeaderRight =& $this->addFormat();
+		$this->formatTopHeaderRight = $this->addFormat();
 		$this->formatTopHeaderRight->setItalic();
 		$this->formatTopHeaderRight->setTop(2);
 		$this->formatTopHeaderRight->setTopColor('gray');
 		$this->formatTopHeaderRight->setAlign('vcenter');
 		$this->formatTopHeaderRight->setAlign('right');
-		$this->formatBottomHeaderRight =& $this->addFormat();
+		$this->formatBottomHeaderRight = $this->addFormat();
 		$this->formatBottomHeaderRight->setItalic();
 		$this->formatBottomHeaderRight->setBottom(2);
 		$this->formatBottomHeaderRight->setBottomColor('gray');
 		$this->formatBottomHeaderRight->setAlign('vcenter');
 		$this->formatBottomHeaderRight->setAlign('right');
-		$this->formatFooter =& $this->addFormat();
+		$this->formatFooter = $this->addFormat();
 		$this->formatFooter->setTop(2);
 		$this->formatFooter->setTopColor('gray');
 		$this->SetHeaderType("header");
@@ -191,6 +192,34 @@ class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
 	function SetHeaderType($name) {
 		$this->headerFunc = $name;
 	}
+
+	/**
+	 * Create a cell format in the workbook.
+	 *
+	 * @return XlsxCellFormat
+	 */
+	function addFormat() {
+		return $this->workbook->addFormat();
+	}
+
+	/**
+	 * Add a worksheet to the workbook.
+	 *
+	 * @param string $name Sheet name; cleaned and made unique by the writer.
+	 * @return XlsxWorksheet
+	 */
+	function addWorksheet($name = '') {
+		return $this->workbook->addWorksheet($name);
+	}
+
+	/**
+	 * Write the workbook file.
+	 *
+	 * @return bool True when the file was written.
+	 */
+	function close() {
+		return $this->workbook->close();
+	}
 	// Check a given name to see if it's a valid Excel worksheet name,
 	// and fix if necessary
 	function worksheetNameGenerator($name) {
@@ -198,10 +227,8 @@ class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
 		$illegal_chars = array(':', '\\', '/', '?', '*', '[', ']');
 		for ($i = 0; $i < count($illegal_chars); $i++)
 			$name = str_replace($illegal_chars[$i], '', $name);
-		// Now, if name is longer than 31 chars, truncate it
-		if (strlen($name) > 31)
-			$name = substr($name, 0, 31);
-		return $name;
+		// Now, if name is longer than 31 characters, truncate it
+		return mb_substr($name, 0, 31, 'UTF-8');
 	}
 	
 	function NumFormat($dec) {
@@ -212,7 +239,7 @@ class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
 			$format = "###{$tsep}###{$tsep}###{$tsep}##0";
 			if ($dec>0)
 				$format .= "{$dsep}".str_repeat('0',$dec);
-			$this->formatAmount[$dec] =& $this->addFormat();
+			$this->formatAmount[$dec] = $this->addFormat();
 			$this->formatAmount[$dec]->setNumFormat($format);
 			$this->formatAmount[$dec]->setAlign('right');
 		}
@@ -601,8 +628,7 @@ class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
 		{
 			$this->y = 0;
 			$this->sheet = $this->addWorksheet();
-			if ($this->code != 'iso-8859-1')
-				$this->sheet->setInputEncoding($this->code); // set sheet encoding
+			$this->sheet->setInputEncoding($this->code);
 			if ($_SESSION['language']->dir == 'rtl')
 				$this->sheet->setRTL();
 			for ($i = 0; $i < $this->numcols; $i++)
@@ -615,7 +641,7 @@ class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
 			$this->{$this->headerFunc}();
 	}
 	
-	function ymd2Date($year, $mon, $day) {// XLS internal date representation is a number between 1900-01-01 and 2078-12-31
+	function ymd2Date($year, $mon, $day) {// Excel date serial number (1900 date system) is a number between 1900-01-01 and 2078-12-31
 										  // if we need the time part too, we have to add this value after a decimalpoint.
 		$mo = array(0,31,28,31,30,31,30,31,31,30,31,30,31);
 		$BASE = 1900;
@@ -646,7 +672,7 @@ class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
 		return $jul;
 	}
   
-	function px2units($px) { // XLS app conversion. Not bulletproof.
+	function px2units($px) { // Points to Excel column width in characters. Not bulletproof.
 		$excel_column_width_factor = 256;
 		$unit_offset_length = $this->excelColWidthFactor;
 		return ($px / $unit_offset_length);
@@ -658,11 +684,14 @@ class FrontReport extends Spreadsheet_Excel_Writer_Workbook {
 		for ($i = 0; $i < $this->numcols; $i++)
 			$this->sheet->writeBlank($this->y, $i, $this->formatFooter);
 		$this->sheet->mergeCells($this->y, 0, $this->y, $this->numcols - 1);
-		$this->close();
+		if (!$this->close()) {
+			display_error(_('The Excel report file could not be written.'));
+			exit;
+		}
 		$token = report_artifact_register(
 			$this->path.'/'.$this->unique_name,
 			$this->filename,
-			'application/vnd.ms-excel',
+			EXCEL_REPORT_MIME_TYPE,
 			$this->rep_id,
 			$this->security_area,
 			'interactive_report_download'

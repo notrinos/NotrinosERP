@@ -266,12 +266,11 @@ function pkg_prop($pkg, $property, $lang=false) {
 function get_pkg_or_list($type=null, $pkgname=null, $filter=array(), $outkey=null, $download=true) {
 	global $path_to_root, $repo_auth;
 
-	$repo = (isset($repo_auth['scheme']) ? $repo_auth['scheme'] : 'http://')
-			.(isset($repo_auth['login'])  ? $repo_auth['login'].':' : '')
-			.(isset($repo_auth['pass'])   ? $repo_auth['pass'].'@' : '')
-			.(isset($repo_auth['host'])   ? $repo_auth['host'].'/' : '')
-			.(isset($repo_auth['path'])   ? $repo_auth['path'].'/' : '')
-			.$repo_auth['branch'];
+	$repo = get_package_repository_download_url();
+	if ($repo === '') {
+		display_error(_('The extension repository is not configured.'));
+		return null;
+	}
 
 	// first download local copy of repo release file
 	// and check remote signature with local copy of public key
@@ -1140,6 +1139,31 @@ function get_package_repository_base_url() {
 		$url .= '/'.$path;
 
 	return $url.'/'.$branch;
+}
+
+/**
+ * Build the repository URL used to download package lists and package files.
+ *
+ * The public repository needs no login, so the defaults in version.php carry none. A private repository can set
+ * 'login' and 'pass' in the $repo_auth array of config.php; they are URL-encoded into the address and sent as
+ * HTTP Basic authorization by url_get_contents().
+ *
+ * @return string Repository URL ending with the branch, or '' when the host or branch is not configured.
+ */
+function get_package_repository_download_url() {
+	global $repo_auth;
+
+	$url = get_package_repository_base_url();
+	$login = isset($repo_auth['login']) ? (string)$repo_auth['login'] : '';
+	if ($url === '' || $login === '')
+		return $url;
+
+	$scheme = isset($repo_auth['scheme']) ? $repo_auth['scheme'] : 'http://';
+	$credentials = rawurlencode($login);
+	if (isset($repo_auth['pass']) && (string)$repo_auth['pass'] !== '')
+		$credentials .= ':'.rawurlencode((string)$repo_auth['pass']);
+
+	return $scheme.$credentials.'@'.substr($url, strlen($scheme));
 }
 
 /**

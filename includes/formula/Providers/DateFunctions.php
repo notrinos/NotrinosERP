@@ -14,7 +14,7 @@
  * DateFunctions — Built-in date/time formula functions.
  *
  * Implements the date/time function category from the 150+ Excel function
- * registry (Workbook.php::$_functions). Each function is registered
+ * registry (the PEAR Spreadsheet_Excel_Writer function list). Each function is registered
  * as an independent class implementing FormulaFunctionInterface.
  *
  * Functions in this category:

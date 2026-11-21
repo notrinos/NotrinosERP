@@ -130,6 +130,9 @@ class email
 		$file = basename($filename, '.pdf');
 		if ($filename == $file . '.pdf') 
 			return 'application/pdf';
+		$file = basename($filename, '.xlsx');
+		if ($filename == $file . '.xlsx')
+			return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 		$file = basename($filename, '.xls'); 
 		if ($filename == $file . '.xls') 
 			return 'application/vnd.ms-excel'; 

@@ -17,7 +17,7 @@
  * The parser implements the full NFX grammar as specified in Volume 5, Section 5.6
  * of the Centralized Formula Framework architecture. Each grammar production
  * maps to a single private method, following the same pattern used by
- * Spreadsheet_Excel_Writer_Parser (reporting/includes/Workbook.php).
+ * the PEAR Spreadsheet_Excel_Writer_Parser.
  *
  * ## Operator Precedence (Highest to Lowest)
  *

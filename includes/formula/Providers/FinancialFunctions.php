@@ -14,7 +14,7 @@
  * FinancialFunctions — Built-in financial formula functions.
  *
  * Implements the financial function category from the 150+ Excel function
- * registry (Workbook.php::$_functions). These functions are essential for
+ * registry (the PEAR Spreadsheet_Excel_Writer function list). These functions are essential for
  * ERP financial calculations: loans, leases, investments, depreciation.
  *
  * Functions in this category:

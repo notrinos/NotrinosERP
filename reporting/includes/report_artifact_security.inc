@@ -125,7 +125,7 @@ function report_artifact_cleanup($now = null) {
 	$directory = report_artifact_private_directory();
 	if ($directory !== false && ($handle = @opendir($directory))) {
 		while (($name = readdir($handle)) !== false) {
-			if (!preg_match('/^[A-Za-z0-9_-]+\\.(?:xls|pdf|png)$/', $name))
+			if (!preg_match('/^[A-Za-z0-9_-]+\\.(?:xlsx|xls|pdf|png)$/', $name))
 				continue;
 			$path = $directory . DIRECTORY_SEPARATOR . $name;
 			if (is_file($path) && @filemtime($path) < $now - REPORT_ARTIFACT_TTL_SECONDS
@@ -156,7 +156,7 @@ function report_artifact_register($path, $filename, $mime_type, $report_id, $sec
 	$real_path = realpath($path);
 	$real_directory = $directory === false ? false : realpath($directory);
 	$allowed_mimes = array(
-		'application/vnd.ms-excel' => 'xls',
+		'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
 		'application/pdf' => 'pdf',
 	);
 	$purpose = preg_replace('/[^a-z0-9_]/', '', strtolower((string)$purpose));
