@@ -8,7 +8,6 @@
 	core DB functions in includes/approval/db/ but are only needed
 	by the admin UI pages.
 
-	PHP 5.6+ compatible.
 ***********************************************************************/
 
 /**

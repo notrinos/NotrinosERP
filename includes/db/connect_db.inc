@@ -13,12 +13,12 @@
 define('MAX_DEADLOCK_RETRY', 3);
 include_once(__DIR__.'/json_sql.inc');
 
+// PHP 8.1 is the minimum (owner decision D-04); the mysql_* API no longer exists there.
+// Without PDO_MySQL the mysqli wrapper is loaded, whose db_extension_exists() reports a missing extension.
 if (class_exists('PDO') && in_array('mysql', PDO::getAvailableDrivers()))
 	include_once('connect_db_pdo.inc');
-else if (function_exists('mysqli_connect'))
-	include_once('connect_db_mysqli.inc');
 else
-	include_once('connect_db_mysql.inc'); // use deprecated mysql_* API as fallback on old servers
+	include_once('connect_db_mysqli.inc');
 
 function db_get_version() {
 	$result = db_query("SELECT VERSION()");

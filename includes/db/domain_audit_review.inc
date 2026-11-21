@@ -239,9 +239,6 @@ function domain_audit_activate_review_identity($company)
         } elseif (function_exists('mysqli_close') && $db instanceof mysqli) {
             @mysqli_close($db);
             $db = false;
-        } elseif (function_exists('mysql_close')) {
-            @mysql_close($db);
-            $db = false;
         }
         $domain_audit_export_identity_active = false;
     }

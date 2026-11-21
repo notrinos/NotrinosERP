@@ -164,15 +164,6 @@ function domain_audit_export_open_connection($credential)
             $connection['host'], $connection['dbuser'], $connection['dbpassword'],
             $connection['dbname'], (int)$connection['port']
         );
-    } elseif (function_exists('mysql_connect')) {
-        $candidate = @mysql_connect(
-            $connection['host'].':'.$connection['port'],
-            $connection['dbuser'], $connection['dbpassword'], true
-        );
-        if ($candidate && !@mysql_select_db($connection['dbname'], $candidate)) {
-            @mysql_close($candidate);
-            $candidate = false;
-        }
     }
     if (!$candidate) {
         return false;
@@ -194,18 +185,12 @@ function domain_audit_export_open_connection($credential)
     } elseif (function_exists('mysqli_query') && $db instanceof mysqli) {
         $mode_ok = @mysqli_query($db, "SET sql_mode='STRICT_ALL_TABLES'") !== false;
         $encoding_ok = $encoding ? @mysqli_set_charset($db, $encoding) : false;
-    } elseif (function_exists('mysql_query')) {
-        $mode_ok = @mysql_query("SET sql_mode='STRICT_ALL_TABLES'", $db) !== false;
-        $encoding_ok = $encoding && function_exists('mysql_set_charset')
-            ? @mysql_set_charset($encoding, $db) : false;
     }
     if (!$mode_ok || !$encoding_ok) {
         if ($db instanceof PDO) {
             $db = null;
         } elseif (function_exists('mysqli_close') && $db instanceof mysqli) {
             @mysqli_close($db);
-        } elseif (function_exists('mysql_close')) {
-            @mysql_close($db);
         }
         $domain_audit_export_identity_active = false;
         return false;
@@ -371,9 +356,6 @@ function domain_audit_activate_export_identity($company)
             $db = null;
         } elseif (function_exists('mysqli_close') && $db instanceof mysqli) {
             @mysqli_close($db);
-            $db = false;
-        } elseif (function_exists('mysql_close')) {
-            @mysql_close($db);
             $db = false;
         }
         $domain_audit_export_identity_active = false;

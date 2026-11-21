@@ -388,13 +388,8 @@ function db_execute_optional_import_query($sql) {
 		return;
 	}
 
-	if (function_exists('mysqli_query')) {
+	if (function_exists('mysqli_query'))
 		@mysqli_query($db, $sql);
-		return;
-	}
-
-	if (function_exists('mysql_query'))
-		@mysql_query($sql, $db);
 }
 /*
 	Database import:

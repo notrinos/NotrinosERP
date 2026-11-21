@@ -7,7 +7,6 @@
         NOTRINOS_APPROVAL_CRON_TOKEN='...' php admin/approval_cron.php --company=0
 
     Web usage requires the existing SA_APPROVALRULES session permission.
-    PHP 5.6+ compatible.
 ***********************************************************************/
 $page_security = 'SA_APPROVALRULES';
 $path_to_root = '..';
