@@ -11,7 +11,7 @@
 ***********************************************************************/
 
 /**
- * Manage Employees — per HRM_DEVELOPMENT_PLAN.md Section 10.1
+ * Manage Employees
  * 7-Tab interface: Personal, Employment, Salary, Documents, History, Dependents, Transactions
  */
 

@@ -14,8 +14,6 @@
  * Cycle Count Management Page
  *
  * Two tabs: Count Plans (CRUD) and Count Sessions (lifecycle management + count entry).
- *
- * Session 16 of UNIFIED_INVENTORY_IMPLEMENTATION_PLAN.md
  */
 
 $page_security = 'SA_WAREHOUSE_CYCLE_COUNT';

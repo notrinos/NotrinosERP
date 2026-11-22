@@ -12,7 +12,6 @@
 
 /**
  * Master UI aggregator — includes all HRM UI helper files.
- * Per HRM_DEVELOPMENT_PLAN.md Section 4.2 (Separation of Concerns).
  */
 
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');

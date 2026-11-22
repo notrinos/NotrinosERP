@@ -13,8 +13,6 @@
 /**
  * Putaway Rules — CRUD page for warehouse putaway rule definitions
  * and a "Test Putaway" tool to preview bin assignment results.
- *
- * Session 7 of the Unified Advanced Inventory Implementation Plan.
  */
 $page_security = 'SA_WAREHOUSE_PUTAWAY';
 $path_to_root = '../..';

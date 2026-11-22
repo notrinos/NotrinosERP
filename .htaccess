@@ -1,9 +1,43 @@
 # Protect sensitive files.
 <FilesMatch "\.(inc|po|sh|pem|.*sql|log)$">
-	Order allow,deny
-	Deny from All
-	Satisfy All
+	<IfModule mod_authz_core.c>
+		Require all denied
+	</IfModule>
+	<IfModule !mod_authz_core.c>
+		Order allow,deny
+		Deny from All
+		Satisfy All
+	</IfModule>
 </FilesMatch>
+
+# Development, build and test files at the application root are never part of the
+# web surface (DIM release packaging). The same rule is verified by
+# tests/php/test_release_web_deny_contract.php and tests/run_release_web_deny_probe.py.
+<FilesMatch "(\.(ps1|ipynb|py|cjs|patch|tsv)|^(package(-lock)?\.json|composer\.(json|lock)|playwright\.config\.js|AGENTS\.md|\.gitattributes|\.gitignore|\.ignore))$">
+	<IfModule mod_authz_core.c>
+		Require all denied
+	</IfModule>
+	<IfModule !mod_authz_core.c>
+		Order allow,deny
+		Deny from All
+		Satisfy All
+	</IfModule>
+</FilesMatch>
+
+# Version control, editor, agent and tool-output folders are never served. The
+# development folders with their own .htaccess (tests, DOCS, tools, deploy,
+# releases) deny themselves.
+<IfModule mod_alias.c>
+	RedirectMatch 404 "(^|/)(\.git|\.github|\.vscode|\.agents|\.codex|\.agent-artifacts[^/]*|\.venv|node_modules|playwright-report|test-results)(/|$)"
+</IfModule>
+
+# Private company data is never served directly: database backups in any compression, employee documents, attachments and
+# generated report PDFs. Authorized pages stream them from the filesystem (admin/backups.php, admin/attachments.php, the HRM
+# document views). Logos, item images and the JavaScript cache under company/<n>/ stay public. Verified by
+# tests/php/test_release_web_deny_contract.php and tests/run_release_web_deny_probe.py.
+<IfModule mod_alias.c>
+	RedirectMatch 404 "(^|/)company/[^/]+/(backup|documents|attachments|pdf_files)(/|$)"
+</IfModule>
 
 # Disable directory listings.
 Options -Indexes
@@ -29,3 +63,22 @@ DirectoryIndex index.php
 #
 #AddType application/x-javascript .js
 #AddType text/css .css
+
+# Cost & Profit Tracking (formerly Dimensions): the module folder dimensions/ was renamed to tracking/ and its pages were renamed
+# (DIM-NAM-006). Old bookmarks and saved links forward permanently to the new page with the same query string. Apache with mod_alias
+# only; on other web servers the old addresses return 404. Verified by tests/php/test_dimension_nam006_file_names_contract.php.
+<IfModule mod_alias.c>
+	RedirectMatch 301 ^(.*)/dimensions/dimension_entry\.php$ $1/tracking/tracking_value_entry.php
+	RedirectMatch 301 ^(.*)/dimensions/dimension_hierarchy\.php$ $1/tracking/tracking_hierarchy.php
+	RedirectMatch 301 ^(.*)/dimensions/dimension_onboarding\.php$ $1/tracking/getting_started.php
+	RedirectMatch 301 ^(.*)/dimensions/financial_tracking_guide\.php$ $1/tracking/user_guide.php
+	RedirectMatch 301 ^(.*)/dimensions/financial_tracking_home\.php$ $1/tracking/overview.php
+	RedirectMatch 301 ^(.*)/dimensions/category_policy\.php$ $1/tracking/category_policy.php
+	RedirectMatch 301 ^(.*)/dimensions/inquiry/dimension_budget_alerts\.php$ $1/tracking/inquiry/budget_alerts.php
+	RedirectMatch 301 ^(.*)/dimensions/inquiry/dimension_exceptions\.php$ $1/tracking/inquiry/missing_or_invalid_tracking.php
+	RedirectMatch 301 ^(.*)/dimensions/inquiry/dimension_tracking\.php$ $1/tracking/inquiry/cost_profit_explorer.php
+	RedirectMatch 301 ^(.*)/dimensions/inquiry/search_dimensions\.php$ $1/tracking/inquiry/search_tracking_values.php
+	RedirectMatch 301 ^(.*)/dimensions/inquiry/customer_economics\.php$ $1/tracking/inquiry/customer_economics.php
+	RedirectMatch 301 ^(.*)/dimensions/view/view_dimension\.php$ $1/tracking/view/view_tracking_value.php
+	RedirectMatch 301 ^(.*)/hrm/inquiry/dimension_compatibility\.php$ $1/hrm/inquiry/tracking_compatibility.php
+</IfModule>

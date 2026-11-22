@@ -11,7 +11,7 @@
 ***********************************************************************/
 
 /**
- * Manage Job Classes — per HRM_DEVELOPMENT_PLAN.md Section 6 & 10.2
+ * Manage Job Classes
  * Supports 3 pay bases: Monthly (0), Daily (1), Hourly (2)
  */
 

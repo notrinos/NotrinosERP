@@ -23,8 +23,6 @@
  * - Recent activity feed
  * - Top stock items by value
  *
- * Session 21 of UNIFIED_INVENTORY_IMPLEMENTATION_PLAN.md
- *
  * @package NotrinosERP
  * @subpackage Inventory/Warehouse
  */

@@ -17,8 +17,6 @@ require_once __DIR__ . '/../../../includes/db/inventory_event_classification_db.
  *
  * Provides CRUD + lifecycle management for cycle counting programs.
  * Tables: 0_wh_cycle_count_plans, 0_wh_cycle_counts, 0_wh_cycle_count_lines
- *
- * Session 16 of UNIFIED_INVENTORY_IMPLEMENTATION_PLAN.md
  */
 
 //----------------------------------------------------------------------

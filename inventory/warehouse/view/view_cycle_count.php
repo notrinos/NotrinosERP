@@ -15,8 +15,6 @@
  *
  * Displays count header, variance summary, and count lines.
  * In enter mode (?enter=1), allows entering counted quantities.
- *
- * Session 16 of UNIFIED_INVENTORY_IMPLEMENTATION_PLAN.md
  */
 
 $page_security = 'SA_WAREHOUSE_CYCLE_COUNT';
