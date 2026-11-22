@@ -5,6 +5,7 @@
     as published by the Free Software Foundation, either version 3
     of the License, or (at your option) any later version.
 ***********************************************************************/
+require_once dirname(__DIR__).'/attachment_service.inc';
 
 /**
  * Append-only HR/payroll domain-audit foundation.
@@ -184,9 +185,7 @@ function ensure_domain_audit_private_storage($company = null) {
         if (DIRECTORY_SEPARATOR === '/' && $permissions !== false && ($permissions & 0077) !== 0) {
             return false;
         }
-        if (!file_exists($path.DIRECTORY_SEPARATOR.'.htaccess')) {
-            @file_put_contents($path.DIRECTORY_SEPARATOR.'.htaccess', "Require all denied\nDeny from all\n");
-        }
+        write_private_directory_htaccess($path);
         if (!file_exists($path.DIRECTORY_SEPARATOR.'web.config')) {
             @file_put_contents($path.DIRECTORY_SEPARATOR.'web.config', '<?xml version="1.0" encoding="UTF-8"?>'
                 .'<configuration><system.webServer><security><authorization>'

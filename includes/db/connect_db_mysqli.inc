@@ -91,7 +91,7 @@ function db_query($sql, $err_msg=null) {
 
 	if ($err_msg != null || $SysPrefs->go_debug) {
 		$exit = $err_msg != null;
-		if (function_exists('xdebug_call_file'))
+		if (function_exists('xdebug_call_file') && in_array('develop', xdebug_info('mode'), true))
 			$err_msg = '<br>At file '.xdebug_call_file().':'.xdebug_call_line().':<br>'.$err_msg;
 		check_db_error($err_msg, $sql, $exit);
 	}

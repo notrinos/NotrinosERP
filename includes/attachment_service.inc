@@ -28,6 +28,26 @@
  */
 
 /**
+ * Write the Apache file that denies all direct web access to one private directory.
+ *
+ * The rules work on Apache 2.4 with or without mod_access_compat and on Apache 2.2.
+ * An existing file is kept, except the older two-line file this application wrote
+ * before, which made Apache 2.4 without mod_access_compat answer 500; that one is
+ * replaced with the same rules in guarded form.
+ *
+ * @param string $directory Private directory that must never be served directly.
+ * @return bool True when the directory holds a deny file afterwards.
+ */
+function write_private_directory_htaccess($directory) {
+    $path = $directory.DIRECTORY_SEPARATOR.'.htaccess';
+    if (file_exists($path) && @file_get_contents($path) !== "Require all denied\nDeny from all\n") {
+        return true;
+    }
+    return @file_put_contents($path, "<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n"
+        ."<IfModule !mod_authz_core.c>\n\tOrder allow,deny\n\tDeny from all\n</IfModule>\n") !== false;
+}
+
+/**
  * Validate an uploaded file against an attachment policy.
  *
  * @param array  $upload  The $_FILES element to validate.
@@ -710,10 +730,7 @@ function ensure_attachments_directory() {
 
     // Deny direct web access independently of the index redirect. All content
     // must pass through an authorized streaming controller.
-    $deny_file = $dir . '/.htaccess';
-    if (!file_exists($deny_file)) {
-        @file_put_contents($deny_file, "Require all denied\nDeny from all\n");
-    }
+    write_private_directory_htaccess($dir);
     $web_config = $dir . '/web.config';
     if (!file_exists($web_config)) {
         @file_put_contents($web_config, '<?xml version="1.0" encoding="UTF-8"?>'
@@ -796,9 +813,7 @@ function ensure_hrm_document_private_storage($company = null) {
         @chmod($path, 0700);
     }
     foreach (array($paths['root'], $paths['objects'], $paths['quarantine'], $paths['keys']) as $path) {
-        if (!file_exists($path.DIRECTORY_SEPARATOR.'.htaccess')) {
-            @file_put_contents($path.DIRECTORY_SEPARATOR.'.htaccess', "Require all denied\nDeny from all\n");
-        }
+        write_private_directory_htaccess($path);
         if (!file_exists($path.DIRECTORY_SEPARATOR.'web.config')) {
             @file_put_contents($path.DIRECTORY_SEPARATOR.'web.config', '<?xml version="1.0" encoding="UTF-8"?>'
                 .'<configuration><system.webServer><security><authorization>'
@@ -1623,9 +1638,8 @@ function harden_hrm_document_public_directories($company = null) {
         if (!is_dir($directory)) {
             continue;
         }
-        $apache = $directory.'/.htaccess';
         $iis = $directory.'/web.config';
-        if ((!file_exists($apache) && @file_put_contents($apache, "Require all denied\nDeny from all\n") === false)
+        if (!write_private_directory_htaccess($directory)
             || (!file_exists($iis) && @file_put_contents($iis, '<?xml version="1.0" encoding="UTF-8"?>'
                 .'<configuration><system.webServer><security><authorization>'
                 .'<remove users="*" roles="" verbs="" /><add accessType="Deny" users="*" />'

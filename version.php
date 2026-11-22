@@ -14,12 +14,12 @@ $version = isset($SysPrefs->version) ? $SysPrefs->version : $src_version;
 //======================================================================
 // Extension packages repository settings
 //
-// Extensions repository. Can be overriden in config.php
+// Extensions repository. Can be overriden by $repo_auth in config.php.
+// The public repository needs no login. A private repository sets its login and password in config.php;
+// never put credentials in this file.
 
 $repo_auth = isset($SysPrefs->repo_auth) ? $SysPrefs->repo_auth :
 array(
-	'login' => 'anonymous',
-	'pass' => 'password',
 	'host' => 'repo.notrinos.com', // repo server address
 	'branch' => '1.0'	// Repository branch for current sources version
 );
