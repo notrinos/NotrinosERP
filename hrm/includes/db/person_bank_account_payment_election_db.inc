@@ -8,6 +8,7 @@
  * predecessor election. It does not create payment instructions, post payroll,
  * execute a payment, create bank transactions/GL, or read protected bank values.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_bank_payment_election_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_bank_payment_election_dependencies = array(
@@ -144,12 +145,6 @@ function hrm_bank_payment_election_normalize_allocations($allocations)
         'hash'=>hash('sha256', $canonical),
         'total'=>'100.000000',
     );
-}
-
-function hrm_bank_payment_election_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
 }
 
 function hrm_bank_payment_election_permission()
@@ -573,7 +568,7 @@ function submit_hrm_person_bank_payment_election($person_id, $currency_code, $pr
     $effective = hrm_bank_payment_election_datetime($effective_from);
     $allocation_set = hrm_bank_payment_election_normalize_allocations($allocations);
     $now = $now_epoch === null ? time() : $now_epoch;
-    $actor = hrm_bank_payment_election_actor_id();
+    $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if ($person_id === false || $currency_code === false || $predecessor_election_id === false
         || $predecessor_row_version === false || (($predecessor_election_id === 0) !== ($predecessor_row_version === 0))
@@ -747,7 +742,7 @@ function execute_approved_bank_payment_election($draft_data, $reserved_trans_no,
     if (!hrm_bank_payment_election_permission())
         return false;
     $bound = hrm_bank_payment_election_from_draft($draft_data, $draft_id);
-    $actor = hrm_bank_payment_election_actor_id();
+    $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if (!is_array($bound) || $actor <= 0)
         return false;
@@ -833,7 +828,7 @@ function reject_bank_payment_election_draft($draft_data, $draft_id, $comments)
     if (!hrm_bank_payment_election_permission())
         return false;
     $bound = hrm_bank_payment_election_from_draft($draft_data, $draft_id);
-    $actor = hrm_bank_payment_election_actor_id();
+    $actor = current_user_id_or_zero();
     if (!is_array($bound) || $actor <= 0)
         return false;
     $election = $bound['election'];
@@ -865,7 +860,7 @@ function cancel_bank_payment_election_draft($draft_data, $draft_id, $comments)
     if (!hrm_bank_payment_election_permission())
         return false;
     $bound = hrm_bank_payment_election_from_draft($draft_data, $draft_id);
-    $actor = hrm_bank_payment_election_actor_id();
+    $actor = current_user_id_or_zero();
     if (!is_array($bound) || $actor <= 0)
         return false;
     $election = $bound['election'];

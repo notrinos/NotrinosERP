@@ -1,15 +1,11 @@
 <?php
 /** PAY-RULE-005 governed jurisdiction/applicability/fact-set persistence. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_pay_rule_005_validate_jurisdiction_version'))
     include_once($path_to_root.'/hrm/includes/payroll/jurisdiction_precedence_contract.inc');
 if (!function_exists('append_domain_audit_event'))
     include_once($path_to_root.'/includes/db/domain_audit_db.inc');
 
-function hrm_pay_rule_005_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user']) && isset($_SESSION['wa_current_user']->user)
-        ? (int)$_SESSION['wa_current_user']->user : 0;
-}
 function hrm_pay_rule_005_manage_allowed(){return function_exists('user_check_access')&&user_check_access('SA_HRM_MANAGE_PAY_RULE_JURISDICTION');}
 function hrm_pay_rule_005_resolve_allowed(){return function_exists('user_check_access')&&user_check_access('SA_HRM_RESOLVE_PAY_RULE_JURISDICTION');}
 function hrm_pay_rule_005_view_allowed(){return function_exists('user_check_access')&&user_check_access('SA_HRM_VIEW_PAY_RULE_RESOLUTION');}
@@ -67,7 +63,7 @@ function hrm_pay_rule_005_audit($entity_type,$entity_key,$action,$reason,$legal_
 /** Create stable identity plus one immutable effective hierarchy version. */
 function hrm_pay_rule_005_write_jurisdiction_version($input)
 {
-    $actor=hrm_pay_rule_005_actor_id();if($actor<=0||!hrm_pay_rule_005_manage_allowed()||!is_array($input))return false;
+    $actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_rule_005_manage_allowed()||!is_array($input))return false;
     foreach(array('jurisdiction_key','jurisdiction_type','parent_jurisdiction_id','effective_from','effective_to','authority_source_ref') as $k)if(!array_key_exists($k,$input))return false;
     $manage=empty($GLOBALS['transaction_level']);if($manage)begin_transaction();$ok=true;$return=false;
     $key=hrm_pay_rule_005_ascii_token($input['jurisdiction_key'],96);$type=hrm_pay_rule_005_ascii_token($input['jurisdiction_type'],24);$parent=(int)$input['parent_jurisdiction_id'];
@@ -102,7 +98,7 @@ function hrm_pay_rule_005_write_jurisdiction_version($input)
 
 function hrm_pay_rule_005_bind_subject_jurisdiction($input)
 {
-    $actor=hrm_pay_rule_005_actor_id();if($actor<=0||!hrm_pay_rule_005_manage_allowed())return false;$v=hrm_pay_rule_005_validate_binding($input,$err);if($v===false)return false;
+    $actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_rule_005_manage_allowed())return false;$v=hrm_pay_rule_005_validate_binding($input,$err);if($v===false)return false;
     $manage=empty($GLOBALS['transaction_level']);if($manage)begin_transaction();$ok=true;$return=false;
     $scope=hrm_pay_rule_005_subject_scope($v['subject_type'],$v['subject_id'],true);if(!is_array($scope)||$scope['legal_entity_id']!==$v['subject_legal_entity_id'])$ok=false;
     if($ok&&!is_array(hrm_pay_rule_005_active_jurisdiction_version($v['jurisdiction_id'],$v['effective_from'],true)))$ok=false;
@@ -149,7 +145,7 @@ function hrm_pay_rule_005_build_fact_material($scope,$date,$for_update=false)
 
 function hrm_pay_rule_005_seal_fact_set($employment_id,$assignment_id,$date)
 {
-    $actor=hrm_pay_rule_005_actor_id();if($actor<=0||!hrm_pay_rule_005_resolve_allowed()||hrm_pay_rule_005_date($date)===false)return false;
+    $actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_rule_005_resolve_allowed()||hrm_pay_rule_005_date($date)===false)return false;
     $manage=empty($GLOBALS['transaction_level']);if($manage)begin_transaction();$ok=true;$return=false;$created=false;$scope=hrm_pay_rule_005_resolution_scope($employment_id,$assignment_id,$date,true);if(!is_array($scope))$ok=false;
     $material=$ok?hrm_pay_rule_005_build_fact_material($scope,$date,true):false;if(!is_array($material))$ok=false;
     $payload=$ok?array('employment_id'=>(int)$scope['employment_id'],'assignment_id'=>(int)$scope['assignment_id'],'legal_entity_id'=>(int)$scope['legal_entity_id'],'work_location_id'=>(int)$scope['work_location_id'],'as_of_date'=>$date,'source_state_sha256'=>$material['source_state_sha256'],'items'=>array_map(function($x){return $x['item_sha256'];},$material['items'])):array();
@@ -163,7 +159,7 @@ function hrm_pay_rule_005_seal_fact_set($employment_id,$assignment_id,$date)
 
 function hrm_pay_rule_005_write_applicability($input)
 {
-    $actor=hrm_pay_rule_005_actor_id();if($actor<=0||!hrm_pay_rule_005_manage_allowed())return false;$v=hrm_pay_rule_005_validate_applicability($input,$err);if($v===false)return false;
+    $actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_rule_005_manage_allowed())return false;$v=hrm_pay_rule_005_validate_applicability($input,$err);if($v===false)return false;
     $manage=empty($GLOBALS['transaction_level']);if($manage)begin_transaction();$ok=true;$return=false;
     $r=db_query('SELECT rv.rule_version_id,rv.effective_from,rv.effective_to,p.publication_id FROM '.TB_PREF.'hrm_pay_rule_rule_versions rv INNER JOIN '.TB_PREF.'hrm_pay_rule_lifecycle_publications p ON p.rule_version_id=rv.rule_version_id LEFT JOIN '.TB_PREF.'hrm_pay_rule_lifecycle_events e ON e.publication_id=p.publication_id WHERE rv.rule_version_id='.$v['rule_version_id'].' AND p.publication_id='.$v['publication_id'].' AND e.event_id IS NULL LIMIT 2 FOR UPDATE','could not lock published PAY-RULE-004 Rule Version');
     if(!$r||db_num_rows($r)!==1)$ok=false;else{$rv=db_fetch_assoc($r);if(strcmp($v['effective_from'],$rv['effective_from'])<0||strcmp($v['effective_to'],$rv['effective_to'])>0)$ok=false;}

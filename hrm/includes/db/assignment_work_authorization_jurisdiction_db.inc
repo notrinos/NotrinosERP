@@ -9,6 +9,7 @@
  * the caller transaction so a successor Assignment cannot commit without its
  * governed jurisdiction custody.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_work_authorization_validate_jurisdiction'))
     include_once($path_to_root.'/hrm/includes/db/work_authorization_db.inc');
 if (!function_exists('append_domain_audit_event'))
@@ -16,12 +17,6 @@ if (!function_exists('append_domain_audit_event'))
 
 if (!defined('HRM_ASSIGNMENT_WA_JURISDICTION_SOURCE_TRANSFER'))
     define('HRM_ASSIGNMENT_WA_JURISDICTION_SOURCE_TRANSFER', 'employee_transfer_explicit');
-
-function hrm_assignment_work_authorization_jurisdiction_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
-}
 
 function hrm_assignment_work_authorization_jurisdiction_permission()
 {
@@ -71,7 +66,7 @@ function bind_hrm_assignment_work_authorization_jurisdiction($assignment_id, $ju
 {
     global $transaction_level;
     $assignment_id = (int)$assignment_id;
-    $actor = hrm_assignment_work_authorization_jurisdiction_actor_id();
+    $actor = current_user_id_or_zero();
     if (empty($transaction_level) || $assignment_id <= 0 || $actor <= 0
         || !hrm_assignment_work_authorization_jurisdiction_permission()
         || !hrm_work_authorization_validate_jurisdiction($jurisdiction)

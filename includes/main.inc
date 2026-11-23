@@ -86,7 +86,9 @@ function init_css() {
 
 		//The $_SERVER['REQUEST_URI'] is different depending on the server configuration (Apache, Nginx)
 		$file_ext = strpos($_SERVER['REQUEST_URI'], 'php?') ? '.php?' : '.php';
-		$basename = basename($_SERVER['REQUEST_URI'], $file_ext . $_SERVER['QUERY_STRING']);
+		// The PHP built-in server sets no QUERY_STRING for a request without a query.
+		$query_string = isset($_SERVER['QUERY_STRING']) ? $_SERVER['QUERY_STRING'] : '';
+		$basename = basename($_SERVER['REQUEST_URI'], $file_ext . $query_string);
 		$local_css = $path_to_root.'/themes/'.user_theme().'/local_style/'.$basename.'.css';
 		$local_css_file = dirname(__FILE__).'/../themes/'.user_theme().'/local_style/'.$basename.'.css';
 

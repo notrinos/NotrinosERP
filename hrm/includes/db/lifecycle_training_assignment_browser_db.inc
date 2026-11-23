@@ -2,6 +2,7 @@
 /**
  * Restricted browser recovery for the fixed Employee Training Assignment.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!defined('HRM_LIFECYCLE_TRAINING_ASSIGNMENT_BROWSER_SESSION_NAMESPACE'))
     define('HRM_LIFECYCLE_TRAINING_ASSIGNMENT_BROWSER_SESSION_NAMESPACE', 'hrm_lifecycle_training_assignment_idempotency');
 
@@ -100,8 +101,8 @@ function get_hrm_lifecycle_employee_training_assignment_browser_status($employee
 {
     $none = array('status'=>'none','own'=>false);
     $employee_id = hrm_lifecycle_training_assignment_browser_employee_id($employee_id);
-    $actor = function_exists('hrm_lifecycle_training_assignment_actor_id')
-        ? hrm_lifecycle_training_assignment_actor_id() : 0;
+    $actor = function_exists('current_user_id_or_zero')
+        ? current_user_id_or_zero() : 0;
     if ($employee_id === false || $actor <= 0 || !hrm_lifecycle_training_assignment_permission()
         || !function_exists('get_hrm_person_worker_binding'))
         return array('status'=>'inconsistent','own'=>false);

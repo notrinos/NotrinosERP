@@ -11,6 +11,7 @@
  * retention-unlock, task-level approval, e-signature, payroll or accounting
  * authority.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_lifecycle_transfer_task_document_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_transfer_task_document_dependencies = array(
@@ -49,17 +50,6 @@ function hrm_lifecycle_transfer_task_document_permission()
         && user_check_access('SA_EMPLOYEE');
 }
 
-function hrm_lifecycle_transfer_task_document_positive_int($value)
-{
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    $value = trim((string)$value);
-    if (preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $number = (int)$value;
-    return $number > 0 && (string)$number === $value ? $number : false;
-}
-
 function hrm_lifecycle_transfer_task_document_access_key($value)
 {
     $value = trim((string)$value);
@@ -69,7 +59,7 @@ function hrm_lifecycle_transfer_task_document_access_key($value)
 /** Lock the active legacy employee/Worker compatibility row for the command Worker. */
 function hrm_lifecycle_transfer_task_document_mapping_for_update($worker_id)
 {
-    $worker_id = hrm_lifecycle_transfer_task_document_positive_int($worker_id);
+    $worker_id = parse_positive_integer($worker_id);
     if ($worker_id === false)
         return false;
     $result = db_query("SELECT mapping_id,employee_number,employee_id,worker_id,retired_at "
@@ -116,7 +106,7 @@ function hrm_lifecycle_transfer_task_document_document_for_update($access_key)
 
 function hrm_lifecycle_transfer_task_document_link_for_update($task_id)
 {
-    $task_id = hrm_lifecycle_transfer_task_document_positive_int($task_id);
+    $task_id = parse_positive_integer($task_id);
     if ($task_id === false)
         return false;
     $result = db_query("SELECT task_document_version_id,lifecycle_task_id,employee_document_id,"
@@ -238,7 +228,7 @@ function link_hrm_lifecycle_employee_transfer_task_document($command_id, $docume
     if (!hrm_lifecycle_transfer_task_document_permission())
         return false;
     $actor = hrm_lifecycle_transfer_task_document_actor_id();
-    $command_id = hrm_lifecycle_transfer_task_document_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     $document_access_key = hrm_lifecycle_transfer_task_document_access_key($document_access_key);
     if ($actor <= 0 || $command_id === false || $document_access_key === false)
         return false;

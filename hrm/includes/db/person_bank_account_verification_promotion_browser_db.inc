@@ -7,6 +7,7 @@
  * assurance action hash, then strips those hashes before returning rows to UI.
  * Bank ciphertext, lookup tokens, key material and plaintext are never selected.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 $hrm_bank_account_verification_promotion_browser_repo_root = dirname(dirname(dirname(__DIR__)));
 if (!function_exists('promote_hrm_person_bank_account_verification')) {
@@ -48,8 +49,8 @@ function hrm_bank_account_verification_promotion_browser_rows(
     $evidence_row_version = (int)$evidence_row_version;
     $request_row_version = (int)$request_row_version;
     $bank_account_row_version = (int)$bank_account_row_version;
-    $actor = function_exists('hrm_bank_account_verification_request_actor_id')
-        ? hrm_bank_account_verification_request_actor_id() : 0;
+    $actor = function_exists('current_user_id_or_zero')
+        ? current_user_id_or_zero() : 0;
     if ($employee_ref === false || $actor <= 0 || !defined('TB_PREF')
         || !defined('ST_HRM_BANK_ACCOUNT_VERIFICATION')
         || !defined('HRM_BANK_ACCOUNT_VERIFICATION_EVIDENCE_REGISTRATION_ACTION_CLASS'))

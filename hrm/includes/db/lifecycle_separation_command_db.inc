@@ -10,6 +10,7 @@
  * bank-transaction, GL, checklist, document, or employee-compensation authority
  * is introduced here.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_lifecycle_separation_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_separation_dependencies = array(
@@ -49,68 +50,19 @@ if (!defined('HRM_LIFECYCLE_SEPARATION_HASH_VERSION'))
 if (!defined('HRM_LIFECYCLE_SEPARATION_REASON'))
     define('HRM_LIFECYCLE_SEPARATION_REASON', 'hrm_fnd_005_employee_separation_command');
 
-function hrm_lifecycle_separation_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
-}
-
 function hrm_lifecycle_separation_permission()
 {
     return function_exists('user_check_access') && user_check_access('SA_EMPSEPARATION');
-}
-
-function hrm_lifecycle_separation_positive_int($value)
-{
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    $value = trim((string)$value);
-    if (preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $number = (int)$value;
-    return $number > 0 && (string)$number === $value ? $number : false;
-}
-
-function hrm_lifecycle_separation_nonnegative_int($value)
-{
-    if (is_int($value))
-        return $value >= 0 ? $value : false;
-    $value = trim((string)$value);
-    if (preg_match('/^(?:0|[1-9][0-9]*)$/D', $value) !== 1)
-        return false;
-    $number = (int)$value;
-    return $number >= 0 && (string)$number === $value ? $number : false;
-}
-
-function hrm_lifecycle_separation_date($value)
-{
-    $value = trim((string)$value);
-    if (preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D', $value) !== 1)
-        return false;
-    $date = DateTime::createFromFormat('!Y-m-d', $value);
-    $errors = DateTime::getLastErrors();
-    if (!$date || (is_array($errors) && ((int)$errors['warning_count'] !== 0 || (int)$errors['error_count'] !== 0))
-        || $date->format('Y-m-d') !== $value)
-        return false;
-    return $value;
 }
 
 function hrm_lifecycle_separation_today_sql()
 {
     if (function_exists('Today') && function_exists('date2sql')) {
         $today = date2sql(Today());
-        if (hrm_lifecycle_separation_date($today) !== false)
+        if (parse_iso_calendar_date($today) !== false)
             return $today;
     }
     return date('Y-m-d');
-}
-
-function hrm_lifecycle_separation_idempotency_hash($key)
-{
-    if (!is_string($key) || strlen($key) < 16 || strlen($key) > 128
-        || preg_match('/^[A-Za-z0-9._:-]+$/D', $key) !== 1)
-        return false;
-    return hash('sha256', $key);
 }
 
 function hrm_lifecycle_separation_workflow_is_maker_checker()
@@ -151,11 +103,11 @@ function hrm_lifecycle_separation_request_hash($company, $worker_id, $employment
     $employee_number, $effective_date, $is_resignation)
 {
     foreach (array($worker_id,$employment_id,$assignment_id,$employee_number) as $value)
-        if (hrm_lifecycle_separation_positive_int((string)$value) === false)
+        if (parse_positive_integer((string)$value) === false)
             return false;
-    $is_resignation = hrm_lifecycle_separation_nonnegative_int((string)$is_resignation);
+    $is_resignation = parse_non_negative_integer((string)$is_resignation);
     if ((int)$company < 0 || $is_resignation === false || !in_array($is_resignation, array(0,1), true)
-        || hrm_lifecycle_separation_date($effective_date) === false)
+        || parse_iso_calendar_date($effective_date) === false)
         return false;
     return hash('sha256', HRM_LIFECYCLE_SEPARATION_HASH_CONTRACT.'|v='.HRM_LIFECYCLE_SEPARATION_HASH_VERSION
         .'|company='.(int)$company.'|worker_id='.(int)$worker_id.'|employment_id='.(int)$employment_id
@@ -165,7 +117,7 @@ function hrm_lifecycle_separation_request_hash($company, $worker_id, $employment
 
 function hrm_lifecycle_separation_command_for_update($command_id)
 {
-    $command_id = hrm_lifecycle_separation_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($command_id === false)
         return false;
     $result = db_query("SELECT lifecycle_command_id,worker_id,employment_id,assignment_id,command_type,command_status,"
@@ -248,14 +200,14 @@ function hrm_lifecycle_separation_draft_matches($draft_data, $command, $allow_te
     if ($keys !== $expected_keys)
         return false;
     foreach (array('lifecycle_command_id','worker_id','employment_id','assignment_id','employee_number') as $key)
-        if (hrm_lifecycle_separation_positive_int($draft_data[$key]) === false)
+        if (parse_positive_integer($draft_data[$key]) === false)
             return false;
-    $is_resignation = hrm_lifecycle_separation_nonnegative_int($draft_data['is_resignation']);
-    $draft_version = hrm_lifecycle_separation_positive_int($draft_data['command_row_version']);
+    $is_resignation = parse_non_negative_integer($draft_data['is_resignation']);
+    $draft_version = parse_positive_integer($draft_data['command_row_version']);
     $terminal_successor = $allow_terminal_version && (int)$command['row_version'] === 2 && $draft_version === 1;
     if ($is_resignation === false || !in_array($is_resignation, array(0,1), true)
         || $draft_version === false || ($draft_version !== (int)$command['row_version'] && !$terminal_successor)
-        || hrm_lifecycle_separation_date($draft_data['effective_date']) === false
+        || parse_iso_calendar_date($draft_data['effective_date']) === false
         || !is_string($draft_data['request_hash']) || preg_match('/^[a-f0-9]{64}$/D', $draft_data['request_hash']) !== 1)
         return false;
     if ((int)$draft_data['lifecycle_command_id'] !== (int)$command['lifecycle_command_id']
@@ -282,10 +234,10 @@ function hrm_lifecycle_separation_draft_matches($draft_data, $command, $allow_te
 function submit_hrm_lifecycle_employee_separation($employee_id, $effective_date, $is_resignation, $idempotency_key)
 {
     $employee_id = trim((string)$employee_id);
-    $effective_date = hrm_lifecycle_separation_date($effective_date);
-    $is_resignation = hrm_lifecycle_separation_nonnegative_int($is_resignation);
-    $idempotency_hash = hrm_lifecycle_separation_idempotency_hash($idempotency_key);
-    $actor = hrm_lifecycle_separation_actor_id();
+    $effective_date = parse_iso_calendar_date($effective_date);
+    $is_resignation = parse_non_negative_integer($is_resignation);
+    $idempotency_hash = idempotency_key_hash($idempotency_key);
+    $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if ($employee_id === '' || strlen($employee_id) > 20 || $effective_date === false
         || $is_resignation === false || !in_array($is_resignation, array(0,1), true)
@@ -403,7 +355,7 @@ function submit_hrm_lifecycle_employee_separation($employee_id, $effective_date,
 
 function hrm_lifecycle_separation_bound_draft($draft_data, $draft_id, $allow_terminal_version)
 {
-    $draft_id = hrm_lifecycle_separation_positive_int($draft_id);
+    $draft_id = parse_positive_integer($draft_id);
     if ($draft_id === false || !is_array($draft_data) || !isset($draft_data['lifecycle_command_id']))
         return false;
     $command = hrm_lifecycle_separation_command_for_update($draft_data['lifecycle_command_id']);
@@ -416,8 +368,8 @@ function hrm_lifecycle_separation_bound_draft($draft_data, $draft_id, $allow_ter
 
 function hrm_lifecycle_separation_service_years($hire_date, $effective_date)
 {
-    $hire_date = hrm_lifecycle_separation_date($hire_date);
-    $effective_date = hrm_lifecycle_separation_date($effective_date);
+    $hire_date = parse_iso_calendar_date($hire_date);
+    $effective_date = parse_iso_calendar_date($effective_date);
     if ($hire_date === false || $effective_date === false || strcmp($effective_date, $hire_date) < 0)
         return false;
     $days = (strtotime($effective_date.' 00:00:00 UTC') - strtotime($hire_date.' 00:00:00 UTC')) / 86400;
@@ -430,7 +382,7 @@ function execute_approved_hrm_lifecycle_separation($draft_data, $reserved_trans_
 {
     if (!hrm_lifecycle_separation_permission())
         return false;
-    $actor = hrm_lifecycle_separation_actor_id();
+    $actor = current_user_id_or_zero();
     $command = hrm_lifecycle_separation_bound_draft($draft_data, $draft_id, true);
     if (!$command || $actor <= 0)
         return false;
@@ -514,7 +466,7 @@ function hrm_lifecycle_separation_terminalize($draft_data, $draft_id, $status, $
 {
     if (!hrm_lifecycle_separation_permission() || !in_array($status, array('rejected','cancelled'), true))
         return false;
-    $actor = hrm_lifecycle_separation_actor_id();
+    $actor = current_user_id_or_zero();
     $command = hrm_lifecycle_separation_bound_draft($draft_data, $draft_id, true);
     if (!$command || $actor <= 0)
         return false;

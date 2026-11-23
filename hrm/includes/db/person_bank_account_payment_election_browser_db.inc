@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-004 Person bank payment-election browser read/intent helpers. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_bank_payment_election_browser_root = isset($path_to_root) ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_bank_payment_election_browser_command = $hrm_bank_payment_election_browser_root.'/hrm/includes/db/person_bank_account_payment_election_db.inc';
 if (is_file($hrm_bank_payment_election_browser_command)) include_once($hrm_bank_payment_election_browser_command);
@@ -145,7 +146,7 @@ function hrm_bank_payment_election_browser_retry_probe($prepared)
         'allocation_hash','action_hash') as $key) if (!array_key_exists($key,$prepared)) return false;
     $person_id=hrm_bank_payment_election_positive_int($prepared['person_id']);
     $currency_code=hrm_bank_payment_election_currency($prepared['currency_code']);
-    $actor=function_exists('hrm_bank_payment_election_actor_id')?hrm_bank_payment_election_actor_id():0;
+    $actor=function_exists('current_user_id_or_zero')?current_user_id_or_zero():0;
     if($person_id===false||$currency_code===false||$actor<=0||!is_string($prepared['allocation_hash'])
         ||preg_match('/^[a-f0-9]{64}$/D',(string)$prepared['allocation_hash'])!==1
         ||!is_string($prepared['action_hash'])||preg_match('/^[a-f0-9]{64}$/D',(string)$prepared['action_hash'])!==1)return false;
@@ -194,7 +195,7 @@ function hrm_bank_payment_election_browser_checker_candidate($employee_ref, $pay
     $person_id = hrm_bank_payment_election_browser_person($employee_ref);
     $payment_election_id = hrm_bank_payment_election_positive_int($payment_election_id);
     $row_version = hrm_bank_payment_election_positive_int($row_version);
-    $actor = function_exists('hrm_bank_payment_election_actor_id') ? hrm_bank_payment_election_actor_id() : 0;
+    $actor = function_exists('current_user_id_or_zero') ? current_user_id_or_zero() : 0;
     if ($person_id===false||$payment_election_id===false||$row_version===false||$actor<=0) return false;
     $result=db_query("SELECT payment_election_id,person_id,currency_code,election_status,approval_status,approval_draft_id,row_version,effective_from,created_by,source "
         ."FROM ".TB_PREF."hrm_person_bank_payment_elections WHERE payment_election_id=".$payment_election_id

@@ -5,6 +5,7 @@
  * Custody-only: records externally verified opaque provenance after the exact
  * central approval has completed. It deliberately does not promote bank verification/approval state or expose protected bank material.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 
 $hrm_bank_account_verification_evidence_repo_root = dirname(dirname(dirname(__DIR__)));
@@ -271,7 +272,7 @@ function register_hrm_person_bank_account_verification_evidence(
     $evidence_reference_hash = hrm_bank_account_verification_evidence_hex64($evidence_reference_hash);
     $evidence_payload_hash = hrm_bank_account_verification_evidence_hex64($evidence_payload_hash);
     $now = $now_epoch === null ? time() : $now_epoch;
-    $actor = hrm_bank_account_verification_request_actor_id();
+    $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if ($verification_request_id === false || $request_row_version === false || $approval_draft_id === false
         || $verification_method === false || $evidence_source === false
@@ -459,7 +460,7 @@ function promote_hrm_person_bank_account_verification(
     $evidence_row_version = hrm_bank_account_verification_request_positive_int($evidence_row_version);
     $request_row_version = hrm_bank_account_verification_request_positive_int($request_row_version);
     $bank_account_row_version = hrm_bank_account_verification_request_positive_int($bank_account_row_version);
-    $actor = hrm_bank_account_verification_request_actor_id();
+    $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if ($verification_evidence_id === false || $evidence_row_version === false
         || $request_row_version === false || $bank_account_row_version === false

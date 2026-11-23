@@ -191,9 +191,9 @@ function get_hrm_lifecycle_employee_service_state_browser_status($employee_id, $
 }
 function get_hrm_lifecycle_employee_suspension_browser_status($employee_id)
 {
-    return get_hrm_lifecycle_employee_service_state_browser_status($employee_id,'employee_suspension','ST_HRM_LIFECYCLE_SUSPENSION','hrm_lifecycle_suspension_actor_id','hrm_lifecycle_suspension_permission');
+    return get_hrm_lifecycle_employee_service_state_browser_status($employee_id,'employee_suspension','ST_HRM_LIFECYCLE_SUSPENSION','current_user_id_or_zero','hrm_lifecycle_suspension_permission');
 }
 function get_hrm_lifecycle_employee_reinstatement_browser_status($employee_id)
 {
-    return get_hrm_lifecycle_employee_service_state_browser_status($employee_id,'employee_reinstatement','ST_HRM_LIFECYCLE_REINSTATEMENT','hrm_lifecycle_reinstatement_actor_id','hrm_lifecycle_reinstatement_permission');
+    return get_hrm_lifecycle_employee_service_state_browser_status($employee_id,'employee_reinstatement','ST_HRM_LIFECYCLE_REINSTATEMENT','current_user_id_or_zero','hrm_lifecycle_reinstatement_permission');
 }

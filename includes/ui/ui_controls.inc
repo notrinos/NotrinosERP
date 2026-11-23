@@ -165,18 +165,28 @@ function ensure_csrf_token() {
 }
 
 /**
+ * Return whether the posted form token equals the session token, in constant time, without any message.
+ *
+ * Both must be non-empty strings; a token posted as an array is refused.
+ *
+ * @return bool
+ */
+function csrf_token_is_valid() {
+	$session_token = isset($_SESSION['csrf_token']) ? $_SESSION['csrf_token'] : '';
+	$submitted_token = isset($_POST['_token']) ? $_POST['_token'] : '';
+
+	return is_string($session_token) && is_string($submitted_token)
+		&& $session_token !== '' && $submitted_token !== ''
+		&& hash_equals($session_token, $submitted_token);
+}
+
+/**
  * Validate the submitted CSRF token against the current session token.
  *
  * @return bool
  */
 function check_csrf_token() {
-	$session_token = isset($_SESSION['csrf_token']) ? $_SESSION['csrf_token'] : '';
-	$submitted_token = isset($_POST['_token']) ? $_POST['_token'] : '';
-	$valid_token = function_exists('hash_equals')
-		? ($session_token !== '' && $submitted_token !== '' && hash_equals($session_token, $submitted_token))
-		: ($session_token !== '' && $session_token == $submitted_token);
-
-	if (!$valid_token) {
+	if (!csrf_token_is_valid()) {
 		display_error(_('Request from outside of this page is forbidden.'));
 		error_log(_('CSRF attack detected from: ').@$_SERVER['HTTP_HOST'].' ('.@$_SERVER['HTTP_REFERER'].')');
 		return false;

@@ -39,6 +39,8 @@ if (check_faillog()) {
 		document.getElementById('log_msg').innerHTML='$demo_text'}, 1000*".$SysPrefs->login_delay.");</script>";
 	$demo_text = '<span class="redfg">'._('Too many failed login attempts.<br>Please wait a while or try later.').'</span>';
 }
+elseif (!empty($login_form_expired))
+	$demo_text = '<span class="redfg">'._('The login form has expired. Please sign in again.').'</span>';
 elseif ($show_invalid_login_message && $_SESSION['wa_current_user']->login_attempt > 1)
 	$demo_text = '<span class="redfg">'._('Invalid password or username. Please, try again.').'</span>';
 

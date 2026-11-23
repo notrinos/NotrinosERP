@@ -1,5 +1,6 @@
 <?php
 /** PAY-RULE-005 controlled immutable resolution execution. Not production-routed. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_pay_rule_005_seal_fact_set'))
     include_once($path_to_root.'/hrm/includes/payroll/jurisdiction_precedence_store.inc');
 
@@ -45,7 +46,7 @@ function hrm_pay_rule_005_record_resolution($scope,$fact_set,$request_hash,$idem
  */
 function hrm_pay_rule_005_resolve_and_record($employment_id,$assignment_id,$as_of_date,$required_groups,$selections,$idempotency_key)
 {
-    $actor=hrm_pay_rule_005_actor_id();$idem=hrm_pay_rule_005_idempotency_hash($idempotency_key);
+    $actor=current_user_id_or_zero();$idem=hrm_pay_rule_005_idempotency_hash($idempotency_key);
     if($actor<=0||!hrm_pay_rule_005_resolve_allowed()||$idem===false||hrm_pay_rule_005_date($as_of_date)===false||!is_array($required_groups)||!is_array($selections))return false;
     $normalized_groups=array();foreach($required_groups as $group){$group=hrm_pay_rule_005_ascii_token($group,160);if($group===false)return false;$normalized_groups[$group]=true;}if(count($normalized_groups)===0)return false;$required_groups=array_keys($normalized_groups);sort($required_groups,SORT_STRING);ksort($selections,SORT_STRING);
     begin_transaction();$ok=true;$out=false;$scope=hrm_pay_rule_005_resolution_scope($employment_id,$assignment_id,$as_of_date,true);if(!is_array($scope))$ok=false;

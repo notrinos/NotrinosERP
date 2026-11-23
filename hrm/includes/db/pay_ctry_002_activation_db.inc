@@ -7,6 +7,7 @@
  * consumers are wired by pay_ctry_002_runtime_db.inc and consume only the
  * immutable metadata produced here.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $pay_ctry_002_activation_root = isset($path_to_root) ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $pay_ctry_002_activation_dependencies = array(
     array('/includes/pay_ctry_002_contract.inc', 'pay_ctry_002_validate_execution_descriptor'),
@@ -20,11 +21,6 @@ foreach ($pay_ctry_002_activation_dependencies as $dependency) {
 }
 unset($pay_ctry_002_activation_root, $pay_ctry_002_activation_dependencies, $dependency, $candidate);
 
-function pay_ctry_002_activation_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
-}
 function pay_ctry_002_activation_company_id()
 {
     return function_exists('user_company') ? (int)user_company() : -1;
@@ -194,7 +190,7 @@ function pay_ctry_002_existing_execution_for_update($proposal_id)
  */
 function pay_ctry_002_execute_approved_activation($proposal_id,$now_epoch=null,&$error=null)
 {
-    $error=null;$proposal_id=pay_ctry_002_uint($proposal_id,false);$actor=pay_ctry_002_activation_actor_id();$company=pay_ctry_002_activation_company_id();$now_epoch=$now_epoch===null?time():(int)$now_epoch;
+    $error=null;$proposal_id=pay_ctry_002_uint($proposal_id,false);$actor=current_user_id_or_zero();$company=pay_ctry_002_activation_company_id();$now_epoch=$now_epoch===null?time():(int)$now_epoch;
     if($proposal_id===false||$actor<=0||$company<0||$now_epoch<=0||!pay_ctry_002_activation_access()){$error='execution_unauthorized_or_invalid';return false;}
     if(!empty($GLOBALS['transaction_level'])){$error='execution_requires_owned_transaction';return false;}
     begin_transaction();$ok=false;$out=false;

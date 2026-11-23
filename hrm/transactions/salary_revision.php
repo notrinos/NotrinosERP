@@ -9,6 +9,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 $page_security = 'SA_SALARYREVISION';
 $path_to_root = "../..";
 include($path_to_root . "/includes/session.inc");
@@ -99,7 +100,7 @@ if (isset($_POST['Process'])) {
         $has_error = true;
     } else {
         $effective_date_sql = date2sql($_POST['effective_date']);
-        if (hrm_lifecycle_salary_revision_date($effective_date_sql) === false) {
+        if (parse_iso_calendar_date($effective_date_sql) === false) {
             display_error(_('Effective date is invalid.'));
             set_focus('effective_date');
             $has_error = true;

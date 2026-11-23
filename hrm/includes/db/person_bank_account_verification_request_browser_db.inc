@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-004 Person bank-account verification-request browser continuation read helpers. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_bank_request_browser_root = isset($path_to_root) ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_bank_request_browser_command = $hrm_bank_request_browser_root.'/hrm/includes/db/person_bank_account_verification_request_db.inc';
 if (is_file($hrm_bank_request_browser_command)) include_once($hrm_bank_request_browser_command);
@@ -26,13 +27,13 @@ function hrm_bank_account_verification_request_browser_employee_ref($value)
 function hrm_bank_account_verification_request_browser_successor($employee_ref, $person_bank_account_id, $row_version)
 {
     if (!hrm_bank_account_verification_request_browser_permission() || !defined('TB_PREF')
-        || !function_exists('hrm_bank_account_verification_request_actor_id')) return false;
+        || !function_exists('current_user_id_or_zero')) return false;
     $person_bank_account_id = function_exists('hrm_bank_account_verification_request_positive_int')
         ? hrm_bank_account_verification_request_positive_int($person_bank_account_id) : false;
     $row_version = function_exists('hrm_bank_account_verification_request_positive_int')
         ? hrm_bank_account_verification_request_positive_int($row_version) : false;
     $employee_ref = hrm_bank_account_verification_request_browser_employee_ref($employee_ref);
-    $actor = hrm_bank_account_verification_request_actor_id();
+    $actor = current_user_id_or_zero();
     if ($person_bank_account_id === false || $row_version === false || $employee_ref === false || $actor <= 0) return false;
     $column = is_numeric($employee_ref) ? 'employee_number' : 'employee_id';
     $employee = is_numeric($employee_ref) ? (int)$employee_ref : $employee_ref;
@@ -65,9 +66,9 @@ function hrm_bank_account_verification_request_browser_successor($employee_ref, 
 function get_hrm_bank_account_verification_request_browser_candidates_masked($employee_ref)
 {
     if (!hrm_bank_account_verification_request_browser_permission() || !defined('TB_PREF')
-        || !function_exists('hrm_bank_account_verification_request_actor_id')) return false;
+        || !function_exists('current_user_id_or_zero')) return false;
     $employee_ref = hrm_bank_account_verification_request_browser_employee_ref($employee_ref);
-    $actor = hrm_bank_account_verification_request_actor_id();
+    $actor = current_user_id_or_zero();
     if ($employee_ref === false || $actor <= 0) return false;
     $column = is_numeric($employee_ref) ? 'employee_number' : 'employee_id';
     $employee = is_numeric($employee_ref) ? (int)$employee_ref : $employee_ref;

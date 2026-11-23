@@ -6,9 +6,10 @@
  * country-pack callback and never grants the pack ERP, accounting, employee,
  * bank, tax, security, administration, or unrestricted SQL authority.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $pay_ctry_002_runtime_root = isset($path_to_root) ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 if (!function_exists('pay_ctry_002_validate_runtime_snapshot')) include_once($pay_ctry_002_runtime_root.'/includes/pay_ctry_002_contract.inc');
-if (!function_exists('pay_ctry_002_activation_actor_id')) include_once($pay_ctry_002_runtime_root.'/hrm/includes/db/pay_ctry_002_activation_db.inc');
+if (!function_exists('current_user_id_or_zero')) include_once($pay_ctry_002_runtime_root.'/hrm/includes/db/pay_ctry_002_activation_db.inc');
 unset($pay_ctry_002_runtime_root);
 
 function pay_ctry_002_runtime_tables_ready()
@@ -112,7 +113,7 @@ function pay_ctry_002_append_outbox_intent(array $event,&$error=null)
 /** Append an immutable local delivery attempt; no outbox row is ever updated. */
 function pay_ctry_002_deliver_outbox_event($outbox_id,$target_code='runtime_guard',$now_epoch=null,&$error=null)
 {
-    $error=null;$actor=pay_ctry_002_activation_actor_id();$now_epoch=$now_epoch===null?time():(int)$now_epoch;
+    $error=null;$actor=current_user_id_or_zero();$now_epoch=$now_epoch===null?time():(int)$now_epoch;
     if($actor<=0||(!function_exists('user_check_access')||(!user_check_access(PAY_CTRY_002_RECOVERY_PERMISSION)&&!user_check_access(PAY_CTRY_002_EXECUTOR_PERMISSION)))){$error='outbox_delivery_unauthorized';return false;}
     if(!pay_ctry_002_runtime_tables_ready()){$error='outbox_schema_not_ready';return false;}$out=pay_ctry_002_activation_fetch_one('SELECT * FROM '.TB_PREF.'pay_ctry_activation_outbox WHERE outbox_id='.(int)$outbox_id.' LIMIT 2 FOR UPDATE');if(!is_array($out)){$error='outbox_missing';return false;}
     $q=db_query('SELECT attempt_no FROM '.TB_PREF.'pay_ctry_activation_delivery_attempts WHERE outbox_id='.(int)$outbox_id.' ORDER BY attempt_no DESC LIMIT 1 FOR UPDATE');if(!$q){$error='outbox_attempt_lookup_failed';return false;}$attempt_no=db_num_rows($q)===1?(int)db_fetch_assoc($q)['attempt_no']+1:1;$target=pay_ctry_002_token($target_code,64);if(!$target){$error='outbox_target_invalid';return false;}
@@ -124,7 +125,7 @@ function pay_ctry_002_deliver_outbox_event($outbox_id,$target_code='runtime_guar
 /** Append suspend/resume/hard-revoke custody plus its outbox intent atomically. */
 function pay_ctry_002_append_lifecycle_event($binding_id,$action,$reason,$action_hash,$now_epoch=null,&$error=null)
 {
-    $error=null;$actor=pay_ctry_002_activation_actor_id();$company=pay_ctry_002_activation_company_id();$now_epoch=$now_epoch===null?time():(int)$now_epoch;$action=(string)$action;$reason=(string)$reason;
+    $error=null;$actor=current_user_id_or_zero();$company=pay_ctry_002_activation_company_id();$now_epoch=$now_epoch===null?time():(int)$now_epoch;$action=(string)$action;$reason=(string)$reason;
     if($actor<=0||$company<0||!function_exists('user_check_access')||!user_check_access(PAY_CTRY_002_RECOVERY_PERMISSION)||!in_array($action,pay_ctry_002_lifecycle_actions(),true)||pay_ctry_002_token($reason,96)===false||pay_ctry_002_sha256($action_hash)===false){$error='lifecycle_unauthorized_or_invalid';return false;}
     if(!pay_ctry_002_runtime_tables_ready()){$error='lifecycle_schema_not_ready';return false;}if(!empty($GLOBALS['transaction_level'])){$error='lifecycle_requires_owned_transaction';return false;}
     begin_transaction();$ok=false;$out=false;

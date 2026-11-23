@@ -1,5 +1,6 @@
 <?php
 /** Fixed advisory clearance acknowledgements under completed Separation custody. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/lifecycle_separation_command_db.inc');
 
 /** Finite task policy; none of these acknowledgements executes an external action. */
@@ -21,7 +22,7 @@ function hrm_lifecycle_offboarding_task_labels()
 function acknowledge_hrm_lifecycle_offboarding_task($employee_id, $task_code)
 {
     $labels = hrm_lifecycle_offboarding_task_labels();
-    $actor = hrm_lifecycle_separation_actor_id();
+    $actor = current_user_id_or_zero();
     if (!hrm_lifecycle_separation_permission() || $actor <= 0
         || !is_string($task_code) || !isset($labels[$task_code])) return false;
     begin_transaction();

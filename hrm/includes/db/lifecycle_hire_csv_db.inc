@@ -8,6 +8,7 @@
  * and atomically stages/submits one existing central maker/checker draft per
  * row. Final approval/execution remains row-scoped and independent.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 if (!function_exists('submit_staged_hrm_lifecycle_employee_hire_for_approval'))
     include_once($path_to_root.'/hrm/includes/db/lifecycle_hire_approval_db.inc');
@@ -42,8 +43,8 @@ function hrm_lifecycle_hire_csv_slot($employee_id)
 /** @return array|false */
 function hrm_lifecycle_hire_csv_command_state($command_id)
 {
-    $command_id = hrm_lifecycle_hire_payload_positive_int($command_id);
-    $actor = hrm_lifecycle_hire_payload_actor_id();
+    $command_id = parse_positive_integer($command_id);
+    $actor = current_user_id_or_zero();
     if ($command_id === false || $actor <= 0)
         return false;
     $result = db_query("SELECT hire_command_id,command_status,row_version,requested_by,approval_draft_id,request_hash "
@@ -57,7 +58,7 @@ function hrm_lifecycle_hire_csv_command_state($command_id)
 function hrm_lifecycle_hire_csv_retry_key($employee_id)
 {
     $employee_id = hrm_lifecycle_hire_csv_employee_code($employee_id);
-    if ($employee_id === false || hrm_lifecycle_hire_payload_actor_id() <= 0
+    if ($employee_id === false || current_user_id_or_zero() <= 0
         || !hrm_lifecycle_hire_payload_permission())
         return false;
     $store =& hrm_lifecycle_hire_csv_session_store();
@@ -66,7 +67,7 @@ function hrm_lifecycle_hire_csv_retry_key($employee_id)
         $entry = $store[$slot];
         $key = isset($entry['idempotency_key']) ? (string)$entry['idempotency_key'] : '';
         $command_id = isset($entry['hire_command_id']) ? (int)$entry['hire_command_id'] : 0;
-        if ($key === '' || hrm_lifecycle_hire_payload_idempotency_hash($key) === false)
+        if ($key === '' || idempotency_key_hash($key) === false)
             return false;
         if ($command_id <= 0)
             return $key;
@@ -96,9 +97,9 @@ function hrm_lifecycle_hire_csv_retry_key($employee_id)
 function hrm_lifecycle_hire_csv_bind_command($employee_id, $idempotency_key, $command_id)
 {
     $employee_id = hrm_lifecycle_hire_csv_employee_code($employee_id);
-    $command_id = hrm_lifecycle_hire_payload_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($employee_id === false || $command_id === false
-        || hrm_lifecycle_hire_payload_idempotency_hash($idempotency_key) === false)
+        || idempotency_key_hash($idempotency_key) === false)
         return false;
     $store =& hrm_lifecycle_hire_csv_session_store();
     $slot = hrm_lifecycle_hire_csv_slot($employee_id);
@@ -127,7 +128,7 @@ function hrm_lifecycle_hire_csv_batch_plan($rows)
         if ($canonical === false)
             return false;
         $employee_id = hrm_lifecycle_hire_csv_employee_code($canonical['employee_id']);
-        $effective_date = hrm_lifecycle_hire_payload_date($canonical['hire_date']);
+        $effective_date = parse_iso_calendar_date($canonical['hire_date']);
         $dedupe = $employee_id === false ? '' : strtolower($employee_id);
         if ($employee_id === false || $effective_date === false || isset($seen[$dedupe]))
             return false;

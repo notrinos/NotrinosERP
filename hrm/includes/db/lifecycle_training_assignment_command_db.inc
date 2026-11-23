@@ -7,6 +7,7 @@
  * training writer only after independent central approval. It is intentionally
  * not a generic training, checklist, recruitment, or employee-status workflow.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_lifecycle_training_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_training_dependencies = array(
@@ -38,29 +39,10 @@ if (!defined('HRM_LIFECYCLE_TRAINING_ASSIGNMENT_HASH_CONTRACT'))
 if (!defined('HRM_LIFECYCLE_TRAINING_ASSIGNMENT_REASON'))
     define('HRM_LIFECYCLE_TRAINING_ASSIGNMENT_REASON', 'hrm_fnd_005_employee_training_assignment_command');
 
-/** @return int */
-function hrm_lifecycle_training_assignment_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
-}
-
 /** @return bool */
 function hrm_lifecycle_training_assignment_permission()
 {
     return function_exists('user_check_access') && user_check_access('SA_HRSETTINGS');
-}
-
-/** @param mixed $value @return int|false */
-function hrm_lifecycle_training_assignment_positive_int($value)
-{
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    $value = trim((string)$value);
-    if (preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $number = (int)$value;
-    return $number > 0 && (string)$number === $value ? $number : false;
 }
 
 /** @param mixed $value @return int|false */
@@ -109,15 +91,6 @@ function hrm_lifecycle_training_assignment_remarks($value)
 {
     $value = trim(strip_tags((string)$value));
     return strlen($value) <= 1000 ? $value : false;
-}
-
-/** @param mixed $key @return string|false */
-function hrm_lifecycle_training_assignment_idempotency_hash($key)
-{
-    if (!is_string($key) || strlen($key) < 16 || strlen($key) > 128
-        || preg_match('/^[A-Za-z0-9._:-]+$/D', $key) !== 1)
-        return false;
-    return hash('sha256', $key);
 }
 
 /** @return bool */
@@ -201,7 +174,7 @@ function hrm_lifecycle_training_assignment_request_hash($company, $worker_id, $e
 /** @param int $command_id @return array|false */
 function hrm_lifecycle_training_assignment_command_for_update($command_id)
 {
-    $command_id = hrm_lifecycle_training_assignment_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($command_id === false)
         return false;
     $result = db_query("SELECT lifecycle_command_id,worker_id,employment_id,assignment_id,command_type,command_status,"
@@ -268,7 +241,7 @@ function hrm_lifecycle_training_assignment_draft_matches($draft_data, $command, 
     $keys = array_keys($draft_data); sort($keys, SORT_STRING);
     if ($keys !== $expected)
         return false;
-    $draft_version = hrm_lifecycle_training_assignment_positive_int($draft_data['command_row_version']);
+    $draft_version = parse_positive_integer($draft_data['command_row_version']);
     $terminal = $allow_terminal_version && (int)$command['row_version'] === 2 && $draft_version === 1;
     $remarks = hrm_lifecycle_training_assignment_remarks($draft_data['remarks']);
     if ($draft_version === false || ($draft_version !== (int)$command['row_version'] && !$terminal)
@@ -297,15 +270,15 @@ function submit_hrm_lifecycle_employee_training_assignment($employee_id, $course
     $completion_date, $status, $score, $cost_amount, $remarks, $idempotency_key)
 {
     $employee_id = trim((string)$employee_id);
-    $course_id = hrm_lifecycle_training_assignment_positive_int($course_id);
+    $course_id = parse_positive_integer($course_id);
     $training_date = hrm_lifecycle_training_assignment_date($training_date, false);
     $completion_date = hrm_lifecycle_training_assignment_date($completion_date, true);
     $status = hrm_lifecycle_training_assignment_status($status);
     $score = hrm_lifecycle_training_assignment_decimal($score, true, false);
     $cost_amount = hrm_lifecycle_training_assignment_decimal($cost_amount, false, true);
     $remarks = hrm_lifecycle_training_assignment_remarks($remarks);
-    $idempotency_hash = hrm_lifecycle_training_assignment_idempotency_hash($idempotency_key);
-    $actor = hrm_lifecycle_training_assignment_actor_id();
+    $idempotency_hash = idempotency_key_hash($idempotency_key);
+    $actor = current_user_id_or_zero();
     if ($employee_id === '' || strlen($employee_id) > 20 || preg_match('/^[A-Za-z0-9_-]+$/D', $employee_id) !== 1
         || $course_id === false || $training_date === false || $completion_date === false || $status === false
         || $score === false || $cost_amount === false || $remarks === false || $idempotency_hash === false
@@ -411,7 +384,7 @@ function submit_hrm_lifecycle_employee_training_assignment($employee_id, $course
 /** @return array|false */
 function hrm_lifecycle_training_assignment_bound_draft($draft_data, $draft_id, $allow_terminal_version)
 {
-    $draft_id = hrm_lifecycle_training_assignment_positive_int($draft_id);
+    $draft_id = parse_positive_integer($draft_id);
     if ($draft_id === false || !is_array($draft_data) || !isset($draft_data['lifecycle_command_id']))
         return false;
     $command = hrm_lifecycle_training_assignment_command_for_update($draft_data['lifecycle_command_id']);
@@ -427,7 +400,7 @@ function execute_approved_hrm_lifecycle_training_assignment($draft_data, $reserv
 {
     if (!hrm_lifecycle_training_assignment_permission())
         return false;
-    $actor = hrm_lifecycle_training_assignment_actor_id();
+    $actor = current_user_id_or_zero();
     $command = hrm_lifecycle_training_assignment_bound_draft($draft_data, $draft_id, true);
     if (!$command || $actor <= 0)
         return false;
@@ -495,7 +468,7 @@ function hrm_lifecycle_training_assignment_terminalize($draft_data, $draft_id, $
 {
     if (!hrm_lifecycle_training_assignment_permission() || !in_array($status, array('rejected','cancelled'), true))
         return false;
-    $actor = hrm_lifecycle_training_assignment_actor_id();
+    $actor = current_user_id_or_zero();
     $command = hrm_lifecycle_training_assignment_bound_draft($draft_data, $draft_id, true);
     if (!$command || $actor <= 0)
         return false;

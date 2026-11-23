@@ -6,6 +6,7 @@
  * activate country packs, execute payroll, post accounting, submit filings or expose
  * employee facts in regulatory notice payloads.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $pay_ctry_007_runtime_root = isset($path_to_root) ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 if (!function_exists('pay_ctry_007_validate_audience')) {
     include_once($pay_ctry_007_runtime_root.'/includes/pay_ctry_007_contract.inc');
@@ -17,12 +18,6 @@ if (!function_exists('append_domain_audit_event')) {
     include_once($pay_ctry_007_runtime_root.'/includes/db/domain_audit_db.inc');
 }
 unset($pay_ctry_007_runtime_root);
-
-function pay_ctry_007_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user']) && isset($_SESSION['wa_current_user']->user)
-        ? (int)$_SESSION['wa_current_user']->user : 0;
-}
 
 function pay_ctry_007_company_id()
 {
@@ -131,7 +126,7 @@ function pay_ctry_007_audit(array $event, &$error)
 function pay_ctry_007_create_notice_audience($notice_applicability_id, $audience_type, array $recipient_user_ids, $now_epoch = null, &$error = null)
 {
     $error = null;
-    $actor_id = pay_ctry_007_actor_id();
+    $actor_id = current_user_id_or_zero();
     $now_epoch = $now_epoch === null ? time() : (int)$now_epoch;
     if ($actor_id <= 0 || !pay_ctry_007_has_access(PAY_CTRY_007_MANAGE_PERMISSION)
         || !in_array($audience_type, pay_ctry_007_audience_types(), true)) {
@@ -321,7 +316,7 @@ function pay_ctry_007_create_notice_audience($notice_applicability_id, $audience
 function pay_ctry_007_append_recipient_event($notice_audience_id, $recipient_user_id, $event_type, $reason_code, $command_key, $now_epoch = null, &$error = null)
 {
     $error = null;
-    $actor_id = pay_ctry_007_actor_id();
+    $actor_id = current_user_id_or_zero();
     $recipient_user_id = (int)$recipient_user_id;
     $now_epoch = $now_epoch === null ? time() : (int)$now_epoch;
     if ($actor_id <= 0 || !pay_ctry_007_has_access(PAY_CTRY_007_MANAGE_PERMISSION)
@@ -459,7 +454,7 @@ function pay_ctry_007_append_recipient_event($notice_audience_id, $recipient_use
 function pay_ctry_007_acknowledge_notice($recipient_event_id, $now_epoch = null, &$error = null)
 {
     $error = null;
-    $actor_id = pay_ctry_007_actor_id();
+    $actor_id = current_user_id_or_zero();
     $recipient_event_id = (int)$recipient_event_id;
     $now_epoch = $now_epoch === null ? time() : (int)$now_epoch;
     if ($actor_id <= 0 || $recipient_event_id <= 0 || !pay_ctry_007_has_access(PAY_CTRY_007_ACK_PERMISSION)) {
@@ -580,7 +575,7 @@ function pay_ctry_007_acknowledge_notice($recipient_event_id, $now_epoch = null,
 function pay_ctry_007_append_notice_lifecycle_event($notice_applicability_id, $event_type, $recipient_event_id, $reason_code, $evidence_sha256, $due_at = null, $now_epoch = null, &$error = null)
 {
     $error = null;
-    $actor_id = pay_ctry_007_actor_id();
+    $actor_id = current_user_id_or_zero();
     $now_epoch = $now_epoch === null ? time() : (int)$now_epoch;
     $recipient_event_id = $recipient_event_id === null ? null : (int)$recipient_event_id;
     $required_permission = $event_type === 'resolved' ? PAY_CTRY_007_RESOLVE_PERMISSION : PAY_CTRY_007_ESCALATE_PERMISSION;
@@ -781,7 +776,7 @@ function pay_ctry_007_delivery_recipient_is_current(array $row)
 /** Queue one immutable, metadata-only in-app delivery intent for a currently assigned recipient. */
 function pay_ctry_007_enqueue_notice_delivery($recipient_event_id,$channel='in_app',$now_epoch=null,&$error=null)
 {
-    $error=null;$actor_id=pay_ctry_007_actor_id();$now_epoch=$now_epoch===null?time():(int)$now_epoch;
+    $error=null;$actor_id=current_user_id_or_zero();$now_epoch=$now_epoch===null?time():(int)$now_epoch;
     if($actor_id<=0||!pay_ctry_007_has_access(PAY_CTRY_007_DELIVER_PERMISSION)||!in_array($channel,pay_ctry_007_delivery_channels(),true)){$error='delivery_enqueue_unauthorized_or_invalid';return false;}
     if(!pay_ctry_007_delivery_tables_ready()){$error='delivery_schema_not_ready';return false;}
     if(!empty($GLOBALS['transaction_level'])){$error='delivery_enqueue_requires_owned_transaction';return false;}
@@ -843,7 +838,7 @@ function pay_ctry_007_append_delivery_attempt_locked(array $outbox,$status,$erro
 /** Dispatch an outbox intent to the in-app notification provider; no network transport is performed. */
 function pay_ctry_007_dispatch_notice_delivery($delivery_outbox_id,$now_epoch=null,&$error=null)
 {
-    $error=null;$actor_id=pay_ctry_007_actor_id();$now_epoch=$now_epoch===null?time():(int)$now_epoch;
+    $error=null;$actor_id=current_user_id_or_zero();$now_epoch=$now_epoch===null?time():(int)$now_epoch;
     if($actor_id<=0||!pay_ctry_007_has_access(PAY_CTRY_007_DELIVER_PERMISSION)){$error='delivery_dispatch_unauthorized';return false;}
     if(!pay_ctry_007_delivery_tables_ready()){$error='delivery_schema_not_ready';return false;}
     if(!empty($GLOBALS['transaction_level'])){$error='delivery_dispatch_requires_owned_transaction';return false;}
@@ -860,7 +855,7 @@ function pay_ctry_007_dispatch_notice_delivery($delivery_outbox_id,$now_epoch=nu
 /** Record a bounded retryable/dead-letter attempt without performing a network send. */
 function pay_ctry_007_record_delivery_failure($delivery_outbox_id,$dead_letter,$error_code,$now_epoch=null,&$error=null)
 {
-    $error=null;$actor_id=pay_ctry_007_actor_id();$now_epoch=$now_epoch===null?time():(int)$now_epoch;
+    $error=null;$actor_id=current_user_id_or_zero();$now_epoch=$now_epoch===null?time():(int)$now_epoch;
     if($actor_id<=0||!pay_ctry_007_has_access(PAY_CTRY_007_DELIVER_PERMISSION)||!pay_ctry_007_reason($error_code)){$error='delivery_failure_unauthorized_or_invalid';return false;}
     if(!pay_ctry_007_delivery_tables_ready()){$error='delivery_schema_not_ready';return false;}if(!empty($GLOBALS['transaction_level'])){$error='delivery_failure_requires_owned_transaction';return false;}
     begin_transaction();$ok=false;$result=false;do{$outbox=pay_ctry_007_delivery_outbox_for_update($delivery_outbox_id);if(!is_array($outbox)){$error='delivery_outbox_scope_denied';break;}if(!pay_ctry_007_delivery_recipient_is_current($outbox)){$error='delivery_recipient_not_current';break;}$status=$dead_letter?'dead_lettered':'retryable_failure';$result=pay_ctry_007_append_delivery_attempt_locked($outbox,$status,$error_code,$now_epoch,$actor_id,$error);if($result===false)break;if(!pay_ctry_007_audit(array('company_id'=>(int)$outbox['company_id'],'legal_entity_id'=>$outbox['legal_entity_id']===null?0:(int)$outbox['legal_entity_id'],'entity_type'=>'pay_ctry_update_notice_delivery_attempt','entity_key'=>array('delivery_outbox_id'=>(int)$delivery_outbox_id,'attempt_no'=>(int)$result['attempt_no']),'action'=>'pay.ctry.update.delivery.'.$status,'reason_code'=>$error_code,'before'=>array(),'after'=>array('delivery_attempt_sha256'=>$result['delivery_attempt_sha256'],'delivery_status'=>$status),'restricted_diff'=>array('external_network_delivery'=>false,'employee_fact_payload'=>false,'automatic_pack_activation'=>false)),$error))break;$ok=true;}while(false);if($ok)commit_transaction();else cancel_transaction();return $ok?$result:false;
@@ -869,7 +864,7 @@ function pay_ctry_007_record_delivery_failure($delivery_outbox_id,$dead_letter,$
 /** Read only delivered, current, unacknowledged notices for the current user's own company scope. */
 function pay_ctry_007_get_visible_deliveries($user_id,$limit=100)
 {
-    $user_id=(int)$user_id;$actor_id=pay_ctry_007_actor_id();$limit=(int)$limit;if($limit<1)$limit=1;if($limit>100)$limit=100;
+    $user_id=(int)$user_id;$actor_id=current_user_id_or_zero();$limit=(int)$limit;if($limit<1)$limit=1;if($limit>100)$limit=100;
     if($user_id<=0||$actor_id!==$user_id||!pay_ctry_007_has_access(PAY_CTRY_007_VIEW_PERMISSION)||!pay_ctry_007_delivery_tables_ready())return array();
     $company_id=pay_ctry_007_company_id();if($company_id<0)return array();
     $sql='SELECT o.delivery_outbox_id,o.queued_at,n.pack_code,n.current_pack_version,n.successor_pack_version,n.severity,n.deadline_at,n.required_action,n.notice_sha256,a.applicability_sha256'

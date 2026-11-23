@@ -1,5 +1,6 @@
 <?php
 /** Same-code Rehire request page; every mutation belongs to central approval. */
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 $page_security = 'SA_EMPLOYEE';
 $path_to_root = '../..';
 include($path_to_root.'/includes/session.inc');
@@ -13,7 +14,7 @@ if (!isset($_POST['employee_id'])) $_POST['employee_id'] = '';
 if (!isset($_POST['effective_date'])) $_POST['effective_date'] = Today();
 $binding = trim((string)$_POST['employee_id']) !== ''
     ? get_hrm_person_worker_binding((string)$_POST['employee_id']) : false;
-$namespace = 'hrm_rehire_'.(int)user_company().'_'.hrm_lifecycle_separation_actor_id();
+$namespace = 'hrm_rehire_'.(int)user_company().'_'.current_user_id_or_zero();
 $status = $binding ? get_hrm_lifecycle_rehire_maker_status($binding['employee_number']) : false;
 if (isset($_POST['NewRequest']) && $status && in_array($status['status'], array('rejected','cancelled'), true)) {
     hrm_lifecycle_service_state_browser_forget_key($namespace, 'employee_rehire:'.$status['effective_date'], $binding['employee_id']);

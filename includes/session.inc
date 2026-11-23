@@ -626,6 +626,16 @@ if (!defined('FA_LOGOUT_PHP_FILE')){
 				include($path_to_root.'/access/login.php');
 			exit;
 		}
+		elseif (!csrf_token_is_valid()) {
+			// A sign-in must come from the login form this session rendered (end_form() adds the session token). A forged
+			// or stale post is refused before any credential check, is not a failed attempt and none of its fields are kept.
+			session_log_security_event('denied_login_form_token');
+			if (!isset($_SESSION['timeout']))
+				$_SESSION['timeout'] = array('uri' => preg_replace('/JsHttpRequest=(?:(\d+)-)?([^&]+)/s', '', html_specials_encode($_SERVER['REQUEST_URI'])), 'post' => array());
+			$login_form_expired = true;
+			include($path_to_root.'/access/login.php');
+			exit;
+		}
 		else {
 			if (isset($_POST['company_login_nickname']) && !isset($_POST['company_login_name'])) {
 				for ($i = 0; $i < count($db_connections); $i++) {

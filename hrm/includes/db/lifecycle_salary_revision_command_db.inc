@@ -11,6 +11,7 @@
  * evidence. Historical payroll results, payslips, posting, payment, bank, GL,
  * accounting, formulas, and approval comments are never rewritten here.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_lifecycle_salary_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_salary_dependencies = array(
@@ -50,57 +51,16 @@ if (!defined('HRM_LIFECYCLE_SALARY_REVISION_HASH_VERSION'))
 if (!defined('HRM_LIFECYCLE_SALARY_REVISION_REASON'))
     define('HRM_LIFECYCLE_SALARY_REVISION_REASON', 'hrm_fnd_005_salary_revision_command');
 
-function hrm_lifecycle_salary_revision_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
-}
-
 function hrm_lifecycle_salary_revision_permission()
 {
     return function_exists('user_check_access') && user_check_access('SA_SALARYREVISION');
-}
-
-function hrm_lifecycle_salary_revision_positive_int($value)
-{
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    $value = trim((string)$value);
-    if (preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $number = (int)$value;
-    return $number > 0 && (string)$number === $value ? $number : false;
-}
-
-function hrm_lifecycle_salary_revision_nonnegative_int($value)
-{
-    if (is_int($value))
-        return $value >= 0 ? $value : false;
-    $value = trim((string)$value);
-    if (preg_match('/^(?:0|[1-9][0-9]*)$/D', $value) !== 1)
-        return false;
-    $number = (int)$value;
-    return $number >= 0 && (string)$number === $value ? $number : false;
-}
-
-function hrm_lifecycle_salary_revision_date($value)
-{
-    $value = trim((string)$value);
-    if (preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D', $value) !== 1)
-        return false;
-    $date = DateTime::createFromFormat('!Y-m-d', $value);
-    $errors = DateTime::getLastErrors();
-    if (!$date || (is_array($errors) && ((int)$errors['warning_count'] !== 0 || (int)$errors['error_count'] !== 0))
-        || $date->format('Y-m-d') !== $value)
-        return false;
-    return $value;
 }
 
 function hrm_lifecycle_salary_revision_today_sql()
 {
     if (function_exists('Today') && function_exists('date2sql')) {
         $today = date2sql(Today());
-        if (hrm_lifecycle_salary_revision_date($today) !== false)
+        if (parse_iso_calendar_date($today) !== false)
             return $today;
     }
     return date('Y-m-d');
@@ -134,14 +94,6 @@ function hrm_lifecycle_salary_revision_reason_value($value)
         || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $value))
         return false;
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-}
-
-function hrm_lifecycle_salary_revision_idempotency_hash($key)
-{
-    if (!is_string($key) || strlen($key) < 16 || strlen($key) > 128
-        || preg_match('/^[A-Za-z0-9._:-]+$/D', $key) !== 1)
-        return false;
-    return hash('sha256', $key);
 }
 
 function hrm_lifecycle_salary_revision_workflow_is_maker_checker()
@@ -197,7 +149,7 @@ function hrm_lifecycle_salary_revision_basic_element_for_update()
 
 function hrm_lifecycle_salary_revision_salary_row_for_update($employee_id, $element_id, $effective_date)
 {
-    $effective_date = hrm_lifecycle_salary_revision_date($effective_date);
+    $effective_date = parse_iso_calendar_date($effective_date);
     if (trim((string)$employee_id) === '' || (int)$element_id <= 0 || $effective_date === false)
         return false;
     $result = db_query("SELECT salary_id,employee_id,element_id,amount,formula,effective_from,effective_to,is_active,reference "
@@ -216,16 +168,16 @@ function hrm_lifecycle_salary_revision_salary_row_fingerprint($row)
         return false;
     if (!$row)
         return hash('sha256', 'notrinoserp.hrm-fnd-005.salary-row|none');
-    $salary_id = hrm_lifecycle_salary_revision_positive_int(isset($row['salary_id']) ? $row['salary_id'] : 0);
-    $element_id = hrm_lifecycle_salary_revision_positive_int(isset($row['element_id']) ? $row['element_id'] : 0);
+    $salary_id = parse_positive_integer(isset($row['salary_id']) ? $row['salary_id'] : 0);
+    $element_id = parse_positive_integer(isset($row['element_id']) ? $row['element_id'] : 0);
     $amount = hrm_lifecycle_salary_revision_amount(isset($row['amount']) ? $row['amount'] : '');
-    $active = hrm_lifecycle_salary_revision_nonnegative_int(isset($row['is_active']) ? $row['is_active'] : -1);
-    $effective_from = hrm_lifecycle_salary_revision_date(isset($row['effective_from']) ? $row['effective_from'] : '');
+    $active = parse_non_negative_integer(isset($row['is_active']) ? $row['is_active'] : -1);
+    $effective_from = parse_iso_calendar_date(isset($row['effective_from']) ? $row['effective_from'] : '');
     if ($salary_id === false || $element_id === false || $amount === false || $active === false
         || !in_array($active, array(0,1), true) || $effective_from === false)
         return false;
     $effective_to = isset($row['effective_to']) && $row['effective_to'] !== null ? trim((string)$row['effective_to']) : '';
-    if ($effective_to !== '' && $effective_to !== '0000-00-00' && hrm_lifecycle_salary_revision_date($effective_to) === false)
+    if ($effective_to !== '' && $effective_to !== '0000-00-00' && parse_iso_calendar_date($effective_to) === false)
         return false;
     $formula = isset($row['formula']) && $row['formula'] !== null ? (string)$row['formula'] : '';
     $reference = isset($row['reference']) && $row['reference'] !== null ? (string)$row['reference'] : '';
@@ -239,14 +191,14 @@ function hrm_lifecycle_salary_revision_request_hash($company, $worker_id, $emplo
     $salary_row_id, $salary_row_fingerprint, $employee_personal_salary)
 {
     foreach (array($worker_id,$employment_id,$assignment_id,$employee_number,$basic_element_id) as $value)
-        if (hrm_lifecycle_salary_revision_positive_int((string)$value) === false)
+        if (parse_positive_integer((string)$value) === false)
             return false;
-    $salary_row_id = hrm_lifecycle_salary_revision_nonnegative_int((string)$salary_row_id);
-    $employee_personal_salary = hrm_lifecycle_salary_revision_nonnegative_int((string)$employee_personal_salary);
+    $salary_row_id = parse_non_negative_integer((string)$salary_row_id);
+    $employee_personal_salary = parse_non_negative_integer((string)$employee_personal_salary);
     $new_salary = hrm_lifecycle_salary_revision_amount($new_salary);
     if ((int)$company < 0 || $salary_row_id === false || $employee_personal_salary === false
         || !in_array($employee_personal_salary, array(0,1), true) || $new_salary === false
-        || hrm_lifecycle_salary_revision_date($effective_date) === false
+        || parse_iso_calendar_date($effective_date) === false
         || !is_string($reason_hash) || preg_match('/^[a-f0-9]{64}$/D', $reason_hash) !== 1
         || !is_string($salary_row_fingerprint) || preg_match('/^[a-f0-9]{64}$/D', $salary_row_fingerprint) !== 1)
         return false;
@@ -260,7 +212,7 @@ function hrm_lifecycle_salary_revision_request_hash($company, $worker_id, $emplo
 
 function hrm_lifecycle_salary_revision_command_for_update($command_id)
 {
-    $command_id = hrm_lifecycle_salary_revision_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($command_id === false)
         return false;
     $result = db_query("SELECT lifecycle_command_id,worker_id,employment_id,assignment_id,command_type,command_status,"
@@ -339,17 +291,17 @@ function hrm_lifecycle_salary_revision_draft_matches($draft_data, $command, $all
     if ($keys !== $expected_keys)
         return false;
     foreach (array('lifecycle_command_id','worker_id','employment_id','assignment_id','employee_number','basic_element_id') as $key)
-        if (hrm_lifecycle_salary_revision_positive_int($draft_data[$key]) === false)
+        if (parse_positive_integer($draft_data[$key]) === false)
             return false;
-    if (hrm_lifecycle_salary_revision_nonnegative_int($draft_data['salary_row_id']) === false
-        || hrm_lifecycle_salary_revision_nonnegative_int($draft_data['employee_personal_salary']) === false)
+    if (parse_non_negative_integer($draft_data['salary_row_id']) === false
+        || parse_non_negative_integer($draft_data['employee_personal_salary']) === false)
         return false;
-    $draft_version = hrm_lifecycle_salary_revision_positive_int($draft_data['command_row_version']);
+    $draft_version = parse_positive_integer($draft_data['command_row_version']);
     $terminal_successor = $allow_terminal_version && (int)$command['row_version'] === 2 && $draft_version === 1;
     $reason = hrm_lifecycle_salary_revision_reason_value($draft_data['reason']);
     $new_salary = hrm_lifecycle_salary_revision_amount($draft_data['new_salary']);
     if ($draft_version === false || ($draft_version !== (int)$command['row_version'] && !$terminal_successor)
-        || hrm_lifecycle_salary_revision_date($draft_data['effective_date']) === false || $reason === false || $new_salary === false
+        || parse_iso_calendar_date($draft_data['effective_date']) === false || $reason === false || $new_salary === false
         || $reason !== (string)$draft_data['reason'] || !is_string($draft_data['reason_hash'])
         || hash('sha256', $reason) !== (string)$draft_data['reason_hash']
         || !is_string($draft_data['request_hash']) || preg_match('/^[a-f0-9]{64}$/D', $draft_data['request_hash']) !== 1
@@ -377,10 +329,10 @@ function submit_hrm_lifecycle_employee_salary_revision($employee_id, $new_salary
 {
     $employee_id = trim((string)$employee_id);
     $new_salary = hrm_lifecycle_salary_revision_amount($new_salary);
-    $effective_date = hrm_lifecycle_salary_revision_date($effective_date);
+    $effective_date = parse_iso_calendar_date($effective_date);
     $reason = hrm_lifecycle_salary_revision_reason_value($reason);
-    $idempotency_hash = hrm_lifecycle_salary_revision_idempotency_hash($idempotency_key);
-    $actor = hrm_lifecycle_salary_revision_actor_id();
+    $idempotency_hash = idempotency_key_hash($idempotency_key);
+    $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if ($employee_id === '' || strlen($employee_id) > 20 || $new_salary === false || $effective_date === false
         || $reason === false || $idempotency_hash === false || strcmp($effective_date, hrm_lifecycle_salary_revision_today_sql()) > 0
@@ -516,7 +468,7 @@ function submit_hrm_lifecycle_employee_salary_revision($employee_id, $new_salary
 
 function hrm_lifecycle_salary_revision_bound_draft($draft_data, $draft_id, $allow_terminal_version)
 {
-    $draft_id = hrm_lifecycle_salary_revision_positive_int($draft_id);
+    $draft_id = parse_positive_integer($draft_id);
     if ($draft_id === false || !is_array($draft_data) || !isset($draft_data['lifecycle_command_id']))
         return false;
     $command = hrm_lifecycle_salary_revision_command_for_update($draft_data['lifecycle_command_id']);
@@ -532,7 +484,7 @@ function execute_approved_hrm_lifecycle_salary_revision($draft_data, $reserved_t
     if (is_array($draft_data) && isset($draft_data['employee_id']) && !hrm_cmp_001_legacy_salary_revision_allowed($draft_data['employee_id'])) return false;
     if (!hrm_lifecycle_salary_revision_permission())
         return false;
-    $actor = hrm_lifecycle_salary_revision_actor_id();
+    $actor = current_user_id_or_zero();
     $command = hrm_lifecycle_salary_revision_bound_draft($draft_data, $draft_id, true);
     if (!$command || $actor <= 0)
         return false;
@@ -645,7 +597,7 @@ function hrm_lifecycle_salary_revision_terminalize($draft_data, $draft_id, $stat
 {
     if (!hrm_lifecycle_salary_revision_permission() || !in_array($status, array('rejected','cancelled'), true))
         return false;
-    $actor = hrm_lifecycle_salary_revision_actor_id();
+    $actor = current_user_id_or_zero();
     $command = hrm_lifecycle_salary_revision_bound_draft($draft_data, $draft_id, true);
     if (!$command || $actor <= 0)
         return false;

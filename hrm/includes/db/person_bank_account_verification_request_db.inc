@@ -8,6 +8,7 @@
  * state; bank-account verification/approval state remains untouched for the
  * later promotion slice. No bank value is decrypted or copied here.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 $hrm_bank_account_verification_request_repo_root = dirname(dirname(dirname(__DIR__)));
 $hrm_bank_account_verification_request_dependencies = array(
@@ -52,12 +53,6 @@ function hrm_bank_account_verification_request_positive_int($value)
         return false;
     $integer = (int)$value;
     return $integer > 0 && (string)$integer === $value ? $integer : false;
-}
-
-function hrm_bank_account_verification_request_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
 }
 
 function hrm_bank_account_verification_request_action_hash($company, $person_bank_account_id, $bank_account_row_version, $verification_method)
@@ -256,7 +251,7 @@ function submit_hrm_person_bank_account_verification_request($person_bank_accoun
     $bank_account_row_version = hrm_bank_account_verification_request_positive_int($bank_account_row_version);
     $verification_method = hrm_bank_account_verification_request_method($verification_method);
     $now = $now_epoch === null ? time() : $now_epoch;
-    $actor = hrm_bank_account_verification_request_actor_id();
+    $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if ($person_bank_account_id === false || $bank_account_row_version === false || $verification_method === false
         || !is_int($now) || $now <= 0 || $actor <= 0 || !hrm_bank_account_verification_request_permission()
@@ -377,7 +372,7 @@ function execute_approved_bank_account_verification_request($draft_data, $reserv
     if (!hrm_bank_account_verification_request_permission())
         return false;
     $request = hrm_bank_account_verification_request_from_draft($draft_data, true);
-    $actor = hrm_bank_account_verification_request_actor_id();
+    $actor = current_user_id_or_zero();
     if (!$request || $actor <= 0 || (int)$request['requested_by'] === $actor
         || (string)$request['request_status'] !== 'pending')
         return false;
@@ -413,7 +408,7 @@ function reject_bank_account_verification_request_draft($draft_data, $draft_id, 
     if (!hrm_bank_account_verification_request_permission())
         return false;
     $request = hrm_bank_account_verification_request_from_draft($draft_data, true);
-    $actor = hrm_bank_account_verification_request_actor_id();
+    $actor = current_user_id_or_zero();
     if (!$request || $actor <= 0 || (int)$request['requested_by'] === $actor
         || (string)$request['request_status'] !== 'pending')
         return false;
@@ -450,7 +445,7 @@ function cancel_bank_account_verification_request_draft($draft_data, $draft_id, 
     if (!hrm_bank_account_verification_request_permission())
         return false;
     $request = hrm_bank_account_verification_request_from_draft($draft_data, true);
-    $actor = hrm_bank_account_verification_request_actor_id();
+    $actor = current_user_id_or_zero();
     if (!$request || $actor <= 0 || (int)$request['requested_by'] !== $actor
         || (string)$request['request_status'] !== 'pending')
         return false;

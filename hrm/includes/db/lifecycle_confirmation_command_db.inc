@@ -7,6 +7,7 @@
  * employee's employment type, probation date, status, Employment/Assignment
  * chronology, compensation, payroll, payment, bank, or accounting data.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_lifecycle_confirmation_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_confirmation_dependencies = array(
@@ -37,44 +38,10 @@ if (!defined('HRM_LIFECYCLE_CONFIRMATION_HASH_CONTRACT'))
 if (!defined('HRM_LIFECYCLE_CONFIRMATION_REASON'))
     define('HRM_LIFECYCLE_CONFIRMATION_REASON', 'hrm_fnd_005_employee_confirmation_command');
 
-/** @return int */
-function hrm_lifecycle_confirmation_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
-}
-
 /** @return bool */
 function hrm_lifecycle_confirmation_permission()
 {
     return function_exists('user_check_access') && user_check_access('SA_EMPLOYEE');
-}
-
-/** @param mixed $value @return int|false */
-function hrm_lifecycle_confirmation_positive_int($value)
-{
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    $value = trim((string)$value);
-    if (preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $number = (int)$value;
-    return $number > 0 && (string)$number === $value ? $number : false;
-}
-
-/** @param mixed $value @return string|false */
-function hrm_lifecycle_confirmation_date($value)
-{
-    $value = trim((string)$value);
-    if (preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D', $value) !== 1)
-        return false;
-    $date = DateTime::createFromFormat('!Y-m-d', $value);
-    $errors = DateTime::getLastErrors();
-    if (!$date || (is_array($errors)
-        && ((int)$errors['warning_count'] !== 0 || (int)$errors['error_count'] !== 0))
-        || $date->format('Y-m-d') !== $value)
-        return false;
-    return $value;
 }
 
 /** @param mixed $value @return string|false */
@@ -82,15 +49,6 @@ function hrm_lifecycle_confirmation_reason_value($value)
 {
     $value = trim(strip_tags((string)$value));
     return $value !== '' && strlen($value) <= 500 ? $value : false;
-}
-
-/** @param mixed $key @return string|false */
-function hrm_lifecycle_confirmation_idempotency_hash($key)
-{
-    if (!is_string($key) || strlen($key) < 16 || strlen($key) > 128
-        || preg_match('/^[A-Za-z0-9._:-]+$/D', $key) !== 1)
-        return false;
-    return hash('sha256', $key);
 }
 
 /** @return bool */
@@ -150,7 +108,7 @@ function hrm_lifecycle_confirmation_request_hash($company, $worker_id, $employme
         || (int)$assignment_id <= 0 || (int)$employee_number <= 0
         || !is_string($employee_fingerprint)
         || preg_match('/^[a-f0-9]{64}$/D', $employee_fingerprint) !== 1
-        || hrm_lifecycle_confirmation_date($effective_date) === false
+        || parse_iso_calendar_date($effective_date) === false
         || !is_string($reason_hash) || preg_match('/^[a-f0-9]{64}$/D', $reason_hash) !== 1)
         return false;
     return hash('sha256', HRM_LIFECYCLE_CONFIRMATION_HASH_CONTRACT
@@ -163,7 +121,7 @@ function hrm_lifecycle_confirmation_request_hash($company, $worker_id, $employme
 /** @param int $command_id @return array|false */
 function hrm_lifecycle_confirmation_command_for_update($command_id)
 {
-    $command_id = hrm_lifecycle_confirmation_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($command_id === false)
         return false;
     $result = db_query("SELECT lifecycle_command_id,worker_id,employment_id,assignment_id,command_type,"
@@ -231,7 +189,7 @@ function hrm_lifecycle_confirmation_draft_matches($draft_data, $command, $allow_
     sort($keys, SORT_STRING);
     if ($keys !== $expected)
         return false;
-    $draft_version = hrm_lifecycle_confirmation_positive_int($draft_data['command_row_version']);
+    $draft_version = parse_positive_integer($draft_data['command_row_version']);
     $terminal = $allow_terminal_version && (int)$command['row_version'] === 2 && $draft_version === 1;
     $reason = hrm_lifecycle_confirmation_reason_value($draft_data['reason']);
     if ($draft_version === false || ($draft_version !== (int)$command['row_version'] && !$terminal)
@@ -258,10 +216,10 @@ function hrm_lifecycle_confirmation_draft_matches($draft_data, $command, $allow_
 function submit_hrm_lifecycle_employee_confirmation($employee_id, $effective_date, $reason, $idempotency_key)
 {
     $employee_id = trim((string)$employee_id);
-    $effective_date = hrm_lifecycle_confirmation_date($effective_date);
+    $effective_date = parse_iso_calendar_date($effective_date);
     $reason = hrm_lifecycle_confirmation_reason_value($reason);
-    $idempotency_hash = hrm_lifecycle_confirmation_idempotency_hash($idempotency_key);
-    $actor = hrm_lifecycle_confirmation_actor_id();
+    $idempotency_hash = idempotency_key_hash($idempotency_key);
+    $actor = current_user_id_or_zero();
     if ($employee_id === '' || strlen($employee_id) > 20
         || preg_match('/^[A-Za-z0-9_-]+$/D', $employee_id) !== 1
         || $effective_date === false || $reason === false || $idempotency_hash === false || $actor <= 0
@@ -384,7 +342,7 @@ function submit_hrm_lifecycle_employee_confirmation($employee_id, $effective_dat
 /** @return array|false */
 function hrm_lifecycle_confirmation_bound_draft($draft_data, $draft_id, $allow_terminal_version)
 {
-    $draft_id = hrm_lifecycle_confirmation_positive_int($draft_id);
+    $draft_id = parse_positive_integer($draft_id);
     if ($draft_id === false || !is_array($draft_data) || !isset($draft_data['lifecycle_command_id']))
         return false;
     $command = hrm_lifecycle_confirmation_command_for_update($draft_data['lifecycle_command_id']);
@@ -400,7 +358,7 @@ function execute_approved_hrm_lifecycle_confirmation($draft_data, $reserved_tran
 {
     if (!hrm_lifecycle_confirmation_permission())
         return false;
-    $actor = hrm_lifecycle_confirmation_actor_id();
+    $actor = current_user_id_or_zero();
     $command = hrm_lifecycle_confirmation_bound_draft($draft_data, $draft_id, true);
     if (!$command || $actor <= 0 || (int)$command['requested_by'] === $actor)
         return false;
@@ -478,7 +436,7 @@ function hrm_lifecycle_confirmation_terminalize($draft_data, $draft_id, $status,
     if (!hrm_lifecycle_confirmation_permission()
         || !in_array($status, array('rejected','cancelled'), true))
         return false;
-    $actor = hrm_lifecycle_confirmation_actor_id();
+    $actor = current_user_id_or_zero();
     $command = hrm_lifecycle_confirmation_bound_draft($draft_data, $draft_id, true);
     if (!$command || $actor <= 0)
         return false;

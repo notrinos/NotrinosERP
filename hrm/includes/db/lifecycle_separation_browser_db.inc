@@ -8,6 +8,7 @@
  * route must submit through submit_hrm_lifecycle_employee_separation(); there
  * is no direct employee/Employment/Assignment mutation fallback.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_lifecycle_separation_browser_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_separation_browser_dependencies = array(
@@ -159,7 +160,7 @@ function get_hrm_lifecycle_employee_separation_browser_status($employee_id)
 {
     $none = array('status'=>'none','own'=>false,'lifecycle_command_id'=>0,'approval_draft_id'=>0);
     $employee_id = hrm_lifecycle_separation_browser_employee_id($employee_id);
-    $actor = function_exists('hrm_lifecycle_separation_actor_id') ? hrm_lifecycle_separation_actor_id() : 0;
+    $actor = function_exists('current_user_id_or_zero') ? current_user_id_or_zero() : 0;
     if ($employee_id === false || $actor <= 0 || !function_exists('hrm_lifecycle_separation_permission')
         || !hrm_lifecycle_separation_permission() || !function_exists('get_hrm_person_worker_binding'))
         return array_merge($none, array('status'=>'inconsistent'));

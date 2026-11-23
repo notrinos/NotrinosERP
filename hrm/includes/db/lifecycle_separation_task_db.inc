@@ -7,6 +7,7 @@
  * reopen central approval, and does not mutate Employee/Assignment/document,
  * payroll, payment, bank, GL, or accounting state.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_lifecycle_separation_task_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_separation_task_dependencies = array(
@@ -29,8 +30,8 @@ if (!defined('HRM_LIFECYCLE_SEPARATION_TASK_REASON'))
 
 function hrm_lifecycle_separation_task_actor_id()
 {
-    return function_exists('hrm_lifecycle_separation_actor_id')
-        ? hrm_lifecycle_separation_actor_id()
+    return function_exists('current_user_id_or_zero')
+        ? current_user_id_or_zero()
         : (isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
             && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0);
 }
@@ -40,17 +41,6 @@ function hrm_lifecycle_separation_task_permission()
     return function_exists('user_check_access') && user_check_access('SA_EMPSEPARATION');
 }
 
-function hrm_lifecycle_separation_task_positive_int($value)
-{
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    $value = trim((string)$value);
-    if (preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $number = (int)$value;
-    return $number > 0 && (string)$number === $value ? $number : false;
-}
-
 /**
  * Lock and validate one accepted Employee Separation lifecycle command plus its
  * command-owned central approval draft. Only a completed row-version 2 command
@@ -58,7 +48,7 @@ function hrm_lifecycle_separation_task_positive_int($value)
  */
 function hrm_lifecycle_separation_task_command_for_update($command_id)
 {
-    $command_id = hrm_lifecycle_separation_task_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($command_id === false || !defined('ST_HRM_LIFECYCLE_SEPARATION')
         || !defined('APPROVAL_STATUS_APPROVED'))
         return false;
@@ -84,7 +74,7 @@ function hrm_lifecycle_separation_task_command_for_update($command_id)
 
 function hrm_lifecycle_separation_task_row_for_update($command_id)
 {
-    $command_id = hrm_lifecycle_separation_task_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($command_id === false)
         return false;
     $result = db_query("SELECT lifecycle_task_id,lifecycle_command_id,task_code,task_status,"
@@ -97,7 +87,7 @@ function hrm_lifecycle_separation_task_row_for_update($command_id)
 
 function get_hrm_lifecycle_employee_separation_task($command_id)
 {
-    $command_id = hrm_lifecycle_separation_task_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($command_id === false || !hrm_lifecycle_separation_task_permission())
         return false;
     $result = db_query("SELECT lifecycle_task_id,lifecycle_command_id,task_code,task_status,"
@@ -183,7 +173,7 @@ function create_hrm_lifecycle_employee_separation_task($command_id)
     if (!hrm_lifecycle_separation_task_permission())
         return false;
     $actor = hrm_lifecycle_separation_task_actor_id();
-    $command_id = hrm_lifecycle_separation_task_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($actor <= 0 || $command_id === false)
         return false;
 
@@ -231,7 +221,7 @@ function complete_hrm_lifecycle_employee_separation_task($command_id)
     if (!hrm_lifecycle_separation_task_permission())
         return false;
     $actor = hrm_lifecycle_separation_task_actor_id();
-    $command_id = hrm_lifecycle_separation_task_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($actor <= 0 || $command_id === false)
         return false;
 

@@ -6,6 +6,7 @@
  * central approval has completed. It deliberately does not promote identifier
  * verification/approval state or expose identifier material.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 
 $hrm_identifier_verification_evidence_repo_root = dirname(dirname(dirname(__DIR__)));
@@ -272,7 +273,7 @@ function register_hrm_person_identifier_verification_evidence(
     $evidence_reference_hash = hrm_identifier_verification_evidence_hex64($evidence_reference_hash);
     $evidence_payload_hash = hrm_identifier_verification_evidence_hex64($evidence_payload_hash);
     $now = $now_epoch === null ? time() : $now_epoch;
-    $actor = hrm_identifier_verification_request_actor_id();
+    $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if ($verification_request_id === false || $request_row_version === false || $approval_draft_id === false
         || $verification_method === false || $evidence_source === false
@@ -450,7 +451,7 @@ function promote_hrm_person_identifier_verification(
     $evidence_row_version = hrm_identifier_verification_request_positive_int($evidence_row_version);
     $request_row_version = hrm_identifier_verification_request_positive_int($request_row_version);
     $identifier_row_version = hrm_identifier_verification_request_positive_int($identifier_row_version);
-    $actor = hrm_identifier_verification_request_actor_id();
+    $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if ($verification_evidence_id === false || $evidence_row_version === false
         || $request_row_version === false || $identifier_row_version === false

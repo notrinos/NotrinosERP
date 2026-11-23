@@ -120,7 +120,7 @@ function federation_oidc_token_verifier_library_signature($jwt, $jwks_bytes, $is
                 $this->pinnedJwks = $pinned_jwks;
                 $this->providerConfigParam(array('jwks_uri'=>FEDERATION_OIDC_TOKEN_VERIFIER_PINNED_JWKS_URI));
             }
-            protected function fetchURL(string $url, string $post_body = null, array $headers = [])
+            protected function fetchURL(string $url, ?string $post_body = null, array $headers = [])
             {
                 if ($url === FEDERATION_OIDC_TOKEN_VERIFIER_PINNED_JWKS_URI && $post_body === null && count($headers) === 0)
                     return $this->pinnedJwks;

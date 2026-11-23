@@ -7,6 +7,7 @@
  * command metadata plus confidential staged payload custody. Final Hire
  * execution remains a separate reviewed dependency.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 if (!function_exists('append_domain_audit_event'))
     include_once($path_to_root.'/includes/db/domain_audit_db.inc');
@@ -20,53 +21,10 @@ if (!defined('HRM_LIFECYCLE_HIRE_PAYLOAD_RETENTION_DAYS'))
 if (!defined('HRM_LIFECYCLE_HIRE_PAYLOAD_HASH_CONTRACT'))
     define('HRM_LIFECYCLE_HIRE_PAYLOAD_HASH_CONTRACT', 'notrinoserp.hrm.lifecycle.hire-payload-request.v1');
 
-/** @return int */
-function hrm_lifecycle_hire_payload_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
-}
-
 /** @return bool */
 function hrm_lifecycle_hire_payload_permission()
 {
     return function_exists('user_check_access') && user_check_access('SA_EMPLOYEE');
-}
-
-/** @param mixed $value @return int|false */
-function hrm_lifecycle_hire_payload_positive_int($value)
-{
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    $value = trim((string)$value);
-    if (preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $number = (int)$value;
-    return $number > 0 && (string)$number === $value ? $number : false;
-}
-
-/** @param mixed $value @return string|false */
-function hrm_lifecycle_hire_payload_date($value)
-{
-    $value = trim((string)$value);
-    if (preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D', $value) !== 1)
-        return false;
-    $date = DateTime::createFromFormat('!Y-m-d', $value);
-    $errors = DateTime::getLastErrors();
-    if (!$date || (is_array($errors)
-        && ((int)$errors['warning_count'] !== 0 || (int)$errors['error_count'] !== 0))
-        || $date->format('Y-m-d') !== $value)
-        return false;
-    return $value;
-}
-
-/** @param mixed $key @return string|false */
-function hrm_lifecycle_hire_payload_idempotency_hash($key)
-{
-    if (!is_string($key) || strlen($key) < 16 || strlen($key) > 128
-        || preg_match('/^[A-Za-z0-9._:-]+$/D', $key) !== 1)
-        return false;
-    return hash('sha256', $key);
 }
 
 /**
@@ -275,7 +233,7 @@ function hrm_hire_payload_key($key_id, $company = null, $expected_generation = n
     if ($manifest === false || $paths === false)
         return false;
     if ($expected_generation !== null) {
-        $expected_generation = hrm_lifecycle_hire_payload_positive_int($expected_generation);
+        $expected_generation = parse_positive_integer($expected_generation);
         if ($expected_generation === false)
             return false;
     }
@@ -387,7 +345,7 @@ function hrm_lifecycle_hire_payload_canonicalize($payload)
                 if ($rule === 'date_required') return false;
                 $out[$field] = '';
             } else {
-                $date = hrm_lifecycle_hire_payload_date($value);
+                $date = parse_iso_calendar_date($value);
                 if ($date === false) return false;
                 $out[$field] = $date;
             }
@@ -426,7 +384,7 @@ function hrm_lifecycle_hire_payload_canonical_json($payload)
 /** @return string|false */
 function hrm_lifecycle_hire_payload_request_hash($company, $effective_date, $canonical_json)
 {
-    $effective_date = hrm_lifecycle_hire_payload_date($effective_date);
+    $effective_date = parse_iso_calendar_date($effective_date);
     if ($effective_date === false || !is_string($canonical_json) || $canonical_json === '' || strlen($canonical_json) > 32768)
         return false;
     return hash('sha256', HRM_LIFECYCLE_HIRE_PAYLOAD_HASH_CONTRACT.'|company='.(int)$company
@@ -436,7 +394,7 @@ function hrm_lifecycle_hire_payload_request_hash($company, $effective_date, $can
 /** @return string|false */
 function hrm_lifecycle_hire_payload_context($company, $command_id, $request_hash, $envelope_version=1)
 {
-    $command_id = hrm_lifecycle_hire_payload_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($command_id === false || preg_match('/^[a-f0-9]{64}$/D', (string)$request_hash) !== 1
         || (int)$envelope_version !== HRM_LIFECYCLE_HIRE_PAYLOAD_ENVELOPE_VERSION)
         return false;
@@ -493,7 +451,7 @@ function hrm_lifecycle_hire_command_by_idempotency_for_update($idempotency_hash)
 /** @return array|false */
 function hrm_lifecycle_hire_command_for_update($command_id)
 {
-    $command_id = hrm_lifecycle_hire_payload_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($command_id === false)
         return false;
     $result = db_query("SELECT hire_command_id,command_status,effective_at,idempotency_key_hash,request_hash,"
@@ -505,7 +463,7 @@ function hrm_lifecycle_hire_command_for_update($command_id)
 /** @return array|false */
 function hrm_lifecycle_hire_payload_for_update($command_id)
 {
-    $command_id = hrm_lifecycle_hire_payload_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($command_id === false)
         return false;
     $result = db_query("SELECT hire_command_id,payload_state,envelope_version,payload_ciphertext,ciphertext_sha256,"
@@ -556,11 +514,11 @@ function hrm_lifecycle_hire_payload_audit($action, $command, $payload_meta, $res
  */
 function stage_hrm_lifecycle_employee_hire_payload($payload, $effective_date, $idempotency_key)
 {
-    $effective_date = hrm_lifecycle_hire_payload_date($effective_date);
-    $idempotency_hash = hrm_lifecycle_hire_payload_idempotency_hash($idempotency_key);
+    $effective_date = parse_iso_calendar_date($effective_date);
+    $idempotency_hash = idempotency_key_hash($idempotency_key);
     $canonical = hrm_lifecycle_hire_payload_canonicalize($payload);
     $canonical_json = $canonical === false ? false : hrm_lifecycle_hire_payload_canonical_json($canonical);
-    $actor = hrm_lifecycle_hire_payload_actor_id();
+    $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     $request_hash = $canonical_json === false ? false
         : hrm_lifecycle_hire_payload_request_hash($company, $effective_date, $canonical_json);
@@ -696,9 +654,9 @@ function load_hrm_lifecycle_employee_hire_payload_for_update($command_id, $allow
  */
 function purge_hrm_lifecycle_employee_hire_payload($command_id, $reason_code)
 {
-    $command_id = hrm_lifecycle_hire_payload_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     $reason_code = trim((string)$reason_code);
-    $actor = hrm_lifecycle_hire_payload_actor_id();
+    $actor = current_user_id_or_zero();
     if ($command_id === false || $actor <= 0 || !hrm_lifecycle_hire_payload_permission()
         || preg_match('/^[a-z][a-z0-9_.:-]{2,63}$/D', $reason_code) !== 1)
         return false;

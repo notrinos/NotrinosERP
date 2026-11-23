@@ -5,6 +5,7 @@
  * Deliberately non-mutating. It consumes the accepted 1.0.373 Rehire custody
  * and freezes a future atomic rollover plan without changing any business row.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 include_once(dirname(__FILE__).'/lifecycle_rehire_command_db.inc');
 
@@ -89,7 +90,7 @@ function hrm_lifecycle_rehire_rollover_sequence_state_for_update($custody)
 function hrm_lifecycle_rehire_protected_payroll_overlap_for_update($employee_id, $effective_date)
 {
     $employee_id = trim((string)$employee_id);
-    $effective_date = function_exists('hrm_lifecycle_rehire_date') ? hrm_lifecycle_rehire_date($effective_date) : false;
+    $effective_date = function_exists('parse_iso_calendar_date') ? parse_iso_calendar_date($effective_date) : false;
     if ($employee_id === '' || $effective_date === false) return false;
     $sql = "SELECT p.period_id,p.from_date,p.to_date,p.status,ps.payslip_id FROM ".TB_PREF."payroll_periods p "
         ."INNER JOIN ".TB_PREF."payslips ps ON ps.payroll_period_id=p.period_id "

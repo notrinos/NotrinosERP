@@ -6,6 +6,7 @@
  * only. It never changes legacy employee bank/payment authority, never reveals
  * a stored bank value, and never promotes verification or approval state.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_person_bank_supersession_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_person_bank_supersession_dependencies = array(
@@ -38,12 +39,6 @@ function hrm_person_bank_supersession_positive_int($value)
         return false;
     $integer = (int)$value;
     return $integer > 0 && (string)$integer === $value ? $integer : false;
-}
-
-function hrm_person_bank_supersession_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
 }
 
 function hrm_person_bank_supersession_permission()
@@ -182,7 +177,7 @@ function supersede_hrm_person_bank_account($predecessor_id, $predecessor_row_ver
 {
     $predecessor_id = hrm_person_bank_supersession_positive_int($predecessor_id);
     $predecessor_row_version = hrm_person_bank_supersession_positive_int($predecessor_row_version);
-    $actor = hrm_person_bank_supersession_actor_id();
+    $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     $now_epoch = $now_epoch === null ? time() : (int)$now_epoch;
     $canonical = hrm_person_bank_payload_json($new_payload);

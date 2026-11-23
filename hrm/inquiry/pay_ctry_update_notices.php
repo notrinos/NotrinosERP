@@ -1,12 +1,13 @@
 <?php
 /** Read-only self-scoped PAY-CTRY-007 regulatory update inbox. */
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 $page_security='SA_HRM_VIEW_PAY_CTRY_UPDATE';
 $path_to_root='../..';
 include($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/pay_ctry_007_notification_db.inc');
 page(_('Regulatory Country-Pack Updates'));
-$actor=pay_ctry_007_actor_id();
+$actor=current_user_id_or_zero();
 $rows=pay_ctry_007_get_visible_deliveries($actor,100);
 display_note(_('Read-only self-scoped notice center. It contains country-pack metadata only; no employee facts, automatic pack activation, payroll action, payment, posting, filing, email, SMS, or webhook delivery occurs here.'),0,1);
 start_table(TABLESTYLE,"width='100%'");

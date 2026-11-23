@@ -8,6 +8,7 @@
  * promoted, and the accepted effective-dated Assignment writer remains the
  * only business mutation authority.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_lifecycle_promotion_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_promotion_dependencies = array(
@@ -46,56 +47,10 @@ if (!defined('HRM_LIFECYCLE_PROMOTION_HASH_VERSION'))
 if (!defined('HRM_LIFECYCLE_PROMOTION_REASON'))
     define('HRM_LIFECYCLE_PROMOTION_REASON', 'hrm_fnd_005_employee_promotion_command');
 
-/** @return int */
-function hrm_lifecycle_promotion_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
-}
-
 /** @return bool */
 function hrm_lifecycle_promotion_permission()
 {
     return function_exists('user_check_access') && user_check_access('SA_EMPTRANSFER');
-}
-
-/** @param mixed $value @return int|false */
-function hrm_lifecycle_promotion_positive_int($value)
-{
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    $value = trim((string)$value);
-    if (preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $number = (int)$value;
-    return $number > 0 && (string)$number === $value ? $number : false;
-}
-
-/** @param mixed $value @return int|false */
-function hrm_lifecycle_promotion_nonnegative_int($value)
-{
-    if (is_int($value))
-        return $value >= 0 ? $value : false;
-    $value = trim((string)$value);
-    if (preg_match('/^(?:0|[1-9][0-9]*)$/D', $value) !== 1)
-        return false;
-    $number = (int)$value;
-    return $number >= 0 && (string)$number === $value ? $number : false;
-}
-
-/** @param mixed $value @return string|false */
-function hrm_lifecycle_promotion_date($value)
-{
-    $value = trim((string)$value);
-    if (preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D', $value) !== 1)
-        return false;
-    $date = DateTime::createFromFormat('!Y-m-d', $value);
-    $errors = DateTime::getLastErrors();
-    if (!$date || (is_array($errors)
-        && ((int)$errors['warning_count'] !== 0 || (int)$errors['error_count'] !== 0))
-        || $date->format('Y-m-d') !== $value)
-        return false;
-    return $value;
 }
 
 /** @return string */
@@ -103,19 +58,10 @@ function hrm_lifecycle_promotion_today_sql()
 {
     if (function_exists('Today') && function_exists('date2sql')) {
         $today = date2sql(Today());
-        if (hrm_lifecycle_promotion_date($today) !== false)
+        if (parse_iso_calendar_date($today) !== false)
             return $today;
     }
     return date('Y-m-d');
-}
-
-/** @param mixed $key @return string|false */
-function hrm_lifecycle_promotion_idempotency_hash($key)
-{
-    if (!is_string($key) || strlen($key) < 16 || strlen($key) > 128
-        || preg_match('/^[A-Za-z0-9._:-]+$/D', $key) !== 1)
-        return false;
-    return hash('sha256', $key);
 }
 
 /** @return bool */
@@ -177,13 +123,13 @@ function hrm_lifecycle_promotion_request_hash($company, $worker_id, $employment_
     foreach (array($worker_id, $employment_id, $assignment_id, $employee_number,
         $department_id, $position_id, $grade_id, $job_id, $work_location_id,
         $manager_employee_number) as $value) {
-        if (hrm_lifecycle_promotion_nonnegative_int((string)$value) === false)
+        if (parse_non_negative_integer((string)$value) === false)
             return false;
     }
     if ((int)$company < 0 || (int)$worker_id <= 0 || (int)$employment_id <= 0
         || (int)$assignment_id <= 0 || (int)$employee_number <= 0
         || (int)$department_id <= 0 || (int)$position_id <= 0 || (int)$grade_id <= 0
-        || hrm_lifecycle_promotion_date($effective_date) === false)
+        || parse_iso_calendar_date($effective_date) === false)
         return false;
     return hash('sha256', HRM_LIFECYCLE_PROMOTION_HASH_CONTRACT.'|v='
         .HRM_LIFECYCLE_PROMOTION_HASH_VERSION.'|company='.(int)$company
@@ -198,7 +144,7 @@ function hrm_lifecycle_promotion_request_hash($company, $worker_id, $employment_
 /** @param mixed $command_id @return array|false */
 function hrm_lifecycle_promotion_command_for_update($command_id)
 {
-    $command_id = hrm_lifecycle_promotion_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($command_id === false)
         return false;
     $result = db_query("SELECT lifecycle_command_id,worker_id,employment_id,assignment_id,command_type,command_status,"
@@ -287,18 +233,18 @@ function hrm_lifecycle_promotion_draft_matches($draft_data, $command, $allow_ter
         return false;
     foreach (array('lifecycle_command_id','worker_id','employment_id','assignment_id','employee_number',
         'new_department_id','new_position_id','new_grade_id') as $key) {
-        if (hrm_lifecycle_promotion_positive_int($draft_data[$key]) === false)
+        if (parse_positive_integer($draft_data[$key]) === false)
             return false;
     }
     foreach (array('new_job_id','new_work_location_id','manager_employee_number') as $key) {
-        if (hrm_lifecycle_promotion_nonnegative_int($draft_data[$key]) === false)
+        if (parse_non_negative_integer($draft_data[$key]) === false)
             return false;
     }
-    $draft_version = hrm_lifecycle_promotion_positive_int($draft_data['command_row_version']);
+    $draft_version = parse_positive_integer($draft_data['command_row_version']);
     $terminal_successor = $allow_terminal_version && (int)$command['row_version'] === 2
         && $draft_version === 1;
     if ($draft_version === false || ($draft_version !== (int)$command['row_version'] && !$terminal_successor)
-        || hrm_lifecycle_promotion_date($draft_data['effective_date']) === false
+        || parse_iso_calendar_date($draft_data['effective_date']) === false
         || !is_string($draft_data['request_hash'])
         || preg_match('/^[a-f0-9]{64}$/D', $draft_data['request_hash']) !== 1)
         return false;
@@ -334,14 +280,14 @@ function submit_hrm_lifecycle_employee_promotion($employee_id, $effective_date, 
     $new_manager_employee_id, $idempotency_key)
 {
     $employee_id = trim((string)$employee_id);
-    $effective_date = hrm_lifecycle_promotion_date($effective_date);
-    $new_department_id = hrm_lifecycle_promotion_positive_int($new_department_id);
-    $new_position_id = hrm_lifecycle_promotion_positive_int($new_position_id);
-    $new_grade_id = hrm_lifecycle_promotion_positive_int($new_grade_id);
-    $new_job_id = hrm_lifecycle_promotion_nonnegative_int($new_job_id);
-    $new_work_location_id = hrm_lifecycle_promotion_nonnegative_int($new_work_location_id);
-    $idempotency_hash = hrm_lifecycle_promotion_idempotency_hash($idempotency_key);
-    $actor = hrm_lifecycle_promotion_actor_id();
+    $effective_date = parse_iso_calendar_date($effective_date);
+    $new_department_id = parse_positive_integer($new_department_id);
+    $new_position_id = parse_positive_integer($new_position_id);
+    $new_grade_id = parse_positive_integer($new_grade_id);
+    $new_job_id = parse_non_negative_integer($new_job_id);
+    $new_work_location_id = parse_non_negative_integer($new_work_location_id);
+    $idempotency_hash = idempotency_key_hash($idempotency_key);
+    $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if ($employee_id === '' || strlen($employee_id) > 20 || $effective_date === false
         || $new_department_id === false || $new_position_id === false || $new_grade_id === false
@@ -482,7 +428,7 @@ function submit_hrm_lifecycle_employee_promotion($employee_id, $effective_date, 
 /** @return array|false */
 function hrm_lifecycle_promotion_bound_draft($draft_data, $draft_id, $allow_terminal_version)
 {
-    $draft_id = hrm_lifecycle_promotion_positive_int($draft_id);
+    $draft_id = parse_positive_integer($draft_id);
     if ($draft_id === false || !is_array($draft_data)
         || !isset($draft_data['lifecycle_command_id']))
         return false;
@@ -503,7 +449,7 @@ function execute_approved_hrm_lifecycle_promotion($draft_data, $reserved_trans_n
 {
     if (!hrm_lifecycle_promotion_permission())
         return false;
-    $actor = hrm_lifecycle_promotion_actor_id();
+    $actor = current_user_id_or_zero();
     $command = hrm_lifecycle_promotion_bound_draft($draft_data, $draft_id, true);
     if (!$command || $actor <= 0)
         return false;
@@ -606,7 +552,7 @@ function hrm_lifecycle_promotion_terminalize($draft_data, $draft_id, $status, $m
     if (!hrm_lifecycle_promotion_permission()
         || !in_array($status, array('rejected','cancelled'), true))
         return false;
-    $actor = hrm_lifecycle_promotion_actor_id();
+    $actor = current_user_id_or_zero();
     $command = hrm_lifecycle_promotion_bound_draft($draft_data, $draft_id, true);
     if (!$command || $actor <= 0)
         return false;

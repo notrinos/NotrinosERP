@@ -61,6 +61,22 @@ function update_admin_password($conn, $password) {
 	db_query($sql, "could not update user password for 'admin'");
 }
 
+/**
+ * The HTTPS-only setting write_config_db() writes to config_db.php.
+ *
+ * A SECURE_ONLY define that config_db.php already holds is kept, true or false; includes/session.inc defines null when
+ * the file holds none, and null writes no define. The installer runs before any define and turns the setting on when
+ * PHP sees its own request as HTTPS (proxy headers are not trusted, as in session_transport_is_https()).
+ *
+ * @return bool|null
+ */
+function config_db_secure_only_setting() {
+	if (defined('SECURE_ONLY'))
+		return SECURE_ONLY === null ? null : (bool)SECURE_ONLY;
+	include_once(dirname(__DIR__, 2).'/includes/session_security.inc');
+	return session_transport_is_https(null) ? true : null;
+}
+
 function write_config_db($new = false) {
 	global $path_to_root, $def_coy, $db_connections, $tb_pref_counter;
 
@@ -83,6 +99,12 @@ function write_config_db($new = false) {
 	$msg .= "\$tb_pref_counter = " . $tb_pref_counter . ";\n\n";
 	$msg .= "\$db_connections = " .var_export($db_connections, true);
 	$msg .= ";\n";
+	$secure_only = config_db_secure_only_setting();
+	if ($secure_only !== null) {
+		$msg .= "\n/* SECURE_ONLY true: plain HTTP requests are refused (426) before the session starts and the session cookie is always Secure.\n";
+		$msg .= "   The installer sets it when it runs over HTTPS; saving companies keeps the value. */\n";
+		$msg .= "define('SECURE_ONLY', ".($secure_only ? 'true' : 'false').");\n";
+	}
 
 	$filename = $path_to_root.'/config_db.php';
 	// Check if the file exists and is writable first.

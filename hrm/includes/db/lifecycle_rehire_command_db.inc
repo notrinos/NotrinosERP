@@ -9,6 +9,7 @@
  * reactivate an Employee, create successor normalized rows, or reuse Hire/CSV
  * authority. The execution rollover remains a separately reviewed dependency.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 if (!defined('HRM_LIFECYCLE_REHIRE_COMMAND_TYPE'))
     define('HRM_LIFECYCLE_REHIRE_COMMAND_TYPE', 'employee_rehire');
@@ -23,33 +24,10 @@ function hrm_lifecycle_rehire_permission()
     return function_exists('user_check_access') && user_check_access('SA_EMPLOYEE');
 }
 
-/** @param mixed $value @return int|false */
-function hrm_lifecycle_rehire_positive_int($value)
-{
-    if (is_int($value)) return $value > 0 ? $value : false;
-    $value = trim((string)$value);
-    if (preg_match('/^[1-9][0-9]*$/D', $value) !== 1) return false;
-    $number = (int)$value;
-    return $number > 0 && (string)$number === $value ? $number : false;
-}
-
-/** @param mixed $value @return string|false */
-function hrm_lifecycle_rehire_date($value)
-{
-    $value = trim((string)$value);
-    if (preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D', $value) !== 1) return false;
-    $date = DateTime::createFromFormat('!Y-m-d', $value);
-    $errors = DateTime::getLastErrors();
-    if (!$date || (is_array($errors)
-        && ((int)$errors['warning_count'] !== 0 || (int)$errors['error_count'] !== 0))
-        || $date->format('Y-m-d') !== $value) return false;
-    return $value;
-}
-
 /** @return array|false */
 function hrm_lifecycle_rehire_employee_for_update($employee_number)
 {
-    $employee_number = hrm_lifecycle_rehire_positive_int($employee_number);
+    $employee_number = parse_positive_integer($employee_number);
     if ($employee_number === false || !function_exists('db_query') || !defined('TB_PREF')) return false;
     $result = db_query("SELECT employee_number,employee_id,hire_date,released_date,inactive,employment_type,"
         ."department_id,position_id,grade_id,shift_id,cost_center_id,dimension2_id,reporting_to "
@@ -98,8 +76,8 @@ function hrm_lifecycle_rehire_request_hash($company, $worker_id, $predecessor_em
 {
     foreach (array($worker_id,$predecessor_employment_id,$predecessor_contract_id,
         $predecessor_assignment_id,$employee_number,$separation_command_id) as $value)
-        if (hrm_lifecycle_rehire_positive_int((string)$value) === false) return false;
-    $effective_date = hrm_lifecycle_rehire_date($effective_date);
+        if (parse_positive_integer((string)$value) === false) return false;
+    $effective_date = parse_iso_calendar_date($effective_date);
     if ((int)$company < 0 || $effective_date === false) return false;
     return hash('sha256', HRM_LIFECYCLE_REHIRE_HASH_CONTRACT.'|v='.HRM_LIFECYCLE_REHIRE_HASH_VERSION
         .'|company='.(int)$company.'|worker_id='.(int)$worker_id
@@ -124,8 +102,8 @@ function get_hrm_lifecycle_employee_rehire_custody_for_update($employee_number, 
         || !function_exists('get_hrm_legacy_current_employment')
         || !function_exists('get_hrm_legacy_current_contract')
         || !function_exists('get_hrm_legacy_current_assignment')) return false;
-    $employee_number = hrm_lifecycle_rehire_positive_int($employee_number);
-    $effective_date = hrm_lifecycle_rehire_date($effective_date);
+    $employee_number = parse_positive_integer($employee_number);
+    $effective_date = parse_iso_calendar_date($effective_date);
     if ($employee_number === false || $effective_date === false) return false;
 
     $employee = hrm_lifecycle_rehire_employee_for_update($employee_number);
@@ -143,7 +121,7 @@ function get_hrm_lifecycle_employee_rehire_custody_for_update($employee_number, 
             && (!function_exists('hrm_lifecycle_rehire_compatibility_allows')
                 || !hrm_lifecycle_rehire_compatibility_allows($employee, $employment)))
         || (string)$employment['employment_status'] !== 'terminated'
-        || hrm_lifecycle_rehire_date($employment['end_date']) === false
+        || parse_iso_calendar_date($employment['end_date']) === false
         || (string)$employee['released_date'] !== (string)$employment['end_date']
         || (int)$contract['employment_id'] !== (int)$employment['employment_id']
         || (int)$contract['legacy_current'] !== 1 || (string)$contract['effective_to'] !== (string)$employment['end_date']

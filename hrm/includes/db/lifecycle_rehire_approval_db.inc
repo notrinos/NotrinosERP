@@ -3,6 +3,7 @@
  * Fixed same-code Employee Rehire command. Central ApprovalWorkflow owns final
  * execution, rejection and cancellation transactions; no direct writer route.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/lifecycle_separation_command_db.inc');
 include_once(dirname(__FILE__).'/employee_contract_db.inc');
 include_once(dirname(__FILE__).'/lifecycle_rehire_rollover_plan_db.inc');
@@ -70,13 +71,13 @@ function hrm_lifecycle_rehire_draft_matches($data, $command)
         'lifecycle_command_id','request_hash','worker_id'))
         return false;
     foreach (array('employee_number','lifecycle_command_id','worker_id') as $key)
-        if (hrm_lifecycle_rehire_positive_int($data[$key]) === false) return false;
+        if (parse_positive_integer($data[$key]) === false) return false;
     return (int)$data['command_row_version'] === 1
         && $command['command_type'] === 'employee_rehire'
         && (int)$command['lifecycle_command_id'] === (int)$data['lifecycle_command_id']
         && (int)$command['worker_id'] === (int)$data['worker_id']
         && (string)$command['effective_at'] === (string)$data['effective_date'].' 00:00:00'
-        && hrm_lifecycle_rehire_date($data['effective_date']) !== false
+        && parse_iso_calendar_date($data['effective_date']) !== false
         && is_string($data['request_hash'])
         && preg_match('/^[a-f0-9]{64}$/D', $data['request_hash']) === 1
         && hash_equals((string)$command['request_hash'], $data['request_hash']);
@@ -117,7 +118,7 @@ function get_hrm_lifecycle_rehire_maker_status($employee_number)
 {
     if (!hrm_lifecycle_rehire_permission() || (int)$employee_number <= 0) return false;
     begin_transaction();
-    $actor = hrm_lifecycle_separation_actor_id();
+    $actor = current_user_id_or_zero();
     $binding = get_hrm_person_worker_binding((int)$employee_number, true);
     $result = false;
     if ($binding && empty($binding['retired_at'])) {
@@ -143,10 +144,10 @@ function get_hrm_lifecycle_rehire_maker_status($employee_number)
  */
 function submit_hrm_lifecycle_employee_rehire($employee_number, $effective_date, $idempotency_key)
 {
-    $employee_number = hrm_lifecycle_rehire_positive_int($employee_number);
-    $date = hrm_lifecycle_rehire_date($effective_date);
-    $key_hash = hrm_lifecycle_separation_idempotency_hash($idempotency_key);
-    $actor = hrm_lifecycle_separation_actor_id();
+    $employee_number = parse_positive_integer($employee_number);
+    $date = parse_iso_calendar_date($effective_date);
+    $key_hash = idempotency_key_hash($idempotency_key);
+    $actor = current_user_id_or_zero();
     if (!$employee_number || !$date || !$key_hash || $actor <= 0
         || $date > hrm_lifecycle_separation_today_sql() || !hrm_lifecycle_rehire_permission()
         || !hrm_lifecycle_rehire_workflow_is_maker_checker()) return false;
@@ -206,7 +207,7 @@ function hrm_lifecycle_rehire_terminal_custody($data, $draft_id, $status)
     global $transaction_level;
     if (empty($transaction_level) || !hrm_lifecycle_rehire_permission() || !is_array($data)
         || empty($data['lifecycle_command_id']) || (int)$draft_id <= 0) return false;
-    $actor = hrm_lifecycle_separation_actor_id();
+    $actor = current_user_id_or_zero();
     $draft = get_approval_draft_for_update((int)$draft_id);
     $command = hrm_lifecycle_separation_command_for_update($data['lifecycle_command_id']);
     $states = array('completed'=>APPROVAL_STATUS_APPROVED,'rejected'=>APPROVAL_STATUS_REJECTED,
@@ -233,7 +234,7 @@ function hrm_lifecycle_rehire_terminal_custody($data, $draft_id, $status)
 function hrm_lifecycle_rehire_complete_command($command, $status)
 {
     return db_query("UPDATE ".TB_PREF."hrm_lifecycle_commands SET command_status=".db_escape($status)
-        .",row_version=2,completed_at=UTC_TIMESTAMP(),completed_by=".hrm_lifecycle_separation_actor_id()
+        .",row_version=2,completed_at=UTC_TIMESTAMP(),completed_by=".current_user_id_or_zero()
         ." WHERE lifecycle_command_id=".(int)$command['lifecycle_command_id']
         ." AND command_status='pending' AND row_version=1 AND approval_draft_id=".(int)$command['approval_draft_id'],
         'could not terminalize Rehire command') && db_num_affected_rows() === 1;
@@ -274,7 +275,7 @@ function execute_approved_hrm_lifecycle_rehire($data, $reserved_trans_no, $draft
     $command = hrm_lifecycle_rehire_terminal_custody($data, $draft_id, 'completed');
     if (!$command) return false;
     if ($command['command_status'] === 'completed') {
-        if ((int)$command['completed_by'] !== hrm_lifecycle_separation_actor_id()) return false;
+        if ((int)$command['completed_by'] !== current_user_id_or_zero()) return false;
         $retry = hrm_lifecycle_rehire_retry_result($command, $data['employee_number'],
             $data['effective_date'], $command['requested_by']);
         return $retry ? (int)$command['lifecycle_command_id'] : false;
@@ -315,7 +316,7 @@ function execute_approved_hrm_lifecycle_rehire($data, $reserved_trans_no, $draft
     if (!$verified) return false;
     foreach (array('organization_unit_id','position_id','grade_id','job_id','work_location_id','manager_assignment_id') as $field)
         if (!hrm_assignment_nullable_int_equal($assignment[$field], $verified[$field])) return false;
-    $actor = hrm_lifecycle_separation_actor_id();
+    $actor = current_user_id_or_zero();
     $date = $data['effective_date'];
     foreach (array('hrm_employments'=>array('employment_id','predecessor_employment_id'),
         'hrm_contracts'=>array('contract_id','predecessor_contract_id'),

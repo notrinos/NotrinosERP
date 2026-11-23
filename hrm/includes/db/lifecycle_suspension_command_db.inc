@@ -9,6 +9,7 @@
  * Legacy Employee inactive/release fields, Assignment chronology, payroll,
  * payslips, payments, bank transactions and GL are outside this command.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_lifecycle_suspension_root = isset($path_to_root) ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_suspension_dependencies = array(
     array('/includes/approval/approval_workflow.inc', 'class', 'ApprovalWorkflow'),
@@ -36,46 +37,17 @@ if (!defined('HRM_LIFECYCLE_SUSPENSION_HASH_CONTRACT')) define('HRM_LIFECYCLE_SU
 if (!defined('HRM_LIFECYCLE_SUSPENSION_HASH_VERSION')) define('HRM_LIFECYCLE_SUSPENSION_HASH_VERSION', '1');
 if (!defined('HRM_LIFECYCLE_SUSPENSION_REASON')) define('HRM_LIFECYCLE_SUSPENSION_REASON', 'hrm_fnd_005_employee_suspension_command');
 
-function hrm_lifecycle_suspension_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
-}
 function hrm_lifecycle_suspension_permission()
 {
     return function_exists('user_check_access') && user_check_access('SA_EMPSEPARATION');
-}
-function hrm_lifecycle_suspension_positive_int($value)
-{
-    if (is_int($value)) return $value > 0 ? $value : false;
-    $value = trim((string)$value);
-    if (preg_match('/^[1-9][0-9]*$/D', $value) !== 1) return false;
-    $number = (int)$value;
-    return $number > 0 && (string)$number === $value ? $number : false;
-}
-function hrm_lifecycle_suspension_date($value)
-{
-    $value = trim((string)$value);
-    if (preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D', $value) !== 1) return false;
-    $date = DateTime::createFromFormat('!Y-m-d', $value);
-    $errors = DateTime::getLastErrors();
-    if (!$date || (is_array($errors) && ((int)$errors['warning_count'] !== 0 || (int)$errors['error_count'] !== 0))
-        || $date->format('Y-m-d') !== $value) return false;
-    return $value;
 }
 function hrm_lifecycle_suspension_today_sql()
 {
     if (function_exists('Today') && function_exists('date2sql')) {
         $today = date2sql(Today());
-        if (hrm_lifecycle_suspension_date($today) !== false) return $today;
+        if (parse_iso_calendar_date($today) !== false) return $today;
     }
     return date('Y-m-d');
-}
-function hrm_lifecycle_suspension_idempotency_hash($key)
-{
-    if (!is_string($key) || strlen($key) < 16 || strlen($key) > 128
-        || preg_match('/^[A-Za-z0-9._:-]+$/D', $key) !== 1) return false;
-    return hash('sha256', $key);
 }
 function hrm_lifecycle_suspension_workflow_is_maker_checker()
 {
@@ -164,8 +136,8 @@ function hrm_lifecycle_suspension_reinstatement_predecessor_for_update(
 function hrm_lifecycle_suspension_request_hash($company, $worker_id, $employment_id, $assignment_id, $employee_number, $effective_date)
 {
     foreach (array($worker_id,$employment_id,$assignment_id,$employee_number) as $value)
-        if (hrm_lifecycle_suspension_positive_int((string)$value) === false) return false;
-    if ((int)$company < 0 || hrm_lifecycle_suspension_date($effective_date) === false) return false;
+        if (parse_positive_integer((string)$value) === false) return false;
+    if ((int)$company < 0 || parse_iso_calendar_date($effective_date) === false) return false;
     return hash('sha256', HRM_LIFECYCLE_SUSPENSION_HASH_CONTRACT.'|v='.HRM_LIFECYCLE_SUSPENSION_HASH_VERSION
         .'|company='.(int)$company.'|worker_id='.(int)$worker_id.'|employment_id='.(int)$employment_id
         .'|assignment_id='.(int)$assignment_id.'|employee_number='.(int)$employee_number
@@ -173,7 +145,7 @@ function hrm_lifecycle_suspension_request_hash($company, $worker_id, $employment
 }
 function hrm_lifecycle_suspension_command_for_update($command_id)
 {
-    $command_id = hrm_lifecycle_suspension_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($command_id === false) return false;
     $result = db_query("SELECT lifecycle_command_id,worker_id,employment_id,assignment_id,command_type,command_status,"
         ."effective_at,idempotency_key_hash,request_hash,approval_draft_id,row_version,requested_at,requested_by,"
@@ -233,11 +205,11 @@ function hrm_lifecycle_suspension_draft_matches($draft_data, $command, $allow_te
     $keys = array_keys($draft_data); sort($keys, SORT_STRING);
     if ($keys !== $expected_keys) return false;
     foreach (array('lifecycle_command_id','worker_id','employment_id','assignment_id','employee_number') as $key)
-        if (hrm_lifecycle_suspension_positive_int($draft_data[$key]) === false) return false;
-    $draft_version = hrm_lifecycle_suspension_positive_int($draft_data['command_row_version']);
+        if (parse_positive_integer($draft_data[$key]) === false) return false;
+    $draft_version = parse_positive_integer($draft_data['command_row_version']);
     $terminal_successor = $allow_terminal_version && (int)$command['row_version'] === 2 && $draft_version === 1;
     if ($draft_version === false || ($draft_version !== (int)$command['row_version'] && !$terminal_successor)
-        || hrm_lifecycle_suspension_date($draft_data['effective_date']) === false
+        || parse_iso_calendar_date($draft_data['effective_date']) === false
         || !is_string($draft_data['request_hash']) || preg_match('/^[a-f0-9]{64}$/D', $draft_data['request_hash']) !== 1) return false;
     if ((int)$draft_data['lifecycle_command_id'] !== (int)$command['lifecycle_command_id']
         || (int)$draft_data['worker_id'] !== (int)$command['worker_id']
@@ -255,9 +227,9 @@ function hrm_lifecycle_suspension_draft_matches($draft_data, $command, $allow_te
 function submit_hrm_lifecycle_employee_suspension($employee_id, $effective_date, $idempotency_key)
 {
     $employee_id = trim((string)$employee_id);
-    $effective_date = hrm_lifecycle_suspension_date($effective_date);
-    $idempotency_hash = hrm_lifecycle_suspension_idempotency_hash($idempotency_key);
-    $actor = hrm_lifecycle_suspension_actor_id();
+    $effective_date = parse_iso_calendar_date($effective_date);
+    $idempotency_hash = idempotency_key_hash($idempotency_key);
+    $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if ($employee_id === '' || strlen($employee_id) > 20 || $effective_date === false || $idempotency_hash === false
         || $actor <= 0 || $company < 0
@@ -356,7 +328,7 @@ function submit_hrm_lifecycle_employee_suspension($employee_id, $effective_date,
 }
 function hrm_lifecycle_suspension_bound_draft($draft_data, $draft_id, $allow_terminal_version)
 {
-    $draft_id = hrm_lifecycle_suspension_positive_int($draft_id);
+    $draft_id = parse_positive_integer($draft_id);
     if ($draft_id === false || !is_array($draft_data) || !isset($draft_data['lifecycle_command_id'])) return false;
     $command = hrm_lifecycle_suspension_command_for_update($draft_data['lifecycle_command_id']);
     if (!$command || (string)$command['command_type'] !== HRM_LIFECYCLE_SUSPENSION_COMMAND_TYPE
@@ -367,7 +339,7 @@ function hrm_lifecycle_suspension_bound_draft($draft_data, $draft_id, $allow_ter
 function execute_approved_hrm_lifecycle_suspension($draft_data, $reserved_trans_no, $draft_id)
 {
     if (!hrm_lifecycle_suspension_permission()) return false;
-    $actor = hrm_lifecycle_suspension_actor_id();
+    $actor = current_user_id_or_zero();
     $command = hrm_lifecycle_suspension_bound_draft($draft_data,$draft_id,true);
     if (!$command || $actor <= 0) return false;
     if ((string)$command['command_status'] === 'completed' && (int)$command['row_version'] === 2) return (int)$command['lifecycle_command_id'];
@@ -429,7 +401,7 @@ function execute_approved_hrm_lifecycle_suspension($draft_data, $reserved_trans_
 function hrm_lifecycle_suspension_terminalize($draft_data, $draft_id, $status, $maker_only)
 {
     if (!hrm_lifecycle_suspension_permission() || !in_array($status,array('rejected','cancelled'),true)) return false;
-    $actor = hrm_lifecycle_suspension_actor_id(); $command = hrm_lifecycle_suspension_bound_draft($draft_data,$draft_id,true);
+    $actor = current_user_id_or_zero(); $command = hrm_lifecycle_suspension_bound_draft($draft_data,$draft_id,true);
     if (!$command || $actor <= 0) return false;
     if ((string)$command['command_status'] === $status && (int)$command['row_version'] === 2) return (int)$command['lifecycle_command_id'];
     if ((string)$command['command_status'] !== 'pending' || (int)$command['row_version'] !== 1

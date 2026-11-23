@@ -8,6 +8,7 @@
  * central maker/checker approval transaction. No request-controlled command,
  * draft, request-hash, ciphertext, or key identity is accepted.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 include_once($path_to_root.'/hrm/includes/db/lifecycle_hire_approval_db.inc');
 
@@ -17,7 +18,7 @@ if (!defined('HRM_LIFECYCLE_HIRE_BROWSER_SESSION_NAMESPACE'))
 /** @return int */
 function hrm_lifecycle_hire_browser_actor_id()
 {
-    return hrm_lifecycle_hire_payload_actor_id();
+    return current_user_id_or_zero();
 }
 
 /** @return string|false */
@@ -39,7 +40,7 @@ function &hrm_lifecycle_hire_browser_session_store()
 /** @return array|false */
 function hrm_lifecycle_hire_browser_command_state($command_id)
 {
-    $command_id = hrm_lifecycle_hire_payload_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     $actor = hrm_lifecycle_hire_browser_actor_id();
     if ($command_id === false || $actor <= 0)
         return false;
@@ -70,7 +71,7 @@ function hrm_lifecycle_hire_browser_idempotency_key($employee_id)
         $entry = $store[$slot];
         $key = isset($entry['idempotency_key']) ? (string)$entry['idempotency_key'] : '';
         $command_id = isset($entry['hire_command_id']) ? (int)$entry['hire_command_id'] : 0;
-        if ($key === '' || hrm_lifecycle_hire_payload_idempotency_hash($key) === false)
+        if ($key === '' || idempotency_key_hash($key) === false)
             return false;
         if ($command_id <= 0)
             return $key;
@@ -96,9 +97,9 @@ function hrm_lifecycle_hire_browser_idempotency_key($employee_id)
 function hrm_lifecycle_hire_browser_bind_command($employee_id, $idempotency_key, $command_id)
 {
     $employee_id = hrm_lifecycle_hire_browser_employee_code($employee_id);
-    $command_id = hrm_lifecycle_hire_payload_positive_int($command_id);
+    $command_id = parse_positive_integer($command_id);
     if ($employee_id === false || $command_id === false
-        || hrm_lifecycle_hire_payload_idempotency_hash($idempotency_key) === false)
+        || idempotency_key_hash($idempotency_key) === false)
         return false;
     $store =& hrm_lifecycle_hire_browser_session_store();
     $slot = hash('sha256', $employee_id);
@@ -119,7 +120,7 @@ function hrm_lifecycle_hire_browser_bind_command($employee_id, $idempotency_key,
 function submit_hrm_lifecycle_employee_hire_browser($payload, $effective_date)
 {
     $canonical = hrm_lifecycle_hire_payload_canonicalize($payload);
-    $effective_date = hrm_lifecycle_hire_payload_date($effective_date);
+    $effective_date = parse_iso_calendar_date($effective_date);
     if ($canonical === false || $effective_date === false
         || (string)$canonical['hire_date'] !== $effective_date)
         return false;

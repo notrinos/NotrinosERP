@@ -5,6 +5,7 @@
  * Returns masked/governance metadata only. Bank ciphertext, lookup tokens, key
  * material and raw external evidence are never selected by this helper.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 $hrm_bank_account_verification_evidence_browser_repo_root = dirname(dirname(dirname(__DIR__)));
 if (!function_exists('hrm_bank_account_verification_evidence_action_hash')) {
@@ -52,8 +53,8 @@ function hrm_bank_account_verification_evidence_browser_rows($employee_ref, $req
     $request_id = (int)$request_id;
     $request_row_version = (int)$request_row_version;
     $approval_draft_id = (int)$approval_draft_id;
-    $actor = function_exists('hrm_bank_account_verification_request_actor_id')
-        ? hrm_bank_account_verification_request_actor_id() : 0;
+    $actor = function_exists('current_user_id_or_zero')
+        ? current_user_id_or_zero() : 0;
     if ($employee_ref === false || $actor <= 0 || !defined('TB_PREF') || !defined('ST_HRM_BANK_ACCOUNT_VERIFICATION'))
         return false;
     $employee_column = is_numeric($employee_ref) ? 'employee_number' : 'employee_id';

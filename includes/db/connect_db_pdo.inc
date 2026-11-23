@@ -190,6 +190,35 @@ function db_pdo_has_active_result_error($driver_error_no) {
 }
 
 /**
+ * Run one statement on the server, also when the server refuses to prepare it again.
+ *
+ * Every statement is prepared on the server. When the definition of a view or table leaves the definition cache
+ * between prepare and execute (the schema has more tables than the default cache), the server answers error 1615
+ * before it runs anything. The same SQL is then sent once as plain text, which the server never prepares.
+ *
+ * @param PDO $db_connection Active PDO connection.
+ * @param string $sql SQL statement without parameters.
+ *
+ * @return PDOStatement|bool Statement result.
+ */
+function db_pdo_run_statement($db_connection, $sql) {
+	try {
+		return $db_connection->query($sql);
+	} catch (PDOException $exception) {
+		$error_state = db_pdo_extract_error_state($exception);
+		if ((int)$error_state[1] !== 1615)
+			throw $exception;
+	}
+
+	$db_connection->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+	try {
+		return $db_connection->query($sql);
+	} finally {
+		$db_connection->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+	}
+}
+
+/**
  * Execute transaction control statements using PDO native methods.
  *
  * @param PDO $db_connection Active PDO connection.
@@ -501,7 +530,7 @@ function db_query($sql, $err_msg = null) {
 				$result = ($affected_rows !== false);
 				$db_last_affected_rows = $result ? $affected_rows : 0;
 			} else {
-				$statement = $db->query($sql);
+				$statement = db_pdo_run_statement($db, $sql);
 				if ($statement instanceof PDOStatement && $statement->columnCount() > 0) {
 					$result = db_pdo_buffer_result($statement);
 					$db_last_affected_rows = 0;

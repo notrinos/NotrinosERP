@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-004 governed identifier supersession command. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_identifier_supersession_root = isset($path_to_root) ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 foreach (array(
     '/hrm/includes/db/employee_person_sensitive_db.inc',
@@ -103,7 +104,7 @@ function supersede_hrm_person_identifier($predecessor_id, $predecessor_row_versi
 {
     $predecessor_id = hrm_identifier_verification_request_positive_int($predecessor_id);
     $predecessor_row_version = hrm_identifier_verification_request_positive_int($predecessor_row_version);
-    $actor = hrm_identifier_verification_request_actor_id();
+    $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     $now_epoch = $now_epoch === null ? time() : (int)$now_epoch;
     $new_value = hrm_person_sensitive_value($new_value, 255);

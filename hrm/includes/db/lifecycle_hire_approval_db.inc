@@ -8,6 +8,7 @@
  * decrypted only while the terminal approval transaction owns the command,
  * payload, employee-code uniqueness lock and aggregate creation boundary.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 include_once($path_to_root.'/hrm/includes/db/lifecycle_hire_payload_db.inc');
 include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
@@ -53,7 +54,7 @@ function hrm_lifecycle_hire_approval_draft_data($loaded, $command_row_version)
     $command = $loaded['command'];
     $meta = $loaded['payload_meta'];
     $payload = $loaded['payload'];
-    $command_row_version = hrm_lifecycle_hire_payload_positive_int($command_row_version);
+    $command_row_version = parse_positive_integer($command_row_version);
     if ($command_row_version === false || (int)$command['hire_command_id'] <= 0
         || preg_match('/^[a-f0-9]{64}$/D', (string)$command['request_hash']) !== 1
         || preg_match('/^[a-f0-9]{64}$/D', (string)$meta['ciphertext_sha256']) !== 1
@@ -101,7 +102,7 @@ function hrm_lifecycle_hire_draft_matches($draft_data, $loaded, $expected_comman
 /** @return array|false */
 function hrm_lifecycle_hire_approval_draft_for_update($draft_id)
 {
-    $draft_id = hrm_lifecycle_hire_payload_positive_int($draft_id);
+    $draft_id = parse_positive_integer($draft_id);
     if ($draft_id === false)
         return false;
     $result = db_query("SELECT id,trans_type,draft_data,status,submitted_by FROM ".TB_PREF."approval_drafts "
@@ -154,8 +155,8 @@ function hrm_lifecycle_hire_approval_audit($action, $command, $payload_meta, $re
  */
 function submit_staged_hrm_lifecycle_employee_hire_for_approval($command_id)
 {
-    $command_id = hrm_lifecycle_hire_payload_positive_int($command_id);
-    $actor = hrm_lifecycle_hire_payload_actor_id();
+    $command_id = parse_positive_integer($command_id);
+    $actor = current_user_id_or_zero();
     if ($command_id === false || $actor <= 0 || !hrm_lifecycle_hire_payload_permission()
         || !hrm_lifecycle_hire_approval_workflow_is_maker_checker()
         || !function_exists('get_approval_workflow_service'))
@@ -221,12 +222,12 @@ function submit_staged_hrm_lifecycle_employee_hire_for_approval($command_id)
 /** @return int|false */
 function execute_approved_hrm_lifecycle_hire($draft_data, $reserved_trans_no, $draft_id)
 {
-    $actor = hrm_lifecycle_hire_payload_actor_id();
+    $actor = current_user_id_or_zero();
     if ($actor <= 0 || !hrm_lifecycle_hire_payload_permission() || !is_array($draft_data)
         || !isset($draft_data['hire_command_id']))
         return false;
-    $command_id = hrm_lifecycle_hire_payload_positive_int($draft_data['hire_command_id']);
-    $draft_id = hrm_lifecycle_hire_payload_positive_int($draft_id);
+    $command_id = parse_positive_integer($draft_data['hire_command_id']);
+    $draft_id = parse_positive_integer($draft_id);
     if ($command_id === false || $draft_id === false)
         return false;
     $loaded = load_hrm_lifecycle_employee_hire_payload_for_update($command_id, array('pending'));
@@ -300,10 +301,10 @@ function hrm_lifecycle_hire_terminalize($draft_data, $draft_id, $status, $maker_
 {
     if (!in_array($status, array('rejected','cancelled'), true) || !hrm_lifecycle_hire_payload_permission())
         return false;
-    $actor = hrm_lifecycle_hire_payload_actor_id();
+    $actor = current_user_id_or_zero();
     $command_id = is_array($draft_data) && isset($draft_data['hire_command_id'])
-        ? hrm_lifecycle_hire_payload_positive_int($draft_data['hire_command_id']) : false;
-    $draft_id = hrm_lifecycle_hire_payload_positive_int($draft_id);
+        ? parse_positive_integer($draft_data['hire_command_id']) : false;
+    $draft_id = parse_positive_integer($draft_id);
     if ($actor <= 0 || $command_id === false || $draft_id === false)
         return false;
     $loaded = load_hrm_lifecycle_employee_hire_payload_for_update($command_id, array('pending'));
@@ -450,7 +451,7 @@ function hrm_hire_payload_append_rotation_audit($pending)
  */
 function rotate_hrm_hire_payload_key($company, $reason_code)
 {
-    $company=(int)$company; $actor=hrm_lifecycle_hire_payload_actor_id();
+    $company=(int)$company; $actor=current_user_id_or_zero();
     if($company<0||$actor<=0||!hrm_hire_payload_key_rotation_permission()||!domain_audit_valid_token((string)$reason_code)
         ||!hrm_hire_payload_rotation_lock($company))return false;
     $result=false;
@@ -484,7 +485,7 @@ function rotate_hrm_hire_payload_key($company, $reason_code)
 function recover_hrm_hire_payload_key_rotation($company)
 {
     $company=(int)$company;
-    if($company<0||hrm_lifecycle_hire_payload_actor_id()<=0||!hrm_hire_payload_key_rotation_permission()
+    if($company<0||current_user_id_or_zero()<=0||!hrm_hire_payload_key_rotation_permission()
         ||!hrm_hire_payload_rotation_lock($company))return false;
     $result=false;
     do{
