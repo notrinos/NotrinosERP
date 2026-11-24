@@ -1,4 +1,5 @@
 <?php
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/lifecycle_rehire_evidence_db.inc');
 include_once(dirname(__FILE__).'/hrm_tracking_reference_writer_db.inc');
 /**********************************************************************
@@ -85,15 +86,6 @@ function hrm_assignment_manager_column_ready()
         return false;
     $result = db_query("SHOW COLUMNS FROM ".TB_PREF."hrm_assignments LIKE 'manager_assignment_id'");
     return $result && db_num_rows($result) === 1;
-}
-
-function hrm_assignment_actor_id()
-{
-    if (function_exists('user_id'))
-        return (int)user_id();
-    if (isset($_SESSION['wa_current_user']) && isset($_SESSION['wa_current_user']->user))
-        return (int)$_SESSION['wa_current_user']->user;
-    return 0;
 }
 
 function hrm_assignment_required_legacy_int($value, $allow_legacy_irregular = false)
@@ -799,7 +791,7 @@ function execute_hrm_assignment_effective_change($employee, $effective_date, $ch
 
     // B04: lock the former and successor Cost Center/Dimension masters before any interval row changes.
     if (!hrm_assignment_dimension_admit($current, $projection)) return false;
-    $actor = hrm_assignment_actor_id();
+    $actor = current_user_id_or_zero();
     $close = "UPDATE ".TB_PREF."hrm_assignments SET legacy_current=NULL,effective_to=".db_escape($previous_end)
         .",source=".db_escape($source).",updated_at=NOW(),updated_by=".(int)$actor
         ." WHERE assignment_id=".(int)$current['assignment_id']." AND legacy_current=1";
@@ -936,7 +928,7 @@ function execute_hrm_assignment_termination($employee, $effective_date)
     ))
         return false;
 
-    $actor = hrm_assignment_actor_id();
+    $actor = current_user_id_or_zero();
     $sql = "UPDATE ".TB_PREF."hrm_assignments SET effective_to=".db_escape($effective_date)
         .",interval_quality=".db_escape($projection['interval_quality'])
         .",source='runtime_separation',updated_at=NOW(),updated_by=".(int)$actor
@@ -1016,7 +1008,7 @@ function create_hrm_assignment_from_employee($employee, $audit = true,
         return false;
     if (!hrm_assignment_dimension_admit(null, $projection)) return false; // B04
 
-    $actor = hrm_assignment_actor_id();
+    $actor = current_user_id_or_zero();
     $organization_column = hrm_assignment_organization_unit_column_ready()
         ? ',organization_unit_id' : '';
     $organization_value = hrm_assignment_organization_unit_column_ready()
@@ -1143,7 +1135,7 @@ function synchronize_hrm_assignment_from_employee($employee)
         return false;
 
     if (!hrm_assignment_dimension_admit($current, $projection)) return false; // B04
-    $actor = hrm_assignment_actor_id();
+    $actor = current_user_id_or_zero();
     $organization_update = hrm_assignment_organization_unit_column_ready()
         ? ",organization_unit_id=".($projection['organization_unit_id'] === null
             ? 'NULL' : (int)$projection['organization_unit_id']) : '';

@@ -5,6 +5,7 @@
     as published by the Free Software Foundation, either version 3
     of the License, or (at your option) any later version.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /**
  * HRM-FND-003 normalized Establishment identity and explicit administrator writer.
@@ -202,7 +203,7 @@ function add_hrm_establishment($code, $name)
         cancel_transaction();
         return false;
     }
-    $actor = function_exists('user_id') ? (int)user_id() : 0;
+    $actor = current_user_id_or_zero();
     $sql = "INSERT INTO ".TB_PREF."hrm_establishments (legal_entity_id,establishment_code,establishment_name,establishment_status,"
         ."reference_quality,source,created_by) VALUES (".(int)$legal_entity_id.",".db_escape($identity['establishment_code']).",".db_escape($identity['establishment_name'])
         .",'active','greenfield_explicit_admin_input','hrm_establishment_admin',".$actor.")";
@@ -253,7 +254,7 @@ function update_hrm_establishment($establishment_id, $code, $name, $status)
         commit_transaction();
         return true;
     }
-    $actor = function_exists('user_id') ? (int)user_id() : 0;
+    $actor = current_user_id_or_zero();
     $sql = "UPDATE ".TB_PREF."hrm_establishments SET establishment_code=".db_escape($identity['establishment_code'])
         .",establishment_name=".db_escape($identity['establishment_name'])
         .",establishment_status=".db_escape($identity['establishment_status'])

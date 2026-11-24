@@ -1,5 +1,6 @@
 <?php
 /** HRM-TAL-001 bounded admin-only exact-employee performance CSV export service. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_export_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_performance_db.inc');
 
@@ -14,7 +15,7 @@ function hrm_tal_001_performance_export_service_ready(&$error)
         return hrm_tal_001_catalog_fail($error, 'performance_export_service_not_active');
     if (!function_exists('user_check_access') || !user_check_access('SA_HRSETTINGS'))
         return hrm_tal_001_catalog_fail($error, 'permission_denied');
-    if (hrm_tal_001_runtime_company_id() < 0 || hrm_tal_001_runtime_actor_id() <= 0)
+    if (hrm_tal_001_runtime_company_id() < 0 || current_user_id_or_zero() <= 0)
         return hrm_tal_001_catalog_fail($error, 'authenticated_scope_required');
     return true;
 }
@@ -29,7 +30,7 @@ function hrm_tal_001_export_exact_employee_performance_csv($employee_id, &$error
         return hrm_tal_001_catalog_fail($error, 'employee_scope_invalid');
 
     $company = hrm_tal_001_runtime_company_id();
-    $actor = hrm_tal_001_runtime_actor_id();
+    $actor = current_user_id_or_zero();
     $limit = HRM_TAL_001_PERFORMANCE_EXPORT_MAX_ROWS + 1;
     $assessments = db_query('SELECT s.employee_id,c.cycle_code,c.cycle_name,c.purpose_code,s.review_type_code,s.review_window_start,s.review_window_end,'
         .'a.assessment_role_code,a.dimension_code,a.rating_value,a.evidence_date '

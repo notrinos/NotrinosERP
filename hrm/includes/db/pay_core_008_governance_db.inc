@@ -1,10 +1,10 @@
 <?php
 /** Governed PAY-CORE-008 append-only writers. No calculator/GL/payment authority. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_core_008_schema_db.inc');
 include_once(dirname(__FILE__).'/../payroll/pay_core_008_contract.inc');
 include_once(dirname(__FILE__).'/../payroll/pay_core_008_adapters.inc');
 
-function hrm_pay_core_008_actor(){return isset($_SESSION['wa_current_user']->user)?(int)$_SESSION['wa_current_user']->user:0;}
 function hrm_pay_core_008_access($p){return function_exists('user_check_access')&&user_check_access($p);}
 function hrm_pay_core_008_manage_transaction(){return empty($GLOBALS['transaction_level']);}
 function hrm_pay_core_008_one($sql){$r=db_query($sql);if(!$r)return false;$x=db_fetch_assoc($r);if(!$x||db_fetch_assoc($r))return false;return $x;}
@@ -70,7 +70,7 @@ function hrm_pay_core_008_require_threshold_policy(array $input,&$error=null)
 
 function hrm_pay_core_008_append_validator_definition(array $input,&$error=null)
 {
-    $error=null;$actor=hrm_pay_core_008_actor();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_MANAGE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
+    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_MANAGE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
     $v=hrm_pay_core_008_validator_definition($input,$error);if($v===false)return false;$app=hrm_pay_core_004_canonical_json($v['applicability']);
     $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_validator_defs (validator_key,validator_version,domain,severity,origin,capability,purpose,input_contract_sha256,output_contract_sha256,threshold_policy_sha256,applicability_json,definition_sha256,created_by) VALUES ('.db_escape($v['validator_key']).','.db_escape($v['validator_version']).','.db_escape($v['domain']).','.db_escape($v['severity']).','.db_escape($v['origin']).','.db_escape($v['capability']).','.db_escape($v['purpose']).','.db_escape($v['input_contract_sha256']).','.db_escape($v['output_contract_sha256']).','.hrm_pay_core_008_sql_token($v['threshold_policy_sha256']).','.db_escape($app).','.db_escape($v['definition_sha256']).','.$actor.')';
     if(!db_query($sql)){$same=hrm_pay_core_008_one('SELECT validator_definition_id,definition_sha256 FROM '.TB_PREF.'hrm_pay_validation_validator_defs WHERE validator_key='.db_escape($v['validator_key']).' AND validator_version='.db_escape($v['validator_version']).' LIMIT 2');if($same&&hash_equals($same['definition_sha256'],$v['definition_sha256']))return (int)$same['validator_definition_id'];$error='validator_definition_conflict';return false;}
@@ -79,7 +79,7 @@ function hrm_pay_core_008_append_validator_definition(array $input,&$error=null)
 
 function hrm_pay_core_008_append_threshold_policy(array $input,&$error=null)
 {
-    $error=null;$actor=hrm_pay_core_008_actor();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_MANAGE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
+    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_MANAGE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
     $p=hrm_pay_core_008_threshold_policy($input,$error);if($p===false)return false;
     $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_threshold_policies (policy_key,version_no,measure,unit_code,currency_code,mode,tolerance,effective_from,effective_to,policy_sha256,created_by) VALUES ('.db_escape($p['policy_key']).','.$p['version_no'].','.db_escape($p['measure']).','.db_escape($p['unit_code']).','.hrm_pay_core_008_sql_token($p['currency_code']).','.db_escape($p['mode']).','.db_escape($p['tolerance']).','.db_escape($p['effective_from']).','.hrm_pay_core_008_sql_token($p['effective_to']).','.db_escape($p['policy_sha256']).','.$actor.')';
     if(!db_query($sql)){$same=hrm_pay_core_008_one('SELECT threshold_policy_id,policy_sha256 FROM '.TB_PREF.'hrm_pay_validation_threshold_policies WHERE policy_key='.db_escape($p['policy_key']).' AND version_no='.$p['version_no'].' LIMIT 2');if($same&&hash_equals($same['policy_sha256'],$p['policy_sha256']))return (int)$same['threshold_policy_id'];$error='threshold_policy_conflict';return false;}
@@ -88,7 +88,7 @@ function hrm_pay_core_008_append_threshold_policy(array $input,&$error=null)
 
 function hrm_pay_core_008_append_pack_binding($validator_definition_id,array $input,&$error=null)
 {
-    $error=null;$actor=hrm_pay_core_008_actor();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_MANAGE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
+    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_MANAGE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
     $r=hrm_pay_core_008_one('SELECT * FROM '.TB_PREF.'hrm_pay_validation_validator_defs WHERE validator_definition_id='.(int)$validator_definition_id.' LIMIT 2');if(!$r){$error='validator_definition_missing';return false;}
     $app=json_decode($r['applicability_json'],true);$v=hrm_pay_core_008_validator_definition(array('validator_key'=>$r['validator_key'],'validator_version'=>$r['validator_version'],'domain'=>$r['domain'],'severity'=>$r['severity'],'origin'=>$r['origin'],'capability'=>$r['capability'],'purpose'=>$r['purpose'],'input_contract_sha256'=>$r['input_contract_sha256'],'output_contract_sha256'=>$r['output_contract_sha256'],'threshold_policy_sha256'=>$r['threshold_policy_sha256'],'applicability'=>$app),$ve);
     if($v===false||!hash_equals($r['definition_sha256'],$v['definition_sha256'])){$error='validator_definition_hash_drift';return false;}
@@ -100,7 +100,7 @@ function hrm_pay_core_008_append_pack_binding($validator_definition_id,array $in
 
 function hrm_pay_core_008_execute_validator($validator_definition_id,array $scope,$result_id,$source_sha256,array $evidence_hashes,array $findings,$idempotency_key,&$error=null)
 {
-    $error=null;$actor=hrm_pay_core_008_actor();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_EXECUTE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
+    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_EXECUTE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
     $s=hrm_pay_core_008_assert_object_scope($scope,$error);if($s===false)return false;
     $vr=hrm_pay_core_008_one('SELECT * FROM '.TB_PREF.'hrm_pay_validation_validator_defs WHERE validator_definition_id='.(int)$validator_definition_id.' LIMIT 2');if(!$vr){$error='validator_definition_missing';return false;}
     $app=json_decode($vr['applicability_json'],true);$v=hrm_pay_core_008_validator_definition(array('validator_key'=>$vr['validator_key'],'validator_version'=>$vr['validator_version'],'domain'=>$vr['domain'],'severity'=>$vr['severity'],'origin'=>$vr['origin'],'capability'=>$vr['capability'],'purpose'=>$vr['purpose'],'input_contract_sha256'=>$vr['input_contract_sha256'],'output_contract_sha256'=>$vr['output_contract_sha256'],'threshold_policy_sha256'=>$vr['threshold_policy_sha256'],'applicability'=>$app),$ve);
@@ -127,7 +127,7 @@ function hrm_pay_core_008_execute_validator($validator_definition_id,array $scop
 
 function hrm_pay_core_008_record_resolution($finding_id,$reason,$support_sha,$state,$command,&$error=null)
 {
-    $error=null;$actor=hrm_pay_core_008_actor();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_RESOLVE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
+    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_RESOLVE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
     $manage=hrm_pay_core_008_manage_transaction();if($manage)begin_transaction();
     $f=hrm_pay_core_008_one('SELECT f.*,r.executed_by,r.legal_entity_id,r.payroll_relationship_id,r.worker_id,r.person_id,r.assignment_id,r.calendar_period_id FROM '.TB_PREF.'hrm_pay_validation_findings f INNER JOIN '.TB_PREF.'hrm_pay_validation_runs r ON r.validation_run_id=f.validation_run_id WHERE f.finding_id='.(int)$finding_id.' LIMIT 2 FOR UPDATE');
     if(!$f){if($manage)cancel_transaction();$error='finding_missing';return false;}
@@ -147,7 +147,7 @@ function hrm_pay_core_008_record_resolution($finding_id,$reason,$support_sha,$st
  */
 function hrm_pay_core_008_record_signoff(array $scope,$result_set_sha,$validation_set_sha,$resolution_set_sha,$state,$command,&$error=null)
 {
-    $error=null;$actor=hrm_pay_core_008_actor();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_SIGNOFF_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
+    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_SIGNOFF_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
     $s=hrm_pay_core_008_assert_object_scope($scope,$error);if($s===false)return false;
     if($s['calendar_period_id']===null){$error='signoff_calendar_scope_required';return false;}
     $where=hrm_pay_core_008_scope_where($s,'r');$manage=hrm_pay_core_008_manage_transaction();if($manage)begin_transaction();
@@ -179,7 +179,7 @@ function hrm_pay_core_008_record_signoff(array $scope,$result_set_sha,$validatio
 /** Persist variance only from verified immutable PAY-CORE-004 results and independently recomputed line totals. */
 function hrm_pay_core_008_record_variance($kind,array $scope,$current_result_id,$comparison_result_id,array $measures,$threshold_policy_sha=null,&$error=null)
 {
-    $error=null;$actor=hrm_pay_core_008_actor();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_EXECUTE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
+    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_EXECUTE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
     $s=hrm_pay_core_008_assert_object_scope($scope,$error);if($s===false)return false;
     foreach($measures as $measure)if(!in_array($measure,array('gross','net'),true)){$error='variance_measure_requires_independent_evidence';return false;}
     $cr=hrm_pay_core_008_load_result($current_result_id,$error);if($cr===false)return false;$s=hrm_pay_core_008_bind_result_scope($s,$cr,$error);if($s===false)return false;
@@ -206,7 +206,7 @@ function hrm_pay_core_008_record_variance($kind,array $scope,$current_result_id,
 
 function hrm_pay_core_008_record_reconciliation($kind,array $scope,$result_set_sha,$source_evidence_sha,$expected,$actual,$unit,$currency,array $threshold_policy=null,$as_of=null,$evidence_sha=null,&$error=null)
 {
-    $error=null;$actor=hrm_pay_core_008_actor();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_REVIEW_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
+    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_REVIEW_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
     $s=hrm_pay_core_008_assert_object_scope($scope,$error);if($s===false)return false;
     if($threshold_policy!==null){$threshold_policy=hrm_pay_core_008_require_threshold_policy($threshold_policy,$error);if($threshold_policy===false)return false;}
     $r=hrm_pay_core_008_reconciliation($kind,$s,$result_set_sha,$source_evidence_sha,$expected,$actual,$unit,$currency,$threshold_policy,$as_of,$evidence_sha,$error);if($r===false)return false;
@@ -228,7 +228,7 @@ function hrm_pay_core_008_record_result_reconciliation($kind,array $scope,$resul
 
 function hrm_pay_core_008_record_recovery($subject_type,$subject_sha,$action,$source_sha,$evidence_sha,&$error=null)
 {
-    $error=null;$actor=hrm_pay_core_008_actor();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_EXECUTE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
+    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_EXECUTE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
     $r=hrm_pay_core_008_recovery($subject_type,$subject_sha,$action,$source_sha,$evidence_sha,$actor,$error);if($r===false)return false;
     $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_recovery_evidence (subject_type,subject_sha256,action_token,source_sha256,evidence_sha256,recovery_sha256,executed_by) VALUES ('.db_escape($r['subject_type']).','.db_escape($r['subject_sha256']).','.db_escape($r['action_token']).','.db_escape($r['source_sha256']).','.db_escape($r['evidence_sha256']).','.db_escape($r['recovery_sha256']).','.$actor.')';
     if(!db_query($sql)){$same=hrm_pay_core_008_one('SELECT recovery_evidence_id FROM '.TB_PREF.'hrm_pay_validation_recovery_evidence WHERE recovery_sha256='.db_escape($r['recovery_sha256']).' LIMIT 2');if($same)return (int)$same['recovery_evidence_id'];$error='recovery_insert_failed';return false;}

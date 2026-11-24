@@ -22,6 +22,7 @@
  *
  * PHP 5.6 compatible.
  */
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 
 /** Kinds of guided run. */
 function dimension_allocation_kinds()
@@ -483,12 +484,6 @@ function dimension_allocation_run_payload($run)
 	return is_array($payload) ? $payload : false;
 }
 
-/** Actor identity of the authenticated session. */
-function dimension_allocation_actor()
-{
-	return isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
-}
-
 /** Release the live identity and source reservations of one run (state evidence only). */
 function dimension_allocation_release_run($run_id, $status, $reason)
 {
@@ -586,7 +581,7 @@ function dimension_allocation_create_run($request, $link = null, $extra = null)
 		.' status, source_total, request_payload, journal_sha256, actor_id, created_at) VALUES ('.db_escape($key).','.db_escape($key).','
 		.db_escape($request['kind']).','.(int)$request['axis'].','.db_escape($request['mode']).','.db_escape($request['date']).",'pending',"
 		.db_escape(round(abs($preview['totals']['source_pool_minor']) / dimension_allocation_scale(), dimension_allocation_decimals())).','
-		.dimension_allocation_quote($payload).','.db_escape($preview['journal_sha256']).','.dimension_allocation_actor().',NOW())');
+		.dimension_allocation_quote($payload).','.db_escape($preview['journal_sha256']).','.current_user_id_or_zero().',NOW())');
 	$run_id = $inserted ? (int)db_insert_id() : 0;
 	$linked = $run_id > 0;
 	if ($linked)
@@ -844,7 +839,7 @@ function dimension_allocation_submit_inverse($run_id, $date, $memo = '')
 		.' inverse_of_run_id, active_inverse_of, source_total, request_payload, journal_sha256, actor_id, created_at) VALUES ('
 		.db_escape($key).','.db_escape($key).",'inverse',0,'inverse',".db_escape($date).",'pending',".(int)$run_id.','.(int)$run_id.','
 		.db_escape($original['source_total']).','.dimension_allocation_quote($payload).','.db_escape(dimension_allocation_lines_digest($lines)).','
-		.dimension_allocation_actor().',NOW())');
+		.current_user_id_or_zero().',NOW())');
 	$new_id = $inserted ? (int)db_insert_id() : 0;
 	if (!$new_id || !commit_transaction()) {
 		cancel_transaction();

@@ -1,5 +1,6 @@
 <?php
 /** HRM-TAL-001 bounded learning runtime over dedicated immutable TAL custody. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_evidence_db.inc');
 
 /** @return bool */
@@ -10,7 +11,7 @@ function hrm_tal_001_learning_runtime_ready(&$error)
         return hrm_tal_001_catalog_fail($error, 'learning_runtime_not_active');
     if (!function_exists('user_check_access') || !user_check_access('SA_HRSETTINGS'))
         return hrm_tal_001_catalog_fail($error, 'permission_denied');
-    if (hrm_tal_001_runtime_company_id() < 0 || hrm_tal_001_runtime_actor_id() <= 0)
+    if (hrm_tal_001_runtime_company_id() < 0 || current_user_id_or_zero() <= 0)
         return hrm_tal_001_catalog_fail($error, 'authenticated_scope_required');
     return true;
 }
@@ -38,7 +39,7 @@ function hrm_tal_001_register_learning_definition(array $x, &$error=null)
     $provider=isset($x['provider_name'])?trim((string)$x['provider_name']):''; $duration=isset($x['duration_minutes'])?(int)$x['duration_minutes']:0;
     $from=hrm_tal_001_date($x['effective_from']); $to=isset($x['effective_to'])&&trim((string)$x['effective_to'])!==''?hrm_tal_001_date($x['effective_to']):null;
     if($code===false||$mode===false||$name===''||strlen($name)>140||strlen($provider)>140||$duration<0||$duration>525600||$from===false||($to===false)||($to!==null&&strcmp($to,$from)<0))return hrm_tal_001_catalog_fail($error,'learning_definition_invalid');
-    $company=hrm_tal_001_runtime_company_id();$actor=hrm_tal_001_runtime_actor_id();
+    $company=hrm_tal_001_runtime_company_id();$actor=current_user_id_or_zero();
     $hash=hash('sha256',implode('|',array($company,$code,$name,$mode,$provider,$duration,$from,$to===null?'':$to)));
     if(!hrm_tal_001_learning_begin_transaction($error))return false;
     $same=db_query("SELECT learning_definition_id FROM ".TB_PREF."hrm_tal_001_learning_definitions WHERE company_id=".(int)$company." AND definition_sha256=".db_escape($hash)." LIMIT 2");
@@ -57,7 +58,7 @@ function hrm_tal_001_assign_learning_to_employee(array $x, &$error=null)
     foreach(array('learning_definition_id','employee_id','assigned_on','assignment_status_code','source_reference_sha256') as $k)if(!array_key_exists($k,$x))return hrm_tal_001_catalog_fail($error,'learning_assignment_field_missing');
     $id=(int)$x['learning_definition_id'];$employee=trim((string)$x['employee_id']);$assigned=hrm_tal_001_date($x['assigned_on']);$due=isset($x['due_on'])&&trim((string)$x['due_on'])!==''?hrm_tal_001_date($x['due_on']):null;$status=hrm_tal_001_token($x['assignment_status_code'],24);$ref=strtolower(trim((string)$x['source_reference_sha256']));
     if($id<=0||$employee===''||strlen($employee)>20||$assigned===false||$due===false||($due!==null&&strcmp($due,$assigned)<0)||!in_array($status,array('assigned','in_progress','waived'),true)||!preg_match('/^[0-9a-f]{64}$/D',$ref)||!hrm_tal_001_employee_exists($employee))return hrm_tal_001_catalog_fail($error,'learning_assignment_invalid');
-    $company=hrm_tal_001_runtime_company_id();$actor=hrm_tal_001_runtime_actor_id();
+    $company=hrm_tal_001_runtime_company_id();$actor=current_user_id_or_zero();
     $def=db_query("SELECT learning_definition_id,effective_from,effective_to FROM ".TB_PREF."hrm_tal_001_learning_definitions WHERE learning_definition_id=".$id." AND company_id=".(int)$company." LIMIT 2");$d=$def?db_fetch_assoc($def):false;
     if(!$d)return hrm_tal_001_catalog_fail($error,'learning_definition_missing_or_cross_company');
     if(strcmp($assigned,(string)$d['effective_from'])<0||(!empty($d['effective_to'])&&strcmp($assigned,(string)$d['effective_to'])>0))return hrm_tal_001_catalog_fail($error,'learning_assignment_outside_definition_window');
@@ -76,7 +77,7 @@ function hrm_tal_001_record_learning_completion(array $x, &$error=null)
     foreach(array('learning_assignment_id','completion_status_code','completed_on','evidence_reference_sha256') as $k)if(!array_key_exists($k,$x))return hrm_tal_001_catalog_fail($error,'learning_completion_field_missing');
     $assignment=(int)$x['learning_assignment_id'];$status=hrm_tal_001_token($x['completion_status_code'],24);$completed=hrm_tal_001_date($x['completed_on']);$score=isset($x['score_value'])?hrm_tal_001_decimal_or_null($x['score_value']):null;$ref=strtolower(trim((string)$x['evidence_reference_sha256']));
     if($assignment<=0||!in_array($status,array('completed','failed','waived'),true)||$completed===false||$score===false||($score!==null&&((float)$score<0||(float)$score>100))||!preg_match('/^[0-9a-f]{64}$/D',$ref))return hrm_tal_001_catalog_fail($error,'learning_completion_invalid');
-    $company=hrm_tal_001_runtime_company_id();$actor=hrm_tal_001_runtime_actor_id();$q=db_query("SELECT learning_assignment_id,assigned_on FROM ".TB_PREF."hrm_tal_001_learning_assignments WHERE learning_assignment_id=".$assignment." AND company_id=".(int)$company." LIMIT 2");$a=$q?db_fetch_assoc($q):false;
+    $company=hrm_tal_001_runtime_company_id();$actor=current_user_id_or_zero();$q=db_query("SELECT learning_assignment_id,assigned_on FROM ".TB_PREF."hrm_tal_001_learning_assignments WHERE learning_assignment_id=".$assignment." AND company_id=".(int)$company." LIMIT 2");$a=$q?db_fetch_assoc($q):false;
     if(!$a)return hrm_tal_001_catalog_fail($error,'learning_assignment_missing_or_cross_company');if(strcmp($completed,(string)$a['assigned_on'])<0)return hrm_tal_001_catalog_fail($error,'learning_completion_before_assignment');
     $hash=hash('sha256',implode('|',array($company,$assignment,$status,$completed,$score===null?'':$score,$ref)));
     if(!hrm_tal_001_learning_begin_transaction($error))return false;$same=db_query("SELECT learning_completion_evidence_id FROM ".TB_PREF."hrm_tal_001_learning_completion_evidence WHERE company_id=".(int)$company." AND evidence_sha256=".db_escape($hash)." LIMIT 2");

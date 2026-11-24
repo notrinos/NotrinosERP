@@ -5,6 +5,7 @@
  * Lifecycle is append-only. No legacy appraisal, compensation, payroll,
  * accounting or employment-decision record is updated by this service.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_performance_db.inc');
 
 /** @return bool */
@@ -15,7 +16,7 @@ function hrm_tal_001_performance_workflow_ready($minimum_version, &$error)
         return hrm_tal_001_catalog_fail($error, 'performance_workflow_not_active');
     if (!function_exists('user_check_access') || !user_check_access('SA_HRSETTINGS'))
         return hrm_tal_001_catalog_fail($error, 'permission_denied');
-    if (hrm_tal_001_runtime_company_id() < 0 || hrm_tal_001_runtime_actor_id() <= 0)
+    if (hrm_tal_001_runtime_company_id() < 0 || current_user_id_or_zero() <= 0)
         return hrm_tal_001_catalog_fail($error, 'authenticated_scope_required');
     return true;
 }
@@ -62,7 +63,7 @@ function hrm_tal_001_performance_assessment_count($subject_id, $role, &$error)
 /** @return array|false */
 function hrm_tal_001_append_performance_workflow_event($subject_id, $from, $to, $reason_sha, $aggregate, $basis_sha, &$error)
 {
-    $company = hrm_tal_001_runtime_company_id(); $actor = hrm_tal_001_runtime_actor_id();
+    $company = hrm_tal_001_runtime_company_id(); $actor = current_user_id_or_zero();
     $occurred = gmdate('Y-m-d H:i:s');
     $payload = array('company_id'=>$company,'performance_review_subject_id'=>(int)$subject_id,'from_state_code'=>$from,'to_state_code'=>$to,
         'aggregate_rating_value'=>$aggregate,'rating_basis_sha256'=>$basis_sha,'reason_reference_sha256'=>$reason_sha,'actor_user_id'=>$actor,'occurred_at'=>$occurred);

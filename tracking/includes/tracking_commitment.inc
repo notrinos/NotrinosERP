@@ -25,6 +25,7 @@
  * commitment that was never observed is never inferred and the Dimension classification of a line is read from its durable
  * source revision (absent lineage reads as unassigned and is flagged). PHP 5.6 compatible syntax. Dates are SQL `Y-m-d`.
  */
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 include_once dirname(__FILE__).'/tracking_budget_basis.inc';
 include_once dirname(__FILE__).'/tracking_source_revision.inc';
 
@@ -55,12 +56,6 @@ function dimension_commit_has_access($areas)
 function dimension_commit_quote($value)
 {
 	return "'".db_escape_function((string)$value)."'";
-}
-
-/** Identity of the authenticated session. */
-function dimension_commit_actor()
-{
-	return isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
 }
 
 /** A fresh result skeleton (it starts ok; every refusal goes through dimension_commit_fail). */
@@ -369,7 +364,7 @@ function dimension_commit_observe($order_no = 0)
 	$result = dimension_commit_result(array('registered' => 0, 'updated' => 0, 'unchanged' => 0, 'released' => 0, 'unresolved' => array()));
 	if (!dimension_commit_has_access(array('SA_BUDGETENTRY', 'SA_PURCHASEORDER')))
 		return dimension_commit_fail($result, 'permission_denied', _('You are not allowed to observe purchase commitments.'));
-	$actor = dimension_commit_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
 		return dimension_commit_fail($result, 'permission_denied', _('The observing user could not be identified.'));
 	$order_no = (int)$order_no;
@@ -665,7 +660,7 @@ function dimension_commit_set_mode($mode, $reason)
 	$result = dimension_commit_result(array('mode' => '', 'changed' => false));
 	if (!dimension_commit_has_access(array('SA_SETUPCOMPANY')))
 		return dimension_commit_fail($result, 'permission_denied', _('You are not allowed to change the reservation mode.'));
-	$actor = dimension_commit_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
 		return dimension_commit_fail($result, 'permission_denied', _('The deciding user could not be identified.'));
 	if (!in_array($mode, array('advisory', 'reservations'), true))
@@ -743,7 +738,7 @@ function dimension_commit_reserve($reference, $account, $coordinate_1, $coordina
 	$result = dimension_commit_result(array('reservation_id' => 0, 'existing' => false, 'free_before' => null));
 	if (!dimension_commit_has_access(array('SA_PURCHASEORDER', 'SA_BUDGETENTRY')))
 		return dimension_commit_fail($result, 'permission_denied', _('You are not allowed to reserve funds.'));
-	$actor = dimension_commit_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
 		return dimension_commit_fail($result, 'permission_denied', _('The reserving user could not be identified.'));
 	if (dimension_commit_schema_ready() !== true)

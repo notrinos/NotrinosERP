@@ -8,6 +8,7 @@
  * Employee Separation command from accepted browser recovery state, then
  * invokes the fixed task writer with that server-resolved command id.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_lifecycle_separation_task_browser_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_separation_task_browser_dependencies = array(
@@ -38,8 +39,8 @@ function get_hrm_lifecycle_employee_separation_task_browser_status($employee_id)
         || (int)$command['lifecycle_command_id'] <= 0)
         return $base;
 
-    $actor = function_exists('hrm_lifecycle_separation_task_actor_id')
-        ? hrm_lifecycle_separation_task_actor_id() : 0;
+    $actor = function_exists('current_user_id_or_zero')
+        ? current_user_id_or_zero() : 0;
     if ($actor <= 0)
         return array_merge($base, array('status'=>'inconsistent'));
 

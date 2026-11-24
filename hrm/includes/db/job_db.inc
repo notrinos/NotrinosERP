@@ -5,6 +5,7 @@
     as published by the Free Software Foundation, either version 3
     of the License, or (at your option) any later version.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /**
  * HRM-FND-003 normalized Job identity and explicit administrator writer.
@@ -207,7 +208,7 @@ function add_hrm_job($code, $name)
         cancel_transaction();
         return false;
     }
-    $actor = function_exists('user_id') ? (int)user_id() : 0;
+    $actor = current_user_id_or_zero();
     $sql = "INSERT INTO ".TB_PREF."hrm_jobs (legal_entity_id,job_code,job_name,job_status,reference_quality,source,created_by) VALUES ("
         .(int)$legal_entity_id.",".db_escape($identity['job_code']).",".db_escape($identity['job_name'])
         .",'active','greenfield_explicit_admin_input','hrm_job_admin',".$actor.")";
@@ -254,7 +255,7 @@ function update_hrm_job($job_id, $code, $name, $status)
         commit_transaction();
         return true;
     }
-    $actor = function_exists('user_id') ? (int)user_id() : 0;
+    $actor = current_user_id_or_zero();
     $sql = "UPDATE ".TB_PREF."hrm_jobs SET job_code=".db_escape($identity['job_code'])
         .",job_name=".db_escape($identity['job_name']).",job_status=".db_escape($identity['job_status'])
         .",updated_at=NOW(),updated_by=".$actor." WHERE job_id=".(int)$job_id." AND legal_entity_id=".(int)$legal_entity_id;

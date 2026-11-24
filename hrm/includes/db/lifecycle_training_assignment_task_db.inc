@@ -29,14 +29,6 @@ if (!defined('HRM_LIFECYCLE_TRAINING_ASSIGNMENT_TASK_CODE'))
 if (!defined('HRM_LIFECYCLE_TRAINING_ASSIGNMENT_TASK_REASON'))
     define('HRM_LIFECYCLE_TRAINING_ASSIGNMENT_TASK_REASON', 'hrm_fnd_005_training_assignment_task_writer');
 
-function hrm_lifecycle_training_assignment_task_actor_id()
-{
-    return function_exists('current_user_id_or_zero')
-        ? current_user_id_or_zero()
-        : (isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-            && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0);
-}
-
 function hrm_lifecycle_training_assignment_task_permission()
 {
     return function_exists('user_check_access') && user_check_access('SA_HRSETTINGS');
@@ -112,7 +104,7 @@ function hrm_lifecycle_training_assignment_task_contract_matches($task, $command
 function get_hrm_lifecycle_employee_training_assignment_task($command_id)
 {
     $command_id = parse_positive_integer($command_id);
-    $actor = hrm_lifecycle_training_assignment_task_actor_id();
+    $actor = current_user_id_or_zero();
     if ($command_id === false || $actor <= 0 || !hrm_lifecycle_training_assignment_task_permission())
         return false;
     if (!hrm_lifecycle_training_assignment_task_command_for_update($command_id, $actor, false))
@@ -177,7 +169,7 @@ function create_hrm_lifecycle_employee_training_assignment_task($command_id)
 {
     if (!hrm_lifecycle_training_assignment_task_permission())
         return false;
-    $actor = hrm_lifecycle_training_assignment_task_actor_id();
+    $actor = current_user_id_or_zero();
     $command_id = parse_positive_integer($command_id);
     if ($actor <= 0 || $command_id === false)
         return false;
@@ -221,7 +213,7 @@ function complete_hrm_lifecycle_employee_training_assignment_task($command_id)
 {
     if (!hrm_lifecycle_training_assignment_task_permission())
         return false;
-    $actor = hrm_lifecycle_training_assignment_task_actor_id();
+    $actor = current_user_id_or_zero();
     $command_id = parse_positive_integer($command_id);
     if ($actor <= 0 || $command_id === false)
         return false;

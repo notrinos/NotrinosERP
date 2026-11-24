@@ -5,20 +5,11 @@
  * The command records only a pending request. Final delegation authority is
  * created only by the distinct checker command in the approval helper.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('append_domain_audit_event'))
     include_once($path_to_root.'/includes/db/domain_audit_db.inc');
 if (!function_exists('hrm_ess_manager_scope_normalize_date'))
     include_once($path_to_root.'/hrm/includes/db/ess_manager_scope_db.inc');
-
-/** Return the current application actor id. */
-function hrm_ess_manager_delegation_actor_id()
-{
-    if (function_exists('user_id'))
-        return (int)user_id();
-    if (isset($_SESSION['wa_current_user']->user))
-        return (int)$_SESSION['wa_current_user']->user;
-    return 0;
-}
 
 /** Require the explicit administrative maker authority; no generic manager implication. */
 function hrm_ess_manager_delegation_user_can_request()
@@ -145,7 +136,7 @@ function request_hrm_ess_manager_delegation($delegator_worker_id, $delegate_work
     $effective_to = hrm_ess_manager_scope_normalize_date($effective_to);
     $evidence_digest = strtolower(trim((string)$evidence_digest));
     $request_nonce = (string)$request_nonce;
-    $actor = hrm_ess_manager_delegation_actor_id();
+    $actor = current_user_id_or_zero();
     if (!hrm_ess_manager_delegation_user_can_request() || !hrm_ess_manager_delegation_command_tables_ready()
         || $actor <= 0 || $delegator_worker_id <= 0 || $delegate_worker_id <= 0
         || $delegator_worker_id === $delegate_worker_id || $effective_from === false || $effective_to === false

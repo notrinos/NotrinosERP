@@ -1,6 +1,7 @@
 <?php
 /** HRM-ESS-001 fail-closed current-session self-scope resolver. */
-if (!function_exists('hrm_ess_identity_link_actor_id'))
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
+if (!function_exists('hrm_ess_identity_link_tables_ready'))
     include_once($path_to_root.'/hrm/includes/db/ess_identity_link_db.inc');
 
 /**
@@ -9,7 +10,7 @@ if (!function_exists('hrm_ess_identity_link_actor_id'))
  */
 function get_hrm_ess_current_self_scope()
 {
-    $actor = hrm_ess_identity_link_actor_id();
+    $actor = current_user_id_or_zero();
     if ($actor <= 0 || !hrm_ess_identity_link_tables_ready())
         return false;
     $sql = 'SELECT l.link_id,l.user_id,l.worker_id,w.person_id,m.mapping_id,m.employee_number,m.employee_id '

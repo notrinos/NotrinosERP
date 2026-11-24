@@ -6,18 +6,9 @@
  * service. They retain source bytes, write only hashed source references to the
  * append-only journal, and never make quarantined or partial content available.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 include_once($path_to_root.'/hrm/includes/db/employee_document_db.inc');
-
-/**
- * Return the numeric actor for migration evidence.
- *
- * @return int
- */
-function employee_document_migration_actor_id() {
-	return isset($_SESSION['wa_current_user']) && isset($_SESSION['wa_current_user']->user)
-		? (int)$_SESSION['wa_current_user']->user : 0;
-}
 
 /**
  * Load the latest append-only journal event for a document.
@@ -45,7 +36,7 @@ function append_employee_document_migration_event($event) {
 		'detected_mime' => null, 'target_attachment_id' => null,
 		'policy_version' => 'hrm-document-v1', 'scanner_status' => 'not_scanned',
 		'status' => 'migration_failed', 'error_code' => 'unknown',
-		'actor_id' => employee_document_migration_actor_id(), 'batch_id' => '',
+		'actor_id' => current_user_id_or_zero(), 'batch_id' => '',
 	);
 	$event = array_merge($defaults, $event);
 	$attempt_result = db_query("SELECT COALESCE(MAX(attempt_no), 0) attempt_no FROM "

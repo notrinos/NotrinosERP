@@ -1,5 +1,6 @@
 <?php
 /** PAY-ECO-001 append-only partner onboarding writers. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/includes/pay_eco_001_contract.inc');
 include_once(dirname(__FILE__).'/pay_ctry_001_db.inc');
 if(!function_exists('append_domain_audit_event'))include_once($path_to_root.'/includes/db/domain_audit_db.inc');
@@ -7,7 +8,7 @@ if(!function_exists('append_domain_audit_event'))include_once($path_to_root.'/in
 /** Return the authenticated actor id, or zero when no actor is available. */
 function pay_eco_001_onboarding_actor_id()
 {
-    return function_exists('pay_ctry_001_actor_id') ? (int)pay_ctry_001_actor_id() : 0;
+    return function_exists('current_user_id_or_zero') ? (int)current_user_id_or_zero() : 0;
 }
 /** Check an existing PAY-CTRY permission for the current actor. */
 function pay_eco_001_onboarding_access($permission)

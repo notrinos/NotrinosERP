@@ -7,6 +7,7 @@
  * lifecycle command/task identifiers are resolved server-side from the current
  * actor's accepted completed Transfer custody.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_lifecycle_transfer_task_document_browser_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_transfer_task_document_browser_dependencies = array(
@@ -32,7 +33,7 @@ function hrm_lifecycle_transfer_task_document_browser_context($employee_id)
         || !hrm_lifecycle_transfer_task_document_permission())
         return $base;
     if (!function_exists('get_hrm_lifecycle_employee_transfer_task_browser_status')
-        || !function_exists('hrm_lifecycle_transfer_task_document_actor_id'))
+        || !function_exists('current_user_id_or_zero'))
         return array_merge($base, array('status'=>'inconsistent'));
 
     $task_status = get_hrm_lifecycle_employee_transfer_task_browser_status($employee_id);
@@ -44,7 +45,7 @@ function hrm_lifecycle_transfer_task_document_browser_context($employee_id)
         || (int)$task_status['lifecycle_command_id'] <= 0)
         return $base;
 
-    $actor = (int)hrm_lifecycle_transfer_task_document_actor_id();
+    $actor = (int)current_user_id_or_zero();
     $command_id = (int)$task_status['lifecycle_command_id'];
     if ($actor <= 0 || $command_id <= 0)
         return array_merge($base, array('status'=>'inconsistent'));

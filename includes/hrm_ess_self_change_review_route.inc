@@ -1,5 +1,6 @@
 <?php
 /** HRM-ESS-001 checker/executor BOLA-safe read projections for bounded self-change workflow. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 if(!function_exists('hrm_ess_self_change_route_security_headers'))include_once(dirname(__FILE__).DIRECTORY_SEPARATOR.'hrm_ess_self_change_route.inc');
 
 function hrm_ess_self_change_review_positive_id($value)
@@ -21,7 +22,7 @@ function hrm_ess_self_change_review_executor_authorized()
 /** Candidate list exposes control metadata and field names only; no ciphertext/plaintext values. */
 function hrm_ess_self_change_review_candidates($mode,$limit=50)
 {
-    $actor=hrm_ess_self_change_actor_id();$limit=(int)$limit;
+    $actor=current_user_id_or_zero();$limit=(int)$limit;
     if($actor<=0||$limit<1||$limit>100||!in_array($mode,array('checker','executor'),true))return false;
     if($mode==='checker'&&!hrm_ess_self_change_review_checker_authorized())return false;
     if($mode==='executor'&&!hrm_ess_self_change_review_executor_authorized())return false;
@@ -45,7 +46,7 @@ function hrm_ess_self_change_review_candidates($mode,$limit=50)
 /** Resolve one selected request only after role, object-state and maker/checker/executor separation checks. */
 function hrm_ess_self_change_review_detail($mode,$request_id)
 {
-    $request_id=hrm_ess_self_change_review_positive_id($request_id);$actor=hrm_ess_self_change_actor_id();
+    $request_id=hrm_ess_self_change_review_positive_id($request_id);$actor=current_user_id_or_zero();
     if($request_id===false||$actor<=0||!in_array($mode,array('checker','executor'),true))return false;
     if($mode==='checker'&&!hrm_ess_self_change_review_checker_authorized())return false;
     if($mode==='executor'&&!hrm_ess_self_change_review_executor_authorized())return false;
@@ -63,7 +64,7 @@ function hrm_ess_self_change_review_detail($mode,$request_id)
 
 function hrm_ess_self_change_review_approval_digest($request_id)
 {
-    $request_id=hrm_ess_self_change_review_positive_id($request_id);$actor=hrm_ess_self_change_actor_id();if($request_id===false||$actor<=0)return false;
+    $request_id=hrm_ess_self_change_review_positive_id($request_id);$actor=current_user_id_or_zero();if($request_id===false||$actor<=0)return false;
     $request=get_hrm_ess_self_change_request($request_id,false);if(!is_array($request)||!hrm_ess_self_change_digest_is_valid((string)$request['request_digest']))return false;
     return hash('sha256',implode("\0",array('hrm-ess-self-change-approval-v1',(string)$request['request_digest'],$actor)));
 }

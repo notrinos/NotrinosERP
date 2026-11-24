@@ -6,6 +6,7 @@
  * typed artifacts only for draft/unverified/simulation custody and exposes no
  * production resolver or publication state.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(__DIR__.'/decision_rate_plan.inc');
 
 if (!defined('HRM_PAY_RULE_003_ARTIFACT_STORE_VERSION'))
@@ -101,15 +102,6 @@ function hrm_pay_rule_003_store_user_can($permission)
     return function_exists('user_check_access') && user_check_access($permission);
 }
 
-function hrm_pay_rule_003_store_actor_id()
-{
-    if (function_exists('hrm_person_worker_actor_id'))
-        return (int)hrm_person_worker_actor_id();
-    if (function_exists('user_id'))
-        return (int)user_id();
-    return 0;
-}
-
 function hrm_pay_rule_003_store_row_matches($row, $binding, $actor_id)
 {
     foreach (array('artifact_semver','custody_status','source_class','artifact_json','artifact_sha256',
@@ -177,7 +169,7 @@ function hrm_pay_rule_003_append_artifact_version($artifact, $custody_status, $s
         include_once($path_to_root.'/includes/db/domain_audit_db.inc');
 
     if ($actor_id === null)
-        $actor_id = hrm_pay_rule_003_store_actor_id();
+        $actor_id = current_user_id_or_zero();
     $error = null;
     $binding = hrm_pay_rule_003_prepare_binding($artifact, $custody_status, $source_class, $evidence, $error);
     if ($binding === false || $actor_id <= 0 || !hrm_pay_rule_003_store_user_can($permission))

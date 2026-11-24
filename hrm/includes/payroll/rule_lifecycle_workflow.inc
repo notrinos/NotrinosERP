@@ -5,6 +5,7 @@
  * Governance evidence only. This module is intentionally absent from
  * payroll_engine.inc; PAY-RULE-006 alone owns production routing/cutover.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(__DIR__.'/rule_lifecycle_store.inc');
 
 if (!defined('HRM_PAY_RULE_004_REVIEW_WORKFLOW_VERSION'))
@@ -37,7 +38,7 @@ function hrm_pay_rule_004_review_version($rule_version_id,$decision,$reason_toke
 {
     global $path_to_root;
     if(!function_exists('append_domain_audit_event'))include_once($path_to_root.'/includes/db/domain_audit_db.inc');
-    if($actor_id===null)$actor_id=hrm_pay_rule_004_store_actor_id();
+    if($actor_id===null)$actor_id=current_user_id_or_zero();
     if((int)$actor_id<=0||!hrm_pay_rule_004_store_user_can('SA_HRM_REVIEW_PAY_RULE'))return false;
     if($manage_transaction)begin_transaction();$ok=true;$return_id=false;
     $version=hrm_pay_rule_004_read_version_internal((int)$rule_version_id,true,$error);if($version===false)$ok=false;
@@ -131,7 +132,7 @@ function hrm_pay_rule_004_active_intervals_for_rule($rule_id,$exclude_rule_versi
 function hrm_pay_rule_004_publish_version($rule_version_id,$lifecycle_review_id,$preview,$actor_id=null,$manage_transaction=true)
 {
     global $path_to_root;if(!function_exists('append_domain_audit_event'))include_once($path_to_root.'/includes/db/domain_audit_db.inc');
-    if($actor_id===null)$actor_id=hrm_pay_rule_004_store_actor_id();if((int)$actor_id<=0||!hrm_pay_rule_004_store_user_can('SA_HRM_PUBLISH_PAY_RULE'))return false;
+    if($actor_id===null)$actor_id=current_user_id_or_zero();if((int)$actor_id<=0||!hrm_pay_rule_004_store_user_can('SA_HRM_PUBLISH_PAY_RULE'))return false;
     if(HRM_PAY_RULE_004_PRODUCTION_ACTIVATION_ALLOWED!==false||HRM_PAY_RULE_004_EMERGENCY_PUBLICATION_ALLOWED!==false)return false;
     if($manage_transaction)begin_transaction();$ok=true;$return_id=false;$version=hrm_pay_rule_004_read_version_internal((int)$rule_version_id,true,$error);if($version===false)$ok=false;
     if($ok){$lock=db_query('SELECT rule_id FROM '.TB_PREF.'hrm_pay_rule_rules WHERE rule_id='.(int)$version['rule_id'].' LIMIT 1 FOR UPDATE');if(!$lock||db_num_rows($lock)!==1)$ok=false;}
@@ -177,7 +178,7 @@ function hrm_pay_rule_004_lifecycle_event_binding($publication,$version,$event_t
 function hrm_pay_rule_004_terminal_transition($rule_version_id,$event_type,$successor_rule_version_id,$reason_token,$event_at,$actor_id=null,$manage_transaction=true)
 {
     global $path_to_root;if(!function_exists('append_domain_audit_event'))include_once($path_to_root.'/includes/db/domain_audit_db.inc');
-    if($actor_id===null)$actor_id=hrm_pay_rule_004_store_actor_id();if((int)$actor_id<=0||!hrm_pay_rule_004_store_user_can('SA_HRM_WITHDRAW_PAY_RULE'))return false;
+    if($actor_id===null)$actor_id=current_user_id_or_zero();if((int)$actor_id<=0||!hrm_pay_rule_004_store_user_can('SA_HRM_WITHDRAW_PAY_RULE'))return false;
     if(!hrm_pay_rule_004_events_table_exists())return false;if($manage_transaction)begin_transaction();$ok=true;$return_id=false;
     $version=hrm_pay_rule_004_read_version_internal((int)$rule_version_id,true,$error);if($version===false)$ok=false;
     if($ok){$lock=db_query('SELECT rule_id FROM '.TB_PREF.'hrm_pay_rule_rules WHERE rule_id='.(int)$version['rule_id'].' LIMIT 1 FOR UPDATE');if(!$lock||db_num_rows($lock)!==1)$ok=false;}
@@ -238,7 +239,7 @@ function hrm_pay_rule_004_emergency_binding($version,$incident_reference,$reason
 function hrm_pay_rule_004_declare_emergency_change($rule_version_id,$incident_reference,$reason_token,$declared_at,$actor_id=null,$manage_transaction=true)
 {
     global $path_to_root;if(!function_exists('append_domain_audit_event'))include_once($path_to_root.'/includes/db/domain_audit_db.inc');
-    if($actor_id===null)$actor_id=hrm_pay_rule_004_store_actor_id();if((int)$actor_id<=0||!hrm_pay_rule_004_store_user_can('SA_HRM_DECLARE_PAY_RULE_EMERGENCY'))return false;
+    if($actor_id===null)$actor_id=current_user_id_or_zero();if((int)$actor_id<=0||!hrm_pay_rule_004_store_user_can('SA_HRM_DECLARE_PAY_RULE_EMERGENCY'))return false;
     if(HRM_PAY_RULE_004_EMERGENCY_PUBLICATION_ALLOWED!==false||!hrm_pay_rule_004_emergency_table_exists())return false;if($manage_transaction)begin_transaction();$ok=true;$return_id=false;
     $version=hrm_pay_rule_004_read_version_internal((int)$rule_version_id,true,$error);if($version===false)$ok=false;
     if($ok){$lock=db_query('SELECT rule_id FROM '.TB_PREF.'hrm_pay_rule_rules WHERE rule_id='.(int)$version['rule_id'].' LIMIT 1 FOR UPDATE');if(!$lock||db_num_rows($lock)!==1)$ok=false;}

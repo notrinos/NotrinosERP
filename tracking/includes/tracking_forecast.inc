@@ -14,6 +14,7 @@
  * digests are chained to the basis and verified on approval and on every position read. Nothing is written to the budget, the
  * general ledger, purchasing or the commitment register. Commitments and the forecast are advisory evidence. PHP 5.6 compatible.
  */
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 
 /** Largest number of lines one forecast version may hold. */
 function dimension_forecast_max_lines()
@@ -205,7 +206,7 @@ function dimension_forecast_propose($fiscal_year, $basis_version_id, $changes, $
 	$result = dimension_commit_result(array('version_id' => 0, 'version_no' => 0, 'line_count' => 0));
 	if (!dimension_commit_has_access(array('SA_BUDGETENTRY')))
 		return dimension_commit_fail($result, 'permission_denied', _('You are not allowed to propose forecasts.'));
-	$actor = dimension_commit_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
 		return dimension_commit_fail($result, 'permission_denied', _('The proposing user could not be identified.'));
 	$commentary = dimension_forecast_check_commentary($commentary, $result);
@@ -341,7 +342,7 @@ function dimension_forecast_decide($version_id, $decision, $note = '')
 		return dimension_commit_fail($result, 'permission_denied', _('You are not allowed to decide forecasts.'));
 	if (!in_array($decision, array('approve', 'reject'), true))
 		return dimension_commit_fail($result, 'invalid_decision', _('The decision must be approve or reject.'));
-	$actor = dimension_commit_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
 		return dimension_commit_fail($result, 'permission_denied', _('The deciding user could not be identified.'));
 	$note = is_string($note) ? trim($note) : '';

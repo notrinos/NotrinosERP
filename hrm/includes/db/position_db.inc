@@ -5,6 +5,7 @@
     as published by the Free Software Foundation, either version 3
     of the License, or (at your option) any later version.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /**
  * HRM-FND-003 bounded Position compatibility foundation.
@@ -501,7 +502,7 @@ function set_hrm_position_hierarchy($legacy_position_id, $reports_to_position_id
     if ($latest && strcmp($effective_from, (string)$latest['effective_from']) <= 0)
         return false;
 
-    $actor = function_exists('user_id') ? (int)user_id() : 0;
+    $actor = current_user_id_or_zero();
     $operation = $target_parent_id === null ? 'unassign' : ($asof ? 'reassign' : 'assign');
     if (is_array($asof)) {
         $previous_end = hrm_position_hierarchy_day_before($effective_from);
@@ -814,7 +815,7 @@ function set_hrm_position_headcount_budget($legacy_position_id, $budgeted_headco
         return false;
     if ($latest && strcmp($effective_from, (string)$latest['effective_from']) <= 0)
         return false;
-    $actor = function_exists('user_id') ? (int)user_id() : 0;
+    $actor = current_user_id_or_zero();
     if (is_array($asof)) {
         $previous_end = hrm_position_headcount_day_before($effective_from);
         if ($previous_end === false || strcmp($previous_end, (string)$asof['effective_from']) < 0)
@@ -945,7 +946,7 @@ function set_hrm_position_job_binding($legacy_position_id, $job_id)
     }
     if ($target_job_id === $current_job_id)
         return true;
-    $actor = function_exists('user_id') ? (int)user_id() : 0;
+    $actor = current_user_id_or_zero();
     $sql = "UPDATE ".TB_PREF."hrm_positions SET job_id="
         .($target_job_id === null ? 'NULL' : (int)$target_job_id)
         .",updated_at=NOW(),updated_by=".(int)$actor
@@ -1041,7 +1042,7 @@ function synchronize_hrm_position_from_legacy_position($legacy_position_id, $cha
     if (!$projection)
         return false;
     $current = get_hrm_position_by_legacy_position((int)$legacy_position_id, true);
-    $actor = function_exists('user_id') ? (int)user_id() : 0;
+    $actor = current_user_id_or_zero();
     if ($current === null) {
         if ((string)$operation !== 'create')
             return false;

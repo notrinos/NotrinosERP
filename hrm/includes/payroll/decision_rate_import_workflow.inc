@@ -1,5 +1,6 @@
 <?php
 /** PAY-RULE-003 validation/review/execution workflow for simulation-only legacy import. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(__DIR__.'/decision_rate_legacy_import.inc');
 
 if (!defined('HRM_PAY_RULE_003_IMPORT_VALIDATION_VERSION'))
@@ -165,7 +166,7 @@ function hrm_pay_rule_003_review_import($candidate_ids, $artifact, $evidence_id,
     if (!hrm_pay_rule_003_store_user_can('SA_HRM_REVIEW_PAY_RULE_IMPORT')
         || !in_array($decision, array('approved_for_simulation','rejected'), true))
         return false;
-    $reviewer = hrm_pay_rule_003_store_actor_id();
+    $reviewer = current_user_id_or_zero();
     if ($reviewer <= 0)
         return false;
 
@@ -269,7 +270,7 @@ function hrm_pay_rule_003_execute_import($review_id, $predecessor_id=null)
     if (!hrm_pay_rule_003_store_user_can('SA_HRM_EXECUTE_PAY_RULE_IMPORT')
         || !is_int($review_id) || $review_id <= 0)
         return false;
-    $executor = hrm_pay_rule_003_store_actor_id();
+    $executor = current_user_id_or_zero();
     if ($executor <= 0)
         return false;
 

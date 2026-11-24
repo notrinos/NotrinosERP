@@ -1,4 +1,5 @@
 <?php
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/lifecycle_rehire_evidence_db.inc');
 /**********************************************************************
     Copyright (C) NotrinosERP.
@@ -28,16 +29,6 @@ function hrm_contract_table_ready()
     // encode the placeholder and make an installed foundation table appear absent.
     $result = db_query("SHOW TABLES LIKE '".TB_PREF.db_escape_function('hrm_contracts')."'");
     return $result && db_num_rows($result) === 1;
-}
-
-/** @return int */
-function hrm_contract_actor_id()
-{
-    if (function_exists('user_id'))
-        return (int)user_id();
-    if (isset($_SESSION['wa_current_user']) && isset($_SESSION['wa_current_user']->user))
-        return (int)$_SESSION['wa_current_user']->user;
-    return 0;
 }
 
 /**
@@ -200,7 +191,7 @@ function create_hrm_contract_from_employee($employee, $audit = true,
     if (!$projection || get_hrm_legacy_current_contract($employee_number, true))
         return false;
 
-    $actor = hrm_contract_actor_id();
+    $actor = current_user_id_or_zero();
     $sql = "INSERT INTO ".TB_PREF."hrm_contracts (employment_id,contract_sequence,"
         ."legacy_employee_number,legacy_current,legacy_employment_type,contract_type_code,type_quality,"
         ."effective_from,effective_to,interval_quality,source,created_by) VALUES ("
@@ -266,7 +257,7 @@ function synchronize_hrm_contract_from_employee($employee)
     if (empty($changed))
         return true;
 
-    $actor = hrm_contract_actor_id();
+    $actor = current_user_id_or_zero();
     $sql = "UPDATE ".TB_PREF."hrm_contracts SET "
         ."legacy_employment_type=".(int)$projection['legacy_employment_type'].","
         ."contract_type_code=".db_escape($projection['contract_type_code']).","

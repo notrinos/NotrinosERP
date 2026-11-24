@@ -5,6 +5,7 @@
     as published by the Free Software Foundation, either version 3
     of the License, or (at your option) any later version.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /**
  * HRM-FND-003 bounded Organization Unit compatibility foundation.
@@ -107,16 +108,6 @@ function get_hrm_organization_unit_by_legacy_department($department_id, $for_upd
         return false;
     $row = db_fetch_assoc($result);
     return $row ? $row : null;
-}
-
-/** @return int */
-function hrm_organization_unit_actor_id()
-{
-    if (function_exists('user_id'))
-        return (int)user_id();
-    if (isset($_SESSION['wa_current_user']) && isset($_SESSION['wa_current_user']->user))
-        return (int)$_SESSION['wa_current_user']->user;
-    return 0;
 }
 
 /**
@@ -298,7 +289,7 @@ function synchronize_hrm_organization_unit_from_department($department_id,
             return false;
     }
     $existing = get_hrm_organization_unit_by_legacy_department($department_id, true);
-    $actor = hrm_organization_unit_actor_id();
+    $actor = current_user_id_or_zero();
     if ($action === 'create') {
         if ($existing !== null)
             return false;

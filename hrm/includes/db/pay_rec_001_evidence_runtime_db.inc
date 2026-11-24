@@ -4,6 +4,7 @@
  * This file may read accepted PAY-CORE/PAY-GL/PAY-PMT/PAY-FIL custody and append only PAY-REC custody.
  * It never posts GL, executes payments, submits filings, performs network I/O or mutates payroll/close state.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_rec_001_evidence_review_db.inc');
 include_once(dirname(__FILE__).'/pay_core_009_governance_db.inc');
 include_once(dirname(__FILE__).'/pay_core_004_governance_db.inc');
@@ -21,7 +22,6 @@ function pay_rec_001_runtime_review_matches(array $row,array $review){return pay
 function pay_rec_001_runtime_approval_matches(array $row,array $approval){return pay_rec_001_runtime_same_fields($row,array('reconciliation_review_id'=>$approval['reconciliation_review_id'],'close_checklist_id'=>$approval['close_checklist_id'],'review_sha256'=>$approval['review_sha256'],'decision'=>$approval['decision'],'assurance_evidence_sha256'=>$approval['assurance_evidence_sha256'],'approval_sha256'=>$approval['approval_sha256'],'approved_by'=>$approval['approved_by']));}
 function pay_rec_001_runtime_review_response(array $row){$row['close_state_mutation_authorized']=false;return $row;}
 function pay_rec_001_runtime_approval_response(array $row){$row['close_state_mutation_authorized']=false;$row['production_close_authorized']=false;return $row;}
-function pay_rec_001_runtime_actor(){return isset($_SESSION['wa_current_user']->user)?(int)$_SESSION['wa_current_user']->user:0;}
 function pay_rec_001_runtime_company(){return isset($_SESSION['wa_current_user']->company)?(int)$_SESSION['wa_current_user']->company:0;}
 function pay_rec_001_runtime_access($permission){return function_exists('user_check_access')&&user_check_access($permission);}
 function pay_rec_001_runtime_require_access($permission,&$error){return pay_rec_001_runtime_access($permission)?true:pay_rec_001_runtime_fail($error,'permission_denied');}
@@ -113,7 +113,7 @@ function pay_rec_001_runtime_insert_evidence($profile_id,array $d,$actor,$at,&$e
 function pay_rec_001_prepare_reconciliation(array $scope,array $policy,array $filing_completion,&$error=null)
 {
     $error=null;if(!pay_rec_001_runtime_ready($error)||!pay_rec_001_runtime_require_access(PAY_REC_001_PREPARE_PERMISSION,$error))return false;
-    $actor=pay_rec_001_runtime_actor();if($actor<=0||!isset($scope['company_id'])||!pay_rec_001_runtime_scope_company((int)$scope['company_id'],$error))return false;
+    $actor=current_user_id_or_zero();if($actor<=0||!isset($scope['company_id'])||!pay_rec_001_runtime_scope_company((int)$scope['company_id'],$error))return false;
     $recomputed=pay_rec_001_runtime_recompute_all($scope,$filing_completion,$error);if($recomputed===false)return false;
     $profile=pay_rec_001_profile_descriptor($scope,$policy,$recomputed['payroll_scope_sha256'],$error);if($profile===false)return false;
     $at=pay_rec_001_runtime_now();begin_transaction();$storedProfile=pay_rec_001_runtime_insert_profile($profile,$actor,$at,$error);if($storedProfile===false){cancel_transaction();return false;}
@@ -159,7 +159,7 @@ function pay_rec_001_runtime_revalidate_checklist($close_checklist_id,array $fil
 function pay_rec_001_review_reconciliation($close_checklist_id,array $filing_completion,$decision,$review_evidence_sha256,&$error=null)
 {
     $error=null;if(!pay_rec_001_runtime_ready($error)||!pay_rec_001_runtime_require_access(PAY_REC_001_REVIEW_PERMISSION,$error))return false;
-    $actor=pay_rec_001_runtime_actor();$validated=pay_rec_001_runtime_revalidate_checklist($close_checklist_id,$filing_completion,$error);if($validated===false)return false;
+    $actor=current_user_id_or_zero();$validated=pay_rec_001_runtime_revalidate_checklist($close_checklist_id,$filing_completion,$error);if($validated===false)return false;
     $cl=$validated['checklist'];$descriptor=pay_rec_001_review_descriptor((int)$cl['close_checklist_id'],(string)$cl['checklist_sha256'],(string)$cl['readiness_sha256'],(int)$cl['prepared_by'],$actor,$decision,$review_evidence_sha256,$error);if($descriptor===false)return false;
     $query='SELECT * FROM '.TB_PREF.'hrm_pay_rec_001_reviews WHERE close_checklist_id='.(int)$cl['close_checklist_id'].' LIMIT 2';$existing=pay_rec_001_runtime_one($query);
     if($existing){if(!pay_rec_001_runtime_review_matches($existing,$descriptor))return pay_rec_001_runtime_fail($error,'reconciliation_review_conflict');return pay_rec_001_runtime_review_response($existing);}
@@ -172,7 +172,7 @@ function pay_rec_001_review_reconciliation($close_checklist_id,array $filing_com
 function pay_rec_001_approve_reconciliation($reconciliation_review_id,array $filing_completion,$decision,$assurance_evidence_sha256,&$error=null)
 {
     $error=null;if(!pay_rec_001_runtime_ready($error)||!pay_rec_001_runtime_require_access(PAY_REC_001_APPROVE_PERMISSION,$error))return false;
-    $actor=pay_rec_001_runtime_actor();$review=pay_rec_001_runtime_one('SELECT rv.*,cl.prepared_by,cl.checklist_sha256 AS authoritative_checklist_sha256,cl.readiness_sha256 AS authoritative_readiness_sha256 FROM '.TB_PREF.'hrm_pay_rec_001_reviews rv INNER JOIN '.TB_PREF.'hrm_pay_rec_001_checklists cl ON cl.close_checklist_id=rv.close_checklist_id WHERE rv.reconciliation_review_id='.(int)$reconciliation_review_id.' LIMIT 2');
+    $actor=current_user_id_or_zero();$review=pay_rec_001_runtime_one('SELECT rv.*,cl.prepared_by,cl.checklist_sha256 AS authoritative_checklist_sha256,cl.readiness_sha256 AS authoritative_readiness_sha256 FROM '.TB_PREF.'hrm_pay_rec_001_reviews rv INNER JOIN '.TB_PREF.'hrm_pay_rec_001_checklists cl ON cl.close_checklist_id=rv.close_checklist_id WHERE rv.reconciliation_review_id='.(int)$reconciliation_review_id.' LIMIT 2');
     if(!$review)return pay_rec_001_runtime_fail($error,'reconciliation_review_missing');
     if(!hash_equals((string)$review['checklist_sha256'],(string)$review['authoritative_checklist_sha256'])||!hash_equals((string)$review['readiness_sha256'],(string)$review['authoritative_readiness_sha256']))return pay_rec_001_runtime_fail($error,'reconciliation_review_binding_mismatch');
     $reviewCheck=pay_rec_001_review_descriptor((int)$review['close_checklist_id'],(string)$review['checklist_sha256'],(string)$review['readiness_sha256'],(int)$review['prepared_by'],(int)$review['reviewed_by'],(string)$review['decision'],(string)$review['review_evidence_sha256'],$re);

@@ -5,6 +5,7 @@
     as published by the Free Software Foundation, either version 3
     of the License, or (at your option) any later version.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /**
  * HRM-FND-003 bounded Legal Entity foundation.
@@ -124,7 +125,7 @@ function initialize_hrm_fresh_default_legal_entity()
     $projection = hrm_legal_entity_projection_from_company_prefs($prefs);
     if (!$projection)
         return false;
-    $actor = function_exists('user_id') ? (int)user_id() : 0;
+    $actor = current_user_id_or_zero();
     $sql = "INSERT INTO ".TB_PREF."hrm_legal_entities (entity_code,registered_name,registration_number,"
         ."tax_registration_number,country_code,base_currency,entity_status,legacy_default,source,created_by) VALUES ("
         .db_escape($projection['entity_code']).",".db_escape($projection['registered_name']).","

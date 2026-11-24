@@ -5,6 +5,7 @@
  * This module is intentionally not loaded by payroll_engine.inc. It creates
  * governance evidence only; publication never means production activation.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(__DIR__.'/rule_lifecycle_contract.inc');
 include_once(__DIR__.'/decision_rate_artifact_store.inc');
 
@@ -43,13 +44,6 @@ function hrm_pay_rule_004_digest($parts)
 function hrm_pay_rule_004_store_user_can($permission)
 {
     return function_exists('user_check_access') && user_check_access($permission);
-}
-
-function hrm_pay_rule_004_store_actor_id()
-{
-    if (function_exists('hrm_person_worker_actor_id')) return (int)hrm_person_worker_actor_id();
-    if (function_exists('user_id')) return (int)user_id();
-    return 0;
 }
 
 function hrm_pay_rule_004_validate_version_chain_rows($rows, &$leaf_id, &$max_version)
@@ -147,7 +141,7 @@ function hrm_pay_rule_004_create_draft_version($rule,$predecessor_version_id=nul
 {
     global $path_to_root;
     if (!function_exists('append_domain_audit_event')) include_once($path_to_root.'/includes/db/domain_audit_db.inc');
-    if ($actor_id===null) $actor_id=hrm_pay_rule_004_store_actor_id();
+    if ($actor_id===null) $actor_id=current_user_id_or_zero();
     if ($actor_id<=0 || !hrm_pay_rule_004_store_user_can('SA_HRM_AUTHOR_PAY_RULE')) return false;
     if (!is_array($rule)) return false;
     $rule['author_id']=(int)$actor_id;

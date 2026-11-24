@@ -6,6 +6,7 @@
  * They do not update/delete performance evidence, mutate legacy appraisal,
  * payroll or compensation data, or make employment decisions.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_catalog_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_evidence_db.inc');
 
@@ -17,7 +18,7 @@ function hrm_tal_001_performance_admin_ready($minimum_version, &$error)
         return hrm_tal_001_catalog_fail($error, 'performance_service_not_active');
     if (!function_exists('user_check_access') || !user_check_access('SA_HRSETTINGS'))
         return hrm_tal_001_catalog_fail($error, 'permission_denied');
-    if (hrm_tal_001_runtime_company_id() < 0 || hrm_tal_001_runtime_actor_id() <= 0)
+    if (hrm_tal_001_runtime_company_id() < 0 || current_user_id_or_zero() <= 0)
         return hrm_tal_001_catalog_fail($error, 'authenticated_scope_required');
     return true;
 }
@@ -109,7 +110,7 @@ function hrm_tal_001_register_performance_cycle_definition(array $x, &$error = n
         || $scale === false || !in_array($scale, array('none','level_1_5','percent_0_100'), true)
         || $from === false || ($to !== null && ($to === false || $to < $from)))
         return hrm_tal_001_catalog_fail($error, 'performance_cycle_invalid');
-    $company = hrm_tal_001_runtime_company_id(); $actor = hrm_tal_001_runtime_actor_id();
+    $company = hrm_tal_001_runtime_company_id(); $actor = current_user_id_or_zero();
     $payload = array('company_id'=>$company,'cycle_code'=>$code,'cycle_name'=>$name,'purpose_code'=>$purpose,
         'period_start'=>$period_start,'period_end'=>$period_end,'rating_scale_code'=>$scale,'effective_from'=>$from,'effective_to'=>$to);
     $sha = hrm_tal_001_payload_sha256($payload);
@@ -150,7 +151,7 @@ function hrm_tal_001_register_performance_review_subject(array $x, &$error = nul
         return hrm_tal_001_catalog_fail($error,'performance_subject_invalid');
     $cycle=hrm_tal_001_performance_cycle_by_id($cycle_id,$error);if($cycle===false)return false;
     if($start<(string)$cycle['period_start']||$end>(string)$cycle['period_end'])return hrm_tal_001_catalog_fail($error,'performance_subject_outside_cycle_period');
-    $company=hrm_tal_001_runtime_company_id();$actor=hrm_tal_001_runtime_actor_id();
+    $company=hrm_tal_001_runtime_company_id();$actor=current_user_id_or_zero();
     $payload=array('company_id'=>$company,'performance_cycle_definition_id'=>$cycle_id,'definition_sha256'=>(string)$cycle['definition_sha256'],
         'employee_id'=>$employee,'review_type_code'=>$type,'review_window_start'=>$start,'review_window_end'=>$end,'subject_reference_sha256'=>$reference);
     $sha=hrm_tal_001_payload_sha256($payload);
@@ -189,7 +190,7 @@ function hrm_tal_001_record_performance_assessment_evidence(array $x, &$error = 
     if(($scale==='none'&&$rating!==null)||($scale==='level_1_5'&&($rating===null||hrm_tal_001_decimal_compare($rating,'1')<0||hrm_tal_001_decimal_compare($rating,'5')>0))
         ||($scale==='percent_0_100'&&($rating===null||hrm_tal_001_decimal_compare($rating,'0')<0||hrm_tal_001_decimal_compare($rating,'100')>0)))
         return hrm_tal_001_catalog_fail($error,'performance_rating_invalid_for_scale');
-    $company=hrm_tal_001_runtime_company_id();$actor=hrm_tal_001_runtime_actor_id();
+    $company=hrm_tal_001_runtime_company_id();$actor=current_user_id_or_zero();
     $payload=array('company_id'=>$company,'performance_review_subject_id'=>$subject_id,'subject_sha256'=>(string)$subject['subject_sha256'],
         'assessment_role_code'=>$role,'dimension_code'=>$dimension,'rating_value'=>$rating,'comment_reference_sha256'=>$comment,'evidence_date'=>$date);
     $sha=hrm_tal_001_payload_sha256($payload);

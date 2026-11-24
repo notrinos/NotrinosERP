@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 
 /**
  * DIM-FND-006: durable ADR-03 source classification revisions.
@@ -111,17 +112,6 @@ function dimension_source_revision_company()
 {
 	return isset($_SESSION['wa_current_user']->cur_con)
 		? (int)$_SESSION['wa_current_user']->cur_con : 0;
-}
-
-/**
- * Authenticated actor identity, or 0 when the request is not authenticated.
- *
- * @return int
- */
-function dimension_source_revision_actor()
-{
-	return isset($_SESSION['wa_current_user']->user)
-		? (int)$_SESSION['wa_current_user']->user : 0;
 }
 
 /**
@@ -839,7 +829,7 @@ function dimension_source_revision_prepare($family, $trans_type, $document_key, 
 		return $result;
 	}
 	$company = dimension_source_revision_company();
-	$actor = dimension_source_revision_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor < 1) {
 		$result['codes'][] = 'unauthenticated';
 		$result['errors'][] = _('A durable tracking source revision needs the authenticated actor who recorded it.');

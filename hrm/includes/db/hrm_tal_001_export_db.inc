@@ -1,5 +1,6 @@
 <?php
 /** HRM-TAL-001 bounded admin-only exact-employee CSV export service. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_catalog_db.inc');
 
 if (!defined('HRM_TAL_001_EXPORT_MAX_ROWS')) define('HRM_TAL_001_EXPORT_MAX_ROWS', 1000);
@@ -13,7 +14,7 @@ function hrm_tal_001_export_service_ready(&$error)
         return hrm_tal_001_catalog_fail($error, 'export_service_not_active');
     if (!function_exists('user_check_access') || !user_check_access('SA_HRSETTINGS'))
         return hrm_tal_001_catalog_fail($error, 'permission_denied');
-    if (hrm_tal_001_runtime_company_id() < 0 || hrm_tal_001_runtime_actor_id() <= 0)
+    if (hrm_tal_001_runtime_company_id() < 0 || current_user_id_or_zero() <= 0)
         return hrm_tal_001_catalog_fail($error, 'authenticated_scope_required');
     return true;
 }
@@ -44,7 +45,7 @@ function hrm_tal_001_export_exact_employee_csv($employee_id, &$error = null)
         return hrm_tal_001_catalog_fail($error, 'employee_scope_invalid');
 
     $company = hrm_tal_001_runtime_company_id();
-    $actor = hrm_tal_001_runtime_actor_id();
+    $actor = current_user_id_or_zero();
     $limit = HRM_TAL_001_EXPORT_MAX_ROWS + 1;
     $skills = db_query('SELECT e.employee_id,d.skill_code,d.skill_name,d.category_code,e.evidence_type_code,e.proficiency_value,e.evidence_date,e.valid_from,e.valid_to '
         .'FROM '.TB_PREF.'hrm_tal_001_employee_skill_evidence e INNER JOIN '.TB_PREF.'hrm_tal_001_skill_definitions d '

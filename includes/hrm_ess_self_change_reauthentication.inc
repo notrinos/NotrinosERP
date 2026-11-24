@@ -7,6 +7,7 @@
  * assurance inside the caller's business transaction. Raw passwords, OIDC
  * tokens, profile values and recovery material are never persisted here.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 if (!defined('HRM_ESS_SELF_CHANGE_REAUTH_DB_VERSION')) define('HRM_ESS_SELF_CHANGE_REAUTH_DB_VERSION','1.0.452');
 if (!defined('HRM_ESS_SELF_CHANGE_REAUTH_CSRF_TTL')) define('HRM_ESS_SELF_CHANGE_REAUTH_CSRF_TTL',600);
 if (!defined('HRM_ESS_SELF_CHANGE_REAUTH_TRANSACTION_TTL')) define('HRM_ESS_SELF_CHANGE_REAUTH_TRANSACTION_TTL',300);
@@ -46,7 +47,7 @@ function hrm_ess_self_change_reauth_dependencies()
         $p=$root===false?false:$root.'/hrm/includes/db/ess_self_change_request_db.inc';
         if($p===false||!is_file($p))return false; include_once($p);
     }
-    return function_exists('get_hrm_ess_self_change_request') && function_exists('hrm_ess_self_change_actor_id');
+    return function_exists('get_hrm_ess_self_change_request');
 }
 
 function hrm_ess_self_change_reauth_operation($value)
@@ -96,7 +97,7 @@ function hrm_ess_self_change_reauth_action_hash($company,$actor,$operation,$requ
 /** Build one exact server-bound operation context. */
 function hrm_ess_self_change_reauth_action_context($operation,$request_id=0,$intent_digest='')
 {
-    $op=hrm_ess_self_change_reauth_operation($operation); $actor=hrm_ess_self_change_actor_id(); $company=function_exists('user_company')?(int)user_company():0;
+    $op=hrm_ess_self_change_reauth_operation($operation); $actor=current_user_id_or_zero(); $company=function_exists('user_company')?(int)user_company():0;
     if($op===false||$actor<=0||!hrm_ess_self_change_reauth_authorized($op)||$company<0)return false;
     $request_id=(int)$request_id; $request_digest=''; $row_version=0;
     if($op==='request'){
@@ -134,7 +135,7 @@ function hrm_ess_self_change_reauth_revalidate_action($action)
 function hrm_ess_self_change_reauth_local_password($password)
 {
     if(hrm_ess_self_change_reauth_current_auth_method()!=='local_password'||!is_string($password)||$password===''||strlen($password)>512)return false;
-    $actor=hrm_ess_self_change_actor_id(); if($actor<=0)return false;
+    $actor=current_user_id_or_zero(); if($actor<=0)return false;
     $q=db_query('SELECT id,password,inactive FROM '.TB_PREF.'users WHERE id='.$actor.' LIMIT 2','could not reauthenticate ESS self-change actor');
     if(!$q||db_num_rows($q)!==1)return false; $row=db_fetch_assoc($q);
     if(!$row||(int)$row['id']!==$actor||(int)$row['inactive']!==0||!is_string($row['password'])||$row['password']==='')return false;

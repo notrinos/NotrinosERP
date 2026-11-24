@@ -1,5 +1,6 @@
 <?php
 /** HRM-ESS-001 reauthenticated, CSRF-protected current-user self-change browser boundary. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 if (!defined('HRM_ESS_SELF_CHANGE_ROUTE_DB_VERSION')) define('HRM_ESS_SELF_CHANGE_ROUTE_DB_VERSION','1.0.450');
 if (!defined('HRM_ESS_SELF_CHANGE_ROUTE_ATTEMPT_KEY')) define('HRM_ESS_SELF_CHANGE_ROUTE_ATTEMPT_KEY','hrm_ess_self_change_route_attempts');
 if (!defined('HRM_ESS_SELF_CHANGE_ROUTE_MAX_ATTEMPTS')) define('HRM_ESS_SELF_CHANGE_ROUTE_MAX_ATTEMPTS',5);
@@ -60,7 +61,7 @@ function hrm_ess_self_change_route_reauthenticate_local($password)
     $user = $_SESSION['wa_current_user'];
     if (!isset($user->auth_method) || (string)$user->auth_method !== 'local_password')
         return false;
-    $actor = function_exists('hrm_ess_self_change_actor_id') ? (int)hrm_ess_self_change_actor_id() : 0;
+    $actor = current_user_id_or_zero();
     if ($actor <= 0) return false;
     $result = db_query('SELECT id,password,inactive FROM '.TB_PREF.'users WHERE id='.$actor.' LIMIT 2',
         'could not reauthenticate ESS self-change actor');
@@ -97,7 +98,7 @@ function hrm_ess_self_change_route_current_values()
 /** Return at most one open request owned by the current session actor; no encrypted payload is exposed. */
 function hrm_ess_self_change_route_open_request()
 {
-    $actor = hrm_ess_self_change_actor_id();
+    $actor = current_user_id_or_zero();
     $scope = get_hrm_ess_current_self_scope();
     if ($actor <= 0 || !is_array($scope) || (int)$scope['user_id'] !== $actor) return false;
     $result = db_query('SELECT request_id,request_status,expires_at,row_version,created_at FROM '.TB_PREF.'hrm_ess_self_change_requests '

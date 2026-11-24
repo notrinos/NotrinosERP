@@ -1,5 +1,6 @@
 <?php
 /** HRM-TAL-001 immutable employee skill/certification evidence writer. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_catalog_db.inc');
 
 /** @return bool */
@@ -92,7 +93,7 @@ function hrm_tal_001_record_skill_evidence(array $x, &$error = null)
         || ($scale === 'level_1_5' && ($proficiency === null || hrm_tal_001_decimal_compare($proficiency, '1') < 0 || hrm_tal_001_decimal_compare($proficiency, '5') > 0))
         || ($scale === 'percent_0_100' && ($proficiency === null || hrm_tal_001_decimal_compare($proficiency, '0') < 0 || hrm_tal_001_decimal_compare($proficiency, '100') > 0)))
         return hrm_tal_001_catalog_fail($error, 'skill_proficiency_invalid_for_scale');
-    $company = hrm_tal_001_runtime_company_id(); $actor = hrm_tal_001_runtime_actor_id();
+    $company = hrm_tal_001_runtime_company_id(); $actor = current_user_id_or_zero();
     $payload = array('company_id'=>$company,'skill_definition_id'=>$definition_id,'definition_sha256'=>(string)$definition['definition_sha256'],
         'employee_id'=>$employee,'evidence_type_code'=>$type,'source_reference_sha256'=>$source,'proficiency_value'=>$proficiency,
         'evidence_date'=>$date,'valid_from'=>$from,'valid_to'=>$to);
@@ -129,7 +130,7 @@ function hrm_tal_001_record_certification_evidence(array $x, &$error = null)
         $expected=date('Y-m-d',strtotime($issued.' +'.(int)$definition['default_validity_days'].' days'));
         if($expires!==$expected)return hrm_tal_001_catalog_fail($error,'certification_fixed_expiry_mismatch');
     }
-    $company=hrm_tal_001_runtime_company_id();$actor=hrm_tal_001_runtime_actor_id();
+    $company=hrm_tal_001_runtime_company_id();$actor=current_user_id_or_zero();
     $payload=array('company_id'=>$company,'certification_definition_id'=>$definition_id,'definition_sha256'=>(string)$definition['definition_sha256'],
         'employee_id'=>$employee,'credential_reference_sha256'=>$credential,'issued_on'=>$issued,'expires_on'=>$expires,
         'verification_status_code'=>$status,'verification_evidence_sha256'=>$verification);

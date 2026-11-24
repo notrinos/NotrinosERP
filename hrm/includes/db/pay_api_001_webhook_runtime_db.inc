@@ -1,5 +1,6 @@
 <?php
 /** PAY-API-001 fail-closed webhook enqueue and atomic claim runtime writers. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_api_001_runtime_db.inc');
 include_once($path_to_root.'/includes/pay_api_001_webhook.inc');
 
@@ -35,7 +36,7 @@ function pay_api_001_webhook_runtime_configuration($target_id,$company,$now,&$er
 /** Append or replay the minimized payroll-period-summary event and outbox row. */
 function pay_api_001_enqueue_payroll_period_summary_webhook($company_id,$webhook_target_id,array $summary,$source_evidence_sha256,&$error=null)
 {
-    $error=null;$actor=pay_api_001_runtime_actor();$company=pay_api_001_uint_value($company_id,true,4294967295);$target_id=pay_api_001_positive_id($webhook_target_id);
+    $error=null;$actor=current_user_id_or_zero();$company=pay_api_001_uint_value($company_id,true,4294967295);$target_id=pay_api_001_positive_id($webhook_target_id);
     if($actor<=0||!pay_api_001_runtime_access('SA_HRM_EXECUTE_PAY_API')||$company===false||$target_id===false||!pay_api_001_webhook_runtime_enabled('enqueue')){$error='webhook_enqueue_access_or_version_denied';return false;}
     if(!pay_api_001_runtime_require_company($company,$error))return false;$now=pay_api_001_runtime_now();$event=pay_api_001_webhook_event_envelope($company,$summary,$source_evidence_sha256,$now);if($event===false){$error='webhook_event_invalid';return false;}
     $manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();$target=pay_api_001_webhook_active_target($target_id,$company,$now,$error);$cfg=$target?pay_api_001_webhook_runtime_configuration($target_id,$company,$now,$error):false;if(!$target||!$cfg){if($manage)cancel_transaction();return false;}
@@ -53,7 +54,7 @@ function pay_api_001_enqueue_payroll_period_summary_webhook($company_id,$webhook
 /** Atomically append or replay a bounded claim lease for one outbox row. */
 function pay_api_001_claim_webhook_outbox($company_id,$webhook_outbox_id,$claim_token_sha256,$unix_time=null,&$error=null)
 {
-    $error=null;$actor=pay_api_001_runtime_actor();$company=pay_api_001_uint_value($company_id,true,4294967295);$outbox_id=pay_api_001_positive_id($webhook_outbox_id);$token=pay_api_001_webhook_claim_token($claim_token_sha256);$t=$unix_time===null?time():pay_api_001_uint_value($unix_time,true,PHP_INT_MAX);
+    $error=null;$actor=current_user_id_or_zero();$company=pay_api_001_uint_value($company_id,true,4294967295);$outbox_id=pay_api_001_positive_id($webhook_outbox_id);$token=pay_api_001_webhook_claim_token($claim_token_sha256);$t=$unix_time===null?time():pay_api_001_uint_value($unix_time,true,PHP_INT_MAX);
     if($actor<=0||!pay_api_001_runtime_access('SA_HRM_EXECUTE_PAY_API')||$company===false||$outbox_id===false||$token===false||$t===false||!pay_api_001_webhook_runtime_enabled('claim')){$error='webhook_claim_access_or_version_denied';return false;}if(!pay_api_001_runtime_require_company($company,$error))return false;$now=gmdate('Y-m-d H:i:s',$t);
     $manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();$o=pay_api_001_runtime_one('SELECT o.*,e.company_id,t.webhook_target_id target_id FROM '.TB_PREF.'hrm_pay_api_001_webhook_outbox o INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_events e ON e.webhook_event_id=o.webhook_event_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_targets t ON t.webhook_target_id=o.webhook_target_id WHERE o.webhook_outbox_id='.$outbox_id.' LIMIT 2 FOR UPDATE','could not lock PAY-API-001 webhook outbox');if(!$o||(int)$o['company_id']!==$company){if($manage)cancel_transaction();$error='webhook_claim_scope_invalid';return false;}
     $target=pay_api_001_webhook_active_target((int)$o['target_id'],$company,$now,$error);$cfg=$target?pay_api_001_webhook_runtime_configuration((int)$o['target_id'],$company,$now,$error):false;if(!$target||!$cfg){if($manage)cancel_transaction();return false;}

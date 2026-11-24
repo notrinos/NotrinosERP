@@ -1,5 +1,6 @@
 <?php
 /** HRM-TAL-001 session-derived ESS self-only skills/certifications read service. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_catalog_db.inc');
 include_once($path_to_root.'/hrm/includes/db/ess_self_scope_db.inc');
 
@@ -12,7 +13,7 @@ function hrm_tal_001_self_service_scope(&$error)
         return hrm_tal_001_catalog_fail($error, 'self_service_view_not_active');
     if (!function_exists('user_check_access') || !user_check_access('SA_HRM_ESS_VIEW_SELF'))
         return hrm_tal_001_catalog_fail($error, 'permission_denied');
-    if (hrm_tal_001_runtime_company_id() < 0 || hrm_tal_001_runtime_actor_id() <= 0)
+    if (hrm_tal_001_runtime_company_id() < 0 || current_user_id_or_zero() <= 0)
         return hrm_tal_001_catalog_fail($error, 'authenticated_scope_required');
     $scope = get_hrm_ess_current_self_scope();
     if (!is_array($scope) || empty($scope['employee_id']) || strlen((string)$scope['employee_id']) > 20)

@@ -6,6 +6,7 @@
  * requested values to Person, Worker, legacy employee, payroll, or accounting
  * state and exposes no public route.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('append_domain_audit_event'))
     include_once($path_to_root.'/includes/db/domain_audit_db.inc');
 if (!function_exists('get_hrm_ess_current_self_scope'))
@@ -16,15 +17,6 @@ if (!function_exists('hrm_person_sensitive_active_key'))
     include_once($path_to_root.'/hrm/includes/db/employee_person_sensitive_db.inc');
 if (!function_exists('hrm_person_private_profile_text'))
     include_once($path_to_root.'/hrm/includes/db/employee_person_private_profile_db.inc');
-
-/** Return the current authenticated application actor id. */
-function hrm_ess_self_change_actor_id()
-{
-    if (function_exists('user_id'))
-        return (int)user_id();
-    return isset($_SESSION['wa_current_user']->user)
-        ? (int)$_SESSION['wa_current_user']->user : 0;
-}
 
 /** Validate one lowercase SHA-256 custody digest. */
 function hrm_ess_self_change_digest_is_valid($value)
@@ -206,7 +198,7 @@ function hrm_ess_self_change_open_payload($request)
  */
 function request_hrm_ess_self_profile_change($changes, $request_nonce)
 {
-    $actor = hrm_ess_self_change_actor_id();
+    $actor = current_user_id_or_zero();
     $nonce = (string)$request_nonce;
     if ($actor <= 0 || !hrm_ess_self_change_user_can_request() || !hrm_ess_self_change_tables_ready()
         || !hrm_ess_self_change_request_nonce_is_valid($nonce))

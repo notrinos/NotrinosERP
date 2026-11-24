@@ -6,6 +6,7 @@
  * materialized strictly from the normalized projection. No public route lives
  * here and bank/tax/identifier/compensation fields are never accepted.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('approve_hrm_ess_self_profile_change'))
     include_once($path_to_root.'/hrm/includes/db/ess_self_change_approval_db.inc');
 if (!function_exists('hrm_employee_projection_store'))
@@ -110,7 +111,7 @@ function hrm_ess_self_change_apply_normalized($binding, $current, $payload)
 function execute_hrm_ess_self_profile_change($request_id, $execution_nonce)
 {
     $request_id = (int)$request_id;
-    $actor = hrm_ess_self_change_actor_id();
+    $actor = current_user_id_or_zero();
     $nonce = (string)$execution_nonce;
     if ($actor <= 0 || $request_id <= 0 || !hrm_ess_self_change_user_can_execute()
         || !hrm_ess_self_change_execution_nonce_is_valid($nonce)

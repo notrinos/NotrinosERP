@@ -8,17 +8,9 @@
  * privileged checker revalidates the pair under lock before the immutable link
  * is created. No role/permission grant is written by this service.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('append_domain_audit_event'))
     include_once($path_to_root.'/includes/db/domain_audit_db.inc');
-
-function hrm_ess_identity_link_actor_id()
-{
-    if (function_exists('user_id'))
-        return (int)user_id();
-    if (isset($_SESSION['wa_current_user']->user))
-        return (int)$_SESSION['wa_current_user']->user;
-    return 0;
-}
 
 function hrm_ess_identity_link_has_area($area)
 {
@@ -142,7 +134,7 @@ function request_hrm_ess_identity_link($user_id, $worker_id, $evidence_digest, $
     $worker_id = (int)$worker_id;
     $evidence_digest = strtolower(trim((string)$evidence_digest));
     $request_nonce = (string)$request_nonce;
-    $actor = hrm_ess_identity_link_actor_id();
+    $actor = current_user_id_or_zero();
     if (!hrm_ess_identity_link_user_can_request() || !hrm_ess_identity_link_tables_ready()
         || $actor <= 0 || $actor === $user_id || $user_id <= 0 || $worker_id <= 0
         || !hrm_ess_identity_link_digest_is_valid($evidence_digest) || strlen($request_nonce) < 16)
@@ -216,7 +208,7 @@ function approve_hrm_ess_identity_link($request_id, $approval_digest)
 {
     $request_id = (int)$request_id;
     $approval_digest = strtolower(trim((string)$approval_digest));
-    $actor = hrm_ess_identity_link_actor_id();
+    $actor = current_user_id_or_zero();
     if (!hrm_ess_identity_link_user_can_approve() || !hrm_ess_identity_link_tables_ready()
         || $actor <= 0 || $request_id <= 0 || !hrm_ess_identity_link_digest_is_valid($approval_digest))
         return false;

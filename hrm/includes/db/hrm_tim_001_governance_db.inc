@@ -1,9 +1,9 @@
 <?php
 /** Governed HRM-TIM-001 writers. Raw and approved evidence is append-only. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(dirname(__FILE__)).'/time/hrm_tim_001_contract.inc');
 include_once(dirname(__FILE__).'/pay_core_003_governance_db.inc');
 
-function hrm_tim_001_actor(){return isset($_SESSION['wa_current_user']->user)?(int)$_SESSION['wa_current_user']->user:0;}
 function hrm_tim_001_access($area){return function_exists('user_check_access')&&user_check_access($area);}
 function hrm_tim_001_insert_idempotent($table,$id_col,$hash_col,$hash,$sql,&$error){$q=db_query('SELECT '.$id_col.','.$hash_col.' FROM '.TB_PREF.$table.' WHERE '.$hash_col.'='.db_escape($hash).' LIMIT 2 FOR UPDATE');if(!$q||db_num_rows($q)>1){$error='idempotency_state_invalid';return false;}if(db_num_rows($q)===1){$r=db_fetch_assoc($q);return (int)$r[$id_col];}if(!db_query($sql,'could not append HRM-TIM-001 custody')){$error='insert_failed';return false;}return (int)db_insert_id();}
 function hrm_tim_001_db_date($v){return hrm_tim_001_date($v)!==false?db_escape($v):false;}
@@ -46,7 +46,7 @@ function hrm_tim_001_actor_can_review_scope(array $scope,$as_of)
 }
 function hrm_tim_001_create_work_pattern($assignment_id,array $definition,&$error=null)
 {
-    $error=null;$actor=hrm_tim_001_actor();
+    $error=null;$actor=current_user_id_or_zero();
     if($actor<=0||!hrm_tim_001_access('SA_HRM_MANAGE_TIME')){$error='access_denied';return false;}
     $from=$definition['effective_from']??null;
     begin_transaction();
@@ -89,7 +89,7 @@ function hrm_tim_001_create_work_pattern($assignment_id,array $definition,&$erro
 }
 function hrm_tim_001_ingest_raw_event($assignment_id,array $event,&$error=null)
 {
-    $error=null;$actor=hrm_tim_001_actor();
+    $error=null;$actor=current_user_id_or_zero();
     if($actor<=0||!hrm_tim_001_access('SA_HRM_INGEST_TIME')){$error='access_denied';return false;}
     $local=$event['effective_local_at']??'';
     $work_date=is_string($local)&&strlen($local)>=10?substr($local,0,10):'';
@@ -146,7 +146,7 @@ function hrm_tim_001_ingest_raw_event($assignment_id,array $event,&$error=null)
 }
 function hrm_tim_001_review_time($assignment_id,array $review,array $raw_event_ids,array $allocations,&$error=null)
 {
-    $error=null;$actor=hrm_tim_001_actor();
+    $error=null;$actor=current_user_id_or_zero();
     if($actor<=0||!hrm_tim_001_access('SA_HRM_REVIEW_TIME')){$error='access_denied';return false;}
     $date=$review['work_date']??'';$cmd=hrm_tim_001_token($review['review_command_key']??'',128);$start=hrm_tim_001_utc_datetime($review['period_start_utc']??'');$end=hrm_tim_001_utc_datetime($review['period_end_utc']??'');
     if(hrm_tim_001_date($date)===false||$cmd===false||$start===false||$end===false){$error='review_identity_invalid';return false;}
@@ -231,7 +231,7 @@ function hrm_tim_001_review_time($assignment_id,array $review,array $raw_event_i
 }
 function hrm_tim_001_approve_time($reviewed_entry_id,$approval_evidence_sha256,$command_key,&$error=null)
 {
-    $error=null;$actor=hrm_tim_001_actor();$reviewed_entry_id=(int)$reviewed_entry_id;$cmd=hrm_tim_001_token($command_key,128);
+    $error=null;$actor=current_user_id_or_zero();$reviewed_entry_id=(int)$reviewed_entry_id;$cmd=hrm_tim_001_token($command_key,128);
     if($actor<=0||!hrm_tim_001_access('SA_HRM_APPROVE_TIME')||$reviewed_entry_id<=0||$cmd===false||!hrm_tim_001_is_sha256($approval_evidence_sha256)){$error='approval_access_or_evidence_invalid';return false;}
     begin_transaction();
     /* Return the original immutable result for an exact command replay, even if later state has advanced. */
@@ -265,7 +265,7 @@ function hrm_tim_001_approve_time($reviewed_entry_id,$approval_evidence_sha256,$
 }
 function hrm_tim_001_create_payroll_mapping(array $x,&$error=null)
 {
-    $error=null;$actor=hrm_tim_001_actor();
+    $error=null;$actor=current_user_id_or_zero();
     if($actor<=0||!hrm_tim_001_access('SA_HRM_MAP_TIME_PAYROLL')){$error='access_denied';return false;}
     $desc=hrm_tim_001_payroll_mapping_descriptor($x+array('created_by'=>$actor),$error);if($desc===false)return false;
     begin_transaction();
@@ -287,7 +287,7 @@ function hrm_tim_001_create_payroll_mapping(array $x,&$error=null)
 }
 function hrm_tim_001_send_approved_time_to_payroll($approval_id,$allocation_id,$payroll_period_id,$command_key,&$error=null)
 {
-    $error=null;$actor=hrm_tim_001_actor();$approval_id=(int)$approval_id;$allocation_id=(int)$allocation_id;$period=(int)$payroll_period_id;$cmd=hrm_tim_001_token($command_key,128);
+    $error=null;$actor=current_user_id_or_zero();$approval_id=(int)$approval_id;$allocation_id=(int)$allocation_id;$period=(int)$payroll_period_id;$cmd=hrm_tim_001_token($command_key,128);
     if($actor<=0||!hrm_tim_001_access('SA_HRM_EXECUTE_TIME_PAYROLL')||!hrm_tim_001_access('SA_HRM_EXECUTE_PAY_CORE_INPUT')||$approval_id<=0||$allocation_id<=0||$period<=0||$cmd===false){$error='adapter_access_or_identity_invalid';return false;}
     global $transaction_level;if(!empty($transaction_level)){$error='top_level_transaction_required';return false;}
     begin_transaction();
@@ -333,7 +333,7 @@ function hrm_tim_001_send_approved_time_to_payroll($approval_id,$allocation_id,$
 }
 function hrm_tim_001_migrate_legacy_attendance($attendance_id,&$error=null)
 {
-    $error=null;$actor=hrm_tim_001_actor();$attendance_id=(int)$attendance_id;if($actor<=0||!hrm_tim_001_access('SA_HRM_MIGRATE_TIME')||$attendance_id<=0){$error='access_denied';return false;}
+    $error=null;$actor=current_user_id_or_zero();$attendance_id=(int)$attendance_id;if($actor<=0||!hrm_tim_001_access('SA_HRM_MIGRATE_TIME')||$attendance_id<=0){$error='access_denied';return false;}
     begin_transaction();$q=db_query('SELECT * FROM '.TB_PREF.'attendance WHERE attendance_id='.$attendance_id.' LIMIT 2 FOR UPDATE');$a=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;if(!$a){cancel_transaction();$error='legacy_attendance_missing';return false;}$attendance_sha=hrm_tim_001_hash($a);
     $q=db_query('SELECT legacy_receipt_id,attendance_sha256,migration_status FROM '.TB_PREF.'hrm_time_legacy_attendance_receipts WHERE attendance_id='.$attendance_id.' LIMIT 2 FOR UPDATE');if($q&&db_num_rows($q)===1){$r=db_fetch_assoc($q);if(hash_equals($r['attendance_sha256'],$attendance_sha)){commit_transaction();return array('legacy_receipt_id'=>(int)$r['legacy_receipt_id'],'status'=>$r['migration_status']);}cancel_transaction();$error='legacy_attendance_changed_after_custody';return false;}
     $date=hrm_tim_001_date($a['date']??'');$employee_id=(string)($a['employee_id']??'');$q=db_query('SELECT m.worker_id,m.employee_number,m.employee_id,a.assignment_id,h.employment_id,h.legal_entity_id FROM '.TB_PREF.'hrm_employee_worker_map m INNER JOIN '.TB_PREF.'hrm_employments h ON h.worker_id=m.worker_id INNER JOIN '.TB_PREF.'hrm_assignments a ON a.employment_id=h.employment_id WHERE m.employee_id='.db_escape($employee_id).' AND m.retired_at IS NULL AND '.($date===false?'1=0':'(h.start_date IS NULL OR h.start_date<='.db_escape($date).') AND (h.end_date IS NULL OR h.end_date>='.db_escape($date).') AND (a.effective_from IS NULL OR a.effective_from<='.db_escape($date).') AND (a.effective_to IS NULL OR a.effective_to>='.db_escape($date).')').' LIMIT 2 FOR UPDATE');$map=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;

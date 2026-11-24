@@ -6,22 +6,21 @@
  * payroll behavior. These helpers maintain a company-scoped shadow identity
  * graph without merging duplicate candidates or exposing a new route.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 if (!function_exists('append_domain_audit_event'))
 	include_once($path_to_root.'/includes/db/domain_audit_db.inc');
 
 /**
- * Return the numeric actor identifier without exposing login information.
+ * Return the signed-in user's id for HRM person and worker audit columns.
+ *
+ * Kept as a name for its many callers; the value comes from current_user_id_or_zero().
  *
  * @return int
  */
 function hrm_person_worker_actor_id()
 {
-	if (function_exists('user_id'))
-		return (int)user_id();
-	if (isset($_SESSION['wa_current_user']->user))
-		return (int)$_SESSION['wa_current_user']->user;
-	return 0;
+	return current_user_id_or_zero();
 }
 
 /**

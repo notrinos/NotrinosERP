@@ -1,5 +1,6 @@
 <?php
 /** HRM-ESS-001 distinct-checker finalization for dated direct-team delegation. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('request_hrm_ess_manager_delegation'))
     include_once($path_to_root.'/hrm/includes/db/ess_manager_delegation_request_db.inc');
 
@@ -39,7 +40,7 @@ function approve_hrm_ess_manager_delegation($request_id, $approval_digest)
 {
     $request_id = (int)$request_id;
     $approval_digest = strtolower(trim((string)$approval_digest));
-    $actor = hrm_ess_manager_delegation_actor_id();
+    $actor = current_user_id_or_zero();
     if (!hrm_ess_manager_delegation_user_can_approve() || !hrm_ess_manager_delegation_command_tables_ready()
         || $actor <= 0 || $request_id <= 0 || !hrm_ess_manager_delegation_command_digest_is_valid($approval_digest))
         return false;

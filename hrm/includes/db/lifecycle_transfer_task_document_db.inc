@@ -34,14 +34,6 @@ if (!defined('HRM_LIFECYCLE_TRANSFER_TASK_DOCUMENT_REASON'))
 if (!defined('HRM_LIFECYCLE_TRANSFER_TASK_DOCUMENT_SNAPSHOT_PURPOSE'))
     define('HRM_LIFECYCLE_TRANSFER_TASK_DOCUMENT_SNAPSHOT_PURPOSE', 'hrm-lifecycle-transfer-task-document-v1');
 
-function hrm_lifecycle_transfer_task_document_actor_id()
-{
-    return function_exists('hrm_lifecycle_transfer_task_actor_id')
-        ? hrm_lifecycle_transfer_task_actor_id()
-        : (isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-            && isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0);
-}
-
 /** Linking needs both Transfer authority and restricted employee-document authority. */
 function hrm_lifecycle_transfer_task_document_permission()
 {
@@ -227,7 +219,7 @@ function link_hrm_lifecycle_employee_transfer_task_document($command_id, $docume
 {
     if (!hrm_lifecycle_transfer_task_document_permission())
         return false;
-    $actor = hrm_lifecycle_transfer_task_document_actor_id();
+    $actor = current_user_id_or_zero();
     $command_id = parse_positive_integer($command_id);
     $document_access_key = hrm_lifecycle_transfer_task_document_access_key($document_access_key);
     if ($actor <= 0 || $command_id === false || $document_access_key === false)

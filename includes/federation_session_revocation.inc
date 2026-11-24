@@ -2,6 +2,7 @@
 /**********************************************************************
     PAY-SEC-004 targeted federation governance/session revocation command.
 ***********************************************************************/
+require_once(__DIR__.'/../includes/value_helpers.inc');
 
 /** Normalize a restricted, non-PII governance reason token. */
 function federation_revocation_reason($reason)
@@ -14,14 +15,6 @@ function federation_revocation_reason($reason)
     return $reason;
 }
 
-/** Resolve the authenticated administrator identity without trusting caller input. */
-function federation_revocation_actor_id()
-{
-    if (!isset($_SESSION['wa_current_user']) || !isset($_SESSION['wa_current_user']->user))
-        return 0;
-    return (int)$_SESSION['wa_current_user']->user;
-}
-
 /** Existing user-administration authority is the bounded federation-governance authority. */
 function federation_revocation_authorized($company)
 {
@@ -29,7 +22,7 @@ function federation_revocation_authorized($company)
         return false;
     if (function_exists('user_company') && (int)user_company() !== (int)$company)
         return false;
-    return federation_revocation_actor_id() > 0;
+    return current_user_id_or_zero() > 0;
 }
 
 /** Return one exact locked row or false; null means target not found. */
@@ -175,7 +168,7 @@ function federation_revocation_execute($company,$operation,$target_id,$expected_
     $reason=federation_revocation_reason($reason);
     if ($company<0||$target_id<=0||$expected_token<=0||$reason===false||!federation_revocation_authorized($company))
         return false;
-    $actor_id=federation_revocation_actor_id();
+    $actor_id=current_user_id_or_zero();
     if (!function_exists('append_domain_audit_event')) {
         $root=isset($path_to_root)?realpath($path_to_root):false;
         if ($root===false)return false;

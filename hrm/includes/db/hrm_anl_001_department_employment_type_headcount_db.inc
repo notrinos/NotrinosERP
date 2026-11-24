@@ -6,6 +6,7 @@
  * custody. No generic metric runtime, employee drill-down, export, HR/payroll
  * mutation, or network authority is enabled.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_anl_001_headcount_db.inc');
 include_once($path_to_root.'/includes/hrm_anl_001_employment_type_headcount_contract.inc');
 include_once($path_to_root.'/includes/hrm_anl_001_department_employment_type_headcount_contract.inc');
@@ -18,7 +19,7 @@ function hrm_anl_001_department_employment_type_headcount_runtime_ready(&$error)
         return hrm_anl_001_headcount_runtime_fail($error, 'bounded_department_employment_type_headcount_runtime_not_active');
     if (!hrm_anl_001_runtime_has_report_access())
         return hrm_anl_001_headcount_runtime_fail($error, 'permission_denied');
-    if (hrm_anl_001_runtime_company_id() < 0 || hrm_anl_001_runtime_actor_id() <= 0)
+    if (hrm_anl_001_runtime_company_id() < 0 || current_user_id_or_zero() <= 0)
         return hrm_anl_001_headcount_runtime_fail($error, 'authenticated_scope_required');
     return true;
 }
@@ -62,7 +63,7 @@ function hrm_anl_001_execute_department_employment_type_headcount($as_of_utc, $p
         return hrm_anl_001_headcount_runtime_fail($error, 'department_employment_type_headcount_owned_transaction_required');
 
     $company = hrm_anl_001_runtime_company_id();
-    $actor = hrm_anl_001_runtime_actor_id();
+    $actor = current_user_id_or_zero();
     $scope = hrm_anl_001_department_employment_type_headcount_scope_hashes($company);
     if ($scope === false) return hrm_anl_001_headcount_runtime_fail($error, 'scope_hash_failed');
 

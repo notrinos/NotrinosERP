@@ -6,6 +6,7 @@
  * does not seed rows, mutate legacy recruitment/training/appraisal state, or
  * grant payroll/compensation/employment-decision authority.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/includes/hrm_tal_001_contract.inc');
 
 /** @return false */
@@ -30,13 +31,6 @@ function hrm_tal_001_runtime_company_id()
         ? (int)$_SESSION['wa_current_user']->company : -1;
 }
 
-/** @return int */
-function hrm_tal_001_runtime_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && isset($_SESSION['wa_current_user']->user)
-        ? (int)$_SESSION['wa_current_user']->user : 0;
-}
-
 /** @return bool */
 function hrm_tal_001_runtime_has_admin_access()
 {
@@ -51,7 +45,7 @@ function hrm_tal_001_catalog_writer_ready(&$error)
         return hrm_tal_001_catalog_fail($error, 'catalog_writer_not_active');
     if (!hrm_tal_001_runtime_has_admin_access())
         return hrm_tal_001_catalog_fail($error, 'permission_denied');
-    if (hrm_tal_001_runtime_company_id() < 0 || hrm_tal_001_runtime_actor_id() <= 0)
+    if (hrm_tal_001_runtime_company_id() < 0 || current_user_id_or_zero() <= 0)
         return hrm_tal_001_catalog_fail($error, 'authenticated_scope_required');
     return true;
 }
@@ -164,7 +158,7 @@ function hrm_tal_001_register_skill_definition(array $x, &$error = null)
         || $name === '' || strlen($name) > 140 || strlen($description) > 2000 || $from === false || ($to !== null && ($to === false || $to < $from)))
         return hrm_tal_001_catalog_fail($error, 'skill_definition_invalid');
     $company = hrm_tal_001_runtime_company_id();
-    $actor = hrm_tal_001_runtime_actor_id();
+    $actor = current_user_id_or_zero();
     $payload = array('company_id'=>$company,'skill_code'=>$code,'skill_name'=>$name,'category_code'=>$category,'description'=>$description,
         'proficiency_scale_code'=>$scale,'effective_from'=>$from,'effective_to'=>$to);
     $sha = hrm_tal_001_payload_sha256($payload);
@@ -213,7 +207,7 @@ function hrm_tal_001_register_certification_definition(array $x, &$error = null)
         || ($policy === 'fixed_days' && ($days === null || $days < 1 || $days > 36500)) || ($policy !== 'fixed_days' && $days !== null))
         return hrm_tal_001_catalog_fail($error, 'certification_definition_invalid');
     $company = hrm_tal_001_runtime_company_id();
-    $actor = hrm_tal_001_runtime_actor_id();
+    $actor = current_user_id_or_zero();
     $payload = array('company_id'=>$company,'certification_code'=>$code,'certification_name'=>$name,'issuer_name'=>$issuer,'category_code'=>$category,
         'expiry_policy_code'=>$policy,'default_validity_days'=>$days,'effective_from'=>$from,'effective_to'=>$to);
     $sha = hrm_tal_001_payload_sha256($payload);

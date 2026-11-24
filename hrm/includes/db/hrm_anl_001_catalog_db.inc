@@ -7,6 +7,7 @@
  * then append the exact built-in headcount definition and suppression policy.
  * No catalog row can be updated or deleted after insertion.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/includes/hrm_anl_001_contract.inc');
 include_once($path_to_root.'/includes/hrm_anl_001_headcount_contract.inc');
 include_once($path_to_root.'/includes/db/domain_audit_db.inc');
@@ -33,13 +34,6 @@ function hrm_anl_001_runtime_company_id()
         ? (int)$_SESSION['wa_current_user']->company : -1;
 }
 
-/** @return int */
-function hrm_anl_001_runtime_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && isset($_SESSION['wa_current_user']->user)
-        ? (int)$_SESSION['wa_current_user']->user : 0;
-}
-
 /** @return bool */
 function hrm_anl_001_runtime_has_report_access()
 {
@@ -54,7 +48,7 @@ function hrm_anl_001_runtime_catalog_writer_ready(&$error)
         return hrm_anl_001_catalog_fail($error, 'catalog_registration_writer_not_active');
     if (!hrm_anl_001_runtime_has_report_access())
         return hrm_anl_001_catalog_fail($error, 'permission_denied');
-    if (hrm_anl_001_runtime_company_id() < 0 || hrm_anl_001_runtime_actor_id() <= 0)
+    if (hrm_anl_001_runtime_company_id() < 0 || current_user_id_or_zero() <= 0)
         return hrm_anl_001_catalog_fail($error, 'authenticated_scope_required');
     return true;
 }
@@ -118,7 +112,7 @@ function hrm_anl_001_review_headcount_catalog($valid_from, $expires_at, &$error 
         || !hrm_anl_001_headcount_sha256($policy['policy_sha256']))
         return hrm_anl_001_catalog_fail($error, 'catalog_blueprint_invalid');
 
-    $actor = hrm_anl_001_runtime_actor_id();
+    $actor = current_user_id_or_zero();
     $payload = hrm_anl_001_catalog_review_payload($valid_from, $expires_at);
     $event = append_domain_audit_event(array(
         'company_id' => $company,
@@ -207,7 +201,7 @@ function hrm_anl_001_approve_headcount_catalog($review_event_sha256, &$error = n
     $review = hrm_anl_001_catalog_review_event($review_event_sha256, $error);
     if ($review === false) return false;
     $reviewer = (int)$review['actor_user_id'];
-    $approver = hrm_anl_001_runtime_actor_id();
+    $approver = current_user_id_or_zero();
     if ($reviewer <= 0 || $approver <= 0 || $reviewer === $approver)
         return hrm_anl_001_catalog_fail($error, 'catalog_reviewer_approver_separation_required');
 

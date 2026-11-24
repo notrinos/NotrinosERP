@@ -5,6 +5,7 @@
     as published by the Free Software Foundation, either version 3
     of the License, or (at your option) any later version.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /**
  * HRM-FND-003 bounded Grade compatibility foundation.
@@ -236,7 +237,7 @@ function synchronize_hrm_grade_from_pay_grade($legacy_grade_id, $changed_fields,
     if (!$projection)
         return false;
     $current = get_hrm_grade_by_legacy_grade((int)$legacy_grade_id, true);
-    $actor = function_exists('user_id') ? (int)user_id() : 0;
+    $actor = current_user_id_or_zero();
     if ($current === null) {
         if ((string)$operation !== 'create')
             return false;

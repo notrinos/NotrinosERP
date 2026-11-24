@@ -3,12 +3,12 @@
  * PAY-CORE-003 governed append-only writers and controlled legacy conversion.
  * This file is deliberately not included by payroll_engine.inc.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(dirname(__FILE__)).'/payroll/pay_core_003_governance.inc');
 include_once(dirname(dirname(__FILE__)).'/payroll/pay_core_003_eligibility.inc');
 include_once(dirname(dirname(__FILE__)).'/payroll/pay_core_003_legacy_mapping_review.inc');
 include_once(dirname(dirname(__FILE__)).'/payroll/pay_core_003_legacy_compatibility.inc');
 
-function hrm_pay_core_003_actor(){return isset($_SESSION['wa_current_user']->user)?(int)$_SESSION['wa_current_user']->user:0;}
 function hrm_pay_core_003_access($permission){return function_exists('user_check_access')&&user_check_access($permission);}
 function hrm_pay_core_003_insert_idempotent($table,$hash_col,$hash,$sql,$id_col,&$error){$q=db_query('SELECT '.$id_col.','.$hash_col.' FROM '.TB_PREF.$table.' WHERE '.$hash_col.'='.db_escape($hash).' LIMIT 2 FOR UPDATE');if(!$q){$error='lookup_failed';return false;}if(db_num_rows($q)===1){$x=db_fetch_assoc($q);return (int)$x[$id_col];}if(db_num_rows($q)>1){$error='ambiguous_replay';return false;}if(!db_query($sql,'could not append PAY-CORE-003 custody')){$error='insert_failed';return false;}return (int)db_insert_id();}
 
@@ -30,7 +30,7 @@ function hrm_pay_core_003_read_legacy_source($kind,$row_id,$for_update=false)
 
 function hrm_pay_core_003_propose_mapping($source_kind,$source_row_id,array $resolution,$supersedes_mapping_plan_id=null,&$error=null)
 {
-    $error=null;$maker=hrm_pay_core_003_actor();
+    $error=null;$maker=current_user_id_or_zero();
     if($maker<=0||!hrm_pay_core_003_access('SA_HRM_MANAGE_PAY_CORE')){$error='access_denied';return false;}
     $legacy=hrm_pay_core_003_read_legacy_source($source_kind,$source_row_id,false);$source_sha=$legacy?hrm_pay_core_003_legacy_source_sha256($source_kind,$legacy):false;
     if($source_sha===false){$error='legacy_source_invalid';return false;}
@@ -45,7 +45,7 @@ function hrm_pay_core_003_propose_mapping($source_kind,$source_row_id,array $res
 
 function hrm_pay_core_003_approve_mapping($mapping_plan_id,$decision_token,$evidence_sha256,&$error=null)
 {
-    $error=null;$checker=hrm_pay_core_003_actor();$mapping_plan_id=(int)$mapping_plan_id;
+    $error=null;$checker=current_user_id_or_zero();$mapping_plan_id=(int)$mapping_plan_id;
     if($checker<=0||!hrm_pay_core_003_access('SA_HRM_REVIEW_PAY_CORE')||!in_array($decision_token,array('approved','rejected'),true)||!hrm_pay_core_003_is_sha256($evidence_sha256)){$error='access_or_evidence_invalid';return false;}
     $q=db_query('SELECT mapping_plan_sha256,maker_id FROM '.TB_PREF.'hrm_pay_core_003_legacy_mapping_plans WHERE mapping_plan_id='.$mapping_plan_id.' LIMIT 2 FOR UPDATE');$p=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
     if(!$p||(int)$p['maker_id']===$checker){$error='distinct_checker_required';return false;}
@@ -76,7 +76,7 @@ function hrm_pay_core_003_append_element_bundle_internal(array $x,$actor,&$error
 
 function hrm_pay_core_003_write_element_version_bundle(array $x,&$error=null)
 {
-    $error=null;$actor=hrm_pay_core_003_actor();if($actor<=0||!hrm_pay_core_003_access('SA_HRM_MANAGE_PAY_CORE')){$error='access_denied';return false;}
+    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_003_access('SA_HRM_MANAGE_PAY_CORE')){$error='access_denied';return false;}
     $manage=empty($GLOBALS['transaction_level']);if($manage)begin_transaction();$r=hrm_pay_core_003_append_element_bundle_internal($x,$actor,$error);if($manage){if($r!==false)commit_transaction();else cancel_transaction();}return $r;
 }
 
@@ -92,7 +92,7 @@ function hrm_pay_core_003_append_eligibility_internal(array $x,$actor,&$error)
 
 function hrm_pay_core_003_write_eligibility_version(array $x,&$error=null)
 {
-    $error=null;$actor=hrm_pay_core_003_actor();if($actor<=0||!hrm_pay_core_003_access('SA_HRM_MANAGE_PAY_CORE')){$error='access_denied';return false;}
+    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_003_access('SA_HRM_MANAGE_PAY_CORE')){$error='access_denied';return false;}
     $manage=empty($GLOBALS['transaction_level']);if($manage)begin_transaction();$r=hrm_pay_core_003_append_eligibility_internal($x,$actor,$error);if($manage){if($r!==false)commit_transaction();else cancel_transaction();}return $r;
 }
 
@@ -112,14 +112,14 @@ function hrm_pay_core_003_append_approved_input_internal(array $x,$actor,$overri
 
 function hrm_pay_core_003_write_approved_input(array $x,&$error=null)
 {
-    $error=null;$actor=hrm_pay_core_003_actor();if($actor<=0||!hrm_pay_core_003_access('SA_HRM_EXECUTE_PAY_CORE_INPUT')){$error='access_denied';return false;}$override=empty($x['override_reason'])?true:hrm_pay_core_003_access('SA_HRM_OVERRIDE_PAY_CORE_INPUT');$manage=empty($GLOBALS['transaction_level']);if($manage)begin_transaction();$r=hrm_pay_core_003_append_approved_input_internal($x,$actor,$override,$error);if($manage){if($r!==false)commit_transaction();else cancel_transaction();}return $r;
+    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_003_access('SA_HRM_EXECUTE_PAY_CORE_INPUT')){$error='access_denied';return false;}$override=empty($x['override_reason'])?true:hrm_pay_core_003_access('SA_HRM_OVERRIDE_PAY_CORE_INPUT');$manage=empty($GLOBALS['transaction_level']);if($manage)begin_transaction();$r=hrm_pay_core_003_append_approved_input_internal($x,$actor,$override,$error);if($manage){if($r!==false)commit_transaction();else cancel_transaction();}return $r;
 }
 
 function hrm_pay_core_003_execute_mapping($mapping_plan_id,&$error=null)
 {
     global $transaction_level;
     $error = null;
-    $executor = hrm_pay_core_003_actor();
+    $executor = current_user_id_or_zero();
     $mapping_plan_id = (int)$mapping_plan_id;
     if ($executor <= 0 || !hrm_pay_core_003_access('SA_HRM_EXECUTE_PAY_CORE')) {
         $error='access_denied';
@@ -232,7 +232,7 @@ function hrm_pay_core_003_execute_mapping($mapping_plan_id,&$error=null)
 
 function hrm_pay_core_003_reconcile_conversion($conversion_receipt_id,$status_token,$evidence_sha256,$recovery_action='none',$supersedes_reconciliation_id=null,&$error=null)
 {
-    $error=null;$reviewer=hrm_pay_core_003_actor();$conversion_receipt_id=(int)$conversion_receipt_id;
+    $error=null;$reviewer=current_user_id_or_zero();$conversion_receipt_id=(int)$conversion_receipt_id;
     $allowed=array('reconciled','unresolved','quarantined','recovery_confirmed');if($reviewer<=0||!hrm_pay_core_003_access('SA_HRM_REVIEW_PAY_CORE')||!in_array($status_token,$allowed,true)||!hrm_pay_core_003_is_sha256($evidence_sha256)){$error='access_or_evidence_invalid';return false;}
     if(($status_token==='reconciled'&&$recovery_action!=='none')||($status_token!=='reconciled'&&hrm_pay_core_003_token($recovery_action,48)===false)){$error='recovery_action_invalid';return false;}
     $q=db_query('SELECT source_kind,source_row_id,source_sha256,target_set_sha256,executor_id FROM '.TB_PREF.'hrm_pay_core_003_legacy_conversion_receipts WHERE conversion_receipt_id='.$conversion_receipt_id.' LIMIT 2');$r=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;if(!$r||$reviewer===(int)$r['executor_id']){$error='distinct_reviewer_required';return false;}
@@ -242,7 +242,7 @@ function hrm_pay_core_003_reconcile_conversion($conversion_receipt_id,$status_to
 
 function hrm_pay_core_003_record_parity_evidence($conversion_receipt_id,$status_token,$evidence_sha256,&$error=null)
 {
-    $error=null;$reviewer=hrm_pay_core_003_actor();$conversion_receipt_id=(int)$conversion_receipt_id;if($reviewer<=0||!hrm_pay_core_003_access('SA_HRM_REVIEW_PAY_CORE')||!in_array($status_token,array('match','mismatch','unresolved'),true)||!hrm_pay_core_003_is_sha256($evidence_sha256)){$error='access_or_evidence_invalid';return false;}
+    $error=null;$reviewer=current_user_id_or_zero();$conversion_receipt_id=(int)$conversion_receipt_id;if($reviewer<=0||!hrm_pay_core_003_access('SA_HRM_REVIEW_PAY_CORE')||!in_array($status_token,array('match','mismatch','unresolved'),true)||!hrm_pay_core_003_is_sha256($evidence_sha256)){$error='access_or_evidence_invalid';return false;}
     $q=db_query('SELECT source_kind,source_row_id,source_sha256,target_set_sha256,executor_id FROM '.TB_PREF.'hrm_pay_core_003_legacy_conversion_receipts WHERE conversion_receipt_id='.$conversion_receipt_id.' LIMIT 2');$r=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;if(!$r||$reviewer===(int)$r['executor_id']){$error='distinct_parity_reviewer_required';return false;}
     $q=db_query('SELECT status_token FROM '.TB_PREF.'hrm_pay_core_003_legacy_conversion_reconciliations WHERE conversion_receipt_id='.$conversion_receipt_id.' ORDER BY reconciliation_id DESC LIMIT 1');$rec=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;if(!$rec||!in_array($rec['status_token'],array('reconciled','recovery_confirmed'),true)){$error='reconciliation_required_before_parity';return false;}
     $projection=hrm_pay_core_003_parity_projection_sha256($r['source_sha256'],$r['target_set_sha256'],'legacy_compatibility');$sha=hrm_pay_core_003_hash(array('conversion_receipt_id'=>$conversion_receipt_id,'projection_sha256'=>$projection,'status_token'=>$status_token,'evidence_sha256'=>$evidence_sha256,'verified_by'=>$reviewer));$sql='INSERT INTO '.TB_PREF.'hrm_pay_core_003_compatibility_parity_evidence (conversion_receipt_id,source_kind,source_row_id,source_sha256,target_set_sha256,projection_sha256,status_token,evidence_sha256,verified_by,parity_sha256) VALUES ('.$conversion_receipt_id.','.db_escape($r['source_kind']).','.(int)$r['source_row_id'].','.db_escape($r['source_sha256']).','.db_escape($r['target_set_sha256']).','.db_escape($projection).','.db_escape($status_token).','.db_escape($evidence_sha256).','.$reviewer.','.db_escape($sha).')';return hrm_pay_core_003_insert_idempotent('hrm_pay_core_003_compatibility_parity_evidence','parity_sha256',$sha,$sql,'parity_evidence_id',$error);

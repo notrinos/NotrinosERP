@@ -24,6 +24,7 @@
  *
  * No posted ledger row, budget, approval or HRM row is ever updated. PHP 5.6 compatible.
  */
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 
 /** Largest measured unit count a driver may carry (keeps every weight product exact in 64-bit integers). */
 function dimension_driver_max_units()
@@ -326,7 +327,7 @@ function dimension_driver_submit($spec)
 	$spec = $normal['spec'];
 	if ($spec['source_kind'] === 'payroll_aggregate' && !dimension_driver_has_access('SA_HRM_VIEW_PAY_GL'))
 		return dimension_allocation_fail($result, 'permission_denied', _('Payroll aggregates need the payroll evidence permission.'));
-	$actor = dimension_allocation_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
 		return dimension_allocation_fail($result, 'permission_denied', _('The proposing user could not be identified.'));
 	$ids = array();
@@ -399,7 +400,7 @@ function dimension_driver_decide($driver_id, $decision)
 		return dimension_allocation_fail($result, 'permission_denied', _('You are not allowed to decide allocation drivers.'));
 	if (!in_array($decision, array('approve', 'reject'), true))
 		return dimension_allocation_fail($result, 'invalid_decision', _('The decision must be approve or reject.'));
-	$actor = dimension_allocation_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
 		return dimension_allocation_fail($result, 'permission_denied', _('The deciding user could not be identified.'));
 	if (!begin_transaction())

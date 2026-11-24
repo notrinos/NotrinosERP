@@ -1,4 +1,5 @@
 <?php
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 // DIM-NAM-003: the company name of each tracking category (also when this file is loaded without a page).
 include_once(dirname(__FILE__).'/tracking_axis_label.inc');
 
@@ -219,7 +220,7 @@ function dimension_alert_set_thresholds($warning, $limit, $reason)
 	$result = dimension_commit_result(array('changed' => false, 'warning' => null, 'limit' => null));
 	if (!dimension_commit_has_access(array('SA_SETUPCOMPANY')))
 		return dimension_commit_fail($result, 'permission_denied', _('You are not allowed to change the budget alert thresholds.'));
-	$actor = dimension_commit_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
 		return dimension_commit_fail($result, 'permission_denied', _('The deciding user could not be identified.'));
 	$warning_value = dimension_alert_parse_percent($warning);
@@ -464,7 +465,7 @@ function dimension_alert_evaluate($fiscal_year_id = 0)
 		return dimension_alert_result('unready');
 	$company = isset($_SESSION['wa_current_user']->cur_con) ? (int)$_SESSION['wa_current_user']->cur_con : 0;
 	$thresholds = dimension_alert_thresholds();
-	$cache_key = $company.'|'.(int)$fiscal_year_id.'|'.$thresholds['warning'].'|'.$thresholds['limit'].'|'.dimension_commit_actor();
+	$cache_key = $company.'|'.(int)$fiscal_year_id.'|'.$thresholds['warning'].'|'.$thresholds['limit'].'|'.current_user_id_or_zero();
 	$store = &dimension_alert_cache_store();
 	if (isset($store[$cache_key]))
 		return $store[$cache_key];

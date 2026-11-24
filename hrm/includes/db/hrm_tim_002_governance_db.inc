@@ -1,9 +1,10 @@
 <?php
 /** Governed HRM-TIM-002 overtime qualification/import writers. All TIM-002 evidence is append-only. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(dirname(__FILE__)).'/time/hrm_tim_002_contract.inc');
 include_once(dirname(__FILE__).'/hrm_tim_001_governance_db.inc');
 include_once(dirname(__FILE__).'/pay_core_003_governance_db.inc');
-function hrm_tim_002_actor(){return hrm_tim_001_actor();}
+function hrm_tim_002_actor(){return current_user_id_or_zero();}
 function hrm_tim_002_access($a){return function_exists('user_check_access')&&user_check_access($a);}
 function hrm_tim_002_insert_idempotent($table,$id,$hashcol,$hash,$sql,&$error){return hrm_tim_001_insert_idempotent($table,$id,$hashcol,$hash,$sql,$error);}
 function hrm_tim_002_sql_nullable($v){return $v===null?'NULL':db_escape($v);}

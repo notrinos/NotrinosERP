@@ -1,13 +1,9 @@
 <?php
 /** PAY-CTRY-001 site-level trust, verification and immutable pack registration. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/includes/pay_ctry_001_verifier.inc');
 include_once(dirname(__FILE__).'/pay_ctry_001_schema_db.inc');
 
-function pay_ctry_001_actor_id()
-{
-    return isset($_SESSION['wa_current_user']) && isset($_SESSION['wa_current_user']->user)
-        ? (int)$_SESSION['wa_current_user']->user : 0;
-}
 function pay_ctry_001_site_company_ok()
 {
     return function_exists('user_company') && (int)user_company() === PAY_CTRY_001_SITE_COMPANY_ID;
@@ -54,13 +50,13 @@ function pay_ctry_001_insert_id()
 }
 function pay_ctry_001_require_install_authority(&$error)
 {
-    $error=null;$actor=pay_ctry_001_actor_id();
+    $error=null;$actor=current_user_id_or_zero();
     if($actor<=0||!pay_ctry_001_access(PAY_CTRY_001_INSTALL_PERMISSION))return pay_ctry_001_fail($error,'install_authority_denied');
     return $actor;
 }
 function pay_ctry_001_require_trust_authority(&$error)
 {
-    $error=null;$actor=pay_ctry_001_actor_id();
+    $error=null;$actor=current_user_id_or_zero();
     if($actor<=0||!pay_ctry_001_access(PAY_CTRY_001_TRUST_PERMISSION))return pay_ctry_001_fail($error,'trust_authority_denied');
     return $actor;
 }

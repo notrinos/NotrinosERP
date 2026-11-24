@@ -21,6 +21,7 @@
  *
  * PHP 5.6 compatible syntax. Dates are SQL `Y-m-d`.
  */
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 
 /** Largest number of members one hierarchy version may hold. */
 function dimension_hier_max_members()
@@ -49,12 +50,6 @@ function dimension_hier_has_access($areas)
 function dimension_hier_quote($value)
 {
 	return "'".db_escape_function((string)$value)."'";
-}
-
-/** Identity of the authenticated session. */
-function dimension_hier_actor()
-{
-	return isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
 }
 
 /** A fresh result skeleton (it starts ok; every refusal goes through dimension_hier_fail). */
@@ -314,7 +309,7 @@ function dimension_hier_propose($axis, $changes, $effective_from, $parent_policy
 	$result = dimension_hier_result(array('version_id' => 0, 'version_no' => 0, 'member_count' => 0));
 	if (!dimension_hier_has_access(array('SA_DIMENSION')))
 		return dimension_hier_fail($result, 'permission_denied', _('You are not allowed to propose tracking hierarchies.'));
-	$actor = dimension_hier_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
 		return dimension_hier_fail($result, 'permission_denied', _('The proposing user could not be identified.'));
 	if ($axis !== 1 && $axis !== 2)
@@ -442,7 +437,7 @@ function dimension_hier_decide($version_id, $decision, $note = '')
 		return dimension_hier_fail($result, 'permission_denied', _('You are not allowed to decide tracking hierarchies.'));
 	if (!in_array($decision, array('approve', 'reject'), true))
 		return dimension_hier_fail($result, 'invalid_decision', _('The decision must be approve or reject.'));
-	$actor = dimension_hier_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
 		return dimension_hier_fail($result, 'permission_denied', _('The deciding user could not be identified.'));
 	$note = is_string($note) ? trim($note) : '';

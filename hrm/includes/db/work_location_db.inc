@@ -5,6 +5,7 @@
     as published by the Free Software Foundation, either version 3
     of the License, or (at your option) any later version.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /**
  * HRM-FND-003 normalized Work Location identity and explicit administrator writer.
@@ -289,7 +290,7 @@ function add_hrm_work_location($code, $name, $establishment_id = null, $establis
             return false;
         }
     }
-    $actor = function_exists('user_id') ? (int)user_id() : 0;
+    $actor = current_user_id_or_zero();
     $establishment_column = $establishment_explicit ? ',establishment_id' : '';
     $establishment_value = $establishment_explicit
         ? ','.($target_establishment_id === null ? 'NULL' : (int)$target_establishment_id) : '';
@@ -372,7 +373,7 @@ function update_hrm_work_location($work_location_id, $code, $name, $status,
         commit_transaction();
         return true;
     }
-    $actor = function_exists('user_id') ? (int)user_id() : 0;
+    $actor = current_user_id_or_zero();
     $establishment_update = $establishment_explicit
         ? ",establishment_id=".($target_establishment_id === null ? 'NULL' : (int)$target_establishment_id) : '';
     $sql = "UPDATE ".TB_PREF."hrm_work_locations SET work_location_code=".db_escape($identity['work_location_code'])

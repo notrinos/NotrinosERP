@@ -5,6 +5,7 @@
  * from the accepted HRM-ESS-002 team_view scope, backed by the HRM-ESS-001
  * Assignment resolver, for the authenticated session and current date.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tal_001_catalog_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_ess_002_context_db.inc');
 
@@ -17,7 +18,7 @@ function hrm_tal_001_manager_scope_subjects($as_of, &$error = null)
         return hrm_tal_001_catalog_fail($error, 'manager_scope_not_active');
     if (!function_exists('user_check_access') || !user_check_access('SA_HRM_ESS_VIEW_TEAM'))
         return hrm_tal_001_catalog_fail($error, 'permission_denied');
-    if (hrm_tal_001_runtime_company_id() < 0 || hrm_tal_001_runtime_actor_id() <= 0)
+    if (hrm_tal_001_runtime_company_id() < 0 || current_user_id_or_zero() <= 0)
         return hrm_tal_001_catalog_fail($error, 'authenticated_scope_required');
     if (!function_exists('hrm_ess_002_date') || !function_exists('hrm_ess_002_today')
         || !function_exists('get_hrm_ess_002_current_manager_scope'))

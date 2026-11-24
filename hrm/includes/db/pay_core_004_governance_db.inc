@@ -6,10 +6,10 @@
  * immutable custody evidence only; it does not calculate payroll, post GL,
  * execute payments, mutate historical payslips or transfer production authority.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(dirname(__FILE__)).'/payroll/pay_core_004_contract.inc');
 include_once(dirname(__FILE__).'/pay_core_004_schema_db.inc');
 
-function hrm_pay_core_004_actor(){return isset($_SESSION['wa_current_user']->user)?(int)$_SESSION['wa_current_user']->user:0;}
 function hrm_pay_core_004_access($permission){return function_exists('user_check_access')&&user_check_access($permission);}
 function hrm_pay_core_004_token($value,$max=64){$value=trim((string)$value);return $value!==''&&strlen($value)<=$max&&preg_match('/^[A-Za-z0-9_.:-]+$/D',$value)===1?$value:false;}
 function hrm_pay_core_004_manage_transaction(){return empty($GLOBALS['transaction_level']);}
@@ -67,7 +67,7 @@ function hrm_pay_core_004_read_one($sql)
 
 function hrm_pay_core_004_seal_snapshot($scope,$identity_sets,&$error=null)
 {
-    $error=null;$actor=hrm_pay_core_004_actor();
+    $error=null;$actor=current_user_id_or_zero();
     if($actor<=0||!hrm_pay_core_004_access('SA_HRM_SEAL_PAY_CORE_RESULT')){$error='access_denied';return false;}
     $material=hrm_pay_core_004_snapshot_material($scope,$identity_sets,$error);if($material===false)return false;
     $literal=hrm_pay_core_004_json_sql_literal($material['payload_json']);if($literal===false){$error='snapshot_json_storage_invalid';return false;}
@@ -104,7 +104,7 @@ function hrm_pay_core_004_replay_matches($result_id,$result_sha,$line_set_sha,$t
 
 function hrm_pay_core_004_append_result($snapshot_id,$totals,$lines,$traces,&$error=null)
 {
-    $error=null;$executor=hrm_pay_core_004_actor();$snapshot_id=(int)$snapshot_id;
+    $error=null;$executor=current_user_id_or_zero();$snapshot_id=(int)$snapshot_id;
     if($executor<=0||!hrm_pay_core_004_access('SA_HRM_WRITE_PAY_CORE_RESULT')){$error='access_denied';return false;}
     $components=hrm_pay_core_004_result_component_hashes($lines,$traces,$error);if($components===false)return false;
     $manage=hrm_pay_core_004_manage_transaction();if($manage)begin_transaction();
@@ -138,7 +138,7 @@ function hrm_pay_core_004_recompute_integrity($result_id,&$error=null)
 
 function hrm_pay_core_004_record_integrity($result_id,$verification_status,$evidence_sha256,&$error=null)
 {
-    $error=null;$reviewer=hrm_pay_core_004_actor();$result_id=(int)$result_id;
+    $error=null;$reviewer=current_user_id_or_zero();$result_id=(int)$result_id;
     if($reviewer<=0||!hrm_pay_core_004_access('SA_HRM_VERIFY_PAY_CORE_RESULT')||!in_array($verification_status,array('verified','failed'),true)||!hrm_pay_core_004_is_sha256($evidence_sha256)){$error='access_or_evidence_invalid';return false;}
     $manage=hrm_pay_core_004_manage_transaction();if($manage)begin_transaction();$integrity=hrm_pay_core_004_recompute_integrity($result_id,$error);if($integrity===false){if($manage)cancel_transaction();return false;}if($reviewer===$integrity['executor_id']){if($manage)cancel_transaction();$error='independent_verifier_required';return false;}
     $q=db_query('SELECT COUNT(*) n FROM '.TB_PREF.'hrm_pay_core_004_results WHERE snapshot_id='.(int)$integrity['snapshot_id'].' AND result_id<'.$result_id);$row=$q?db_fetch_assoc($q):false;if(!$row){if($manage)cancel_transaction();$error='result_history_read_failed';return false;}if((int)$row['n']>0){$lineage=hrm_pay_core_004_read_one('SELECT lineage_id FROM '.TB_PREF.'hrm_pay_core_004_correction_lineage WHERE successor_result_id='.$result_id.' LIMIT 2');if(!$lineage){if($manage)cancel_transaction();$error='correction_lineage_required';return false;}}
@@ -149,7 +149,7 @@ function hrm_pay_core_004_record_integrity($result_id,$verification_status,$evid
 
 function hrm_pay_core_004_record_lineage($predecessor_result_id,$successor_result_id,$lineage_kind,$reason_code,$approval_evidence_sha256,&$error=null)
 {
-    $error=null;$checker=hrm_pay_core_004_actor();$predecessor_result_id=(int)$predecessor_result_id;$successor_result_id=(int)$successor_result_id;$reason=hrm_pay_core_004_token($reason_code,64);
+    $error=null;$checker=current_user_id_or_zero();$predecessor_result_id=(int)$predecessor_result_id;$successor_result_id=(int)$successor_result_id;$reason=hrm_pay_core_004_token($reason_code,64);
     if($checker<=0||!hrm_pay_core_004_access('SA_HRM_REVIEW_PAY_CORE')||$predecessor_result_id<=0||$successor_result_id<=0||$predecessor_result_id===$successor_result_id||!in_array($lineage_kind,hrm_pay_core_004_lineage_kinds(),true)||$reason===false||!hrm_pay_core_004_is_sha256($approval_evidence_sha256)){$error='lineage_input_invalid';return false;}
     $manage=hrm_pay_core_004_manage_transaction();if($manage)begin_transaction();
     $sql='SELECT r.result_id,r.executor_id,r.result_sha256,s.payroll_relationship_id,s.calendar_period_id,s.legal_entity_id,s.currency FROM '.TB_PREF.'hrm_pay_core_004_results r INNER JOIN '.TB_PREF.'hrm_pay_core_004_snapshots s ON s.snapshot_id=r.snapshot_id WHERE r.result_id IN ('.$predecessor_result_id.','.$successor_result_id.') ORDER BY r.result_id FOR UPDATE';$q=db_query($sql);$rows=array();if($q)while($x=db_fetch_assoc($q))$rows[(int)$x['result_id']]=$x;if(count($rows)!==2){if($manage)cancel_transaction();$error='lineage_result_missing';return false;}$a=$rows[$predecessor_result_id];$b=$rows[$successor_result_id];foreach(array('payroll_relationship_id','calendar_period_id','legal_entity_id','currency') as $field)if((string)$a[$field]!== (string)$b[$field]){if($manage)cancel_transaction();$error='lineage_scope_mismatch';return false;}if($checker===(int)$b['executor_id']){if($manage)cancel_transaction();$error='checker_executor_separation_required';return false;}
@@ -160,7 +160,7 @@ function hrm_pay_core_004_record_lineage($predecessor_result_id,$successor_resul
 
 function hrm_pay_core_004_record_legacy_provenance($source_kind,$source_id,$source_sha256,$provenance_state,$gap_codes,$evidence_sha256,&$error=null)
 {
-    $error=null;$actor=hrm_pay_core_004_actor();$source_kind=hrm_pay_core_004_token($source_kind,32);$source_id=(int)$source_id;
+    $error=null;$actor=current_user_id_or_zero();$source_kind=hrm_pay_core_004_token($source_kind,32);$source_id=(int)$source_id;
     if($actor<=0||!hrm_pay_core_004_access('SA_HRM_REVIEW_PAY_CORE')||$source_kind===false||$source_id<=0||!hrm_pay_core_004_is_sha256($source_sha256)||!in_array($provenance_state,hrm_pay_core_004_legacy_provenance_states(),true)||!is_array($gap_codes)||!hrm_pay_core_004_is_sha256($evidence_sha256)){$error='legacy_provenance_invalid';return false;}
     $codes=array();foreach($gap_codes as $code){$t=hrm_pay_core_004_token($code,64);if($t===false){$error='legacy_gap_code_invalid';return false;}$codes[$t]=true;}$codes=array_keys($codes);sort($codes,SORT_STRING);if($provenance_state==='complete'&&count($codes)>0){$error='complete_provenance_cannot_have_gaps';return false;}if($provenance_state!=='complete'&&count($codes)===0){$error='provenance_gap_required';return false;}$gap_json=json_encode($codes,JSON_UNESCAPED_SLASHES);$sha=hrm_pay_core_004_hash(array('legacy_source_kind'=>$source_kind,'legacy_source_id'=>$source_id,'legacy_source_sha256'=>$source_sha256,'provenance_state'=>$provenance_state,'gap_codes'=>$codes,'evidence_sha256'=>$evidence_sha256,'recorded_by'=>$actor));
     $sql='INSERT INTO '.TB_PREF.'hrm_pay_core_004_legacy_provenance_gaps (legacy_source_kind,legacy_source_id,legacy_source_sha256,provenance_state,gap_codes,evidence_sha256,provenance_sha256,recorded_by) VALUES ('.db_escape($source_kind).','.$source_id.','.db_escape($source_sha256).','.db_escape($provenance_state).','.db_escape($gap_json).','.db_escape($evidence_sha256).','.db_escape($sha).','.$actor.')';if(!db_query($sql)){ $existing=hrm_pay_core_004_read_one('SELECT legacy_provenance_id FROM '.TB_PREF.'hrm_pay_core_004_legacy_provenance_gaps WHERE provenance_sha256='.db_escape($sha).' LIMIT 2');if($existing)return (int)$existing['legacy_provenance_id'];$error='legacy_provenance_insert_failed';return false;}return (int)db_insert_id();
@@ -173,7 +173,7 @@ function hrm_pay_core_004_verified_integrity($integrity_evidence_id,$result_id)
 
 function hrm_pay_core_004_record_recovery($result_id,$integrity_evidence_id,$recovery_state,$action_token,$evidence_sha256,&$error=null)
 {
-    $error=null;$reviewer=hrm_pay_core_004_actor();$result_id=(int)$result_id;$integrity_evidence_id=(int)$integrity_evidence_id;$action=hrm_pay_core_004_token($action_token,64);
+    $error=null;$reviewer=current_user_id_or_zero();$result_id=(int)$result_id;$integrity_evidence_id=(int)$integrity_evidence_id;$action=hrm_pay_core_004_token($action_token,64);
     if($reviewer<=0||!hrm_pay_core_004_access('SA_HRM_RECOVER_PAY_CORE_RESULT')||!in_array($recovery_state,hrm_pay_core_004_recovery_states(),true)||$action===false||!hrm_pay_core_004_is_sha256($evidence_sha256)){$error='recovery_input_invalid';return false;}
     $manage=hrm_pay_core_004_manage_transaction();if($manage)begin_transaction();$integrity=hrm_pay_core_004_verified_integrity($integrity_evidence_id,$result_id);if(!$integrity){if($manage)cancel_transaction();$error='verified_integrity_required';return false;}
     $sha=hrm_pay_core_004_hash(array('result_id'=>$result_id,'integrity_evidence_id'=>$integrity_evidence_id,'recovery_state'=>$recovery_state,'action_token'=>$action,'evidence_sha256'=>$evidence_sha256,'reviewer_id'=>$reviewer));$existing=hrm_pay_core_004_read_one('SELECT recovery_evidence_id FROM '.TB_PREF.'hrm_pay_core_004_recovery_evidence WHERE recovery_sha256='.db_escape($sha).' LIMIT 2 FOR UPDATE');if($existing){$id=(int)$existing['recovery_evidence_id'];if($manage)commit_transaction();return $id;}
@@ -182,7 +182,7 @@ function hrm_pay_core_004_record_recovery($result_id,$integrity_evidence_id,$rec
 
 function hrm_pay_core_004_record_archive($result_id,$integrity_evidence_id,$archive_state,$archive_locator_sha256,$archive_payload_sha256,$evidence_sha256,&$error=null)
 {
-    $error=null;$reviewer=hrm_pay_core_004_actor();$result_id=(int)$result_id;$integrity_evidence_id=(int)$integrity_evidence_id;
+    $error=null;$reviewer=current_user_id_or_zero();$result_id=(int)$result_id;$integrity_evidence_id=(int)$integrity_evidence_id;
     if($reviewer<=0||!hrm_pay_core_004_access('SA_HRM_ARCHIVE_PAY_CORE_RESULT')||!in_array($archive_state,hrm_pay_core_004_archive_states(),true)||!hrm_pay_core_004_is_sha256($archive_locator_sha256)||!hrm_pay_core_004_is_sha256($archive_payload_sha256)||!hrm_pay_core_004_is_sha256($evidence_sha256)){$error='archive_input_invalid';return false;}
     $manage=hrm_pay_core_004_manage_transaction();if($manage)begin_transaction();$integrity=hrm_pay_core_004_verified_integrity($integrity_evidence_id,$result_id);if(!$integrity){if($manage)cancel_transaction();$error='verified_integrity_required';return false;}
     $sha=hrm_pay_core_004_hash(array('result_id'=>$result_id,'integrity_evidence_id'=>$integrity_evidence_id,'archive_state'=>$archive_state,'archive_locator_sha256'=>$archive_locator_sha256,'archive_payload_sha256'=>$archive_payload_sha256,'evidence_sha256'=>$evidence_sha256,'reviewer_id'=>$reviewer));$existing=hrm_pay_core_004_read_one('SELECT archive_evidence_id FROM '.TB_PREF.'hrm_pay_core_004_archive_evidence WHERE archive_sha256='.db_escape($sha).' LIMIT 2 FOR UPDATE');if($existing){$id=(int)$existing['archive_evidence_id'];if($manage)commit_transaction();return $id;}

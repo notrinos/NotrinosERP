@@ -1,5 +1,6 @@
 <?php
 /** PAY-RULE-003 read-only legacy inventory and quarantined snapshot custody. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(__DIR__.'/decision_rate_artifact_store.inc');
 
 if (!defined('HRM_PAY_RULE_003_LEGACY_IMPORT_VERSION'))
@@ -145,7 +146,7 @@ function hrm_pay_rule_003_persist_legacy_candidate($snapshot)
         || !hrm_pay_rule_003_store_user_can('SA_HRM_MANAGE_PAY_RULE_ARTIFACT'))
         return false;
 
-    $actor = hrm_pay_rule_003_store_actor_id();
+    $actor = current_user_id_or_zero();
     if ($actor <= 0)
         return false;
     $diagnostics_json = hrm_pay_rule_003_canonical_json($snapshot['diagnostics']);

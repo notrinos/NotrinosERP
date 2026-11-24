@@ -1,4 +1,5 @@
 <?php
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/lifecycle_rehire_evidence_db.inc');
 /**********************************************************************
     Copyright (C) NotrinosERP.
@@ -30,16 +31,6 @@ function hrm_employment_table_ready()
     // encode the placeholder and make an installed foundation table appear absent.
     $result = db_query("SHOW TABLES LIKE '".TB_PREF.db_escape_function('hrm_employments')."'");
     return $result && db_num_rows($result) === 1;
-}
-
-/** @return int */
-function hrm_employment_actor_id()
-{
-    if (function_exists('user_id'))
-        return (int)user_id();
-    if (isset($_SESSION['wa_current_user']) && isset($_SESSION['wa_current_user']->user))
-        return (int)$_SESSION['wa_current_user']->user;
-    return 0;
 }
 
 /**
@@ -431,7 +422,7 @@ function create_hrm_employment_from_employee($employee, $audit = true,
     ))
         return false;
 
-    $actor = hrm_employment_actor_id();
+    $actor = current_user_id_or_zero();
     $sql = "INSERT INTO ".TB_PREF."hrm_employments (worker_id,employment_sequence,"
         ."legal_entity_id,legacy_employee_number,legacy_current,start_date,end_date,"
         ."employment_status,termination_reason_code,interval_quality,source,created_by) VALUES ("
@@ -532,7 +523,7 @@ function synchronize_hrm_employment_from_employee($employee)
         ))
         return false;
 
-    $actor = hrm_employment_actor_id();
+    $actor = current_user_id_or_zero();
     $sql = "UPDATE ".TB_PREF."hrm_employments SET "
         ."start_date=".($projection['start_date'] === null ? 'NULL'
             : db_escape($projection['start_date'])).","
@@ -581,7 +572,7 @@ function execute_hrm_employment_suspension($employee_number, $employment_id, $wo
         || ($current['start_date'] !== null && $current['start_date'] !== ''
             && strcmp($effective_date, (string)$current['start_date']) < 0))
         return false;
-    $actor = hrm_employment_actor_id();
+    $actor = current_user_id_or_zero();
     if (!db_query("UPDATE ".TB_PREF."hrm_employments SET employment_status='suspended',"
         ."source='runtime_suspension',updated_at=UTC_TIMESTAMP(),updated_by=".(int)$actor
         ." WHERE employment_id=".$employment_id." AND worker_id=".$worker_id
@@ -621,7 +612,7 @@ function execute_hrm_employment_reinstatement($employee_number, $employment_id, 
         || ($current['start_date'] !== null && $current['start_date'] !== ''
             && strcmp($effective_date, (string)$current['start_date']) < 0))
         return false;
-    $actor = hrm_employment_actor_id();
+    $actor = current_user_id_or_zero();
     if (!db_query("UPDATE ".TB_PREF."hrm_employments SET employment_status='active',"
         ."source='runtime_reinstatement',updated_at=UTC_TIMESTAMP(),updated_by=".(int)$actor
         ." WHERE employment_id=".$employment_id." AND worker_id=".$worker_id
@@ -700,7 +691,7 @@ function execute_hrm_employment_termination($employee, $effective_date)
         ))
         return false;
 
-    $actor = hrm_employment_actor_id();
+    $actor = current_user_id_or_zero();
     $sql = "UPDATE ".TB_PREF."hrm_employments SET "
         ."end_date=".db_escape($projection['end_date']).","
         ."employment_status='terminated',"

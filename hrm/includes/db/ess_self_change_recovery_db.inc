@@ -1,5 +1,6 @@
 <?php
 /** HRM-ESS-001 terminal recovery semantics for bounded self-profile requests. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('execute_hrm_ess_self_profile_change'))
     include_once($path_to_root.'/hrm/includes/db/ess_self_change_executor_db.inc');
 
@@ -39,7 +40,7 @@ function hrm_ess_self_change_terminal_audit($request, $action, $from, $to, $reas
 /** Distinct authorized checker may reject a draft or approved-but-not-applied request. */
 function reject_hrm_ess_self_profile_change($request_id, $reason_code)
 {
-    $actor=hrm_ess_self_change_actor_id(); $request_id=(int)$request_id; $reason_code=(string)$reason_code;
+    $actor=current_user_id_or_zero(); $request_id=(int)$request_id; $reason_code=(string)$reason_code;
     if ($actor<=0 || $request_id<=0 || !hrm_ess_self_change_user_can_approve()
         || !hrm_ess_self_change_terminal_reason_is_valid($reason_code)) return false;
     begin_transaction();
@@ -64,7 +65,7 @@ function reject_hrm_ess_self_profile_change($request_id, $reason_code)
 /** Current-session owner may withdraw a draft or approved-but-not-applied request. */
 function cancel_hrm_ess_self_profile_change($request_id, $reason_code)
 {
-    $actor=hrm_ess_self_change_actor_id(); $request_id=(int)$request_id; $reason_code=(string)$reason_code;
+    $actor=current_user_id_or_zero(); $request_id=(int)$request_id; $reason_code=(string)$reason_code;
     if ($actor<=0 || $request_id<=0 || !hrm_ess_self_change_user_can_request()
         || !hrm_ess_self_change_terminal_reason_is_valid($reason_code)) return false;
     begin_transaction();
@@ -92,7 +93,7 @@ function cancel_hrm_ess_self_profile_change($request_id, $reason_code)
 /** Authorized internal sweep terminally expires unexecuted draft/approved requests. */
 function expire_hrm_ess_self_profile_changes($limit = 50)
 {
-    $actor=hrm_ess_self_change_actor_id(); $limit=(int)$limit;
+    $actor=current_user_id_or_zero(); $limit=(int)$limit;
     if ($actor<=0 || $limit<1 || $limit>100 || !hrm_ess_self_change_user_can_execute()) return false;
     begin_transaction();
     $result=db_query('SELECT r.* FROM '.TB_PREF."hrm_ess_self_change_requests r WHERE r.request_status IN ('draft','approved') "

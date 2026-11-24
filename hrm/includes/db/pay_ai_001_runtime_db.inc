@@ -7,6 +7,7 @@
  * never stores raw prompts, generated prose, employee identity, bank data or
  * tax data.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/includes/pay_ai_001_contract.inc');
 include_once($path_to_root.'/includes/pay_ai_001_grounding_contract.inc');
 include_once($path_to_root.'/includes/pay_ai_001_baseline_contract.inc');
@@ -49,7 +50,7 @@ function pay_ai_001_runtime_company_id()
 /** @return int */
 function pay_ai_001_runtime_actor_id()
 {
-    return function_exists('hrm_anl_001_runtime_actor_id') ? hrm_anl_001_runtime_actor_id() : 0;
+    return function_exists('current_user_id_or_zero') ? current_user_id_or_zero() : 0;
 }
 
 /** @return string|false */

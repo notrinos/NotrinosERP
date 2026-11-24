@@ -6,6 +6,7 @@
  * the current actor's latest accepted completed Training Assignment command is
  * resolved server-side and only coarse task state is returned.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_lifecycle_training_assignment_task_browser_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_training_assignment_task_browser_dependencies = array(
@@ -30,8 +31,8 @@ function hrm_lifecycle_training_assignment_task_browser_context($employee_id)
         return array_merge($base, array('status'=>'inconsistent'));
 
     $employee_id = hrm_lifecycle_training_assignment_browser_employee_id($employee_id);
-    $actor = function_exists('hrm_lifecycle_training_assignment_task_actor_id')
-        ? hrm_lifecycle_training_assignment_task_actor_id() : 0;
+    $actor = function_exists('current_user_id_or_zero')
+        ? current_user_id_or_zero() : 0;
     if ($employee_id === false || $actor <= 0)
         return array_merge($base, array('status'=>'inconsistent'));
 

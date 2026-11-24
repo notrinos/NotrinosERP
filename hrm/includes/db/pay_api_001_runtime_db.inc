@@ -1,10 +1,10 @@
 <?php
 /** PAY-API-001 governed provisioning and atomic read-rate runtime service. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/includes/pay_api_001_provisioning.inc');
 include_once($path_to_root.'/includes/pay_api_001_rate_limit.inc');
 include_once($path_to_root.'/includes/pay_api_001_contract.inc');
 
-function pay_api_001_runtime_actor(){return isset($_SESSION['wa_current_user']->user)?(int)$_SESSION['wa_current_user']->user:0;}
 function pay_api_001_runtime_company(){return isset($_SESSION['wa_current_user']->company)?pay_api_001_uint_value($_SESSION['wa_current_user']->company,true,4294967295):false;}
 function pay_api_001_runtime_require_company($company,&$error){$current=pay_api_001_runtime_company();if($current===false||$current!==pay_api_001_uint_value($company,true,4294967295)){$error='company_scope_denied';return false;}return true;}
 function pay_api_001_runtime_access($token){return function_exists('user_check_access')&&user_check_access($token);}
@@ -19,7 +19,7 @@ function pay_api_001_runtime_webhook_inbound_configuration_enabled(){ $v=pay_api
 
 function pay_api_001_create_provision_request($target_kind,$company_id,array $payload,$reason_code,&$error=null)
 {
-    $error=null;$actor=pay_api_001_runtime_actor();if($actor<=0||!pay_api_001_runtime_access('SA_HRM_MANAGE_PAY_API')){$error='access_denied';return false;}
+    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!pay_api_001_runtime_access('SA_HRM_MANAGE_PAY_API')){$error='access_denied';return false;}
     if($target_kind==='webhook_inbound_source'&&!pay_api_001_runtime_webhook_inbound_configuration_enabled()){$error='webhook_inbound_configuration_writer_disabled';return false;}
     if(pay_api_001_provisioning_webhook_target_kind($target_kind)&&!pay_api_001_runtime_webhook_configuration_enabled()){$error='webhook_configuration_writer_disabled';return false;}
     $d=pay_api_001_provisioning_target_descriptor($target_kind,$company_id,$payload);if($d===false||!pay_api_001_runtime_require_company($d['company_id'],$error))return false;$reason=pay_api_001_provisioning_token($reason_code,64);if($reason===false){$error='provision_request_invalid';return false;}
@@ -33,7 +33,7 @@ function pay_api_001_create_provision_request($target_kind,$company_id,array $pa
 
 function pay_api_001_review_provision_request($request_id,$decision_code,&$error=null)
 {
-    $error=null;$actor=pay_api_001_runtime_actor();$request_id=pay_api_001_positive_id($request_id);if($actor<=0||!pay_api_001_runtime_access('SA_HRM_REVIEW_PAY_API')||$request_id===false||!in_array($decision_code,array('approve','reject'),true)){$error='access_or_review_invalid';return false;}
+    $error=null;$actor=current_user_id_or_zero();$request_id=pay_api_001_positive_id($request_id);if($actor<=0||!pay_api_001_runtime_access('SA_HRM_REVIEW_PAY_API')||$request_id===false||!in_array($decision_code,array('approve','reject'),true)){$error='access_or_review_invalid';return false;}
     $manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();
     $r=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_provision_requests WHERE provision_request_id='.$request_id.' LIMIT 2 FOR UPDATE','could not lock PAY-API-001 provision request');if($r&&!pay_api_001_runtime_require_company($r['company_id'],$error)){if($manage)cancel_transaction();return false;}if(!$r||$actor===(int)$r['requested_by']){if($manage)cancel_transaction();$error=$r?'distinct_reviewer_required':'provision_request_missing';return false;}
     $q=db_query('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_provision_reviews WHERE provision_request_id='.$request_id.' LIMIT 2 FOR UPDATE');if(!$q||db_num_rows($q)>1){if($manage)cancel_transaction();$error='provision_review_state_invalid';return false;}
@@ -44,7 +44,7 @@ function pay_api_001_review_provision_request($request_id,$decision_code,&$error
 
 function pay_api_001_approve_provision_request($request_id,&$error=null)
 {
-    $error=null;$actor=pay_api_001_runtime_actor();$request_id=pay_api_001_positive_id($request_id);if($actor<=0||!pay_api_001_runtime_access('SA_HRM_APPROVE_PAY_API')||$request_id===false){$error='access_or_approval_invalid';return false;}
+    $error=null;$actor=current_user_id_or_zero();$request_id=pay_api_001_positive_id($request_id);if($actor<=0||!pay_api_001_runtime_access('SA_HRM_APPROVE_PAY_API')||$request_id===false){$error='access_or_approval_invalid';return false;}
     $manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();
     $r=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_provision_requests WHERE provision_request_id='.$request_id.' LIMIT 2 FOR UPDATE','could not lock PAY-API-001 request for approval');if($r&&!pay_api_001_runtime_require_company($r['company_id'],$error)){if($manage)cancel_transaction();return false;}$v=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_provision_reviews WHERE provision_request_id='.$request_id.' LIMIT 2 FOR UPDATE','could not lock PAY-API-001 review for approval');
     if(!$r||!$v||(string)$v['decision_code']!=='approve'||$actor===(int)$r['requested_by']||$actor===(int)$v['reviewed_by']){if($manage)cancel_transaction();$error='three_party_approval_required';return false;}
@@ -93,7 +93,7 @@ function pay_api_001_runtime_insert_target($kind,$company,array $p,$reviewer,$ap
 
 function pay_api_001_execute_provision_request($request_id,array $payload,&$error=null)
 {
-    $error=null;$actor=pay_api_001_runtime_actor();$request_id=pay_api_001_positive_id($request_id);if($actor<=0||!pay_api_001_runtime_access('SA_HRM_EXECUTE_PAY_API')||$request_id===false){$error='access_or_execution_invalid';return false;}
+    $error=null;$actor=current_user_id_or_zero();$request_id=pay_api_001_positive_id($request_id);if($actor<=0||!pay_api_001_runtime_access('SA_HRM_EXECUTE_PAY_API')||$request_id===false){$error='access_or_execution_invalid';return false;}
     $manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();
     $r=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_provision_requests WHERE provision_request_id='.$request_id.' LIMIT 2 FOR UPDATE','could not lock PAY-API-001 request for execution');if($r&&!pay_api_001_runtime_require_company($r['company_id'],$error)){if($manage)cancel_transaction();return false;}if($r&&$r['target_kind']==='webhook_inbound_source'&&!pay_api_001_runtime_webhook_inbound_configuration_enabled()){if($manage)cancel_transaction();$error='webhook_inbound_configuration_writer_disabled';return false;}if($r&&pay_api_001_provisioning_webhook_target_kind($r['target_kind'])&&!pay_api_001_runtime_webhook_configuration_enabled()){if($manage)cancel_transaction();$error='webhook_configuration_writer_disabled';return false;}$v=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_provision_reviews WHERE provision_request_id='.$request_id.' LIMIT 2 FOR UPDATE','could not lock PAY-API-001 review for execution');$a=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_provision_approvals WHERE provision_request_id='.$request_id.' LIMIT 2 FOR UPDATE','could not lock PAY-API-001 approval for execution');
     $d=$r&&$v&&$a?pay_api_001_provision_execution_gate($r,$v,$a,$actor,$payload):false;if($d===false){if($manage)cancel_transaction();$error='provision_execution_gate_denied';return false;}

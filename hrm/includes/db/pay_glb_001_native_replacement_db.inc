@@ -1,5 +1,6 @@
 <?php
 /** Full replacement native production with actual approved CORE-007 lineage; default-disabled. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 require_once dirname(__FILE__).'/pay_glb_001_native_selection_db.inc';
 require_once dirname(__FILE__).'/pay_core_007_governance_db.inc';
 require_once dirname(dirname(__FILE__)).'/payroll/pay_glb_001_native_retro_storage_adapter.inc';
@@ -117,7 +118,7 @@ function pay_glb_001_native_retro_record_deltas($context_id,array $plan,$selecti
     if(!pay_glb_001_native_selection_begin($error))return false;
     $prepared=pay_glb_001_native_retro_delta_prepare($context_id,$plan,$selection_id,$key,$error);
     if($prepared===false || pay_glb_001_native_producer_admit($prepared['request'],$error)===false){pay_glb_001_native_producer_finish(false,$error);return false;}
-    $request=$prepared['request'];$source=$prepared['source'];$d=$source['delta']['core007_deltas'];$actor=hrm_pay_core_007_actor();
+    $request=$prepared['request'];$source=$prepared['source'];$d=$source['delta']['core007_deltas'];$actor=current_user_id_or_zero();
     $owned=pay_glb_001_native_producer_command('native.retro_delta',pay_glb_001_native_producer_scope_hash($request),$key,$error);
     if($owned===false){pay_glb_001_native_producer_finish(false,$error);return false;}
     $count=hrm_pay_core_004_read_one('SELECT COUNT(*) n FROM '.TB_PREF.'hrm_pay_retro_deltas WHERE context_id='.(int)$context_id.' FOR UPDATE');
@@ -390,7 +391,7 @@ function pay_glb_001_native_replacement_complete($operation_id,$relationship,&$e
     $source=null;foreach($op['context']['sources'] as $s)if($s['payroll_relationship_id']===$relationship)$source=$s;
     if($source===null || $source['retro']===null){pay_glb_001_native_producer_finish(false,$error);$error='native_retro_owned_correction_required';return false;}
     $member=pay_glb_001_native_producer_command('native.member',pay_glb_001_native_producer_scope_hash($op['context']),pay_glb_001_native_producer_member_key($op,$relationship),$error);
-    $md=is_array($member)?pay_glb_001_native_producer_command_valid($member,$op['context']['request_sha256'],hrm_pay_core_007_actor(),$error):false;
+    $md=is_array($member)?pay_glb_001_native_producer_command_valid($member,$op['context']['request_sha256'],current_user_id_or_zero(),$error):false;
     $lineage=$md===false?false:pay_glb_001_native_replacement_lineage_proof($op,$source,$md['effect_id'],$error);
     $id=$lineage===false?false:hrm_pay_core_007_record_execution((int)$source['retro']['retro_plan_id'],(int)$md['effect_id'],null,$error);
     $row=$id===false?false:hrm_pay_core_007_one('SELECT * FROM '.TB_PREF.'hrm_pay_retro_executions WHERE execution_id='.(int)$id.' LIMIT 2 FOR UPDATE');
@@ -398,7 +399,7 @@ function pay_glb_001_native_replacement_complete($operation_id,$relationship,&$e
     $key=pay_glb_001_native_producer_hash('retro-complete-key',array('member_command_sha256'=>$member['command_sha256'],'retro_plan_id'=>$source['retro']['retro_plan_id']));
     $old=pay_glb_001_native_producer_command('native.retro_complete',pay_glb_001_native_producer_scope_hash($op['context']),$key,$error);
     if($old===false){pay_glb_001_native_producer_finish(false,$error);return false;}
-    if($old!==null){$cd=pay_glb_001_native_producer_command_valid($old,$op['context']['request_sha256'],hrm_pay_core_007_actor(),$error);
+    if($old!==null){$cd=pay_glb_001_native_producer_command_valid($old,$op['context']['request_sha256'],current_user_id_or_zero(),$error);
         if($cd===false || $cd['effect_id']!==(string)$id || $cd['effect_sha256']!==$row['execution_sha256']){pay_glb_001_native_producer_finish(false,$error);return false;}
     }else{
         $receipt=pay_glb_001_native_producer_record_command('native.retro_complete',$op['context'],$key,'core007_execution',(string)$id,$row['execution_sha256'],

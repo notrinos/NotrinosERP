@@ -7,14 +7,7 @@
     email, login id, display name or any other profile claim, and it never
     activates a browser/PHP session.
 ***********************************************************************/
-
-/** Resolve the authenticated administrator without trusting caller identity. */
-function federation_first_link_actor_id()
-{
-    if (!isset($_SESSION['wa_current_user']) || !isset($_SESSION['wa_current_user']->user))
-        return 0;
-    return (int)$_SESSION['wa_current_user']->user;
-}
+require_once(__DIR__.'/../includes/value_helpers.inc');
 
 /** Reuse the existing user-administration authority; no federation grant is added. */
 function federation_first_link_authorized($company)
@@ -23,7 +16,7 @@ function federation_first_link_authorized($company)
         return false;
     if (!function_exists('user_company') || (int)user_company() !== (int)$company)
         return false;
-    return federation_first_link_actor_id() > 0;
+    return current_user_id_or_zero() > 0;
 }
 
 /** Normalize only explicit non-claim identifiers and an optional deterministic clock. */
@@ -175,7 +168,7 @@ function federation_create_first_external_subject_link($company, $verifier_decis
         if (!db_query($sql,'could not create PAY-SEC-004 explicit first link'))
             break;
         $link_id=function_exists('db_insert_id')?(int)db_insert_id():0;
-        if ($link_id<=0 || !federation_first_link_audit($request['company'],$row,$link_id,federation_first_link_actor_id()))
+        if ($link_id<=0 || !federation_first_link_audit($request['company'],$row,$link_id,current_user_id_or_zero()))
             break;
         commit_transaction();
         $committed=true;$result_value=array('external_subject_link_id'=>$link_id,'provider_id'=>(int)$row['provider_id'],

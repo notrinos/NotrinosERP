@@ -25,6 +25,7 @@
  * No `budget_trans`, `gl_trans`, document, approval or HRM row is ever written, re-pointed or backfilled by this authority.
  * PHP 5.6 compatible syntax. Dates are SQL `Y-m-d`.
  */
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 
 /** Largest number of lines one version may hold. */
 function dimension_budget_version_max_lines()
@@ -64,12 +65,6 @@ function dimension_budget_version_fail(&$result, $code, $text)
 		$result['codes'][] = $code;
 	$result['errors'][] = $text;
 	return $result;
-}
-
-/** Identity of the authenticated session. */
-function dimension_budget_version_actor()
-{
-	return isset($_SESSION['wa_current_user']->user) ? (int)$_SESSION['wa_current_user']->user : 0;
 }
 
 /** A fresh result skeleton for a mutating or answering call (it starts ok; every refusal goes through dimension_budget_version_fail). */
@@ -421,7 +416,7 @@ function dimension_budget_version_capture_baseline($fiscal_year, $commentary = '
 	$result = dimension_budget_version_result(array('version_id' => 0, 'version_no' => 0, 'line_count' => 0));
 	if (!dimension_budget_version_has_access('SA_BUDGETENTRY'))
 		return dimension_budget_version_fail($result, 'permission_denied', _('You are not allowed to capture budget baselines.'));
-	$actor = dimension_budget_version_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
 		return dimension_budget_version_fail($result, 'permission_denied', _('The proposing user could not be identified.'));
 	$commentary = dimension_budget_version_check_commentary($commentary, false, $result);
@@ -584,7 +579,7 @@ function dimension_budget_version_propose_revision($fiscal_year, $basis_version_
 	$result = dimension_budget_version_result(array('duplicate' => false, 'version_id' => 0, 'version_no' => 0, 'changed' => 0));
 	if (!dimension_budget_version_has_access('SA_BUDGETENTRY'))
 		return dimension_budget_version_fail($result, 'permission_denied', _('You are not allowed to propose budget revisions.'));
-	$actor = dimension_budget_version_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
 		return dimension_budget_version_fail($result, 'permission_denied', _('The proposing user could not be identified.'));
 	$commentary = dimension_budget_version_check_commentary($commentary, true, $result);
@@ -697,7 +692,7 @@ function dimension_budget_version_decide($version_id, $decision, $note = '')
 		return dimension_budget_version_fail($result, 'permission_denied', _('You are not allowed to decide budget versions.'));
 	if (!in_array($decision, array('approve', 'reject'), true))
 		return dimension_budget_version_fail($result, 'invalid_decision', _('The decision must be approve or reject.'));
-	$actor = dimension_budget_version_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
 		return dimension_budget_version_fail($result, 'permission_denied', _('The deciding user could not be identified.'));
 	$note = is_string($note) ? trim($note) : '';
@@ -784,7 +779,7 @@ function dimension_budget_version_activate($fiscal_year, $version_id, $reason)
 	$result = dimension_budget_version_result(array('duplicate' => false, 'version_id' => 0));
 	if (!dimension_budget_version_has_access('SA_BUDGETENTRY'))
 		return dimension_budget_version_fail($result, 'permission_denied', _('You are not allowed to change the active budget comparison.'));
-	$actor = dimension_budget_version_actor();
+	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
 		return dimension_budget_version_fail($result, 'permission_denied', _('The acting user could not be identified.'));
 	$reason = is_string($reason) ? trim($reason) : '';
