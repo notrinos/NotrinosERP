@@ -1,4 +1,5 @@
 <?php
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 $page_security = 'SA_HRM_ESS_VIEW_SELF';
 $path_to_root = '../..';
 include($path_to_root.'/includes/session.inc');
@@ -35,7 +36,7 @@ if ($message !== null)
     hrm_ess_002_ui_status($message, $is_error);
 hrm_ess_002_ui_table(_('Reviewed and approved time'), array(_('Date'), _('Minutes'), _('Status')), is_array($time_rows) ? $time_rows : array(), array('work_date', 'duration_minutes', 'status_token'));
 hrm_ess_002_ui_table(_('Overtime requests'), array(_('Date'), _('Hours'), _('Status')), is_array($request_rows) ? $request_rows : array(), array('date', 'hours', 'status'));
-if (hrm_ess_002_access('SA_HRM_ESS_REQUEST_TIME')) {
+if (current_user_has_access('SA_HRM_ESS_REQUEST_TIME')) {
     $nonce = hrm_ess_002_issue_action_nonce('overtime');
     $types = get_overtime_types(false);
     echo '<h2>'._('Request overtime').'</h2><form class="ess2-form" method="post">';

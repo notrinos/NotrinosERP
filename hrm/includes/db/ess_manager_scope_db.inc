@@ -1,12 +1,8 @@
 <?php
 /** HRM-ESS-001 assignment-scoped manager and dated delegation resolver. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('get_hrm_ess_current_self_scope'))
     include_once($path_to_root.'/hrm/includes/db/ess_self_scope_db.inc');
-
-function hrm_ess_manager_scope_has_area($area)
-{
-    return function_exists('user_check_access') && user_check_access($area);
-}
 
 function hrm_ess_manager_scope_normalize_date($as_of)
 {
@@ -143,7 +139,7 @@ function hrm_ess_active_delegated_manager_workers($delegate_worker_id, $as_of)
 function get_hrm_ess_current_manager_scope($as_of)
 {
     $as_of = hrm_ess_manager_scope_normalize_date($as_of);
-    if ($as_of === false || !hrm_ess_manager_scope_has_area('SA_HRM_ESS_VIEW_TEAM'))
+    if ($as_of === false || !current_user_has_access('SA_HRM_ESS_VIEW_TEAM'))
         return false;
     $self = get_hrm_ess_current_self_scope();
     if (!is_array($self) || empty($self['worker_id']))

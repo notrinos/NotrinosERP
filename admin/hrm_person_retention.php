@@ -5,6 +5,7 @@
  * Usage:
  *   php admin/hrm_person_retention.php anonymize --company=0 --person=123 --retained-until=2030-12-31 --policy-ref=approved_schedule_v1 --reason-code=approved_retention_schedule
  */
+require_once(__DIR__.'/../includes/cli_command_helpers.inc');
 if (PHP_SAPI !== 'cli') {
     if (!headers_sent()) {
         http_response_code(404);
@@ -21,19 +22,8 @@ function hrm_person_retention_cli_exit($result)
         : array('ok' => false, 'code' => 'retention_execution_failed'))."\n");
     exit($ok ? 0 : 1);
 }
-function hrm_person_retention_cli_options($arguments)
-{
-    $options = array();
-    foreach ($arguments as $argument) {
-        if (!preg_match('/^--([a-z-]+)=(.*)$/', (string)$argument, $matches)
-            || isset($options[$matches[1]]))
-            return false;
-        $options[$matches[1]] = $matches[2];
-    }
-    return $options;
-}
 $command = isset($argv[1]) ? (string)$argv[1] : '';
-$options = hrm_person_retention_cli_options(array_slice($argv, 2));
+$options = cli_command_options(array_slice($argv, 2));
 if ($command !== 'anonymize' || $options === false || count($options) !== 5
     || !isset($options['company'], $options['person'], $options['retained-until'],
         $options['policy-ref'], $options['reason-code'])

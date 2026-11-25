@@ -56,12 +56,6 @@ function dimension_driver_residual_policies()
 	return array('block', 'dimension');
 }
 
-/** Authorization check that denies when the session helper is unavailable. */
-function dimension_driver_has_access($area)
-{
-	return function_exists('user_check_access') && user_check_access($area);
-}
-
 /**
  * Parse a non-negative integer (an integer or a canonical digit string).
  *
@@ -312,13 +306,13 @@ function dimension_driver_intact($driver)
 function dimension_driver_submit($spec)
 {
 	$result = array('ok' => false, 'duplicate' => false, 'driver_id' => 0, 'version_no' => 0, 'errors' => array(), 'codes' => array());
-	if (!dimension_driver_has_access('SA_DIMENSION'))
+	if (!current_user_has_access('SA_DIMENSION'))
 		return dimension_allocation_fail($result, 'permission_denied', _('You are not allowed to propose allocation drivers.'));
 	$normal = dimension_driver_normalize_spec($spec);
 	if (!$normal['ok'])
 		return array_merge($result, array('errors' => $normal['errors'], 'codes' => $normal['codes']));
 	$spec = $normal['spec'];
-	if ($spec['source_kind'] === 'payroll_aggregate' && !dimension_driver_has_access('SA_HRM_VIEW_PAY_GL'))
+	if ($spec['source_kind'] === 'payroll_aggregate' && !current_user_has_access('SA_HRM_VIEW_PAY_GL'))
 		return dimension_allocation_fail($result, 'permission_denied', _('Payroll aggregates need the payroll evidence permission.'));
 	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
@@ -389,7 +383,7 @@ function dimension_driver_submit($spec)
 function dimension_driver_decide($driver_id, $decision)
 {
 	$result = array('ok' => false, 'status' => '', 'errors' => array(), 'codes' => array());
-	if (!dimension_driver_has_access('SA_DIMENSION'))
+	if (!current_user_has_access('SA_DIMENSION'))
 		return dimension_allocation_fail($result, 'permission_denied', _('You are not allowed to decide allocation drivers.'));
 	if (!in_array($decision, array('approve', 'reject'), true))
 		return dimension_allocation_fail($result, 'invalid_decision', _('The decision must be approve or reject.'));
@@ -403,7 +397,7 @@ function dimension_driver_decide($driver_id, $decision)
 		cancel_transaction();
 		return dimension_allocation_fail($result, 'not_pending', _('Only a proposed driver version can be decided.'));
 	}
-	if ($driver['source_kind'] === 'payroll_aggregate' && !dimension_driver_has_access('SA_HRM_VIEW_PAY_GL')) {
+	if ($driver['source_kind'] === 'payroll_aggregate' && !current_user_has_access('SA_HRM_VIEW_PAY_GL')) {
 		cancel_transaction();
 		return dimension_allocation_fail($result, 'permission_denied', _('Payroll aggregates need the payroll evidence permission.'));
 	}
@@ -684,7 +678,7 @@ function dimension_driver_prepare($run)
 function dimension_driver_preview($request)
 {
 	$result = array('ok' => false, 'errors' => array(), 'codes' => array(), 'weights' => null, 'driver' => null, 'preview' => null);
-	if (!dimension_driver_has_access('SA_JOURNALENTRY'))
+	if (!current_user_has_access('SA_JOURNALENTRY'))
 		return dimension_allocation_fail($result, 'permission_denied', _('You are not allowed to preview allocation runs.'));
 	$normal = dimension_driver_normalize_run($request);
 	if (!$normal['ok'])
@@ -719,7 +713,7 @@ function dimension_driver_submit_run($request)
 {
 	$result = array('ok' => false, 'state' => 'refused', 'duplicate' => false, 'run_id' => 0, 'trans_no' => 0, 'fully_allocated' => false,
 		'errors' => array(), 'codes' => array());
-	if (!dimension_driver_has_access('SA_JOURNALENTRY'))
+	if (!current_user_has_access('SA_JOURNALENTRY'))
 		return dimension_allocation_fail($result, 'permission_denied', _('You are not allowed to run allocations.'));
 	$normal = dimension_driver_normalize_run($request);
 	if (!$normal['ok'])

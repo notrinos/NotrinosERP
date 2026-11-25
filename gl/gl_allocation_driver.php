@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once(__DIR__.'/../includes/value_helpers.inc');
 /**
  * DIM-ALC-002: measured allocation drivers and driver-based allocation runs.
  *
@@ -187,7 +188,7 @@ $inverse_id = find_submit('Inverse');
 if ($inverse_id != -1 && check_csrf_token()) {
 	if (!is_date(get_post('inverse_date', '')))
 		display_error(_('The inverse date is invalid.'));
-	elseif (!dimension_driver_has_access('SA_JOURNALENTRY'))
+	elseif (!current_user_has_access('SA_JOURNALENTRY'))
 		display_error(_('You are not allowed to reverse allocations.'));
 	else {
 		$outcome = dimension_allocation_submit_inverse($inverse_id, date2sql($_POST['inverse_date']));

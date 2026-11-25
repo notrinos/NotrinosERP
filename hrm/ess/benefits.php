@@ -1,4 +1,5 @@
 <?php
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 $page_security = 'SA_HRM_ESS_VIEW_SELF';
 $path_to_root = '../..';
 include($path_to_root.'/includes/session.inc');
@@ -55,7 +56,7 @@ hrm_ess_002_emit_shell_start(_('My Benefits'), 'benefits');
 if ($message !== null)
     hrm_ess_002_ui_status($message, $is_error);
 hrm_ess_002_ui_table(_('Eligible benefits'), array(_('Plan'), _('Version'), _('Coverage basis'), _('Election'), _('Effective from')), is_array($rows) ? $rows : array(), array('plan_code', 'version_token', 'coverage_basis_code', 'enrollment_state', 'effective_from'));
-if (hrm_ess_002_access('SA_HRM_ESS_ENROLL_BENEFITS') && hrm_ess_002_access('SA_HRM_ENROLL_BENEFITS') && $available_windows) {
+if (current_user_has_access('SA_HRM_ESS_ENROLL_BENEFITS') && current_user_has_access('SA_HRM_ENROLL_BENEFITS') && $available_windows) {
     $nonce = hrm_ess_002_issue_action_nonce('benefit');
     echo '<h2>'._('Record benefit election').'</h2><form class="ess2-form" method="post">';
     echo '<input type="hidden" name="_token" value="'.hrm_ess_002_h(ensure_csrf_token()).'">';

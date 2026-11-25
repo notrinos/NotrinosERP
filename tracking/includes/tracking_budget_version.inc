@@ -45,12 +45,6 @@ function dimension_budget_version_max_amount()
 	return 1.0E+11;
 }
 
-/** Authorization check that denies when the session helper is unavailable. */
-function dimension_budget_version_has_access($area)
-{
-	return function_exists('user_check_access') && user_check_access($area);
-}
-
 /** Quote free text for the evidence tables without the page-oriented HTML encoding of `db_escape()`. */
 function dimension_budget_version_quote($value)
 {
@@ -407,7 +401,7 @@ function dimension_budget_version_check_commentary($text, $required, &$result)
 function dimension_budget_version_capture_baseline($fiscal_year, $commentary = '')
 {
 	$result = dimension_budget_version_result(array('version_id' => 0, 'version_no' => 0, 'line_count' => 0));
-	if (!dimension_budget_version_has_access('SA_BUDGETENTRY'))
+	if (!current_user_has_access('SA_BUDGETENTRY'))
 		return dimension_budget_version_fail($result, 'permission_denied', _('You are not allowed to capture budget baselines.'));
 	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
@@ -570,7 +564,7 @@ function dimension_budget_version_check_references($changes, &$result)
 function dimension_budget_version_propose_revision($fiscal_year, $basis_version_id, $changes, $commentary)
 {
 	$result = dimension_budget_version_result(array('duplicate' => false, 'version_id' => 0, 'version_no' => 0, 'changed' => 0));
-	if (!dimension_budget_version_has_access('SA_BUDGETENTRY'))
+	if (!current_user_has_access('SA_BUDGETENTRY'))
 		return dimension_budget_version_fail($result, 'permission_denied', _('You are not allowed to propose budget revisions.'));
 	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
@@ -681,7 +675,7 @@ function dimension_budget_version_propose_revision($fiscal_year, $basis_version_
 function dimension_budget_version_decide($version_id, $decision, $note = '')
 {
 	$result = dimension_budget_version_result(array('status' => ''));
-	if (!dimension_budget_version_has_access('SA_BUDGETENTRY'))
+	if (!current_user_has_access('SA_BUDGETENTRY'))
 		return dimension_budget_version_fail($result, 'permission_denied', _('You are not allowed to decide budget versions.'));
 	if (!in_array($decision, array('approve', 'reject'), true))
 		return dimension_budget_version_fail($result, 'invalid_decision', _('The decision must be approve or reject.'));
@@ -770,7 +764,7 @@ function dimension_budget_version_active($fiscal_year, $lock = false)
 function dimension_budget_version_activate($fiscal_year, $version_id, $reason)
 {
 	$result = dimension_budget_version_result(array('duplicate' => false, 'version_id' => 0));
-	if (!dimension_budget_version_has_access('SA_BUDGETENTRY'))
+	if (!current_user_has_access('SA_BUDGETENTRY'))
 		return dimension_budget_version_fail($result, 'permission_denied', _('You are not allowed to change the active budget comparison.'));
 	$actor = current_user_id_or_zero();
 	if ($actor <= 0)
@@ -832,7 +826,7 @@ function dimension_budget_version_activate($fiscal_year, $version_id, $reason)
  */
 function dimension_budget_version_recent($fiscal_year = 0, $limit = 50)
 {
-	if (!dimension_budget_version_has_access('SA_BUDGETENTRY') || dimension_budget_version_schema_ready() !== true)
+	if (!current_user_has_access('SA_BUDGETENTRY') || dimension_budget_version_schema_ready() !== true)
 		return false;
 	$rows = db_query('SELECT * FROM '.TB_PREF.'dimension_budget_versions'.($fiscal_year ? ' WHERE fiscal_year='.(int)$fiscal_year : '')
 		.' ORDER BY fiscal_year DESC, version_no DESC LIMIT '.(int)$limit);
@@ -853,7 +847,7 @@ function dimension_budget_version_recent($fiscal_year = 0, $limit = 50)
  */
 function dimension_budget_version_activations($fiscal_year = 0, $limit = 50)
 {
-	if (!dimension_budget_version_has_access('SA_BUDGETENTRY') || dimension_budget_version_schema_ready() !== true)
+	if (!current_user_has_access('SA_BUDGETENTRY') || dimension_budget_version_schema_ready() !== true)
 		return false;
 	$rows = db_query('SELECT * FROM '.TB_PREF.'dimension_budget_activations'.($fiscal_year ? ' WHERE fiscal_year='.(int)$fiscal_year : '')
 		.' ORDER BY activation_id DESC LIMIT '.(int)$limit);
@@ -880,7 +874,7 @@ function dimension_budget_version_compare($left_id, $right_id, $limit = 500)
 {
 	$result = dimension_budget_version_result(array('counts' => array('same' => 0, 'changed' => 0, 'added' => 0, 'removed' => 0, 'zero_vs_absent' => 0),
 		'rows' => array(), 'truncated' => false));
-	if (!dimension_budget_version_has_access('SA_BUDGETENTRY'))
+	if (!current_user_has_access('SA_BUDGETENTRY'))
 		return dimension_budget_version_fail($result, 'permission_denied', _('You are not allowed to compare budget versions.'));
 	if (dimension_budget_version_schema_ready() !== true)
 		return dimension_budget_version_fail($result, 'schema_missing', _('The budget version tables are not installed. Upgrade the company database first.'));

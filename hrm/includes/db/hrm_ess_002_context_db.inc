@@ -1,5 +1,6 @@
 <?php
 /** HRM-ESS-002 server-derived self and manager/team context. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/hrm/includes/hrm_ess_002_contract.inc');
 include_once($path_to_root.'/hrm/includes/db/ess_self_scope_db.inc');
 include_once($path_to_root.'/hrm/includes/db/ess_manager_scope_db.inc');
@@ -13,7 +14,7 @@ function get_hrm_ess_002_current_self_context($as_of=null){
 function hrm_ess_002_self_matches_employee($employee_id,$as_of=null){$c=get_hrm_ess_002_current_self_context($as_of);return is_array($c)&&hash_equals((string)$c['employee_id'],(string)$employee_id);}
 function hrm_ess_002_self_matches_assignment($assignment_id,$as_of=null){$c=get_hrm_ess_002_current_self_context($as_of);return is_array($c)&&(int)$c['assignment_id']===(int)$assignment_id;}
 function get_hrm_ess_002_current_manager_scope($as_of,$capability='team_view'){
- if(!hrm_ess_002_capability_valid($capability)||!hrm_ess_002_access('SA_HRM_ESS_VIEW_TEAM'))return false;
+ if(!hrm_ess_002_capability_valid($capability)||!current_user_has_access('SA_HRM_ESS_VIEW_TEAM'))return false;
  $as_of=hrm_ess_002_date($as_of);if($as_of===false||$as_of!==hrm_ess_002_today())return false;$self=get_hrm_ess_current_self_scope();if(!is_array($self))return false;
  $actor=(int)$self['worker_id'];$out=array();$direct=hrm_ess_direct_team_scope_for_worker($actor,$as_of);if($direct===false)return false;
  foreach($direct as $row){$row['scope_origin']='direct';$row['delegation_id']=null;$row['represented_manager_worker_id']=$actor;$out[$row['worker_id'].':'.$row['assignment_id']]=$row;}

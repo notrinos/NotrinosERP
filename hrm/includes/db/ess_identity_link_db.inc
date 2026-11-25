@@ -12,23 +12,18 @@ require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('append_domain_audit_event'))
     include_once($path_to_root.'/includes/db/domain_audit_db.inc');
 
-function hrm_ess_identity_link_has_area($area)
-{
-    return function_exists('user_check_access') && user_check_access($area);
-}
-
 function hrm_ess_identity_link_user_can_request()
 {
-    return hrm_ess_identity_link_has_area('SA_EMPLOYEE')
-        && hrm_ess_identity_link_has_area('SA_HRM_VIEW_IDENTITY_DETAILS')
-        && hrm_ess_identity_link_has_area('SA_HRM_MANAGE_ESS_IDENTITY_LINK');
+    return current_user_has_access('SA_EMPLOYEE')
+        && current_user_has_access('SA_HRM_VIEW_IDENTITY_DETAILS')
+        && current_user_has_access('SA_HRM_MANAGE_ESS_IDENTITY_LINK');
 }
 
 function hrm_ess_identity_link_user_can_approve()
 {
-    return hrm_ess_identity_link_has_area('SA_EMPLOYEE')
-        && hrm_ess_identity_link_has_area('SA_HRM_VIEW_IDENTITY_DETAILS')
-        && hrm_ess_identity_link_has_area('SA_HRM_APPROVE_ESS_IDENTITY_LINK');
+    return current_user_has_access('SA_EMPLOYEE')
+        && current_user_has_access('SA_HRM_VIEW_IDENTITY_DETAILS')
+        && current_user_has_access('SA_HRM_APPROVE_ESS_IDENTITY_LINK');
 }
 
 function hrm_ess_identity_link_digest_is_valid($digest)
