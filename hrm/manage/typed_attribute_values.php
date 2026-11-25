@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-007 single-subject governed Typed Attribute value production route. */
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 $page_security = 'SA_HRM_VIEW_TYPED_ATTRIBUTE_VALUE';
 $path_to_root = '../..';
 include($path_to_root.'/includes/session.inc');
@@ -21,7 +22,7 @@ $action = isset($_POST['route_action']) ? (string)$_POST['route_action'] : '';
 $subject_type = hrm_typed_attribute_browser_subject_type(
     isset($_POST['subject_type']) ? (string)$_POST['subject_type'] : 'worker');
 $subject_id_raw = isset($_POST['subject_id']) ? (string)$_POST['subject_id'] : '';
-$subject_id = hrm_typed_attribute_value_positive_id($subject_id_raw, false);
+$subject_id = parse_positive_integer_strict($subject_id_raw, false);
 $message = '';
 $loaded = false;
 

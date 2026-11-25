@@ -29,8 +29,8 @@ function hrm_identifier_supersession_valid_date($value, $allow_null = true)
 function hrm_identifier_supersession_action_hash($company, $predecessor_id, $predecessor_row_version,
     $identifier_type, $issuing_jurisdiction, $lookup_token, $valid_to)
 {
-    $predecessor_id = hrm_identifier_verification_request_positive_int($predecessor_id);
-    $predecessor_row_version = hrm_identifier_verification_request_positive_int($predecessor_row_version);
+    $predecessor_id = parse_positive_integer_strict($predecessor_id);
+    $predecessor_row_version = parse_positive_integer_strict($predecessor_row_version);
     $identifier_type = is_string($identifier_type) && array_key_exists($identifier_type, hrm_person_identifier_field_map())
         ? $identifier_type : false;
     $issuing_jurisdiction = hrm_person_sensitive_issuing_jurisdiction($issuing_jurisdiction, false);
@@ -49,7 +49,7 @@ function hrm_identifier_supersession_action_hash($company, $predecessor_id, $pre
 
 function hrm_identifier_supersession_assurance_event_for_update($session_id, $action_hash)
 {
-    if ((int)$session_id <= 0 || !federation_assurance_consumer_hex64($action_hash)) return false;
+    if ((int)$session_id <= 0 || !is_sha256_hex($action_hash)) return false;
     $result = db_query("SELECT assurance_event_id,session_id,assurance_level,assurance_method,action_class,action_hash,issued_at,expires_at,consumed_at FROM "
         .TB_PREF."user_session_assurance_events WHERE session_id=".(int)$session_id." AND action_class="
         .db_escape(HRM_IDENTIFIER_SUPERSESSION_ACTION_CLASS)." AND action_hash=".db_escape($action_hash)
@@ -62,7 +62,7 @@ function hrm_identifier_supersession_assurance_event_for_update($session_id, $ac
 
 function hrm_identifier_supersession_consume_assurance($company, $action_hash, $now_epoch)
 {
-    $session_id = federation_assurance_consumer_current_session_id();
+    $session_id = current_security_session_id_or_zero();
     if ($session_id <= 0) return false;
     $custody = federation_assurance_consumer_custody_for_update($session_id);
     if (!federation_assurance_consumer_current_custody_valid($custody, $now_epoch, true)) return false;
@@ -102,8 +102,8 @@ function hrm_identifier_supersession_consume_assurance($company, $action_hash, $
 function supersede_hrm_person_identifier($predecessor_id, $predecessor_row_version, $new_value,
     $issuing_jurisdiction, $valid_to = null, $now_epoch = null)
 {
-    $predecessor_id = hrm_identifier_verification_request_positive_int($predecessor_id);
-    $predecessor_row_version = hrm_identifier_verification_request_positive_int($predecessor_row_version);
+    $predecessor_id = parse_positive_integer_strict($predecessor_id);
+    $predecessor_row_version = parse_positive_integer_strict($predecessor_row_version);
     $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     $now_epoch = $now_epoch === null ? time() : (int)$now_epoch;
@@ -206,8 +206,8 @@ function supersede_hrm_person_identifier($predecessor_id, $predecessor_row_versi
 function hrm_identifier_supersession_browser_predecessor($employee_ref, $identifier_id, $row_version, $allow_superseded = false)
 {
     if (!hrm_identifier_verification_request_permission() || !defined('TB_PREF')) return false;
-    $identifier_id = hrm_identifier_verification_request_positive_int($identifier_id);
-    $row_version = hrm_identifier_verification_request_positive_int($row_version);
+    $identifier_id = parse_positive_integer_strict($identifier_id);
+    $row_version = parse_positive_integer_strict($row_version);
     $column = is_numeric($employee_ref) ? 'employee_number' : 'employee_id';
     $employee = is_numeric($employee_ref) ? (int)$employee_ref : trim((string)$employee_ref);
     if ($identifier_id === false || $row_version === false

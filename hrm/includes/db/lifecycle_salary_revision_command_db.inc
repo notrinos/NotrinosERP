@@ -56,16 +56,6 @@ function hrm_lifecycle_salary_revision_permission()
     return function_exists('user_check_access') && user_check_access('SA_SALARYREVISION');
 }
 
-function hrm_lifecycle_salary_revision_today_sql()
-{
-    if (function_exists('Today') && function_exists('date2sql')) {
-        $today = date2sql(Today());
-        if (parse_iso_calendar_date($today) !== false)
-            return $today;
-    }
-    return date('Y-m-d');
-}
-
 /** Canonical positive decimal used in request hashes and draft custody. */
 function hrm_lifecycle_salary_revision_amount($value)
 {
@@ -335,7 +325,7 @@ function submit_hrm_lifecycle_employee_salary_revision($employee_id, $new_salary
     $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if ($employee_id === '' || strlen($employee_id) > 20 || $new_salary === false || $effective_date === false
-        || $reason === false || $idempotency_hash === false || strcmp($effective_date, hrm_lifecycle_salary_revision_today_sql()) > 0
+        || $reason === false || $idempotency_hash === false || strcmp($effective_date, today_as_sql_date()) > 0
         || $actor <= 0 || $company < 0 || !hrm_lifecycle_salary_revision_permission()
         || !hrm_lifecycle_salary_revision_workflow_is_maker_checker()
         || !hrm_cmp_001_legacy_salary_revision_allowed($employee_id)
@@ -494,7 +484,7 @@ function execute_approved_hrm_lifecycle_salary_revision($draft_data, $reserved_t
         || (int)$command['requested_by'] <= 0 || (int)$command['requested_by'] === $actor)
         return false;
     $effective_date = (string)$draft_data['effective_date'];
-    if (strcmp($effective_date, hrm_lifecycle_salary_revision_today_sql()) > 0)
+    if (strcmp($effective_date, today_as_sql_date()) > 0)
         return false;
 
     $employee_number = (int)$draft_data['employee_number'];

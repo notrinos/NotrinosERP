@@ -125,12 +125,9 @@ function hrm_bank_account_verification_evidence_browser_rows($employee_ref, $req
 
 function hrm_bank_account_verification_evidence_browser_candidate($employee_ref, $request_id, $request_row_version, $approval_draft_id)
 {
-    $request_id = function_exists('hrm_bank_account_verification_request_positive_int')
-        ? hrm_bank_account_verification_request_positive_int($request_id) : false;
-    $request_row_version = function_exists('hrm_bank_account_verification_request_positive_int')
-        ? hrm_bank_account_verification_request_positive_int($request_row_version) : false;
-    $approval_draft_id = function_exists('hrm_bank_account_verification_request_positive_int')
-        ? hrm_bank_account_verification_request_positive_int($approval_draft_id) : false;
+    $request_id = parse_positive_integer_strict($request_id);
+    $request_row_version = parse_positive_integer_strict($request_row_version);
+    $approval_draft_id = parse_positive_integer_strict($approval_draft_id);
     if ($request_id === false || $request_row_version === false || $approval_draft_id === false)
         return false;
     $rows = hrm_bank_account_verification_evidence_browser_rows($employee_ref, $request_id, $request_row_version, $approval_draft_id);

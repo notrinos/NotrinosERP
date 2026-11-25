@@ -97,7 +97,7 @@ function hrm_tim_001_ingest_raw_event($assignment_id,array $event,&$error=null)
     $resolved=hrm_tim_001_local_to_utc($local,$event['timezone_name']??'',array_key_exists('utc_offset_minutes',$event)?$event['utc_offset_minutes']:null,$resolve_error);
     if($resolved===false){$error=$resolve_error?:'raw_event_time_resolution_invalid';return false;}
     $command=hrm_tim_001_token($event['ingest_command_key']??'',128);$channel=hrm_tim_001_token($event['source_channel']??'',32);$source_key=hrm_tim_001_token($event['source_event_key']??'',128);$recorded=hrm_tim_001_utc_datetime($event['recorded_at_utc']??'');$type=(string)($event['event_type']??'');$payload=(string)($event['source_payload_sha256']??'');$pred=empty($event['predecessor_event_id'])?null:(int)$event['predecessor_event_id'];
-    if($command===false||$channel===false||$source_key===false||$recorded===false||!in_array($type,array('clock_in','clock_out','manual_anchor','legacy_attendance'),true)||!hrm_tim_001_is_sha256($payload)){$error='raw_event_identity_invalid';return false;}
+    if($command===false||$channel===false||$source_key===false||$recorded===false||!in_array($type,array('clock_in','clock_out','manual_anchor','legacy_attendance'),true)||!is_sha256_hex($payload)){$error='raw_event_identity_invalid';return false;}
     begin_transaction();
     /* Exact command replay is stable even after assignment/workflow state advances. */
     $q=db_query('SELECT raw_event_id,assignment_id,source_channel,source_event_key,recorded_at_utc,effective_local_at,timezone_name,effective_utc_at,utc_offset_minutes,event_type,source_payload_sha256,predecessor_event_id,ingest_command_key,event_sha256,recorded_by FROM '.TB_PREF.'hrm_time_raw_events WHERE ingest_command_key='.db_escape($command).' LIMIT 2 FOR UPDATE');
@@ -232,7 +232,7 @@ function hrm_tim_001_review_time($assignment_id,array $review,array $raw_event_i
 function hrm_tim_001_approve_time($reviewed_entry_id,$approval_evidence_sha256,$command_key,&$error=null)
 {
     $error=null;$actor=current_user_id_or_zero();$reviewed_entry_id=(int)$reviewed_entry_id;$cmd=hrm_tim_001_token($command_key,128);
-    if($actor<=0||!hrm_tim_001_access('SA_HRM_APPROVE_TIME')||$reviewed_entry_id<=0||$cmd===false||!hrm_tim_001_is_sha256($approval_evidence_sha256)){$error='approval_access_or_evidence_invalid';return false;}
+    if($actor<=0||!hrm_tim_001_access('SA_HRM_APPROVE_TIME')||$reviewed_entry_id<=0||$cmd===false||!is_sha256_hex($approval_evidence_sha256)){$error='approval_access_or_evidence_invalid';return false;}
     begin_transaction();
     /* Return the original immutable result for an exact command replay, even if later state has advanced. */
     $q=db_query('SELECT approval_id,reviewed_entry_id,approval_evidence_sha256,approver_id,approval_sha256 FROM '.TB_PREF.'hrm_time_approvals WHERE approval_command_key='.db_escape($cmd).' LIMIT 2 FOR UPDATE');

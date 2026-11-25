@@ -17,11 +17,6 @@ if (!defined('HRM_PAY_CORE_005_PAYMENT_AUTHORITY_ALLOWED'))
 if (!defined('HRM_PAY_CORE_005_HISTORICAL_MUTATION_ALLOWED'))
     define('HRM_PAY_CORE_005_HISTORICAL_MUTATION_ALLOWED', false);
 
-function hrm_pay_core_005_is_sha256($value)
-{
-    return is_string($value) && preg_match('/^[a-f0-9]{64}$/D', $value) === 1;
-}
-
 function hrm_pay_core_005_token($value, $max=128)
 {
     return is_string($value) && strlen($value) >= 1 && strlen($value) <= $max

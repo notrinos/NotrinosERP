@@ -6,6 +6,7 @@
  * returns legacy or decrypted Typed Attribute plaintext. It verifies the frozen batch,
  * historical retained-profile evidence, conversion receipts, and encrypted values only.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_typed_attribute_legacy_reconciliation_value_matches'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_legacy_reconciliation_db.inc');
 if (!function_exists('hrm_typed_attribute_legacy_bulk_batch_digest'))
@@ -51,7 +52,7 @@ function hrm_typed_attribute_legacy_bulk_reconciliation_profile($profile_version
  */
 function get_hrm_typed_attribute_legacy_bulk_reconciliation($batch_id)
 {
-    $batch_id = hrm_typed_attribute_legacy_mapping_positive_id($batch_id, false);
+    $batch_id = parse_positive_integer_strict($batch_id, false);
     if ($batch_id === false || !hrm_typed_attribute_legacy_bulk_reconciliation_user_can_view())
         return false;
 

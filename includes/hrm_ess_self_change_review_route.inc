@@ -65,7 +65,7 @@ function hrm_ess_self_change_review_detail($mode,$request_id)
 function hrm_ess_self_change_review_approval_digest($request_id)
 {
     $request_id=hrm_ess_self_change_review_positive_id($request_id);$actor=current_user_id_or_zero();if($request_id===false||$actor<=0)return false;
-    $request=get_hrm_ess_self_change_request($request_id,false);if(!is_array($request)||!hrm_ess_self_change_digest_is_valid((string)$request['request_digest']))return false;
+    $request=get_hrm_ess_self_change_request($request_id,false);if(!is_array($request)||!is_sha256_hex((string)$request['request_digest']))return false;
     return hash('sha256',implode("\0",array('hrm-ess-self-change-approval-v1',(string)$request['request_digest'],$actor)));
 }
 

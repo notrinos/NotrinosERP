@@ -1,5 +1,6 @@
 <?php
 /** PAY-CTRY-007 signed catalog release and regulatory update-notice contract. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_ctry_001_verifier.inc');
 
 if (!defined('PAY_CTRY_007_CONTRACT_VERSION')) define('PAY_CTRY_007_CONTRACT_VERSION','1.2.0');
@@ -11,7 +12,7 @@ if (!defined('PAY_CTRY_007_MAX_SIGNATURE_AGE_SECONDS')) define('PAY_CTRY_007_MAX
 
 function pay_ctry_007_fail(&$error,$code){$error=$code;return false;}
 function pay_ctry_007_canonical_json($value){return pay_ctry_001_canonical_json($value);}
-function pay_ctry_007_sha($v){return pay_ctry_001_sha($v);}
+function pay_ctry_007_sha($v){return is_sha256_hex($v);}
 function pay_ctry_007_semver($v){return pay_ctry_001_semver($v);}
 function pay_ctry_007_time($v){return pay_ctry_001_iso_utc_epoch($v);}
 function pay_ctry_007_hash($value){return hash('sha256',pay_ctry_007_canonical_json($value));}

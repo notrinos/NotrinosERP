@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-004 governed identifier supersession browser route. */
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 $identifier_supersession_raw_method=isset($_SERVER['REQUEST_METHOD'])?(string)$_SERVER['REQUEST_METHOD']:'';
 $identifier_supersession_raw_query=isset($_SERVER['QUERY_STRING'])?(string)$_SERVER['QUERY_STRING']:'';
 $identifier_supersession_script_name=isset($_SERVER['SCRIPT_NAME'])?(string)$_SERVER['SCRIPT_NAME']:'';
@@ -61,8 +62,8 @@ if($identifier_supersession_raw_method==='POST' && $action==='start_step_up'){
     } else {
         $candidate=isset($_POST['identifier_candidate'])?(string)$_POST['identifier_candidate']:'';
         $parts=explode(':',$candidate,2);
-        $identifier_id=count($parts)===2?hrm_identifier_verification_request_positive_int($parts[0]):false;
-        $row_version=count($parts)===2?hrm_identifier_verification_request_positive_int($parts[1]):false;
+        $identifier_id=count($parts)===2?parse_positive_integer_strict($parts[0]):false;
+        $row_version=count($parts)===2?parse_positive_integer_strict($parts[1]):false;
         $new_value=isset($_POST['new_identifier_value'])?(string)$_POST['new_identifier_value']:'';
         $jurisdiction=isset($_POST['issuing_jurisdiction'])?(string)$_POST['issuing_jurisdiction']:'';
         $valid_to=isset($_POST['valid_to'])?(string)$_POST['valid_to']:'';

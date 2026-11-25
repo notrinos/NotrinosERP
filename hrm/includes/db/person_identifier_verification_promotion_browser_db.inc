@@ -154,14 +154,10 @@ function hrm_identifier_verification_promotion_browser_rows(
 function hrm_identifier_verification_promotion_browser_candidate(
     $employee_ref, $evidence_id, $evidence_row_version, $request_row_version, $identifier_row_version
 ) {
-    $evidence_id = function_exists('hrm_identifier_verification_request_positive_int')
-        ? hrm_identifier_verification_request_positive_int($evidence_id) : false;
-    $evidence_row_version = function_exists('hrm_identifier_verification_request_positive_int')
-        ? hrm_identifier_verification_request_positive_int($evidence_row_version) : false;
-    $request_row_version = function_exists('hrm_identifier_verification_request_positive_int')
-        ? hrm_identifier_verification_request_positive_int($request_row_version) : false;
-    $identifier_row_version = function_exists('hrm_identifier_verification_request_positive_int')
-        ? hrm_identifier_verification_request_positive_int($identifier_row_version) : false;
+    $evidence_id = parse_positive_integer_strict($evidence_id);
+    $evidence_row_version = parse_positive_integer_strict($evidence_row_version);
+    $request_row_version = parse_positive_integer_strict($request_row_version);
+    $identifier_row_version = parse_positive_integer_strict($identifier_row_version);
     if ($evidence_id === false || $evidence_row_version === false
         || $request_row_version === false || $identifier_row_version === false)
         return false;

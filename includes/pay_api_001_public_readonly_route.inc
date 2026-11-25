@@ -1,5 +1,6 @@
 <?php
 /** PAY-API-001 public read-only HTTP route boundary with DB-gated bounded business-data response support. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_api_001_http_readonly.inc');
 if (!defined('PAY_API_001_PUBLIC_READONLY_ROUTE_CONTRACT_VERSION')) define('PAY_API_001_PUBLIC_READONLY_ROUTE_CONTRACT_VERSION', '1.0.876');
 if (!defined('PAY_API_001_PUBLIC_READONLY_ROUTE_PATH')) define('PAY_API_001_PUBLIC_READONLY_ROUTE_PATH', '/payroll_api.php');
@@ -27,7 +28,7 @@ function pay_api_001_public_route_parse_query($raw_query)
     $contract = pay_api_001_http_contract_version($out['contract']);
     $limit = isset($out['limit']) ? pay_api_001_uint_value($out['limit'], false, 100) : 50;
     $cursor = isset($out['cursor']) && $out['cursor'] !== '' ? $out['cursor'] : null;
-    if ($company === false || $resource === false || $contract === false || $limit === false || ($cursor !== null && !pay_api_001_is_sha256($cursor))) return false;
+    if ($company === false || $resource === false || $contract === false || $limit === false || ($cursor !== null && !is_sha256_hex($cursor))) return false;
     $scope_type = isset($out['scope_type']) ? $out['scope_type'] : null;
     $scope_key = isset($out['scope_key']) ? $out['scope_key'] : null;
     if ($scope_type !== null && (preg_match('/^[a-z0-9][a-z0-9._-]{0,31}$/D',$scope_type)!==1 || preg_match('/^[A-Za-z0-9][A-Za-z0-9._:\/-]{0,127}$/D',$scope_key)!==1)) return false;

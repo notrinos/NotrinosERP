@@ -1,5 +1,6 @@
 <?php
 /** PAY-ECO-001 third-party pack ecosystem governance foundation contract. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_ctry_001_verifier.inc');
 
 if (!defined('PAY_ECO_001_CONTRACT_VERSION')) define('PAY_ECO_001_CONTRACT_VERSION','1.0.0');
@@ -20,7 +21,7 @@ if (!defined('PAY_ECO_001_MARKETPLACE_ACTIVATION_PERMISSION')) define('PAY_ECO_0
 
 function pay_eco_001_fail(&$error,$code){$error=$code;return false;}
 function pay_eco_001_canonical_json($value){return pay_ctry_001_canonical_json($value);}
-function pay_eco_001_sha($value){return pay_ctry_001_sha($value);}
+function pay_eco_001_sha($value){return is_sha256_hex($value);}
 function pay_eco_001_hash($value){return hash('sha256',pay_eco_001_canonical_json($value));}
 /** Return the publisher validity state at a server-derived scan time. */
 function pay_eco_001_dependency_publisher_validity_state($valid_from,$valid_to,$now_epoch){

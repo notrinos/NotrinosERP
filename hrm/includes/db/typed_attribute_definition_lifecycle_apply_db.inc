@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-007 distinct-checker immutable Typed Attribute definition lifecycle application. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_typed_attribute_definition_lifecycle_request'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_definition_lifecycle_writer_db.inc');
 
@@ -19,7 +20,7 @@ function hrm_typed_attribute_definition_lifecycle_applied_successor_matches($can
  */
 function hrm_typed_attribute_definition_lifecycle_apply($pending_version_id)
 {
-    $pending_version_id=hrm_typed_attribute_definition_positive_id($pending_version_id,false);
+    $pending_version_id=parse_positive_integer_strict($pending_version_id,false);
     $checker_id=function_exists('hrm_person_worker_actor_id')?hrm_person_worker_actor_id():0;
     if($pending_version_id===false||$checker_id<=0||!hrm_typed_attribute_definition_lifecycle_user_can_approve())return false;
     begin_transaction();$ok=true;$return_id=false;$definition_id=0;$rows=array();$successor=array();$leaf_ids=array();$max_version=0;

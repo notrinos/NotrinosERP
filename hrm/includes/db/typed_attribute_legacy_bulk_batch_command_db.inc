@@ -7,6 +7,7 @@
  * approved mapping and active definition, and absence of conversion/value rows.
  * No legacy plaintext, encrypted value, receipt, or legacy rewrite is persisted.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('get_hrm_typed_attribute_legacy_bulk_conversion_candidates'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_legacy_bulk_candidate_db.inc');
 if (!function_exists('hrm_employment_lock_binding_for_interval_policy'))
@@ -48,7 +49,7 @@ function hrm_typed_attribute_legacy_bulk_batch_canonical_command($input)
     if (!is_array($input) || array_diff(array_keys($input),$allowed)) return false;
     foreach (array('mapping_version_id','candidate_as_of','request_nonce','candidates') as $field)
         if (!array_key_exists($field,$input)) return false;
-    $mapping=hrm_typed_attribute_legacy_mapping_positive_id($input['mapping_version_id'],false);
+    $mapping=parse_positive_integer_strict($input['mapping_version_id'],false);
     $as_of=is_string($input['candidate_as_of'])?hrm_typed_attribute_legacy_mapping_date($input['candidate_as_of'],false):false;
     $nonce=hrm_typed_attribute_legacy_bulk_batch_nonce($input['request_nonce']);
     if ($mapping===false || $as_of===false || $nonce===false || !is_array($input['candidates'])
@@ -59,10 +60,10 @@ function hrm_typed_attribute_legacy_bulk_batch_canonical_command($input)
             return false;
         foreach (array('employee_number','worker_id','profile_version_id','definition_version_id','candidate_digest') as $field)
             if (!array_key_exists($field,$candidate)) return false;
-        $employee=hrm_typed_attribute_legacy_mapping_positive_id($candidate['employee_number'],false);
-        $worker=hrm_typed_attribute_legacy_mapping_positive_id($candidate['worker_id'],false);
-        $profile=hrm_typed_attribute_legacy_mapping_positive_id($candidate['profile_version_id'],false);
-        $definition=hrm_typed_attribute_legacy_mapping_positive_id($candidate['definition_version_id'],false);
+        $employee=parse_positive_integer_strict($candidate['employee_number'],false);
+        $worker=parse_positive_integer_strict($candidate['worker_id'],false);
+        $profile=parse_positive_integer_strict($candidate['profile_version_id'],false);
+        $definition=parse_positive_integer_strict($candidate['definition_version_id'],false);
         $digest=is_string($candidate['candidate_digest'])&&preg_match('/^[a-f0-9]{64}$/D',$candidate['candidate_digest'])===1
             ? $candidate['candidate_digest'] : false;
         if ($employee===false||$worker===false||$profile===false||$definition===false||$digest===false

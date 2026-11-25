@@ -108,8 +108,8 @@ function hrm_anl_001_review_headcount_catalog($valid_from, $expires_at, &$error 
     $definition = hrm_anl_001_headcount_metric_definition_for_company($company);
     $policy = hrm_anl_001_headcount_suppression_policy_for_company($company);
     if ($definition === false || $policy === false
-        || !hrm_anl_001_headcount_sha256($definition['definition_sha256'])
-        || !hrm_anl_001_headcount_sha256($policy['policy_sha256']))
+        || !is_sha256_hex($definition['definition_sha256'])
+        || !is_sha256_hex($policy['policy_sha256']))
         return hrm_anl_001_catalog_fail($error, 'catalog_blueprint_invalid');
 
     $actor = current_user_id_or_zero();
@@ -139,7 +139,7 @@ function hrm_anl_001_review_headcount_catalog($valid_from, $expires_at, &$error 
 function hrm_anl_001_catalog_review_event($review_event_sha256, &$error = null)
 {
     $company = hrm_anl_001_runtime_company_id();
-    if (!hrm_anl_001_headcount_sha256($review_event_sha256))
+    if (!is_sha256_hex($review_event_sha256))
         return hrm_anl_001_catalog_fail($error, 'catalog_review_event_hash_invalid');
     $sql = 'SELECT event_id,actor_user_id,event_hash,restricted_diff FROM '.TB_PREF.'domain_audit_events'
         .' WHERE company_id='.$company.' AND legal_entity_id=0'

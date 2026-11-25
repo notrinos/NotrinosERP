@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-007 immutable Work Authorization checker verification writer. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_work_authorization_writer_document_matches_worker'))
     include_once($path_to_root.'/hrm/includes/db/work_authorization_writer_db.inc');
 if (!function_exists('hrm_person_worker_actor_id'))
@@ -62,7 +63,7 @@ function hrm_work_authorization_verification_successor_matches($row, $target, $d
  */
 function hrm_work_authorization_verify_current_version($authorization_id)
 {
-    $authorization_id = hrm_work_authorization_positive_id($authorization_id, false);
+    $authorization_id = parse_positive_integer_strict($authorization_id, false);
     $checker_id = function_exists('hrm_person_worker_actor_id') ? hrm_person_worker_actor_id() : 0;
     if ($authorization_id === false || $checker_id <= 0 || !hrm_work_authorization_user_can_verify())
         return false;

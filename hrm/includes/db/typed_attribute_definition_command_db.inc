@@ -6,6 +6,7 @@
  * intentionally non-mutating: it validates one draft command and derives an
  * opaque retry digest. Attribute-value writers remain out of scope.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_typed_attribute_validate_definition_metadata'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_db.inc');
 
@@ -13,15 +14,6 @@ function hrm_typed_attribute_definition_user_can_manage()
 {
     return function_exists('user_check_access')
         && user_check_access('SA_HRM_MANAGE_TYPED_ATTRIBUTE_DEFINITION');
-}
-
-function hrm_typed_attribute_definition_positive_id($value, $nullable = false)
-{
-    if (($value === null || $value === '') && $nullable) return null;
-    if (is_int($value)) return $value > 0 ? $value : false;
-    if (!is_string($value) || preg_match('/^[1-9][0-9]*$/D', $value) !== 1) return false;
-    $number = (int)$value;
-    return $number > 0 && (string)$number === $value ? $number : false;
 }
 
 function hrm_typed_attribute_definition_date($value, $nullable = false)
@@ -110,7 +102,7 @@ function hrm_typed_attribute_definition_canonical_command($input)
     $from = hrm_typed_attribute_definition_date($input['effective_from'], false);
     $to = hrm_typed_attribute_definition_date(
         array_key_exists('effective_to', $input) ? $input['effective_to'] : null, true);
-    $predecessor = hrm_typed_attribute_definition_positive_id(
+    $predecessor = parse_positive_integer_strict(
         array_key_exists('predecessor_id', $input) ? $input['predecessor_id'] : null, true);
     if ($validation === false || $from === false || $to === false || $predecessor === false
         || ($to !== null && strcmp($to, $from) < 0)) return false;

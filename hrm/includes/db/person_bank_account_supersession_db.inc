@@ -12,7 +12,7 @@ $hrm_person_bank_supersession_root = isset($path_to_root)
 $hrm_person_bank_supersession_dependencies = array(
     array('/hrm/includes/db/employee_person_bank_db.inc', 'hrm_person_bank_payload_json'),
     array('/hrm/includes/hrm_security.inc', 'hrm_user_can_access_sensitive_field'),
-    array('/includes/federation_assurance_consumer.inc', 'federation_assurance_consumer_current_session_id'),
+    array('/includes/federation_assurance_consumer.inc', 'current_security_session_id_or_zero'),
     array('/includes/db/domain_audit_db.inc', 'append_domain_audit_event'),
 );
 foreach ($hrm_person_bank_supersession_dependencies as $dependency) {
@@ -30,16 +30,6 @@ if (!defined('HRM_PERSON_BANK_SUPERSESSION_HASH_CONTRACT'))
     define('HRM_PERSON_BANK_SUPERSESSION_HASH_CONTRACT', 'notrinoserp.hrm-fnd-004.person-bank-supersession');
 if (!defined('HRM_PERSON_BANK_SUPERSESSION_HASH_VERSION'))
     define('HRM_PERSON_BANK_SUPERSESSION_HASH_VERSION', '1');
-
-function hrm_person_bank_supersession_positive_int($value)
-{
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    if (!is_string($value) || preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $integer = (int)$value;
-    return $integer > 0 && (string)$integer === $value ? $integer : false;
-}
 
 function hrm_person_bank_supersession_permission()
 {
@@ -66,8 +56,8 @@ function hrm_person_bank_supersession_payload_token($payload, $master_key)
 
 function hrm_person_bank_supersession_action_hash($company, $predecessor_id, $predecessor_row_version, $payload_token)
 {
-    $predecessor_id = hrm_person_bank_supersession_positive_int($predecessor_id);
-    $predecessor_row_version = hrm_person_bank_supersession_positive_int($predecessor_row_version);
+    $predecessor_id = parse_positive_integer_strict($predecessor_id);
+    $predecessor_row_version = parse_positive_integer_strict($predecessor_row_version);
     if ((int)$company < 0 || $predecessor_id === false || $predecessor_row_version === false
         || !is_string($payload_token) || preg_match('/^[a-f0-9]{64}$/D', $payload_token) !== 1)
         return false;
@@ -79,7 +69,7 @@ function hrm_person_bank_supersession_action_hash($company, $predecessor_id, $pr
 
 function hrm_person_bank_supersession_assurance_event_for_update($session_id, $action_hash)
 {
-    if ((int)$session_id <= 0 || !federation_assurance_consumer_hex64($action_hash))
+    if ((int)$session_id <= 0 || !is_sha256_hex($action_hash))
         return false;
     $result = db_query("SELECT assurance_event_id,session_id,assurance_level,assurance_method,action_class,action_hash,issued_at,expires_at,consumed_at FROM "
         .TB_PREF."user_session_assurance_events WHERE session_id=".(int)$session_id." AND action_class="
@@ -95,7 +85,7 @@ function hrm_person_bank_supersession_assurance_event_for_update($session_id, $a
 
 function hrm_person_bank_supersession_consume_assurance($company, $action_hash, $now_epoch)
 {
-    $session_id = federation_assurance_consumer_current_session_id();
+    $session_id = current_security_session_id_or_zero();
     if ($session_id <= 0)
         return false;
     $custody = federation_assurance_consumer_custody_for_update($session_id);
@@ -175,8 +165,8 @@ function hrm_person_bank_supersession_stored_payload($row, $person_id)
  */
 function supersede_hrm_person_bank_account($predecessor_id, $predecessor_row_version, $new_payload, $now_epoch = null)
 {
-    $predecessor_id = hrm_person_bank_supersession_positive_int($predecessor_id);
-    $predecessor_row_version = hrm_person_bank_supersession_positive_int($predecessor_row_version);
+    $predecessor_id = parse_positive_integer_strict($predecessor_id);
+    $predecessor_row_version = parse_positive_integer_strict($predecessor_row_version);
     $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     $now_epoch = $now_epoch === null ? time() : (int)$now_epoch;
@@ -319,8 +309,8 @@ function supersede_hrm_person_bank_account($predecessor_id, $predecessor_row_ver
 function hrm_person_bank_supersession_browser_predecessor($employee_ref, $person_bank_account_id, $row_version, $allow_superseded = false)
 {
     if (!hrm_person_bank_supersession_permission() || !defined('TB_PREF')) return false;
-    $person_bank_account_id = hrm_person_bank_supersession_positive_int($person_bank_account_id);
-    $row_version = hrm_person_bank_supersession_positive_int($row_version);
+    $person_bank_account_id = parse_positive_integer_strict($person_bank_account_id);
+    $row_version = parse_positive_integer_strict($row_version);
     $column = is_numeric($employee_ref) ? 'employee_number' : 'employee_id';
     $employee = is_numeric($employee_ref) ? (int)$employee_ref : trim((string)$employee_ref);
     if ($person_bank_account_id === false || $row_version === false

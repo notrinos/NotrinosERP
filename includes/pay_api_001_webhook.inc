@@ -1,5 +1,6 @@
 <?php
 /** PAY-API-001 bounded outbound webhook event and claim contracts. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_api_001_business_read.inc');
 include_once(dirname(__FILE__).'/pay_api_001_provisioning.inc');
 include_once(dirname(__FILE__).'/pay_api_001_contract.inc');
@@ -15,7 +16,7 @@ function pay_api_001_webhook_writer_datetime($value)
 function pay_api_001_webhook_event_envelope($company_id,array $summary,$source_evidence_sha256,$occurred_at)
 {
     $company=pay_api_001_uint_value($company_id,true,4294967295);$projected=pay_api_001_payroll_period_summary_project_row($summary);
-    if($company===false||$projected===false||!pay_api_001_is_sha256($source_evidence_sha256)||pay_api_001_webhook_writer_datetime($occurred_at)===false)return false;
+    if($company===false||$projected===false||!is_sha256_hex($source_evidence_sha256)||pay_api_001_webhook_writer_datetime($occurred_at)===false)return false;
     $payload=array('contract_version'=>PAY_API_001_PAYROLL_PERIOD_SUMMARY_CONTRACT,'event_type'=>PAY_API_001_WEBHOOK_EVENT_TYPE,'resource'=>PAY_API_001_PAYROLL_PERIOD_SUMMARY_RESOURCE,'summary'=>$projected);
     $payload_json=json_encode($payload,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
     if(!is_string($payload_json))return false;
@@ -27,5 +28,5 @@ function pay_api_001_webhook_event_envelope($company_id,array $summary,$source_e
 }
 
 /** Accept only an opaque SHA-256 claim-token digest. */
-function pay_api_001_webhook_claim_token($value){return pay_api_001_is_sha256($value)?$value:false;}
+function pay_api_001_webhook_claim_token($value){return is_sha256_hex($value)?$value:false;}
 ?>

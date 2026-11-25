@@ -62,12 +62,6 @@ function hrm_anl_001_headcount_hash($value)
 }
 
 /** @return bool */
-function hrm_anl_001_headcount_sha256($value)
-{
-    return is_string($value) && preg_match('/^[a-f0-9]{64}$/D', $value) === 1;
-}
-
-/** @return bool */
 function hrm_anl_001_headcount_datetime($value)
 {
     if (!is_string($value) || preg_match('/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/D', $value, $m) !== 1) return false;

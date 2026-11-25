@@ -37,7 +37,7 @@ function hrm_ess_self_change_reauth_dependencies()
         'federation_issue_privileged_assurance'=>'federation_assurance_issuer.inc',
         'federation_control_load_bundle'=>'federation_control_material.inc',
         'federation_control_hash_equals'=>'federation_control_material.inc',
-        'federation_control_valid_sha256'=>'federation_control_material.inc',
+        'is_sha256_hex'=>'federation_control_material.inc',
         'federation_verifier_dependency_configured_status'=>'federation_verifier_dependencies.inc'
     );
     foreach($required as $fn=>$file){if(!function_exists($fn)){ $p=$base.DIRECTORY_SEPARATOR.$file; if(!is_file($p))return false; require_once($p); }}
@@ -107,7 +107,7 @@ function hrm_ess_self_change_reauth_action_context($operation,$request_id=0,$int
         if($request_id<=0||$intent_digest!=='')return false;
         $request=get_hrm_ess_self_change_request($request_id,false); if(!is_array($request)||!isset($request['request_digest'],$request['request_status'],$request['row_version']))return false;
         $request_digest=(string)$request['request_digest']; $row_version=(int)$request['row_version'];
-        if(!function_exists('hrm_ess_self_change_digest_is_valid')||!hrm_ess_self_change_digest_is_valid($request_digest))return false;
+        if(!function_exists('is_sha256_hex')||!is_sha256_hex($request_digest))return false;
         if($op==='cancel'){
             $scope=get_hrm_ess_current_self_scope();
             if(!is_array($scope)||(int)$request['user_id']!==$actor||(int)$request['requested_by']!==$actor||(int)$scope['worker_id']!==(int)$request['worker_id']||!in_array((string)$request['request_status'],array('draft','approved'),true))return false;
@@ -187,7 +187,7 @@ function hrm_ess_self_change_reauth_session_context($session_id,$now)
 function hrm_ess_self_change_reauth_material_context($company,$session,$required_path)
 {
     $company=(int)$company;if($company<0||!is_array($session)||!isset($session['trust_material_ref_hash'],$session['issuer_hash'],$session['audience_hash'])||!is_string($required_path)||strlen($required_path)<1||strlen($required_path)>1024||$required_path[0]!=='/'||strpos($required_path,'?')!==false||strpos($required_path,'#')!==false||preg_match('/[\x00-\x20\x7f]/',$required_path))return false;
-    foreach(array('trust_material_ref_hash','issuer_hash','audience_hash') as $k)if(!federation_control_valid_sha256((string)$session[$k]))return false;
+    foreach(array('trust_material_ref_hash','issuer_hash','audience_hash') as $k)if(!is_sha256_hex((string)$session[$k]))return false;
     $bundle=federation_control_load_bundle($company,(string)$session['trust_material_ref_hash'],'oidc','oidc_code_pkce_v1'); if(!is_array($bundle)||!isset($bundle['materials'])||!is_array($bundle['materials']))return false;$m=$bundle['materials'];
     if(!isset($m['oidc_client_config'],$m['oidc_assurance_policy']))return false;$client=federation_oidc_client_config($m['oidc_client_config']);$policy=federation_oidc_assurance_policy($m['oidc_assurance_policy']);
     if($client===false||$policy===false||!federation_control_hash_equals(hash('sha256',$client['issuer']),(string)$session['issuer_hash'])||!federation_control_hash_equals(hash('sha256',$client['client_id']),(string)$session['audience_hash']))return false;

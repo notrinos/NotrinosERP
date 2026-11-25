@@ -1,5 +1,6 @@
 <?php
 /** HRM-TIM-001 deterministic work-pattern and approved-time contract. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!defined('HRM_TIM_001_CONTRACT_VERSION')) define('HRM_TIM_001_CONTRACT_VERSION', '1.0');
 if (!defined('HRM_TIM_001_PAYROLL_ADAPTER_VERSION')) define('HRM_TIM_001_PAYROLL_ADAPTER_VERSION', 'approved-time-pay-core-003-v1');
 if (!defined('HRM_TIM_001_PAYROLL_CALC_AUTHORITY_ALLOWED')) define('HRM_TIM_001_PAYROLL_CALC_AUTHORITY_ALLOWED', false);
@@ -27,7 +28,6 @@ function hrm_tim_001_hash($value)
     $json = hrm_tim_001_json($value);
     return $json === false ? false : hash('sha256', $json);
 }
-function hrm_tim_001_is_sha256($value){return is_string($value) && preg_match('/^[a-f0-9]{64}$/D', $value) === 1;}
 function hrm_tim_001_token($value, $max=128)
 {
     $value = trim((string)$value);
@@ -133,7 +133,7 @@ function hrm_tim_001_raw_event_descriptor(array $x,&$error=null)
     $effective_utc=hrm_tim_001_utc_datetime($x['effective_utc_at']);
     if(!is_int($x['utc_offset_minutes']) && (!is_string($x['utc_offset_minutes']) || preg_match('/^-?[0-9]+$/D',$x['utc_offset_minutes'])!==1)){$error='raw_event_offset_invalid';return false;}
     $offset=(int)$x['utc_offset_minutes'];
-    if($channel===false||$event===false||$command===false||$tz===false||$recorded===false||$effective_utc===false||$offset < -1440||$offset > 1440||!hrm_tim_001_is_sha256($x['source_payload_sha256'])){$error='raw_event_identity_invalid';return false;}
+    if($channel===false||$event===false||$command===false||$tz===false||$recorded===false||$effective_utc===false||$offset < -1440||$offset > 1440||!is_sha256_hex($x['source_payload_sha256'])){$error='raw_event_identity_invalid';return false;}
     if(!is_string($x['effective_local_at'])||preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/D',$x['effective_local_at'])!==1){$error='raw_event_local_time_invalid';return false;}
     $resolve_error=null;$resolved=hrm_tim_001_local_to_utc($x['effective_local_at'],$tz,$offset,$resolve_error);
     if($resolved===false||$resolved['utc']!==$effective_utc){$error='raw_event_time_resolution_mismatch';return false;}
@@ -156,7 +156,7 @@ function hrm_tim_001_reviewed_entry_descriptor(array $x,&$error=null)
     foreach(array('worker_id','employment_id','assignment_id','legal_entity_id','reviewer_id') as $k)
         if((int)$x[$k]<=0){$error='review_scope_invalid';return false;}
     $date=hrm_tim_001_date($x['work_date']);$s=hrm_tim_001_utc_datetime($x['period_start_utc']);$e=hrm_tim_001_utc_datetime($x['period_end_utc']);$cmd=hrm_tim_001_token($x['review_command_key'],128);
-    if($date===false||$s===false||$e===false||$cmd===false||!hrm_tim_001_is_sha256($x['source_event_set_sha256'])||!hrm_tim_001_is_sha256($x['work_pattern_sha256'])||!hrm_tim_001_is_sha256($x['allocation_set_sha256'])){$error='review_identity_invalid';return false;}
+    if($date===false||$s===false||$e===false||$cmd===false||!is_sha256_hex($x['source_event_set_sha256'])||!is_sha256_hex($x['work_pattern_sha256'])||!is_sha256_hex($x['allocation_set_sha256'])){$error='review_identity_invalid';return false;}
     $seconds=strtotime($e.' UTC')-strtotime($s.' UTC');if($seconds<=0||$seconds%60!==0||$seconds>172800){$error='review_duration_invalid';return false;}
     $p=array('worker_id'=>(int)$x['worker_id'],'employment_id'=>(int)$x['employment_id'],'assignment_id'=>(int)$x['assignment_id'],'legal_entity_id'=>(int)$x['legal_entity_id'],'work_date'=>$date,'period_start_utc'=>$s,'period_end_utc'=>$e,'duration_minutes'=>(int)($seconds/60),'source_event_set_sha256'=>$x['source_event_set_sha256'],'work_pattern_sha256'=>$x['work_pattern_sha256'],'allocation_set_sha256'=>$x['allocation_set_sha256'],'review_command_key'=>$cmd,'predecessor_entry_id'=>empty($x['predecessor_entry_id'])?null:(int)$x['predecessor_entry_id'],'reviewer_id'=>(int)$x['reviewer_id']);$p['review_sha256']=hrm_tim_001_hash($p);return $p;
 }
@@ -169,14 +169,14 @@ function hrm_tim_001_allocation_descriptor(array $x,&$error=null)
 }
 function hrm_tim_001_allocation_set_descriptor(array $rows,&$error=null)
 {
-    $error=null;if(!$rows){$error='allocation_set_empty';return false;}$seen=array();$norm=array();$total=0;foreach($rows as $r){if(!isset($r['allocation_sha256'],$r['quantity_minutes'])||!hrm_tim_001_is_sha256($r['allocation_sha256'])||(int)$r['quantity_minutes']<=0){$error='allocation_set_invalid';return false;}if(isset($seen[$r['allocation_sha256']])){$error='allocation_set_duplicate';return false;}$seen[$r['allocation_sha256']]=true;$norm[]=$r['allocation_sha256'];$total+=(int)$r['quantity_minutes'];}sort($norm,SORT_STRING);return array('allocation_count'=>count($norm),'total_minutes'=>$total,'allocation_set_sha256'=>hrm_tim_001_hash($norm));
+    $error=null;if(!$rows){$error='allocation_set_empty';return false;}$seen=array();$norm=array();$total=0;foreach($rows as $r){if(!isset($r['allocation_sha256'],$r['quantity_minutes'])||!is_sha256_hex($r['allocation_sha256'])||(int)$r['quantity_minutes']<=0){$error='allocation_set_invalid';return false;}if(isset($seen[$r['allocation_sha256']])){$error='allocation_set_duplicate';return false;}$seen[$r['allocation_sha256']]=true;$norm[]=$r['allocation_sha256'];$total+=(int)$r['quantity_minutes'];}sort($norm,SORT_STRING);return array('allocation_count'=>count($norm),'total_minutes'=>$total,'allocation_set_sha256'=>hrm_tim_001_hash($norm));
 }
 function hrm_tim_001_allocation_set(array $rows,&$error=null){return hrm_tim_001_allocation_set_descriptor($rows,$error);}
 function hrm_tim_001_approval_descriptor(array $x,&$error=null)
 {
     $error=null;foreach(array('reviewed_entry_id','review_sha256','allocation_set_sha256','approval_evidence_sha256','approval_command_key','reviewer_id','approver_id') as $k)if(!array_key_exists($k,$x)){$error='approval_field_missing';return false;}
     $review=(int)$x['reviewed_entry_id'];$reviewer=(int)$x['reviewer_id'];$approver=(int)$x['approver_id'];$cmd=hrm_tim_001_token($x['approval_command_key'],128);
-    if($review<=0||$reviewer<=0||$approver<=0||$reviewer===$approver||$cmd===false||!hrm_tim_001_is_sha256($x['review_sha256'])||!hrm_tim_001_is_sha256($x['allocation_set_sha256'])||!hrm_tim_001_is_sha256($x['approval_evidence_sha256'])){$error=$reviewer===$approver?'self_approval_denied':'approval_invalid';return false;}
+    if($review<=0||$reviewer<=0||$approver<=0||$reviewer===$approver||$cmd===false||!is_sha256_hex($x['review_sha256'])||!is_sha256_hex($x['allocation_set_sha256'])||!is_sha256_hex($x['approval_evidence_sha256'])){$error=$reviewer===$approver?'self_approval_denied':'approval_invalid';return false;}
     $p=array('reviewed_entry_id'=>$review,'review_sha256'=>$x['review_sha256'],'allocation_set_sha256'=>$x['allocation_set_sha256'],'approval_evidence_sha256'=>$x['approval_evidence_sha256'],'approval_command_key'=>$cmd,'reviewer_id'=>$reviewer,'approver_id'=>$approver);$p['approval_sha256']=hrm_tim_001_hash($p);return $p;
 }
 function hrm_tim_001_payroll_mapping_descriptor(array $x,&$error=null)

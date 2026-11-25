@@ -8,6 +8,7 @@
  * credential again. SA_USERS may revoke another user's recovery material but
  * cannot issue or reveal recovery secrets for that user.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 
 if (!defined('ACCOUNT_RECOVERY_MATERIAL_TYPE'))
     define('ACCOUNT_RECOVERY_MATERIAL_TYPE', 'recovery_code');
@@ -96,17 +97,6 @@ function account_recovery_material_hash_secret($secret)
     return is_string($hash) && $hash !== '' && strlen($hash) <= 255 ? $hash : false;
 }
 
-/** Strict positive numeric identifier parser for recovery custody references. */
-function account_recovery_material_positive_id($value)
-{
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    if (!is_string($value) || preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $integer = (int)$value;
-    return $integer > 0 && (string)$integer === $value ? $integer : false;
-}
-
 function account_recovery_material_secret_format_valid($secret)
 {
     return is_string($secret) && preg_match('/^rc1_[a-f0-9]{64}$/D', $secret) === 1;
@@ -121,8 +111,8 @@ function account_recovery_material_secret_format_valid($secret)
  */
 function account_recovery_material_attempt_gate_valid($context, $user_id, $material_id)
 {
-    $user_id = account_recovery_material_positive_id($user_id);
-    $material_id = account_recovery_material_positive_id($material_id);
+    $user_id = parse_positive_integer_strict($user_id);
+    $material_id = parse_positive_integer_strict($material_id);
     if ($user_id === false || $material_id === false || !is_array($context))
         return false;
     return isset($context['scope'], $context['attempt_owner'], $context['user_id'], $context['recovery_material_id'])
@@ -131,15 +121,15 @@ function account_recovery_material_attempt_gate_valid($context, $user_id, $mater
         && isset($context['rate_limit_checked'], $context['lockout_checked'])
         && $context['rate_limit_checked'] === true
         && $context['lockout_checked'] === true
-        && account_recovery_material_positive_id($context['user_id']) === $user_id
-        && account_recovery_material_positive_id($context['recovery_material_id']) === $material_id;
+        && parse_positive_integer_strict($context['user_id']) === $user_id
+        && parse_positive_integer_strict($context['recovery_material_id']) === $material_id;
 }
 
 /** Lock one exact recovery-material row for verification/terminal consume. */
 function account_recovery_material_candidate_for_update($user_id, $material_id)
 {
-    $user_id = account_recovery_material_positive_id($user_id);
-    $material_id = account_recovery_material_positive_id($material_id);
+    $user_id = parse_positive_integer_strict($user_id);
+    $material_id = parse_positive_integer_strict($material_id);
     if ($user_id === false || $material_id === false || !defined('TB_PREF'))
         return false;
     $result = db_query("SELECT recovery_material_id,user_id,material_type,generation,material_slot,secret_hash,issued_at,expires_at,consumed_at,revoked_at,row_version "
@@ -159,8 +149,8 @@ function account_recovery_material_candidate_for_update($user_id, $material_id)
 
 function account_recovery_material_candidate_valid($row, $user_id, $material_id, $secret, $now_epoch)
 {
-    $user_id = account_recovery_material_positive_id($user_id);
-    $material_id = account_recovery_material_positive_id($material_id);
+    $user_id = parse_positive_integer_strict($user_id);
+    $material_id = parse_positive_integer_strict($material_id);
     if ($user_id === false || $material_id === false || !is_array($row)
         || !account_recovery_material_secret_format_valid($secret)
         || !is_int($now_epoch) || $now_epoch <= 0)
@@ -499,8 +489,8 @@ function account_recovery_material_consume_for_reset($company, $user_id, $materi
 {
     global $transaction_level;
     $company = (int)$company;
-    $user_id = account_recovery_material_positive_id($user_id);
-    $material_id = account_recovery_material_positive_id($material_id);
+    $user_id = parse_positive_integer_strict($user_id);
+    $material_id = parse_positive_integer_strict($material_id);
     $now = $now_epoch === null ? time() : $now_epoch;
     if ($company < 0 || $user_id === false || $material_id === false
         || !is_int($now) || $now <= 0 || !account_recovery_material_secret_format_valid($secret)

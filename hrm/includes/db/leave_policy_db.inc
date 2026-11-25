@@ -9,6 +9,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /**
  * Get one leave policy.
@@ -166,26 +167,6 @@ function delete_leave_policy($policy_id) {
 }
 
 /**
- * Normalize leave policy date input to SQL format.
- *
- * @param string $date_value
- * @return string
- */
-function leave_policy_to_sql_date($date_value) {
-    $date_value = trim((string)$date_value);
-    if ($date_value === '')
-        return '';
-
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_value))
-        return $date_value;
-
-    if (is_date($date_value))
-        return date2sql($date_value);
-
-    return $date_value;
-}
-
-/**
  * Find the best matching leave policy for an employee and leave type.
  *
  * @param array $employee
@@ -197,7 +178,7 @@ function get_leave_policy_for_employee($employee, $leave_id, $as_of_date) {
     if (!is_array($employee) || empty($employee['employee_id']) || (int)$leave_id <= 0)
         return false;
 
-    $as_of_sql = leave_policy_to_sql_date($as_of_date);
+    $as_of_sql = input_date_to_sql_date($as_of_date);
     if ($as_of_sql === '')
         $as_of_sql = date2sql(Today());
 
@@ -241,12 +222,12 @@ function calculate_leave_policy_entitlement($policy, $employee, $as_of_date, $pe
     if ($annual_entitlement <= 0)
         return 0;
 
-    $as_of_sql = leave_policy_to_sql_date($as_of_date);
+    $as_of_sql = input_date_to_sql_date($as_of_date);
     if ($as_of_sql === '')
         $as_of_sql = date2sql(Today());
 
-    $hire_date_sql = !empty($employee['hire_date']) ? leave_policy_to_sql_date($employee['hire_date']) : '';
-    $probation_end_sql = !empty($employee['probation_end_date']) ? leave_policy_to_sql_date($employee['probation_end_date']) : '';
+    $hire_date_sql = !empty($employee['hire_date']) ? input_date_to_sql_date($employee['hire_date']) : '';
+    $probation_end_sql = !empty($employee['probation_end_date']) ? input_date_to_sql_date($employee['probation_end_date']) : '';
 
     if ($hire_date_sql !== '' && $hire_date_sql > $as_of_sql)
         return 0;
@@ -272,11 +253,11 @@ function calculate_leave_policy_entitlement($policy, $employee, $as_of_date, $pe
     if ($accrual_method === 0)
         return round2($annual_entitlement, user_price_dec());
 
-    $period_start_sql = leave_policy_to_sql_date($period_start_date);
+    $period_start_sql = input_date_to_sql_date($period_start_date);
     if ($period_start_sql === '')
         $period_start_sql = substr($as_of_sql, 0, 4).'-01-01';
 
-    $policy_start_sql = !empty($policy['effective_from']) ? leave_policy_to_sql_date($policy['effective_from']) : '';
+    $policy_start_sql = !empty($policy['effective_from']) ? input_date_to_sql_date($policy['effective_from']) : '';
     if ($policy_start_sql !== '' && $policy_start_sql > $period_start_sql)
         $period_start_sql = $policy_start_sql;
     if ($hire_date_sql !== '' && $hire_date_sql > $period_start_sql)

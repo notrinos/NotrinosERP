@@ -9,6 +9,7 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /**
  * Check whether a table exists in current company database.
@@ -111,26 +112,6 @@ function payslip_table_columns($table_name) {
 function payslip_has_column($table_name, $column_name) {
 	$columns = payslip_table_columns($table_name);
 	return isset($columns[$column_name]);
-}
-
-/**
- * Convert user date/string to SQL date format when needed.
- *
- * @param string $date_value
- * @return string
- */
-function payslip_to_sql_date($date_value) {
-	$date_value = trim((string)$date_value);
-	if ($date_value === '')
-		return '';
-
-	if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_value))
-		return $date_value;
-
-	if (is_date($date_value))
-		return date2sql($date_value);
-
-	return $date_value;
 }
 
 /**
@@ -246,8 +227,8 @@ function payslip_non_voided_condition($table_name, $table_alias='') {
  * @return string
  */
 function payslip_period_overlap_condition($table_name, $from_date, $to_date, $table_alias='') {
-	$from_sql = payslip_to_sql_date($from_date);
-	$to_sql = payslip_to_sql_date($to_date);
+	$from_sql = input_date_to_sql_date($from_date);
+	$to_sql = input_date_to_sql_date($to_date);
 	if (!$table_name || $from_sql === '' || $to_sql === '')
 		return '1=0';
 
@@ -349,9 +330,9 @@ function add_payslip(&$payslip_doc) {
 	if (empty($columns))
 		return false;
 
-	$from_date = payslip_to_sql_date(isset($payslip_doc->from_date) ? $payslip_doc->from_date : '');
-	$to_date = payslip_to_sql_date(isset($payslip_doc->to_date) ? $payslip_doc->to_date : '');
-	$tran_date = payslip_to_sql_date(isset($payslip_doc->tran_date) ? $payslip_doc->tran_date : Today());
+	$from_date = input_date_to_sql_date(isset($payslip_doc->from_date) ? $payslip_doc->from_date : '');
+	$to_date = input_date_to_sql_date(isset($payslip_doc->to_date) ? $payslip_doc->to_date : '');
+	$tran_date = input_date_to_sql_date(isset($payslip_doc->tran_date) ? $payslip_doc->tran_date : Today());
 
 	$fields = array();
 	$values = array();
@@ -629,7 +610,7 @@ function update_payslip($payslip_id, $data) {
 			continue;
 
 		if (in_array($field, $date_fields)) {
-			$sql_date = payslip_to_sql_date($value);
+			$sql_date = input_date_to_sql_date($value);
 			$sets[] = $field." = ".($sql_date === '' ? 'NULL' : db_escape($sql_date));
 		} else {
 			$sets[] = $field." = ".(is_null($value) ? 'NULL' : db_escape($value));
@@ -807,9 +788,9 @@ function get_payslips_for_employee($employee_id, $from=null, $to=null) {
 	$where = array(payslip_employee_where($employee_id));
 
 	if ($from !== null && $from !== '' && payslip_has_column($table_name, 'to_date'))
-		$where[] = "to_date >= ".db_escape(payslip_to_sql_date($from));
+		$where[] = "to_date >= ".db_escape(input_date_to_sql_date($from));
 	if ($to !== null && $to !== '' && payslip_has_column($table_name, 'from_date'))
-		$where[] = "from_date <= ".db_escape(payslip_to_sql_date($to));
+		$where[] = "from_date <= ".db_escape(input_date_to_sql_date($to));
 
 	$sql = "SELECT * FROM ".TB_PREF.$table_name." WHERE ".implode(' AND ', $where)." ORDER BY from_date DESC, to_date DESC";
 	return db_query($sql, 'could not get payslips for employee');
@@ -942,8 +923,8 @@ function payslip_exists_for_period($employee_id, $from_date, $to_date) {
 	if (!$table_name)
 		return false;
 
-	$from_sql = payslip_to_sql_date($from_date);
-	$to_sql = payslip_to_sql_date($to_date);
+	$from_sql = input_date_to_sql_date($from_date);
+	$to_sql = input_date_to_sql_date($to_date);
 	if ($from_sql === '' || $to_sql === '')
 		return false;
 
@@ -965,7 +946,7 @@ function payslip_generated_for_date($date, $employee) {
 	if (!$table_name)
 		return false;
 
-	$sql_date = payslip_to_sql_date($date);
+	$sql_date = input_date_to_sql_date($date);
 	if ($sql_date === '')
 		return false;
 
@@ -995,8 +976,8 @@ function payslip_generated_for_period($from_date, $to_date, $employee) {
 	if (!$table_name)
 		return false;
 
-	$from_sql = payslip_to_sql_date($from_date);
-	$to_sql = payslip_to_sql_date($to_date);
+	$from_sql = input_date_to_sql_date($from_date);
+	$to_sql = input_date_to_sql_date($to_date);
 	if ($from_sql === '' || $to_sql === '')
 		return false;
 
@@ -1103,7 +1084,7 @@ function get_payslip_hire_eligibility_sql($employee_id, $date) {
 	if ($employee_id === '')
 		return false;
 
-	$sql_date = payslip_to_sql_date($date);
+	$sql_date = input_date_to_sql_date($date);
 	if (!preg_match('/^\d{4}-\d{2}-\d{2}$/D', $sql_date))
 		return false;
 

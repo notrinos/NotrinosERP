@@ -9,30 +9,11 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /**
  * Statutory deduction CRUD
  */
-
-/**
- * Convert user date to SQL date.
- *
- * @param string $date_value
- * @return string
- */
-function statutory_to_sql_date($date_value) {
-    $date_value = trim((string)$date_value);
-    if ($date_value === '')
-        return '';
-
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_value))
-        return $date_value;
-
-    if (is_date($date_value))
-        return date2sql($date_value);
-
-    return $date_value;
-}
 
 /**
  * Add statutory deduction rule.
@@ -54,8 +35,8 @@ function statutory_to_sql_date($date_value) {
  * @return int|false
  */
 function add_statutory_deduction($name, $code, $employee_rate, $employer_rate, $employee_fixed, $employer_fixed, $ceiling_amount, $floor_amount, $calculation_base, $employee_account, $employer_account, $effective_from, $effective_to='', $inactive=0) {
-    $from_sql = statutory_to_sql_date($effective_from);
-    $to_sql = statutory_to_sql_date($effective_to);
+    $from_sql = input_date_to_sql_date($effective_from);
+    $to_sql = input_date_to_sql_date($effective_to);
     if ($from_sql === '')
         return false;
 
@@ -104,8 +85,8 @@ function add_statutory_deduction($name, $code, $employee_rate, $employer_rate, $
  * @return bool
  */
 function update_statutory_deduction($statutory_id, $name, $code, $employee_rate, $employer_rate, $employee_fixed, $employer_fixed, $ceiling_amount, $floor_amount, $calculation_base, $employee_account, $employer_account, $effective_from, $effective_to='', $inactive=0) {
-    $from_sql = statutory_to_sql_date($effective_from);
-    $to_sql = statutory_to_sql_date($effective_to);
+    $from_sql = input_date_to_sql_date($effective_from);
+    $to_sql = input_date_to_sql_date($effective_to);
     if ($from_sql === '')
         return false;
 
@@ -155,7 +136,7 @@ function get_statutory_deductions($all=false, $as_of_date='') {
         $sql .= " AND inactive = 0";
 
     if (trim((string)$as_of_date) !== '') {
-        $as_of_sql = statutory_to_sql_date($as_of_date);
+        $as_of_sql = input_date_to_sql_date($as_of_date);
         if ($as_of_sql !== '') {
             $sql .= " AND effective_from <= ".db_escape($as_of_sql)
                 ." AND (effective_to IS NULL OR effective_to >= ".db_escape($as_of_sql).")";

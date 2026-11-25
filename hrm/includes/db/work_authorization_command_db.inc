@@ -6,6 +6,7 @@
  * enforces a dedicated existing-role-model permission, and derives only an
  * opaque keyed command digest. Runtime persistence is isolated in the writer.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_work_authorization_validate_metadata'))
     include_once($path_to_root.'/hrm/includes/db/work_authorization_db.inc');
 if (!function_exists('hrm_user_can_access_sensitive_field'))
@@ -18,18 +19,6 @@ function hrm_work_authorization_user_can_manage()
             HRM_FIELD_RESTRICTED_WORK_AUTHORIZATION,
             HRM_FIELD_ACTION_MANAGE
         );
-}
-
-function hrm_work_authorization_positive_id($value, $nullable = false)
-{
-    if (($value === null || $value === '') && $nullable)
-        return null;
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    if (!is_string($value) || preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $number = (int)$value;
-    return $number > 0 && (string)$number === $value ? $number : false;
 }
 
 /** Return one exact, deterministic command shape or false. */
@@ -66,9 +55,9 @@ function hrm_work_authorization_canonical_command($input)
     $details = hrm_work_authorization_canonical_details($details);
     if ($details === false)
         return false;
-    $document_id = hrm_work_authorization_positive_id(
+    $document_id = parse_positive_integer_strict(
         array_key_exists('employee_document_id',$input) ? $input['employee_document_id'] : null, true);
-    $predecessor_id = hrm_work_authorization_positive_id(
+    $predecessor_id = parse_positive_integer_strict(
         array_key_exists('predecessor_id',$input) ? $input['predecessor_id'] : null, true);
     if ($document_id === false || $predecessor_id === false)
         return false;
@@ -88,7 +77,7 @@ function hrm_work_authorization_canonical_command($input)
 /** Opaque retry identity; plaintext work-authorization fields are never audited. */
 function hrm_work_authorization_command_digest($worker_id, $command, $master_key)
 {
-    $worker_id = hrm_work_authorization_positive_id($worker_id, false);
+    $worker_id = parse_positive_integer_strict($worker_id, false);
     if ($worker_id === false || !is_array($command) || !is_string($master_key)
         || strlen($master_key) !== 32)
         return false;

@@ -1,10 +1,11 @@
 <?php
 /** PAY-API-001 pure provisioning request/review/approval and target validation. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_api_001_authn.inc');
 if (!defined('PAY_API_001_PROVISIONING_CONTRACT_VERSION')) define('PAY_API_001_PROVISIONING_CONTRACT_VERSION', '1.0.866');
 
 function pay_api_001_provisioning_positive_id($value){return pay_api_001_positive_id($value);}
-function pay_api_001_provisioning_sha256($value){return pay_api_001_is_sha256($value);}
+function pay_api_001_provisioning_sha256($value){return is_sha256_hex($value);}
 /** Return whether a target kind is governed webhook configuration. */
 function pay_api_001_provisioning_webhook_target_kind($value){return in_array((string)$value,array('webhook_target','webhook_target_lifecycle','webhook_secret_ref','webhook_secret_rotation','webhook_delivery_policy','webhook_egress_tls_policy','webhook_signing_profile','webhook_inbound_source'),true);}
 /** Return whether a target kind is supported by PAY-API provisioning. */
@@ -72,7 +73,7 @@ function pay_api_001_provisioning_target_descriptor($kind,$company_id,$payload)
         $n=array('api_principal_id'=>$pid,'credential_key'=>$ck,'verifier_scheme'=>'password_hash','secret_verifier_hash'=>$vh,'valid_from'=>$vf,'expires_at'=>$ex);$key='credential:'.$ck;
     }elseif($kind==='webhook_target'){
         $pc=isset($payload['company_id'])?pay_api_001_uint_value($payload['company_id'],true,4294967295):false;$tk=isset($payload['target_key'])?pay_api_001_provisioning_token($payload['target_key'],96,'/^[a-z0-9][a-z0-9._-]{0,95}$/D'):false;
-        $endpoint=isset($payload['endpoint_config_ref_sha256'])&&pay_api_001_is_sha256($payload['endpoint_config_ref_sha256'])?$payload['endpoint_config_ref_sha256']:false;$signing=isset($payload['signing_key_ref_sha256'])&&pay_api_001_is_sha256($payload['signing_key_ref_sha256'])?$payload['signing_key_ref_sha256']:false;
+        $endpoint=isset($payload['endpoint_config_ref_sha256'])&&is_sha256_hex($payload['endpoint_config_ref_sha256'])?$payload['endpoint_config_ref_sha256']:false;$signing=isset($payload['signing_key_ref_sha256'])&&is_sha256_hex($payload['signing_key_ref_sha256'])?$payload['signing_key_ref_sha256']:false;
         if($pc===false||$pc!==$company||$tk===false||($payload['event_type']??'')!=='payroll.period.summary.available'||($payload['contract_version']??'')!=='v1'||($payload['resource_key']??'')!=='payroll.period.summary'||($payload['object_scope_type']??'')!=='payroll_period'||$endpoint===false||$signing===false)return false;
         $n=array('company_id'=>$company,'target_key'=>$tk,'event_type'=>'payroll.period.summary.available','contract_version'=>'v1','resource_key'=>'payroll.period.summary','object_scope_type'=>'payroll_period','endpoint_config_ref_sha256'=>$endpoint,'signing_key_ref_sha256'=>$signing);$key='webhook_target:'.$company.':'.$tk;
     }elseif($kind==='webhook_target_lifecycle'){
@@ -80,7 +81,7 @@ function pay_api_001_provisioning_target_descriptor($kind,$company_id,$payload)
         if($tid===false||!in_array($action,array('activate','suspend','retire','supersede'),true)||$reason===false||$effective===false||($action==='supersede'?($sid===false||$sid===$tid):$sid!==null))return false;
         $n=array('webhook_target_id'=>$tid,'action_code'=>$action,'successor_target_id'=>$sid,'reason_code'=>$reason,'effective_at'=>$effective);$key='webhook_target_lifecycle:'.$tid.':'.$effective.':'.$action;
     }elseif($kind==='webhook_secret_ref'){
-        $rk=isset($payload['ref_kind'])?(string)$payload['ref_kind']:'';$provider=isset($payload['provider_key'])?pay_api_001_provisioning_token($payload['provider_key'],64):false;$ref=isset($payload['provider_reference_sha256'])&&pay_api_001_is_sha256($payload['provider_reference_sha256'])?$payload['provider_reference_sha256']:false;$valid=isset($payload['valid_from'])?pay_api_001_provisioning_datetime($payload['valid_from']):false;
+        $rk=isset($payload['ref_kind'])?(string)$payload['ref_kind']:'';$provider=isset($payload['provider_key'])?pay_api_001_provisioning_token($payload['provider_key'],64):false;$ref=isset($payload['provider_reference_sha256'])&&is_sha256_hex($payload['provider_reference_sha256'])?$payload['provider_reference_sha256']:false;$valid=isset($payload['valid_from'])?pay_api_001_provisioning_datetime($payload['valid_from']):false;
         if($rk!=='webhook_signing_key'||$provider===false||$ref===false||$valid===false)return false;$n=array('ref_kind'=>$rk,'provider_key'=>$provider,'provider_reference_sha256'=>$ref,'valid_from'=>$valid);$key='webhook_secret_ref:'.$company.':'.$rk.':'.$provider.':'.$ref;
     }elseif($kind==='webhook_secret_rotation'){
         $prev=isset($payload['previous_secret_ref_id'])?pay_api_001_positive_id($payload['previous_secret_ref_id']):false;$next=isset($payload['successor_secret_ref_id'])?pay_api_001_positive_id($payload['successor_secret_ref_id']):false;$reason=isset($payload['reason_code'])?pay_api_001_provisioning_token($payload['reason_code'],64):false;$effective=isset($payload['effective_at'])?pay_api_001_provisioning_datetime($payload['effective_at']):false;

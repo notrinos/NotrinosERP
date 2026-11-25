@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-007 distinct-checker approval for one frozen legacy conversion batch. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_typed_attribute_legacy_bulk_batch_create_draft'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_legacy_bulk_batch_command_db.inc');
 
@@ -28,7 +29,7 @@ function hrm_typed_attribute_legacy_bulk_batch_command_from_locked_rows($batch,$
 /** Approve one exact draft; checker must differ from maker and all candidates are revalidated again. */
 function hrm_typed_attribute_legacy_bulk_batch_approve($batch_id)
 {
-    $batch_id=hrm_typed_attribute_legacy_mapping_positive_id($batch_id,false);
+    $batch_id=parse_positive_integer_strict($batch_id,false);
     $checker=function_exists('hrm_person_worker_actor_id')?hrm_person_worker_actor_id():0;
     if($batch_id===false||$checker<=0||!hrm_typed_attribute_legacy_bulk_batch_user_can_approve())return false;
     begin_transaction();$ok=true;$already=false;

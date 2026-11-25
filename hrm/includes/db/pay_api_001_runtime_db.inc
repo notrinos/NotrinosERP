@@ -111,7 +111,7 @@ function pay_api_001_rate_limit_runtime_core($company_id,$api_principal_id,$api_
     if($require_browser_company&&!pay_api_001_runtime_require_company($company,$error))return false;
     $principal=pay_api_001_positive_id($api_principal_id);$resource=pay_api_001_positive_id($api_resource_id);$policy_id=pay_api_001_positive_id($api_rate_limit_policy_id);
     $scope_id=$api_principal_scope_id===null?null:pay_api_001_positive_id($api_principal_scope_id);
-    if($principal===false||$resource===false||$policy_id===false||($api_principal_scope_id!==null&&$scope_id===false)||!pay_api_001_is_sha256($correlation_sha256)){$error='rate_limit_input_invalid';return false;}
+    if($principal===false||$resource===false||$policy_id===false||($api_principal_scope_id!==null&&$scope_id===false)||!is_sha256_hex($correlation_sha256)){$error='rate_limit_input_invalid';return false;}
     $t=$unix_time===null?time():pay_api_001_uint_value($unix_time,true,PHP_INT_MAX);if($t===false){$error='rate_limit_clock_invalid';return false;}
     $manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();
     $pr=pay_api_001_runtime_one('SELECT company_id,principal_status FROM '.TB_PREF.'hrm_pay_api_001_machine_principals WHERE api_principal_id='.$principal.' LIMIT 2 FOR UPDATE','could not lock PAY-API-001 principal for rate limit');
@@ -176,7 +176,7 @@ function pay_api_001_authenticate_machine_credential($company_id,$credential_key
     $error=null;$company=pay_api_001_uint_value($company_id,true,4294967295);
     $key=pay_api_001_provisioning_token($credential_key,128,'/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/D');
     $t=$unix_time===null?time():pay_api_001_uint_value($unix_time,true,PHP_INT_MAX);
-    if($company===false||$key===false||!is_string($presented_secret)||$presented_secret===''||strlen($presented_secret)>4096||!pay_api_001_is_sha256($correlation_sha256)||$t===false){$error='authentication_input_invalid';return false;}
+    if($company===false||$key===false||!is_string($presented_secret)||$presented_secret===''||strlen($presented_secret)>4096||!is_sha256_hex($correlation_sha256)||$t===false){$error='authentication_input_invalid';return false;}
     $key_sha=hash('sha256',$key);$manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();
     $rq=db_query('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_authn_decisions WHERE company_id='.$company.' AND correlation_sha256='.db_escape($correlation_sha256).' LIMIT 2 FOR UPDATE');
     if(!$rq||db_num_rows($rq)>1){if($manage)cancel_transaction();$error='authentication_replay_state_invalid';return false;}

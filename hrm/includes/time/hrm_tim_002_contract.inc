@@ -1,5 +1,6 @@
 <?php
 /** Pure HRM-TIM-002 overtime-qualification/import contract. No jurisdiction defaults live here. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/hrm_tim_001_contract.inc');
 if (!defined('HRM_TIM_002_CONTRACT_VERSION')) define('HRM_TIM_002_CONTRACT_VERSION','1.0.435');
 if (!defined('HRM_TIM_002_IMPORT_NORMALIZATION_VERSION')) define('HRM_TIM_002_IMPORT_NORMALIZATION_VERSION','tim2-csv-v1');
@@ -8,7 +9,7 @@ if (!defined('HRM_TIM_002_PAYROLL_ADAPTER_VERSION')) define('HRM_TIM_002_PAYROLL
 function hrm_tim_002_token($v,$max=128){return hrm_tim_001_token($v,$max);}
 function hrm_tim_002_hash($v){return hrm_tim_001_hash($v);}
 function hrm_tim_002_date($v){return hrm_tim_001_date($v);}
-function hrm_tim_002_is_sha256($v){return hrm_tim_001_is_sha256($v);}
+function hrm_tim_002_is_sha256($v){return is_sha256_hex($v);}
 function hrm_tim_002_int_or_null($v,$min=0,$max=10000080){if($v===null||$v==='')return null;if(!is_int($v)&&(!is_string($v)||preg_match('/^[0-9]+$/D',$v)!==1))return false;$v=(int)$v;return $v<$min||$v>$max?false:$v;}
 function hrm_tim_002_bool_or_null($v){if($v===null||$v==='')return null;if($v===true||$v===1||$v==='1')return 1;if($v===false||$v===0||$v==='0')return 0;return false;}
 function hrm_tim_002_weekdays($v){if(!is_array($v))return false;$o=array();foreach($v as $d){if(!is_int($d)&&(!is_string($d)||preg_match('/^[0-6]$/D',$d)!==1))return false;$d=(int)$d;if($d<0||$d>6||isset($o[$d]))return false;$o[$d]=true;}ksort($o);return array_keys($o);}

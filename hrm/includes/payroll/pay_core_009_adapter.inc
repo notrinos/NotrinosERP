@@ -1,5 +1,6 @@
 <?php
 /** PAY-CORE-009 minimized staging adapter for rollback-only legacy calculations. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_core_009_contract.inc');
 
 function hrm_pay_core_009_doc_scalar_fields(){return array(
@@ -27,7 +28,7 @@ function hrm_pay_core_009_stage_document($doc,&$error=null)
 
 function hrm_pay_core_009_rehydrate_document($payload_json,$expected_sha256,&$error=null)
 {
-    $error=null;if(!is_string($payload_json)||$payload_json===''||!hrm_pay_core_009_is_sha256($expected_sha256)||!hash_equals($expected_sha256,hash('sha256',$payload_json))){$error='staged_result_hash_mismatch';return false;}
+    $error=null;if(!is_string($payload_json)||$payload_json===''||!is_sha256_hex($expected_sha256)||!hash_equals($expected_sha256,hash('sha256',$payload_json))){$error='staged_result_hash_mismatch';return false;}
     $payload=json_decode($payload_json,true);if(!is_array($payload)||($payload['contract_version']??null)!==HRM_PAY_CORE_009_CONTRACT_VERSION||!is_array($payload['document']??null)||!is_array($payload['employee']??null)||!is_array($payload['lines']??null)){$error='staged_result_invalid';return false;}
     if(!class_exists('payslip_doc')||!class_exists('payslip_line')){$error='legacy_document_class_unavailable';return false;}
     $doc=new payslip_doc();foreach(hrm_pay_core_009_doc_scalar_fields() as $f)if(array_key_exists($f,$payload['document']))$doc->$f=$payload['document'][$f];$doc->employee=(array)$payload['employee'];$doc->employee['employee_id']=$doc->employee_id;

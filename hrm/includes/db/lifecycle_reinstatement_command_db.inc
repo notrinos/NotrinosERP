@@ -41,14 +41,6 @@ function hrm_lifecycle_reinstatement_permission()
 {
     return function_exists('user_check_access') && user_check_access('SA_EMPSEPARATION');
 }
-function hrm_lifecycle_reinstatement_today_sql()
-{
-    if (function_exists('Today') && function_exists('date2sql')) {
-        $today = date2sql(Today());
-        if (parse_iso_calendar_date($today) !== false) return $today;
-    }
-    return date('Y-m-d');
-}
 function hrm_lifecycle_reinstatement_workflow_is_maker_checker()
 {
     if (!defined('ST_HRM_LIFECYCLE_REINSTATEMENT') || !class_exists('ApprovalWorkflow')
@@ -250,7 +242,7 @@ function submit_hrm_lifecycle_employee_reinstatement($employee_id, $effective_da
             break;
         }
         if (!hrm_lifecycle_reinstatement_workflow_is_maker_checker()
-            || strcmp($effective_date, hrm_lifecycle_reinstatement_today_sql()) > 0)
+            || strcmp($effective_date, today_as_sql_date()) > 0)
             break;
         $employment = get_hrm_legacy_current_employment($employee_number, true);
         $assignment = get_hrm_legacy_current_assignment($employee_number, true);
@@ -335,7 +327,7 @@ function execute_approved_hrm_lifecycle_reinstatement($draft_data, $reserved_tra
     if ((string)$command['command_status'] !== 'pending' || (int)$command['row_version'] !== 1
         || (int)$command['requested_by'] <= 0 || (int)$command['requested_by'] === $actor) return false;
     $effective_date = (string)$draft_data['effective_date'];
-    if (strcmp($effective_date, hrm_lifecycle_reinstatement_today_sql()) > 0) return false;
+    if (strcmp($effective_date, today_as_sql_date()) > 0) return false;
     $employee_number = (int)$draft_data['employee_number'];
     $binding = get_hrm_person_worker_binding($employee_number,true);
     $employment = get_hrm_legacy_current_employment($employee_number,true);

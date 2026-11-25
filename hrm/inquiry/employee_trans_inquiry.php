@@ -9,6 +9,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 $page_security = 'SA_EMPLOYEETRANSVIEW';
 $path_to_root = "../..";
 include_once($path_to_root . '/includes/db_pager.inc');
@@ -85,9 +86,9 @@ function get_employee_payslip_inquiry_sql($employee_id, $from_date, $to_date) {
 
     $where = array("p.employee_id = ".db_escape($employee_id));
     if ($from_date !== '' && payslip_has_column($table_name, 'to_date'))
-        $where[] = "p.to_date >= ".db_escape(payslip_to_sql_date($from_date));
+        $where[] = "p.to_date >= ".db_escape(input_date_to_sql_date($from_date));
     if ($to_date !== '' && payslip_has_column($table_name, 'from_date'))
-        $where[] = "p.from_date <= ".db_escape(payslip_to_sql_date($to_date));
+        $where[] = "p.from_date <= ".db_escape(input_date_to_sql_date($to_date));
 
     $where[] = payslip_non_voided_condition($table_name, 'p');
 
@@ -113,9 +114,9 @@ function get_employee_payslip_inquiry_sql($employee_id, $from_date, $to_date) {
 function get_employee_loan_inquiry_sql($employee_id, $from_date, $to_date) {
     $where = array("l.employee_id = ".db_escape($employee_id));
     if ($from_date !== '')
-        $where[] = "l.loan_date >= ".db_escape(loan_to_sql_date($from_date));
+        $where[] = "l.loan_date >= ".db_escape(input_date_to_sql_date($from_date));
     if ($to_date !== '')
-        $where[] = "l.loan_date <= ".db_escape(loan_to_sql_date($to_date));
+        $where[] = "l.loan_date <= ".db_escape(input_date_to_sql_date($to_date));
 
     return "SELECT l.loan_id,
             lt.loan_type_name,
@@ -140,9 +141,9 @@ function get_employee_loan_inquiry_sql($employee_id, $from_date, $to_date) {
 function get_employee_repayment_inquiry_sql($employee_id, $from_date, $to_date) {
     $where = array("l.employee_id = ".db_escape($employee_id));
     if ($from_date !== '')
-        $where[] = "r.due_date >= ".db_escape(loan_to_sql_date($from_date));
+        $where[] = "r.due_date >= ".db_escape(input_date_to_sql_date($from_date));
     if ($to_date !== '')
-        $where[] = "r.due_date <= ".db_escape(loan_to_sql_date($to_date));
+        $where[] = "r.due_date <= ".db_escape(input_date_to_sql_date($to_date));
 
         return "SELECT r.repayment_id,
             r.loan_id,

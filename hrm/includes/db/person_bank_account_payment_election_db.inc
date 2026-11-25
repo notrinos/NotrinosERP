@@ -13,7 +13,7 @@ $hrm_bank_payment_election_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_bank_payment_election_dependencies = array(
     array('/hrm/includes/hrm_security.inc', 'function', 'hrm_user_can_access_sensitive_field'),
-    array('/includes/federation_assurance_consumer.inc', 'function', 'federation_assurance_consumer_current_session_id'),
+    array('/includes/federation_assurance_consumer.inc', 'function', 'current_security_session_id_or_zero'),
     array('/includes/approval/approval_workflow.inc', 'class', 'ApprovalWorkflow'),
     array('/includes/approval/db/approval_rules_db.inc', 'function', 'get_approval_workflow_by_type'),
     array('/includes/db/domain_audit_db.inc', 'function', 'append_domain_audit_event'),
@@ -38,16 +38,6 @@ if (!defined('HRM_BANK_PAYMENT_ELECTION_HASH_VERSION'))
     define('HRM_BANK_PAYMENT_ELECTION_HASH_VERSION', '1');
 if (!defined('HRM_BANK_PAYMENT_ELECTION_MAX_ALLOCATIONS'))
     define('HRM_BANK_PAYMENT_ELECTION_MAX_ALLOCATIONS', 16);
-
-function hrm_bank_payment_election_positive_int($value)
-{
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    if (!is_string($value) || preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $integer = (int)$value;
-    return $integer > 0 && (string)$integer === $value ? $integer : false;
-}
 
 function hrm_bank_payment_election_nonnegative_int($value)
 {
@@ -106,9 +96,9 @@ function hrm_bank_payment_election_normalize_allocations($allocations)
         sort($keys, SORT_STRING);
         if ($keys !== array('allocation_type','allocation_value','bank_account_row_version','person_bank_account_id','priority'))
             return false;
-        $bank_id = hrm_bank_payment_election_positive_int($allocation['person_bank_account_id']);
-        $bank_version = hrm_bank_payment_election_positive_int($allocation['bank_account_row_version']);
-        $priority = hrm_bank_payment_election_positive_int($allocation['priority']);
+        $bank_id = parse_positive_integer_strict($allocation['person_bank_account_id']);
+        $bank_version = parse_positive_integer_strict($allocation['bank_account_row_version']);
+        $priority = parse_positive_integer_strict($allocation['priority']);
         $percentage = hrm_bank_payment_election_percentage($allocation['allocation_value']);
         if ($bank_id === false || $bank_version === false || $priority === false
             || $priority > HRM_BANK_PAYMENT_ELECTION_MAX_ALLOCATIONS
@@ -158,7 +148,7 @@ function hrm_bank_payment_election_permission()
 function hrm_bank_payment_election_submit_action_hash($company, $person_id, $currency_code,
     $predecessor_election_id, $predecessor_row_version, $effective_from, $allocation_hash)
 {
-    $person_id = hrm_bank_payment_election_positive_int($person_id);
+    $person_id = parse_positive_integer_strict($person_id);
     $currency_code = hrm_bank_payment_election_currency($currency_code);
     $predecessor_election_id = hrm_bank_payment_election_nonnegative_int($predecessor_election_id);
     $predecessor_row_version = hrm_bank_payment_election_nonnegative_int($predecessor_row_version);
@@ -180,9 +170,9 @@ function hrm_bank_payment_election_submit_action_hash($company, $person_id, $cur
 function hrm_bank_payment_election_approval_action_hash($company, $payment_election_id, $election_row_version,
     $approval_draft_id, $currency_code, $effective_from, $allocation_hash)
 {
-    $payment_election_id = hrm_bank_payment_election_positive_int($payment_election_id);
-    $election_row_version = hrm_bank_payment_election_positive_int($election_row_version);
-    $approval_draft_id = hrm_bank_payment_election_positive_int($approval_draft_id);
+    $payment_election_id = parse_positive_integer_strict($payment_election_id);
+    $election_row_version = parse_positive_integer_strict($election_row_version);
+    $approval_draft_id = parse_positive_integer_strict($approval_draft_id);
     $currency_code = hrm_bank_payment_election_currency($currency_code);
     $effective = hrm_bank_payment_election_datetime($effective_from);
     if ((int)$company < 0 || $payment_election_id === false || $election_row_version === false
@@ -221,8 +211,8 @@ function hrm_bank_payment_election_workflow_is_maker_checker()
 function hrm_bank_payment_election_assurance_event_for_update($session_id, $action_class, $action_hash)
 {
     if ((int)$session_id <= 0 || !is_string($action_class) || $action_class === ''
-        || !function_exists('federation_assurance_consumer_hex64')
-        || !federation_assurance_consumer_hex64($action_hash))
+        || !function_exists('is_sha256_hex')
+        || !is_sha256_hex($action_hash))
         return false;
     $result = db_query("SELECT assurance_event_id,session_id,assurance_level,assurance_method,action_class,action_hash,issued_at,expires_at,consumed_at FROM "
         .TB_PREF."user_session_assurance_events WHERE session_id=".(int)$session_id." AND action_class=".db_escape($action_class)
@@ -243,13 +233,12 @@ function hrm_bank_payment_election_assurance_event_for_update($session_id, $acti
 
 function hrm_bank_payment_election_consume_assurance($company, $action_class, $action_hash, $reason_code, $now_epoch)
 {
-    if (!function_exists('federation_assurance_consumer_current_session_id')
-        || !function_exists('federation_assurance_consumer_custody_for_update')
+    if (!function_exists('federation_assurance_consumer_custody_for_update')
         || !function_exists('federation_assurance_consumer_current_custody_valid')
         || !function_exists('federation_assurance_consumer_restore_level_one_sql')
         || !function_exists('append_domain_audit_event'))
         return false;
-    $session_id = federation_assurance_consumer_current_session_id();
+    $session_id = current_security_session_id_or_zero();
     if ($session_id <= 0)
         return false;
     $custody = federation_assurance_consumer_custody_for_update($session_id);
@@ -295,7 +284,7 @@ function hrm_bank_payment_election_consume_assurance($company, $action_class, $a
 
 function hrm_bank_payment_election_person_for_update($person_id)
 {
-    $person_id = hrm_bank_payment_election_positive_int($person_id);
+    $person_id = parse_positive_integer_strict($person_id);
     if ($person_id === false)
         return false;
     $result = db_query("SELECT person_id FROM ".TB_PREF."hrm_persons WHERE person_id=".$person_id." LIMIT 2 FOR UPDATE",
@@ -310,7 +299,7 @@ function hrm_bank_payment_election_person_for_update($person_id)
 
 function hrm_bank_payment_election_bank_for_update($bank_id)
 {
-    $bank_id = hrm_bank_payment_election_positive_int($bank_id);
+    $bank_id = parse_positive_integer_strict($bank_id);
     if ($bank_id === false)
         return false;
     $result = db_query("SELECT person_bank_account_id,person_id,row_version,effective_from,effective_to,source,verification_status,verification_method,approval_status "
@@ -381,7 +370,7 @@ function hrm_bank_payment_election_pending_for_update($person_id, $currency_code
 
 function hrm_bank_payment_election_by_id_for_update($election_id)
 {
-    $election_id = hrm_bank_payment_election_positive_int($election_id);
+    $election_id = parse_positive_integer_strict($election_id);
     if ($election_id === false)
         return false;
     $result = db_query("SELECT payment_election_id,person_id,currency_code,election_status,approval_status,approval_draft_id,row_version,"
@@ -431,7 +420,7 @@ function hrm_bank_payment_election_decode_draft_data($raw)
 
 function hrm_bank_payment_election_draft_data($draft_id)
 {
-    $draft_id = hrm_bank_payment_election_positive_int($draft_id);
+    $draft_id = parse_positive_integer_strict($draft_id);
     if ($draft_id === false)
         return false;
     $result = db_query("SELECT id,trans_type,draft_data,submitted_by,status FROM ".TB_PREF."approval_drafts WHERE id=".$draft_id
@@ -462,9 +451,9 @@ function hrm_bank_payment_election_draft_matches($draft_data, $election, $alloca
     foreach ($required as $key)
         if (!array_key_exists($key, $draft_data))
             return false;
-    $election_id = hrm_bank_payment_election_positive_int($draft_data['payment_election_id']);
-    $row_version = hrm_bank_payment_election_positive_int($draft_data['election_row_version']);
-    $person_id = hrm_bank_payment_election_positive_int($draft_data['person_id']);
+    $election_id = parse_positive_integer_strict($draft_data['payment_election_id']);
+    $row_version = parse_positive_integer_strict($draft_data['election_row_version']);
+    $person_id = parse_positive_integer_strict($draft_data['person_id']);
     $predecessor_id = hrm_bank_payment_election_nonnegative_int($draft_data['predecessor_payment_election_id']);
     $predecessor_version = hrm_bank_payment_election_nonnegative_int($draft_data['predecessor_row_version']);
     $terminal_successor = $allow_terminal_successor === true
@@ -561,7 +550,7 @@ function hrm_bank_payment_election_exact_retry($pending, $actor, $predecessor_id
 function submit_hrm_person_bank_payment_election($person_id, $currency_code, $predecessor_election_id,
     $predecessor_row_version, $effective_from, $allocations, $now_epoch = null)
 {
-    $person_id = hrm_bank_payment_election_positive_int($person_id);
+    $person_id = parse_positive_integer_strict($person_id);
     $currency_code = hrm_bank_payment_election_currency($currency_code);
     $predecessor_election_id = hrm_bank_payment_election_nonnegative_int($predecessor_election_id);
     $predecessor_row_version = hrm_bank_payment_election_nonnegative_int($predecessor_row_version);
@@ -721,11 +710,11 @@ function submit_hrm_person_bank_payment_election($person_id, $currency_code, $pr
 
 function hrm_bank_payment_election_from_draft($draft_data, $draft_id)
 {
-    $draft_id = hrm_bank_payment_election_positive_int($draft_id);
+    $draft_id = parse_positive_integer_strict($draft_id);
     if ($draft_id === false || !is_array($draft_data))
         return false;
     $election_id = isset($draft_data['payment_election_id'])
-        ? hrm_bank_payment_election_positive_int($draft_data['payment_election_id']) : false;
+        ? parse_positive_integer_strict($draft_data['payment_election_id']) : false;
     if ($election_id === false)
         return false;
     $election = hrm_bank_payment_election_by_id_for_update($election_id);

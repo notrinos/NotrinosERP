@@ -9,6 +9,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 include_once(dirname(__FILE__).'/../payroll_formula_policy.inc');
 include_once(dirname(__FILE__).'/hrm_cmp_001_legacy_guard_db.inc');
@@ -17,26 +18,6 @@ include_once(dirname(__FILE__).'/hrm_cmp_001_legacy_guard_db.inc');
  * Employee personal salary override CRUD
  * Used when employee.personal_salary = 1 (individual salary structure).
  */
-
-/**
- * Convert date into SQL format.
- *
- * @param string $date_value
- * @return string
- */
-function employee_salary_to_sql_date($date_value) {
-	$date_value = trim((string)$date_value);
-	if ($date_value === '')
-		return '';
-
-	if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_value))
-		return $date_value;
-
-	if (is_date($date_value))
-		return date2sql($date_value);
-
-	return $date_value;
-}
 
 /**
  * Add one employee salary override row.
@@ -55,8 +36,8 @@ function add_employee_salary($employee_id, $element_id, $amount, $effective_from
 	if (!hrm_legacy_formula_guard_change('employee_salary.formula', 0, '', $formula))
 		return false;
 
-	$effective_from_sql = employee_salary_to_sql_date($effective_from);
-	$effective_to_sql = employee_salary_to_sql_date($effective_to);
+	$effective_from_sql = input_date_to_sql_date($effective_from);
+	$effective_to_sql = input_date_to_sql_date($effective_to);
 	if ($effective_from_sql === '')
 		return false;
 
@@ -111,8 +92,8 @@ function update_employee_salary($salary_id, $amount, $effective_from, $effective
 	))
 		return false;
 
-	$effective_from_sql = employee_salary_to_sql_date($effective_from);
-	$effective_to_sql = employee_salary_to_sql_date($effective_to);
+	$effective_from_sql = input_date_to_sql_date($effective_from);
+	$effective_to_sql = input_date_to_sql_date($effective_to);
 	if ($effective_from_sql === '')
 		return false;
 
@@ -157,7 +138,7 @@ function get_employee_salary($salary_id) {
  * @return array|false
  */
 function get_employee_salary_by_key($employee_id, $element_id, $effective_from) {
-	$effective_from_sql = employee_salary_to_sql_date($effective_from);
+	$effective_from_sql = input_date_to_sql_date($effective_from);
 	if ($effective_from_sql === '')
 		return false;
 
@@ -190,7 +171,7 @@ function get_employee_salaries($employee_id, $active_only=true, $as_of_date=null
 		$sql .= " AND es.is_active = 1";
 
 	if ($as_of_date !== null && $as_of_date !== '') {
-		$as_of_sql = employee_salary_to_sql_date($as_of_date);
+		$as_of_sql = input_date_to_sql_date($as_of_date);
 		if ($as_of_sql !== '') {
 			$sql .= " AND es.effective_from <= ".db_escape($as_of_sql)
 				." AND (es.effective_to IS NULL OR es.effective_to = '0000-00-00' OR es.effective_to >= ".db_escape($as_of_sql).")";
@@ -241,7 +222,7 @@ function get_employee_total_salary($employee_id, $as_of_date=null) {
 	if (!$as_of_date)
 		$as_of_date = Today();
 
-	$as_of_sql = employee_salary_to_sql_date($as_of_date);
+	$as_of_sql = input_date_to_sql_date($as_of_date);
 	if ($as_of_sql === '')
 		$as_of_sql = date2sql(Today());
 

@@ -55,16 +55,6 @@ function hrm_lifecycle_transfer_permission()
     return function_exists('user_check_access') && user_check_access('SA_EMPTRANSFER');
 }
 
-function hrm_lifecycle_transfer_today_sql()
-{
-    if (function_exists('Today') && function_exists('date2sql')) {
-        $today = date2sql(Today());
-        if (parse_iso_calendar_date($today) !== false)
-            return $today;
-    }
-    return date('Y-m-d');
-}
-
 function hrm_lifecycle_transfer_workflow_is_maker_checker()
 {
     if (!defined('ST_HRM_LIFECYCLE_TRANSFER') || !class_exists('ApprovalWorkflow')
@@ -311,7 +301,7 @@ function submit_hrm_lifecycle_employee_transfer($employee_id, $effective_date, $
         || $new_job_id === false || $new_work_location_id === false || $idempotency_hash === false
         || !function_exists('hrm_work_authorization_validate_jurisdiction')
         || !hrm_work_authorization_validate_jurisdiction($work_authorization_jurisdiction)
-        || strcmp($effective_date, hrm_lifecycle_transfer_today_sql()) > 0 || $actor <= 0 || $company < 0
+        || strcmp($effective_date, today_as_sql_date()) > 0 || $actor <= 0 || $company < 0
         || !hrm_lifecycle_transfer_permission() || !hrm_lifecycle_transfer_workflow_is_maker_checker()
         || !function_exists('get_hrm_person_worker_binding') || !function_exists('get_hrm_legacy_current_employment')
         || !function_exists('get_hrm_legacy_current_assignment') || !function_exists('get_approval_workflow_service')
@@ -478,7 +468,7 @@ function execute_approved_hrm_lifecycle_transfer($draft_data, $reserved_trans_no
         return false;
     $work_authorization_jurisdiction = (string)$draft_data['work_authorization_jurisdiction'];
     $effective_date = (string)$draft_data['effective_date'];
-    if (strcmp($effective_date, hrm_lifecycle_transfer_today_sql()) > 0)
+    if (strcmp($effective_date, today_as_sql_date()) > 0)
         return false;
 
     $employee_number = (int)$draft_data['employee_number'];

@@ -13,7 +13,7 @@ require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $hrm_bank_account_verification_request_repo_root = dirname(dirname(dirname(__DIR__)));
 $hrm_bank_account_verification_request_dependencies = array(
     array('/hrm/includes/hrm_security.inc', 'function', 'hrm_user_can_access_sensitive_field'),
-    array('/includes/federation_assurance_consumer.inc', 'function', 'federation_assurance_consumer_current_session_id'),
+    array('/includes/federation_assurance_consumer.inc', 'function', 'current_security_session_id_or_zero'),
     array('/includes/approval/approval_workflow.inc', 'class', 'ApprovalWorkflow'),
     array('/includes/approval/db/approval_rules_db.inc', 'function', 'get_approval_workflow_by_type'),
     array('/includes/db/domain_audit_db.inc', 'function', 'append_domain_audit_event'),
@@ -45,21 +45,11 @@ function hrm_bank_account_verification_request_method($value)
         && preg_match('/^[a-z][a-z0-9_]{0,31}$/D', $value) === 1 ? $value : false;
 }
 
-function hrm_bank_account_verification_request_positive_int($value)
-{
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    if (!is_string($value) || preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $integer = (int)$value;
-    return $integer > 0 && (string)$integer === $value ? $integer : false;
-}
-
 function hrm_bank_account_verification_request_action_hash($company, $person_bank_account_id, $bank_account_row_version, $verification_method)
 {
     $company = (int)$company;
-    $person_bank_account_id = hrm_bank_account_verification_request_positive_int($person_bank_account_id);
-    $bank_account_row_version = hrm_bank_account_verification_request_positive_int($bank_account_row_version);
+    $person_bank_account_id = parse_positive_integer_strict($person_bank_account_id);
+    $bank_account_row_version = parse_positive_integer_strict($bank_account_row_version);
     $verification_method = hrm_bank_account_verification_request_method($verification_method);
     if ($company < 0 || $person_bank_account_id === false || $bank_account_row_version === false
         || $verification_method === false)
@@ -135,7 +125,7 @@ function hrm_bank_account_verification_request_workflow_is_maker_checker()
 
 function hrm_bank_account_verification_request_assurance_event_for_update($session_id, $action_hash)
 {
-    if ((int)$session_id <= 0 || !federation_assurance_consumer_hex64($action_hash))
+    if ((int)$session_id <= 0 || !is_sha256_hex($action_hash))
         return false;
     $result = db_query("SELECT assurance_event_id,session_id,assurance_level,assurance_method,action_class,"
         ."action_hash,nonce_hash,issued_at,expires_at,consumed_at FROM ".TB_PREF."user_session_assurance_events "
@@ -153,7 +143,7 @@ function hrm_bank_account_verification_request_assurance_event_for_update($sessi
 
 function hrm_bank_account_verification_request_consume_assurance($company, $action_hash, $now_epoch)
 {
-    $session_id = federation_assurance_consumer_current_session_id();
+    $session_id = current_security_session_id_or_zero();
     if ($session_id <= 0)
         return false;
     $custody = federation_assurance_consumer_custody_for_update($session_id);
@@ -247,8 +237,8 @@ function hrm_bank_account_verification_request_audit($action, $reason, $request,
 function submit_hrm_person_bank_account_verification_request($person_bank_account_id, $bank_account_row_version, $verification_method, $now_epoch = null)
 {
     global $transaction_level;
-    $person_bank_account_id = hrm_bank_account_verification_request_positive_int($person_bank_account_id);
-    $bank_account_row_version = hrm_bank_account_verification_request_positive_int($bank_account_row_version);
+    $person_bank_account_id = parse_positive_integer_strict($person_bank_account_id);
+    $bank_account_row_version = parse_positive_integer_strict($bank_account_row_version);
     $verification_method = hrm_bank_account_verification_request_method($verification_method);
     $now = $now_epoch === null ? time() : $now_epoch;
     $actor = current_user_id_or_zero();
@@ -346,9 +336,9 @@ function hrm_bank_account_verification_request_from_draft($draft_data, $for_upda
     if (!is_array($draft_data) || !isset($draft_data['verification_request_id'],$draft_data['person_bank_account_id'],
         $draft_data['bank_account_row_version'],$draft_data['verification_method']))
         return false;
-    $request_id = hrm_bank_account_verification_request_positive_int($draft_data['verification_request_id']);
-    $person_bank_account_id = hrm_bank_account_verification_request_positive_int($draft_data['person_bank_account_id']);
-    $row_version = hrm_bank_account_verification_request_positive_int($draft_data['bank_account_row_version']);
+    $request_id = parse_positive_integer_strict($draft_data['verification_request_id']);
+    $person_bank_account_id = parse_positive_integer_strict($draft_data['person_bank_account_id']);
+    $row_version = parse_positive_integer_strict($draft_data['bank_account_row_version']);
     $method = hrm_bank_account_verification_request_method($draft_data['verification_method']);
     if ($request_id === false || $person_bank_account_id === false || $row_version === false || $method === false)
         return false;

@@ -4,6 +4,7 @@
  * Pure bytes/arithmetic only. Existing v1 projection, approval, cutover and
  * financial workflows remain authoritative and unchanged. No runtime caller.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 require_once dirname(__FILE__).'/pay_glb_001_native_execution_contract.inc';
 require_once dirname(__FILE__).'/pay_core_004_contract.inc';
 require_once dirname(__FILE__).'/pay_core_010_contract.inc';
@@ -67,7 +68,7 @@ function pay_glb_001_native_projection_candidate_v2(array $execution,array $sele
     $error=null;
     if (!pay_glb_001_native_projection_selection($execution,$selection,$error)
         || !pay_glb_001_native_receipt_validate('member',$member,$error)
-        || !hrm_pay_core_004_is_sha256($employee_sha) || $member['assignment_id']===null
+        || !is_sha256_hex($employee_sha) || $member['assignment_id']===null
         || $member['native_execution_key']!==$execution['native_execution_key']
         || count($lines)<1 || count($lines)>4096 || count($traces)<1 || count($traces)>65536) {
         $error='native_projection_member_or_material_invalid';return false;
@@ -148,7 +149,7 @@ function pay_glb_001_native_projection_result_set_v2(array $rows,&$error=null)
     $items=array();$seen=array();$currency=null;$sums=array('gross_amount'=>'0.00000000','deduction_amount'=>'0.00000000','net_amount'=>'0.00000000');
     foreach ($rows as $row) {
         if (!is_array($row) || array_keys($row)!==array('result_id','result_sha256','currency','gross_amount','deduction_amount','net_amount')
-            || pay_glb_001_native_helper_id($row['result_id'],$error)===false || !hrm_pay_core_004_is_sha256($row['result_sha256'])
+            || pay_glb_001_native_helper_id($row['result_id'],$error)===false || !is_sha256_hex($row['result_sha256'])
             || isset($seen[$row['result_id']]) || !is_string($row['currency']) || preg_match('/^[A-Z]{3}$/D',$row['currency'])!==1
             || ($currency!==null && $currency!==$row['currency'])) { $error='native_projection_result_set_row_invalid';return false; }
         $seen[$row['result_id']]=true;$currency=$row['currency'];
@@ -179,7 +180,7 @@ function pay_glb_001_native_projection_approval_intent_v2(array $execution,array
 {
     $error=null;
     if (!pay_glb_001_native_projection_selection($execution,$selection,$error)
-        || !hrm_pay_core_004_is_sha256($cutover_sha) || !hrm_pay_core_004_is_sha256($key)
+        || !is_sha256_hex($cutover_sha) || !is_sha256_hex($key)
         || pay_glb_001_native_helper_id($maker,$error)===false || !pay_glb_001_native_unsigned($maker,'4294967295')
         || count($projections)!==(int)$execution['member_count'] || array_keys($projections)!==range(0,count($projections)-1)) {
         $error='native_projection_intent_scope_invalid';return false;
@@ -209,7 +210,7 @@ function pay_glb_001_native_projection_approval_intent_v2(array $execution,array
             || $d['result_id']!==pay_glb_001_native_helper_id($member['core004_result_id'],$error) || $d['result_sha256']!==$member['result_sha256']
             || $d['assignment_id']!==pay_glb_001_native_helper_id($member['assignment_id'],$error)
             || $d['payroll_relationship_id']!==pay_glb_001_native_helper_id($member['payroll_relationship_id'],$error)
-            || !hrm_pay_core_004_is_sha256($d['employee_id_sha256']) || $header['employee_id_sha256']!==$d['employee_id_sha256']
+            || !is_sha256_hex($d['employee_id_sha256']) || $header['employee_id_sha256']!==$d['employee_id_sha256']
             || $header['company_id']!==$execution['company_id'] || $header['projection_contract_version']!==pay_glb_001_native_projection_version()
             || $header['payroll_relationship_id']!==$member['payroll_relationship_id'] || $header['assignment_id']!==$member['assignment_id']
             || $header['snapshot_id']!==$member['core004_snapshot_id'] || $header['snapshot_sha256']!==$member['snapshot_sha256']

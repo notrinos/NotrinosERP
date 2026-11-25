@@ -5,6 +5,7 @@
  * Side-effect free. No DB/session/request/network/GL/payment authority. Runtime
  * writers bind these descriptors to authoritative repository/database state.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_core_004_contract.inc');
 if(!defined('HRM_PAY_CORE_009_CONTRACT_VERSION')) define('HRM_PAY_CORE_009_CONTRACT_VERSION','1.0');
 if(!defined('HRM_PAY_CORE_009_DEFAULT_CHUNK_SIZE')) define('HRM_PAY_CORE_009_DEFAULT_CHUNK_SIZE',10);
@@ -18,7 +19,6 @@ if(!defined('HRM_PAY_CORE_009_CALCULATOR_CUTOVER_ALLOWED')) define('HRM_PAY_CORE
 
 function hrm_pay_core_009_hash($v){return hrm_pay_core_004_hash($v);}
 function hrm_pay_core_009_canonical_json($v){return hrm_pay_core_004_canonical_json($v);}
-function hrm_pay_core_009_is_sha256($v){return is_string($v)&&preg_match('/^[a-f0-9]{64}$/D',$v)===1;}
 function hrm_pay_core_009_token($v,$max=128){return is_string($v)&&strlen($v)>0&&strlen($v)<=$max&&preg_match('/^[A-Za-z0-9_.:-]+$/D',$v)===1?$v:false;}
 function hrm_pay_core_009_states(){return array('queued','running','finalizing','completed','failed','quarantined','cancelled');}
 function hrm_pay_core_009_item_states(){return array('pending','running','completed','failed','quarantined');}
@@ -66,7 +66,7 @@ function hrm_pay_core_009_run_request($period_name,$from_date,$to_date,array $it
 function hrm_pay_core_009_state_descriptor($run_key,$state,$version,$request_sha256,$checkpoint_no,$lease_token_sha256=null,&$error=null)
 {
     $error=null;$key=hrm_pay_core_009_token($run_key,96);$version=(int)$version;$checkpoint=(int)$checkpoint_no;
-    if(!$key||!in_array($state,hrm_pay_core_009_states(),true)||$version<=0||$checkpoint<0||!hrm_pay_core_009_is_sha256($request_sha256)||($lease_token_sha256!==null&&!hrm_pay_core_009_is_sha256($lease_token_sha256))){$error='state_descriptor_invalid';return false;}
+    if(!$key||!in_array($state,hrm_pay_core_009_states(),true)||$version<=0||$checkpoint<0||!is_sha256_hex($request_sha256)||($lease_token_sha256!==null&&!is_sha256_hex($lease_token_sha256))){$error='state_descriptor_invalid';return false;}
     $o=array('run_key'=>$key,'state'=>$state,'state_version'=>$version,'request_sha256'=>$request_sha256,'checkpoint_no'=>$checkpoint,'lease_token_sha256'=>$lease_token_sha256);$o['state_sha256']=hrm_pay_core_009_hash($o);return $o;
 }
 
@@ -83,7 +83,7 @@ function hrm_pay_core_009_transition(array $current,$expected_state,$expected_ve
 function hrm_pay_core_009_lease($run_key,$worker_token,$lease_token_sha256,$acquired_at,$expires_at,$event,&$error=null)
 {
     $error=null;$run=hrm_pay_core_009_token($run_key,96);$worker=hrm_pay_core_009_token($worker_token,128);$a=hrm_pay_core_009_iso_utc($acquired_at);$e=hrm_pay_core_009_iso_utc($expires_at);
-    if(!$run||!$worker||!hrm_pay_core_009_is_sha256($lease_token_sha256)||!$a||!$e||$e<=$a||!in_array($event,array('acquired','heartbeat','released','expired_takeover'),true)){$error='lease_invalid';return false;}
+    if(!$run||!$worker||!is_sha256_hex($lease_token_sha256)||!$a||!$e||$e<=$a||!in_array($event,array('acquired','heartbeat','released','expired_takeover'),true)){$error='lease_invalid';return false;}
     $o=array('run_key'=>$run,'worker_sha256'=>hash('sha256',$worker),'lease_token_sha256'=>$lease_token_sha256,'event'=>$event,'acquired_at'=>$a,'expires_at'=>$e);$o['lease_event_sha256']=hrm_pay_core_009_hash($o);return $o;
 }
 function hrm_pay_core_009_lease_is_expired($expires_at,$now){$e=hrm_pay_core_009_iso_utc($expires_at);$n=hrm_pay_core_009_iso_utc($now);return !$e||!$n||$e<=$n;}
@@ -91,28 +91,28 @@ function hrm_pay_core_009_lease_is_expired($expires_at,$now){$e=hrm_pay_core_009
 function hrm_pay_core_009_item_descriptor($run_key,$ordinal,$employee_id,array $scope,$input_sha256,$state,$state_version,$attempt_no,$result_sha256=null,&$error=null)
 {
     $error=null;$run=hrm_pay_core_009_token($run_key,96);$ordinal=(int)$ordinal;$employee=trim((string)$employee_id);$attempt=(int)$attempt_no;$version=(int)$state_version;$s=hrm_pay_core_009_scope($scope,$se);
-    if(!$run||$ordinal<=0||$employee===''||strlen($employee)>64||$s===false||!hrm_pay_core_009_is_sha256($input_sha256)||!in_array($state,hrm_pay_core_009_item_states(),true)||$version<=0||$attempt<0||($result_sha256!==null&&!hrm_pay_core_009_is_sha256($result_sha256))){$error=$s===false?$se:'item_descriptor_invalid';return false;}
+    if(!$run||$ordinal<=0||$employee===''||strlen($employee)>64||$s===false||!is_sha256_hex($input_sha256)||!in_array($state,hrm_pay_core_009_item_states(),true)||$version<=0||$attempt<0||($result_sha256!==null&&!is_sha256_hex($result_sha256))){$error=$s===false?$se:'item_descriptor_invalid';return false;}
     $o=array('run_key'=>$run,'ordinal'=>$ordinal,'employee_id_sha256'=>hash('sha256',$employee),'scope'=>$s,'input_sha256'=>$input_sha256,'state'=>$state,'state_version'=>$version,'attempt_no'=>$attempt,'result_sha256'=>$result_sha256);$o['item_state_sha256']=hrm_pay_core_009_hash($o);return $o;
 }
 
 function hrm_pay_core_009_checkpoint($run_key,$checkpoint_no,$completed,$failed,$quarantined,$item_set_sha256,$state_sha256,$evidence_sha256,&$error=null)
 {
     $error=null;$run=hrm_pay_core_009_token($run_key,96);$checkpoint=(int)$checkpoint_no;$completed=(int)$completed;$failed=(int)$failed;$quarantined=(int)$quarantined;
-    if(!$run||$checkpoint<=0||min($completed,$failed,$quarantined)<0||!hrm_pay_core_009_is_sha256($item_set_sha256)||!hrm_pay_core_009_is_sha256($state_sha256)||!hrm_pay_core_009_is_sha256($evidence_sha256)){$error='checkpoint_invalid';return false;}
+    if(!$run||$checkpoint<=0||min($completed,$failed,$quarantined)<0||!is_sha256_hex($item_set_sha256)||!is_sha256_hex($state_sha256)||!is_sha256_hex($evidence_sha256)){$error='checkpoint_invalid';return false;}
     $o=array('run_key'=>$run,'checkpoint_no'=>$checkpoint,'completed_items'=>$completed,'failed_items'=>$failed,'quarantined_items'=>$quarantined,'item_set_sha256'=>$item_set_sha256,'state_sha256'=>$state_sha256,'evidence_sha256'=>$evidence_sha256);$o['checkpoint_sha256']=hrm_pay_core_009_hash($o);return $o;
 }
 
 function hrm_pay_core_009_attempt($run_key,$ordinal,$attempt_no,$command_key,$worker_token,$predecessor_sha256,$outcome,$result_sha256,$error_code,$evidence_sha256,&$error=null)
 {
     $error=null;$run=hrm_pay_core_009_token($run_key,96);$cmd=hrm_pay_core_009_token($command_key,128);$worker=hrm_pay_core_009_token($worker_token,128);$code=$error_code===null?null:hrm_pay_core_009_token($error_code,96);$result=$result_sha256===null?null:$result_sha256;
-    if(!$run||(int)$ordinal<=0||(int)$attempt_no<=0||!$cmd||!$worker||!hrm_pay_core_009_is_sha256($predecessor_sha256)||!in_array($outcome,array('completed','failed','quarantined','stale'),true)||($result!==null&&!hrm_pay_core_009_is_sha256($result))||($code!==null&&!$code)||!hrm_pay_core_009_is_sha256($evidence_sha256)){$error='attempt_invalid';return false;}
+    if(!$run||(int)$ordinal<=0||(int)$attempt_no<=0||!$cmd||!$worker||!is_sha256_hex($predecessor_sha256)||!in_array($outcome,array('completed','failed','quarantined','stale'),true)||($result!==null&&!is_sha256_hex($result))||($code!==null&&!$code)||!is_sha256_hex($evidence_sha256)){$error='attempt_invalid';return false;}
     $o=array('run_key'=>$run,'ordinal'=>(int)$ordinal,'attempt_no'=>(int)$attempt_no,'command_key'=>$cmd,'worker_sha256'=>hash('sha256',$worker),'predecessor_state_sha256'=>$predecessor_sha256,'outcome'=>$outcome,'result_sha256'=>$result,'error_code'=>$code,'evidence_sha256'=>$evidence_sha256);$o['attempt_sha256']=hrm_pay_core_009_hash($o);return $o;
 }
 
 function hrm_pay_core_009_recovery($run_key,$action,$predecessor_state_sha256,$evidence_sha256,$actor_id,&$error=null)
 {
     $error=null;$run=hrm_pay_core_009_token($run_key,96);$action=hrm_pay_core_009_token($action,64);$actor=(int)$actor_id;
-    if(!$run||!in_array($action,array('resume_failed','resume_quarantined','expire_lease','reconcile','cancel'),true)||!hrm_pay_core_009_is_sha256($predecessor_state_sha256)||!hrm_pay_core_009_is_sha256($evidence_sha256)||$actor<=0){$error='recovery_invalid';return false;}
+    if(!$run||!in_array($action,array('resume_failed','resume_quarantined','expire_lease','reconcile','cancel'),true)||!is_sha256_hex($predecessor_state_sha256)||!is_sha256_hex($evidence_sha256)||$actor<=0){$error='recovery_invalid';return false;}
     $o=array('run_key'=>$run,'action'=>$action,'predecessor_state_sha256'=>$predecessor_state_sha256,'evidence_sha256'=>$evidence_sha256,'actor_id'=>$actor);$o['recovery_sha256']=hrm_pay_core_009_hash($o);return $o;
 }
 ?>

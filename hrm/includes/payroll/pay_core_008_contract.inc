@@ -6,6 +6,7 @@
  * access. It consumes explicit immutable predecessor evidence and returns canonical
  * successor evidence only.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_core_004_contract.inc');
 include_once(dirname(__FILE__).'/pay_core_005_contract.inc');
 include_once(dirname(__FILE__).'/pay_core_006_contract.inc');
@@ -16,7 +17,7 @@ if(!defined('HRM_PAY_CORE_008_PAYMENT_AUTHORITY_ALLOWED')) define('HRM_PAY_CORE_
 if(!defined('HRM_PAY_CORE_008_STATUTORY_AUTHORITY_ALLOWED')) define('HRM_PAY_CORE_008_STATUTORY_AUTHORITY_ALLOWED',false);
 
 function hrm_pay_core_008_hash($v){return hrm_pay_core_004_hash($v);}
-function hrm_pay_core_008_is_sha256($v){return hrm_pay_core_004_is_sha256($v);}
+function hrm_pay_core_008_is_sha256($v){return is_sha256_hex($v);}
 function hrm_pay_core_008_token($v,$max=128){return is_string($v)&&strlen($v)>0&&strlen($v)<=$max&&preg_match('/^[A-Za-z0-9_.:-]+$/D',$v)?$v:false;}
 function hrm_pay_core_008_date($v){return is_string($v)&&preg_match('/^\\d{4}-\\d{2}-\\d{2}$/D',$v)&&date('Y-m-d',strtotime($v))===$v?$v:false;}
 function hrm_pay_core_008_decimal($v){return hrm_pay_core_005_decimal_string($v);}

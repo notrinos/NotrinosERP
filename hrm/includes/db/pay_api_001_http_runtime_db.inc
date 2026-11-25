@@ -1,5 +1,6 @@
 <?php
 /** PAY-API-001 governed machine-authenticated read pre-controller runtime. Public HTTP exposure remains disabled. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_api_001_runtime_db.inc');
 include_once($path_to_root.'/includes/pay_api_001_http_readonly.inc');
 
@@ -13,7 +14,7 @@ function pay_api_001_record_read_request_audit(array $event,&$error=null)
     $rate=array_key_exists('api_rate_limit_decision_id',$event)&&$event['api_rate_limit_decision_id']!==null?pay_api_001_positive_id($event['api_rate_limit_decision_id']):null;
     $method=isset($event['method'])?strtoupper((string)$event['method']):'';
     $outcome=isset($event['outcome_code'])?pay_api_001_provisioning_token((string)$event['outcome_code'],48):false;
-    foreach(array('resource_key_sha256','request_target_sha256','correlation_sha256') as $k)if(!isset($event[$k])||!pay_api_001_is_sha256($event[$k])){$error='read_request_audit_hash_invalid';return false;}
+    foreach(array('resource_key_sha256','request_target_sha256','correlation_sha256') as $k)if(!isset($event[$k])||!is_sha256_hex($event[$k])){$error='read_request_audit_hash_invalid';return false;}
     if($company===false||($authn===false)||($principal===false)||($resource===false)||($rate===false)||preg_match('/^[A-Z]{3,8}$/D',$method)!==1||$outcome===false){$error='read_request_audit_input_invalid';return false;}
     $fingerprint=pay_api_001_provisioning_hash(array(
         'company_id'=>$company,'api_authn_decision_id'=>$authn,'api_principal_id'=>$principal,'api_resource_id'=>$resource,'api_rate_limit_decision_id'=>$rate,

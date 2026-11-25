@@ -1,12 +1,13 @@
 <?php
 /** PAY-API-001 pure rate-limit policy/decision gate. Durable atomic enforcement is implemented by the governed DB runtime service. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_api_001_authn.inc');
 if (!defined('PAY_API_001_RATE_LIMIT_CONTRACT_VERSION')) define('PAY_API_001_RATE_LIMIT_CONTRACT_VERSION', '1.0.867');
 function pay_api_001_rate_limit_positive_int($value,$max){$n=pay_api_001_uint_value($value,false,$max);return $n===false?false:$n;}
 function pay_api_001_rate_limit_policy_valid($policy)
 {
     if(!is_array($policy))return false;foreach(array('api_rate_limit_policy_id','api_resource_id','reviewed_by','approved_by') as $k)if(!isset($policy[$k])||pay_api_001_rate_limit_positive_int($policy[$k],PHP_INT_MAX)===false)return false;
-    if(pay_api_001_positive_id($policy['reviewed_by'])===pay_api_001_positive_id($policy['approved_by'])||!isset($policy['action_code'])||(string)$policy['action_code']!=='read'||!isset($policy['window_seconds'])||pay_api_001_rate_limit_positive_int($policy['window_seconds'],86400)===false||!isset($policy['max_requests'])||pay_api_001_rate_limit_positive_int($policy['max_requests'],100000)===false||!isset($policy['policy_sha256'])||!pay_api_001_is_sha256($policy['policy_sha256']))return false;return true;
+    if(pay_api_001_positive_id($policy['reviewed_by'])===pay_api_001_positive_id($policy['approved_by'])||!isset($policy['action_code'])||(string)$policy['action_code']!=='read'||!isset($policy['window_seconds'])||pay_api_001_rate_limit_positive_int($policy['window_seconds'],86400)===false||!isset($policy['max_requests'])||pay_api_001_rate_limit_positive_int($policy['max_requests'],100000)===false||!isset($policy['policy_sha256'])||!is_sha256_hex($policy['policy_sha256']))return false;return true;
 }
 function pay_api_001_rate_limit_window_start($unix_time,$window_seconds)
 {

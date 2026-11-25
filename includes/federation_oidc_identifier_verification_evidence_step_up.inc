@@ -11,6 +11,7 @@
  * This file exposes no HTTP route, performs no payroll/payment/accounting write,
  * consumes no privileged action, and accepts no browser-controlled return URL.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 
 if (!defined('FEDERATION_OIDC_IDENTIFIER_VERIFICATION_EVIDENCE_STEP_UP_CSRF_TTL'))
     define('FEDERATION_OIDC_IDENTIFIER_VERIFICATION_EVIDENCE_STEP_UP_CSRF_TTL', 600);
@@ -43,7 +44,7 @@ function federation_oidc_identifier_verification_evidence_step_up_dependencies()
         'federation_issue_privileged_assurance'=>'federation_assurance_issuer.inc',
         'federation_control_load_bundle'=>'federation_control_material.inc',
         'federation_control_hash_equals'=>'federation_control_material.inc',
-        'federation_control_valid_sha256'=>'federation_control_material.inc',
+        'is_sha256_hex'=>'federation_control_material.inc',
         'federation_verifier_dependency_configured_status'=>'federation_verifier_dependencies.inc'
     );
     foreach ($required as $function=>$file) {
@@ -82,12 +83,6 @@ function federation_oidc_identifier_verification_evidence_step_up_authorized()
 {
     return function_exists('hrm_identifier_verification_request_permission')
         && hrm_identifier_verification_request_permission();
-}
-
-/** Current durable federated session id, never a browser parameter. */
-function federation_oidc_identifier_verification_evidence_step_up_current_session_id()
-{
-    return isset($_SESSION['security_session_registry_id']) ? (int)$_SESSION['security_session_registry_id'] : 0;
 }
 
 /**
@@ -136,11 +131,11 @@ function federation_oidc_identifier_verification_evidence_step_up_action_context
     $approval_draft_id, $identifier_id, $identifier_row_version, $action_hash
 ) {
     $company=(int)$company;
-    $verification_request_id=hrm_identifier_verification_request_positive_int($verification_request_id);
-    $request_row_version=hrm_identifier_verification_request_positive_int($request_row_version);
-    $approval_draft_id=hrm_identifier_verification_request_positive_int($approval_draft_id);
-    $identifier_id=hrm_identifier_verification_request_positive_int($identifier_id);
-    $identifier_row_version=hrm_identifier_verification_request_positive_int($identifier_row_version);
+    $verification_request_id=parse_positive_integer_strict($verification_request_id);
+    $request_row_version=parse_positive_integer_strict($request_row_version);
+    $approval_draft_id=parse_positive_integer_strict($approval_draft_id);
+    $identifier_id=parse_positive_integer_strict($identifier_id);
+    $identifier_row_version=parse_positive_integer_strict($identifier_row_version);
     $employee_ref=is_scalar($employee_ref)?trim((string)$employee_ref):'';
     if($company<0||$employee_ref===''||strlen($employee_ref)>64||$verification_request_id===false
         ||$request_row_version===false||$approval_draft_id===false||$identifier_id===false||$identifier_row_version===false
@@ -166,10 +161,10 @@ function federation_oidc_identifier_verification_evidence_step_up_material_conte
         || strpos($required_path, '?') !== false || strpos($required_path, '#') !== false
         || preg_match('/[\x00-\x20\x7f]/', $required_path))
         return false;
-    if (!function_exists('federation_control_valid_sha256')
-        || !federation_control_valid_sha256((string)$session_context['trust_material_ref_hash'])
-        || !federation_control_valid_sha256((string)$session_context['issuer_hash'])
-        || !federation_control_valid_sha256((string)$session_context['audience_hash']))
+    if (!function_exists('is_sha256_hex')
+        || !is_sha256_hex((string)$session_context['trust_material_ref_hash'])
+        || !is_sha256_hex((string)$session_context['issuer_hash'])
+        || !is_sha256_hex((string)$session_context['audience_hash']))
         return false;
     $bundle = federation_control_load_bundle($company, (string)$session_context['trust_material_ref_hash'], 'oidc', 'oidc_code_pkce_v1');
     if (!is_array($bundle) || !isset($bundle['materials']) || !is_array($bundle['materials'])
@@ -222,7 +217,7 @@ function federation_oidc_identifier_verification_evidence_step_up_authorization_
 function federation_oidc_identifier_verification_evidence_step_up_issue_csrf($action, $now_epoch = null)
 {
     $now=$now_epoch===null?time():$now_epoch;
-    $session_id=federation_oidc_identifier_verification_evidence_step_up_current_session_id();
+    $session_id=current_security_session_id_or_zero();
     if(!is_array($action)||!isset($action['company'],$action['employee_ref'],$action['verification_request_id'],
         $action['request_row_version'],$action['approval_draft_id'],$action['identifier_id'],$action['identifier_row_version'],$action['action_hash'])
         ||!is_int($now)||$now<=0||$session_id<=0||!federation_oidc_identifier_verification_evidence_step_up_authorized())return false;
@@ -248,7 +243,7 @@ function federation_oidc_identifier_verification_evidence_step_up_consume_csrf($
     if(!is_array($action)||!is_array($row)||!is_string($token)||preg_match('/^[A-Za-z0-9_-]{43}$/D',$token)!==1
         ||!is_int($now_epoch)||$now_epoch<=0)return false;
     return (int)$row['company']===(int)$action['company']
-        &&(int)$row['session_id']===federation_oidc_identifier_verification_evidence_step_up_current_session_id()
+        &&(int)$row['session_id']===current_security_session_id_or_zero()
         &&(string)$row['employee_ref']===(string)$action['employee_ref']
         &&(int)$row['verification_request_id']===(int)$action['verification_request_id']
         &&(int)$row['request_row_version']===(int)$action['request_row_version']
@@ -308,7 +303,7 @@ function federation_oidc_identifier_verification_evidence_step_up_pending($compa
         || !is_array($_SESSION['federation_identifier_verification_evidence_step_up_pending'][$hash])) return false;
     $row=$_SESSION['federation_identifier_verification_evidence_step_up_pending'][$hash];
     if ((int)$row['company']!==$company
-        || (int)$row['session_id']!==federation_oidc_identifier_verification_evidence_step_up_current_session_id()
+        || (int)$row['session_id']!==current_security_session_id_or_zero()
         || (string)$row['action_class']!==HRM_IDENTIFIER_VERIFICATION_EVIDENCE_REGISTRATION_ACTION_CLASS) return false;
     return $row;
 }
@@ -358,7 +353,7 @@ function federation_oidc_start_identifier_verification_evidence_step_up($company
     $dependency=$root===false?false:federation_verifier_dependency_configured_status($root);
     if (!is_array($dependency)||empty($dependency['available']))
         return federation_oidc_identifier_verification_evidence_step_up_result('retry_later','verifier_dependency_unavailable');
-    $session_id=federation_oidc_identifier_verification_evidence_step_up_current_session_id();
+    $session_id=current_security_session_id_or_zero();
     $session_context=federation_oidc_identifier_verification_evidence_step_up_session_context($session_id,$now);
     if (!is_array($session_context)) return federation_oidc_identifier_verification_evidence_step_up_result('denied','federated_session_ineligible');
     $material=federation_oidc_identifier_verification_evidence_step_up_material_context($company,$session_context,$required_callback_path);

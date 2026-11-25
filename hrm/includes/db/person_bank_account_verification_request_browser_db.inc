@@ -28,10 +28,8 @@ function hrm_bank_account_verification_request_browser_successor($employee_ref, 
 {
     if (!hrm_bank_account_verification_request_browser_permission() || !defined('TB_PREF')
         || !function_exists('current_user_id_or_zero')) return false;
-    $person_bank_account_id = function_exists('hrm_bank_account_verification_request_positive_int')
-        ? hrm_bank_account_verification_request_positive_int($person_bank_account_id) : false;
-    $row_version = function_exists('hrm_bank_account_verification_request_positive_int')
-        ? hrm_bank_account_verification_request_positive_int($row_version) : false;
+    $person_bank_account_id = parse_positive_integer_strict($person_bank_account_id);
+    $row_version = parse_positive_integer_strict($row_version);
     $employee_ref = hrm_bank_account_verification_request_browser_employee_ref($employee_ref);
     $actor = current_user_id_or_zero();
     if ($person_bank_account_id === false || $row_version === false || $employee_ref === false || $actor <= 0) return false;

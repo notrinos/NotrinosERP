@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-004 governed Person bank payment-election maker/final-checker browser continuation. */
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 $bank_payment_election_raw_method=isset($_SERVER['REQUEST_METHOD'])?(string)$_SERVER['REQUEST_METHOD']:'';
 $bank_payment_election_raw_query=isset($_SERVER['QUERY_STRING'])?(string)$_SERVER['QUERY_STRING']:'';
 $bank_payment_election_script_name=isset($_SERVER['SCRIPT_NAME'])?(string)$_SERVER['SCRIPT_NAME']:'';
@@ -70,8 +71,8 @@ if($bank_payment_election_raw_method==='POST'&&$action==='start_submit_step_up')
         $generic_error=_('The payment-election action could not be prepared.');
     }else{
         $parts=explode(':',isset($_POST['bank_candidate'])?(string)$_POST['bank_candidate']:'',2);
-        $bank_id=count($parts)===2?hrm_bank_payment_election_positive_int($parts[0]):false;
-        $bank_version=count($parts)===2?hrm_bank_payment_election_positive_int($parts[1]):false;
+        $bank_id=count($parts)===2?parse_positive_integer_strict($parts[0]):false;
+        $bank_version=count($parts)===2?parse_positive_integer_strict($parts[1]):false;
         $currency=isset($_POST['currency_code'])?strtoupper(trim((string)$_POST['currency_code'])):'';
         $effective=isset($_POST['effective_from'])?trim((string)$_POST['effective_from']):'';
         $prepared=($bank_id===false||$bank_version===false)?false:hrm_bank_payment_election_browser_prepare_submit($employee_ref,$currency,$effective,$bank_id,$bank_version);
@@ -109,8 +110,8 @@ if($bank_payment_election_raw_method==='POST'&&$action==='start_checker_step_up'
         $generic_error=_('The final checker action could not be prepared.');
     }else{
         $parts=explode(':',isset($_POST['election_candidate'])?(string)$_POST['election_candidate']:'',2);
-        $election_id=count($parts)===2?hrm_bank_payment_election_positive_int($parts[0]):false;
-        $row_version=count($parts)===2?hrm_bank_payment_election_positive_int($parts[1]):false;
+        $election_id=count($parts)===2?parse_positive_integer_strict($parts[0]):false;
+        $row_version=count($parts)===2?parse_positive_integer_strict($parts[1]):false;
         $prepared=($election_id===false||$row_version===false)?false:hrm_bank_payment_election_browser_checker_candidate($employee_ref,$election_id,$row_version);
         $step_csrf=is_array($prepared)?federation_oidc_bank_payment_election_step_up_issue_csrf($prepared,$now):false;
         $result=$step_csrf===false?false:federation_oidc_start_bank_payment_election_step_up($company,$employee_ref,
@@ -129,8 +130,8 @@ if($bank_payment_election_raw_method==='POST'&&$action==='confirm_submit'){
         $generic_error=_('The payment-election confirmation was rejected.');
     }else{
         $parts=explode(':',isset($_POST['bank_candidate'])?(string)$_POST['bank_candidate']:'',2);
-        $bank_id=count($parts)===2?hrm_bank_payment_election_positive_int($parts[0]):false;
-        $bank_version=count($parts)===2?hrm_bank_payment_election_positive_int($parts[1]):false;
+        $bank_id=count($parts)===2?parse_positive_integer_strict($parts[0]):false;
+        $bank_version=count($parts)===2?parse_positive_integer_strict($parts[1]):false;
         $currency=isset($_POST['currency_code'])?strtoupper(trim((string)$_POST['currency_code'])):'';
         $effective=isset($_POST['effective_from'])?trim((string)$_POST['effective_from']):'';
         $prepared=($bank_id===false||$bank_version===false)?false:hrm_bank_payment_election_browser_prepare_submit($employee_ref,$currency,$effective,$bank_id,$bank_version);

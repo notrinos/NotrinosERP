@@ -22,8 +22,8 @@ function pay_api_001_webhook_delivery_result_evidence(array $result,&$error=null
     $error=null;$keys=array('classification','retry_safe','http_status','response_headers_sha256','response_body_sha256','response_body_bytes','response_content_type_sha256','error_code');
     if(array_keys($result)!==$keys||!in_array($result['classification'],array('pre_send_failure','delivery_uncertain','delivered','provider_retryable','provider_rejected'),true)
         ||!is_bool($result['retry_safe'])||!is_int($result['http_status'])||$result['http_status']<0||$result['http_status']>599
-        ||!pay_api_001_is_sha256($result['response_headers_sha256'])||!pay_api_001_is_sha256($result['response_body_sha256'])||!is_int($result['response_body_bytes'])||$result['response_body_bytes']<0||$result['response_body_bytes']>PAY_API_001_WEBHOOK_MAX_RESPONSE_BYTES
-        ||!pay_api_001_is_sha256($result['response_content_type_sha256'])||!is_string($result['error_code'])||strlen($result['error_code'])>64||preg_match('/^[A-Za-z0-9_.:-]*$/D',$result['error_code'])!==1){$error='webhook_delivery_result_invalid';return false;}
+        ||!is_sha256_hex($result['response_headers_sha256'])||!is_sha256_hex($result['response_body_sha256'])||!is_int($result['response_body_bytes'])||$result['response_body_bytes']<0||$result['response_body_bytes']>PAY_API_001_WEBHOOK_MAX_RESPONSE_BYTES
+        ||!is_sha256_hex($result['response_content_type_sha256'])||!is_string($result['error_code'])||strlen($result['error_code'])>64||preg_match('/^[A-Za-z0-9_.:-]*$/D',$result['error_code'])!==1){$error='webhook_delivery_result_invalid';return false;}
     $definite=in_array($result['classification'],array('delivered','provider_retryable','provider_rejected'),true);
     if($definite&&($result['http_status']<100||$result['http_status']>599)){$error='webhook_provider_response_status_invalid';return false;}
     if(!$definite&&$result['classification']==='pre_send_failure'&&($result['http_status']!==0||$result['retry_safe']!==true)){$error='webhook_pre_send_result_invalid';return false;}
@@ -34,7 +34,7 @@ function pay_api_001_webhook_delivery_result_evidence(array $result,&$error=null
 /** Resolve only an endpoint path from an opaque approved endpoint reference. */
 function pay_api_001_webhook_resolve_endpoint(array $target,$resolver,&$error=null)
 {
-    $error=null;if(!isset($target['company_id'],$target['endpoint_config_ref_sha256'])||pay_api_001_uint_value($target['company_id'],true,4294967295)===false||!pay_api_001_is_sha256($target['endpoint_config_ref_sha256'])||!is_callable($resolver)){$error='webhook_endpoint_resolver_invalid';return false;}
+    $error=null;if(!isset($target['company_id'],$target['endpoint_config_ref_sha256'])||pay_api_001_uint_value($target['company_id'],true,4294967295)===false||!is_sha256_hex($target['endpoint_config_ref_sha256'])||!is_callable($resolver)){$error='webhook_endpoint_resolver_invalid';return false;}
     $request=array('company_id'=>(int)$target['company_id'],'event_type'=>PAY_API_001_WEBHOOK_EVENT_TYPE,'endpoint_config_ref_sha256'=>(string)$target['endpoint_config_ref_sha256']);
     try{$endpoint=call_user_func($resolver,$request);}catch(Throwable $t){$error='webhook_endpoint_resolver_failed';return false;}
     if(!is_array($endpoint)||array_keys($endpoint)!==array('endpoint_config_ref_sha256','path')){$error='webhook_endpoint_resolver_invalid';return false;}
@@ -83,7 +83,7 @@ function pay_api_001_webhook_reserve_initial_dispatch(array $context,array $requ
 function pay_api_001_record_initial_webhook_delivery($company_id,$webhook_outbox_id,$replay_key_sha256,array $result,&$error=null)
 {
     $error=null;$actor=current_user_id_or_zero();$company=pay_api_001_uint_value($company_id,true,4294967295);$outbox=pay_api_001_positive_id($webhook_outbox_id);$evidence=pay_api_001_webhook_delivery_result_evidence($result,$error);
-    if($actor<=0||!pay_api_001_runtime_access('SA_HRM_EXECUTE_PAY_API')||$company===false||$outbox===false||!pay_api_001_is_sha256($replay_key_sha256)||$evidence===false||!pay_api_001_webhook_delivery_runtime_enabled('attempt')){$error=$error?:'webhook_delivery_attempt_access_or_version_denied';return false;}
+    if($actor<=0||!pay_api_001_runtime_access('SA_HRM_EXECUTE_PAY_API')||$company===false||$outbox===false||!is_sha256_hex($replay_key_sha256)||$evidence===false||!pay_api_001_webhook_delivery_runtime_enabled('attempt')){$error=$error?:'webhook_delivery_attempt_access_or_version_denied';return false;}
     if($evidence['definite_provider_response']&&!pay_api_001_webhook_delivery_runtime_enabled('response')){$error='webhook_provider_response_writer_not_enabled';return false;}if(!pay_api_001_runtime_require_company($company,$error))return false;$now=pay_api_001_runtime_now();
     $manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();$o=pay_api_001_runtime_one('SELECT o.webhook_outbox_id,e.company_id,o.payload_sha256 FROM '.TB_PREF.'hrm_pay_api_001_webhook_outbox o INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_events e ON e.webhook_event_id=o.webhook_event_id WHERE o.webhook_outbox_id='.$outbox.' LIMIT 2 FOR UPDATE','could not lock PAY-API-001 delivery evidence outbox');
     $d=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_replay_defenses WHERE webhook_outbox_id='.$outbox.' AND replay_key_sha256='.db_escape($replay_key_sha256).' LIMIT 2 FOR UPDATE','could not lock PAY-API-001 replay defense');$existing=db_query('SELECT webhook_delivery_attempt_id FROM '.TB_PREF.'hrm_pay_api_001_webhook_delivery_attempts WHERE webhook_outbox_id='.$outbox.' LIMIT 1 FOR UPDATE');

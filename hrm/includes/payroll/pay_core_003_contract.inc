@@ -5,6 +5,7 @@
  *
  * This file deliberately owns no database or production payroll authority.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!defined('HRM_PAY_CORE_003_CONTRACT_VERSION'))
     define('HRM_PAY_CORE_003_CONTRACT_VERSION', '1.0');
 if (!defined('HRM_PAY_CORE_003_PRODUCTION_ACTIVATION_ALLOWED'))
@@ -25,11 +26,6 @@ function hrm_pay_core_003_calculation_modes()
 function hrm_pay_core_003_input_value_types()
 {
     return array('decimal','date','code','boolean');
-}
-
-function hrm_pay_core_003_is_sha256($value)
-{
-    return is_string($value) && preg_match('/^[a-f0-9]{64}$/D', $value) === 1;
 }
 
 function hrm_pay_core_003_is_iso_date($value)
@@ -63,11 +59,11 @@ function hrm_pay_core_003_validate_element_version($row)
         || !in_array($row['calculation_mode'], hrm_pay_core_003_calculation_modes(), true))
         return false;
     if (!hrm_pay_core_003_valid_effective_range($row['effective_from'], isset($row['effective_to']) ? $row['effective_to'] : null)
-        || !hrm_pay_core_003_is_sha256($row['version_sha256']))
+        || !is_sha256_hex($row['version_sha256']))
         return false;
     if ($row['calculation_mode'] === 'rule')
-        return isset($row['rule_artifact_sha256']) && hrm_pay_core_003_is_sha256($row['rule_artifact_sha256']);
-    return !isset($row['rule_artifact_sha256']) || $row['rule_artifact_sha256'] === null || $row['rule_artifact_sha256'] === '' || hrm_pay_core_003_is_sha256($row['rule_artifact_sha256']);
+        return isset($row['rule_artifact_sha256']) && is_sha256_hex($row['rule_artifact_sha256']);
+    return !isset($row['rule_artifact_sha256']) || $row['rule_artifact_sha256'] === null || $row['rule_artifact_sha256'] === '' || is_sha256_hex($row['rule_artifact_sha256']);
 }
 
 function hrm_pay_core_003_validate_input_definition($row)
@@ -84,7 +80,7 @@ function hrm_pay_core_003_validate_input_definition($row)
         return false;
     if (!in_array((int)$row['required_flag'], array(0,1), true))
         return false;
-    return hrm_pay_core_003_is_sha256($row['definition_sha256']);
+    return is_sha256_hex($row['definition_sha256']);
 }
 
 /**

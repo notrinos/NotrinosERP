@@ -8,15 +8,11 @@
  * single-purpose assurance event, and appends restricted PAY-AUD evidence in
  * one transaction. It exposes no route and consumes no HR/payroll action.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 require_once(dirname(__FILE__).DIRECTORY_SEPARATOR.'session_registry.inc');
 
 if (!defined('FEDERATION_ASSURANCE_ISSUER_MAX_LIFETIME'))
     define('FEDERATION_ASSURANCE_ISSUER_MAX_LIFETIME', 300);
-
-function federation_assurance_issuer_hex64($value)
-{
-    return is_string($value) && preg_match('/^[a-f0-9]{64}$/D', $value) === 1;
-}
 
 function federation_assurance_issuer_action_class($value)
 {
@@ -32,7 +28,7 @@ function federation_assurance_issue_request($company, $session_id, $candidate, $
     $now = $now_epoch === null ? time() : $now_epoch;
     if ($company < 0 || $session_id <= 0 || !is_int($now) || $now <= 0
         || !federation_assurance_issuer_action_class($action_class)
-        || !federation_assurance_issuer_hex64($action_hash)
+        || !is_sha256_hex($action_hash)
         || !is_array($candidate))
         return false;
     $required = array('verified','provider_id','external_subject_hash','issuer_sha256','client_id_sha256',
@@ -46,10 +42,10 @@ function federation_assurance_issue_request($company, $session_id, $candidate, $
         || (string)$candidate['assurance_method'] !== 'oidc_acr_amr'
         || $candidate['elevation_issued'] !== false || $candidate['assurance_event_written'] !== false
         || $candidate['recovery_factor_verified'] !== false
-        || !federation_assurance_issuer_hex64($candidate['external_subject_hash'])
-        || !federation_assurance_issuer_hex64($candidate['issuer_sha256'])
-        || !federation_assurance_issuer_hex64($candidate['client_id_sha256'])
-        || !federation_assurance_issuer_hex64($candidate['assurance_proof_sha256'])
+        || !is_sha256_hex($candidate['external_subject_hash'])
+        || !is_sha256_hex($candidate['issuer_sha256'])
+        || !is_sha256_hex($candidate['client_id_sha256'])
+        || !is_sha256_hex($candidate['assurance_proof_sha256'])
         || !is_int($candidate['auth_time_epoch']) || !is_int($candidate['verified_at_epoch'])
         || !is_int($candidate['expires_at_epoch']) || $candidate['auth_time_epoch'] <= 0
         || $candidate['verified_at_epoch'] <= 0 || $candidate['verified_at_epoch'] > $now
@@ -97,7 +93,7 @@ function federation_assurance_issuer_custody_for_update($session_id)
 /** Load an exact proof replay record for idempotent response recovery. */
 function federation_assurance_issuer_existing_event_for_update($proof_hash)
 {
-    if (!defined('TB_PREF') || !federation_assurance_issuer_hex64($proof_hash))
+    if (!defined('TB_PREF') || !is_sha256_hex($proof_hash))
         return false;
     $result = db_query("SELECT assurance_event_id,session_id,assurance_level,assurance_method,action_class,action_hash,nonce_hash,issued_at,expires_at,consumed_at "
         ."FROM ".TB_PREF."user_session_assurance_events WHERE nonce_hash=".db_escape($proof_hash)." LIMIT 2 FOR UPDATE",

@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-004 governed superseded-identifier verification-request browser continuation. */
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 $identifier_verification_request_raw_method=isset($_SERVER['REQUEST_METHOD'])?(string)$_SERVER['REQUEST_METHOD']:'';
 $identifier_verification_request_raw_query=isset($_SERVER['QUERY_STRING'])?(string)$_SERVER['QUERY_STRING']:'';
 $identifier_verification_request_script_name=isset($_SERVER['SCRIPT_NAME'])?(string)$_SERVER['SCRIPT_NAME']:'';
@@ -62,8 +63,8 @@ if($identifier_verification_request_raw_method==='POST' && $action==='start_step
     } else {
         $candidate=isset($_POST['identifier_candidate'])?(string)$_POST['identifier_candidate']:'';
         $parts=explode(':',$candidate,2);
-        $identifier_id=count($parts)===2?hrm_identifier_verification_request_positive_int($parts[0]):false;
-        $row_version=count($parts)===2?hrm_identifier_verification_request_positive_int($parts[1]):false;
+        $identifier_id=count($parts)===2?parse_positive_integer_strict($parts[0]):false;
+        $row_version=count($parts)===2?parse_positive_integer_strict($parts[1]):false;
         $verification_method=isset($_POST['verification_method'])?(string)$_POST['verification_method']:'';
         $prepared=($identifier_id===false||$row_version===false)?false:hrm_identifier_verification_request_prepare_browser_action(
             $employee_ref,$identifier_id,$row_version,$verification_method);

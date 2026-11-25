@@ -7,6 +7,7 @@
  * business-command dispatch. Secret and endpoint material are supplied through
  * explicit reviewed resolver boundaries and exist only in process memory.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_api_001_webhook.inc');
 
 if (!defined('PAY_API_001_WEBHOOK_MAX_SECRET_BYTES')) define('PAY_API_001_WEBHOOK_MAX_SECRET_BYTES', 4096);
@@ -70,8 +71,8 @@ function pay_api_001_webhook_resolve_signing_secret(array $secret_ref, $resolver
     $error=null;
     foreach (array('company_id','ref_kind','provider_key','provider_reference_sha256','secret_ref_sha256') as $key) if (!array_key_exists($key,$secret_ref)) {$error='webhook_secret_reference_invalid';return false;}
     if (pay_api_001_uint_value($secret_ref['company_id'],true,4294967295)===false || (string)$secret_ref['ref_kind']!=='webhook_signing_key'
-        || pay_api_001_provisioning_token($secret_ref['provider_key'],64)===false || !pay_api_001_is_sha256($secret_ref['provider_reference_sha256'])
-        || !pay_api_001_is_sha256($secret_ref['secret_ref_sha256']) || !is_callable($resolver)) {$error='webhook_secret_reference_invalid';return false;}
+        || pay_api_001_provisioning_token($secret_ref['provider_key'],64)===false || !is_sha256_hex($secret_ref['provider_reference_sha256'])
+        || !is_sha256_hex($secret_ref['secret_ref_sha256']) || !is_callable($resolver)) {$error='webhook_secret_reference_invalid';return false;}
     $request=array('company_id'=>(int)$secret_ref['company_id'],'ref_kind'=>'webhook_signing_key','provider_key'=>(string)$secret_ref['provider_key'],
         'provider_reference_sha256'=>(string)$secret_ref['provider_reference_sha256'],'secret_ref_sha256'=>(string)$secret_ref['secret_ref_sha256']);
     try {$resolved=call_user_func($resolver,$request);} catch (Throwable $t) {$error='webhook_secret_resolver_failed';return false;}
@@ -86,7 +87,7 @@ function pay_api_001_webhook_resolve_signing_secret(array $secret_ref, $resolver
 function pay_api_001_webhook_endpoint_material(array $target, array $endpoint, &$error=null)
 {
     $error=null;
-    if (!isset($target['endpoint_config_ref_sha256']) || !pay_api_001_is_sha256($target['endpoint_config_ref_sha256'])) {$error='webhook_endpoint_target_reference_invalid';return false;}
+    if (!isset($target['endpoint_config_ref_sha256']) || !is_sha256_hex($target['endpoint_config_ref_sha256'])) {$error='webhook_endpoint_target_reference_invalid';return false;}
     if (array_keys($endpoint)!==array('endpoint_config_ref_sha256','path') || !is_string($endpoint['endpoint_config_ref_sha256'])
         || !hash_equals((string)$target['endpoint_config_ref_sha256'],$endpoint['endpoint_config_ref_sha256'])) {$error='webhook_endpoint_reference_mismatch';return false;}
     $path=pay_api_001_webhook_endpoint_path($endpoint['path']);if($path===false){$error='webhook_endpoint_path_invalid';return false;}
@@ -101,7 +102,7 @@ function pay_api_001_webhook_signed_request(array $delivery,array $tls_policy,ar
     foreach(array('webhook_outbox_id','event_type','payload_json','payload_sha256','queue_key_sha256') as $k)if(!array_key_exists($k,$delivery)){$error='webhook_delivery_material_invalid';return false;}
     $outbox=pay_api_001_positive_id($delivery['webhook_outbox_id']);$body=is_string($delivery['payload_json'])?$delivery['payload_json']:false;
     if($outbox===false||$delivery['event_type']!==PAY_API_001_WEBHOOK_EVENT_TYPE||$body===false||strlen($body)<2||strlen($body)>PAY_API_001_WEBHOOK_MAX_PAYLOAD_BYTES
-        ||!pay_api_001_is_sha256($delivery['payload_sha256'])||!hash_equals($delivery['payload_sha256'],hash('sha256',$body))||!pay_api_001_is_sha256($delivery['queue_key_sha256'])){$error='webhook_delivery_material_invalid';return false;}
+        ||!is_sha256_hex($delivery['payload_sha256'])||!hash_equals($delivery['payload_sha256'],hash('sha256',$body))||!is_sha256_hex($delivery['queue_key_sha256'])){$error='webhook_delivery_material_invalid';return false;}
     $decoded=json_decode($body,true);if(!is_array($decoded)||json_encode($decoded,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)!==$body){$error='webhook_payload_not_canonical';return false;}
     $raw_host=isset($tls_policy['destination_host'])&&is_string($tls_policy['destination_host'])?strtolower($tls_policy['destination_host']):'';
     if(filter_var($raw_host,FILTER_VALIDATE_IP)!==false){$error='webhook_ip_literal_destination_denied';return false;}
@@ -139,15 +140,15 @@ function pay_api_001_webhook_curl_request_valid(array $request)
         ||pay_api_001_webhook_dns_hostname($request['host'])!==$request['host']||!in_array($request['minimum_tls_version'],array('TLS1.2','TLS1.3'),true)
         ||!is_string($request['path'])||pay_api_001_webhook_endpoint_path($request['path'])!==$request['path']
         ||$request['url']!=='https://'.$request['host'].$request['path']||!is_string($request['body'])||strlen($request['body'])<2
-        ||strlen($request['body'])>PAY_API_001_WEBHOOK_MAX_PAYLOAD_BYTES||!pay_api_001_is_sha256($request['payload_sha256'])
-        ||!hash_equals($request['payload_sha256'],hash('sha256',$request['body']))||!pay_api_001_is_sha256($request['queue_key_sha256'])
+        ||strlen($request['body'])>PAY_API_001_WEBHOOK_MAX_PAYLOAD_BYTES||!is_sha256_hex($request['payload_sha256'])
+        ||!hash_equals($request['payload_sha256'],hash('sha256',$request['body']))||!is_sha256_hex($request['queue_key_sha256'])
         ||!is_int($request['webhook_outbox_id'])||$request['webhook_outbox_id']<1||!is_string($request['timestamp'])
         ||preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/D',$request['timestamp'])!==1
         ||!is_int($request['connect_timeout_seconds'])||$request['connect_timeout_seconds']<1||$request['connect_timeout_seconds']>PAY_API_001_WEBHOOK_CONNECT_TIMEOUT_SECONDS
         ||!is_int($request['total_timeout_seconds'])||$request['total_timeout_seconds']<$request['connect_timeout_seconds']
         ||$request['total_timeout_seconds']>PAY_API_001_WEBHOOK_TOTAL_TIMEOUT_SECONDS||!is_int($request['max_response_bytes'])
         ||$request['max_response_bytes']<1||$request['max_response_bytes']>PAY_API_001_WEBHOOK_MAX_RESPONSE_BYTES||!is_array($request['headers'])
-        ||array_keys($request['headers'])!==array(0,1,2,3,4,5,6)||!pay_api_001_is_sha256($request['request_sha256']))return false;
+        ||array_keys($request['headers'])!==array(0,1,2,3,4,5,6)||!is_sha256_hex($request['request_sha256']))return false;
     $signature_prefix='X-Notrinos-Signature: v1=';
     if(!is_string($request['headers'][5])||strpos($request['headers'][5],$signature_prefix)!==0)return false;
     $signature=substr($request['headers'][5],strlen($signature_prefix));
@@ -185,7 +186,7 @@ function pay_api_001_webhook_resolve_public_ipv4($host,$resolver=null,&$error=nu
 function pay_api_001_webhook_transport_classify($transport,$max_response_bytes=PAY_API_001_WEBHOOK_MAX_RESPONSE_BYTES)
 {
     $keys=array('request_sent','transport_ok','http_status','content_type','body','response_headers_sha256','error_code');if(!is_array($transport)||array_keys($transport)!==$keys)return false;
-    if(!is_bool($transport['request_sent'])||!is_bool($transport['transport_ok'])||!is_int($transport['http_status'])||!is_string($transport['content_type'])||!is_string($transport['body'])||!pay_api_001_is_sha256($transport['response_headers_sha256'])||!is_string($transport['error_code']))return false;
+    if(!is_bool($transport['request_sent'])||!is_bool($transport['transport_ok'])||!is_int($transport['http_status'])||!is_string($transport['content_type'])||!is_string($transport['body'])||!is_sha256_hex($transport['response_headers_sha256'])||!is_string($transport['error_code']))return false;
     $body=$transport['body'];$evidence=array('http_status'=>$transport['http_status'],'response_headers_sha256'=>$transport['response_headers_sha256'],'response_body_sha256'=>hash('sha256',$body),'response_body_bytes'=>strlen($body),'response_content_type_sha256'=>hash('sha256',strtolower(trim($transport['content_type']))));
     if(strlen($body)>(int)$max_response_bytes)return array_merge(array('classification'=>'delivery_uncertain','retry_safe'=>false),$evidence);
     if(!$transport['request_sent'])return array_merge(array('classification'=>'pre_send_failure','retry_safe'=>true),$evidence);

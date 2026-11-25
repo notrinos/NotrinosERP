@@ -25,7 +25,7 @@ function approve_hrm_ess_self_profile_change($request_id, $approval_digest)
     $approval_digest = strtolower(trim((string)$approval_digest));
     $actor = current_user_id_or_zero();
     if ($actor <= 0 || $request_id <= 0 || !hrm_ess_self_change_user_can_approve()
-        || !hrm_ess_self_change_digest_is_valid($approval_digest) || !hrm_ess_self_change_tables_ready())
+        || !is_sha256_hex($approval_digest) || !hrm_ess_self_change_tables_ready())
         return false;
 
     begin_transaction();
@@ -33,9 +33,9 @@ function approve_hrm_ess_self_profile_change($request_id, $approval_digest)
     if (!is_array($request) || (int)$request['requested_by'] <= 0 || (int)$request['requested_by']===$actor
         || (int)$request['user_id'] !== (int)$request['requested_by']
         || (string)$request['field_set_code'] !== 'contact_private_v1'
-        || !hrm_ess_self_change_digest_is_valid((string)$request['payload_digest'])
-        || !hrm_ess_self_change_digest_is_valid((string)$request['baseline_auth_tag'])
-        || !hrm_ess_self_change_digest_is_valid((string)$request['request_digest'])
+        || !is_sha256_hex((string)$request['payload_digest'])
+        || !is_sha256_hex((string)$request['baseline_auth_tag'])
+        || !is_sha256_hex((string)$request['request_digest'])
         || !hash_equals((string)$request['request_digest'], hrm_ess_self_change_request_digest(
             (int)$request['user_id'], (int)$request['worker_id'], (string)$request['payload_digest'],
             (string)$request['baseline_auth_tag'], (string)$request['request_nonce_hash']))) {

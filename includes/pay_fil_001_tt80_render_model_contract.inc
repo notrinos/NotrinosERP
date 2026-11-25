@@ -1,5 +1,6 @@
 <?php
 /** PAY-FIL-001 TT80 source-bound render-model activation contract. Pure helpers only. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_fil_001_contract.inc');
 include_once(dirname(__FILE__).'/pay_fil_001_tt80_renderer_contract.inc');
 if (!defined('PAY_FIL_001_TT80_RENDER_MODEL_CONTRACT_VERSION')) define('PAY_FIL_001_TT80_RENDER_MODEL_CONTRACT_VERSION','1.0');
@@ -80,7 +81,7 @@ function pay_fil_001_tt80_build_render_model(array $source,array $taxpayer,array
     foreach(array('company_id','legal_entity_id','obligation_sha256','source_set_sha256','currency_code','period_start','period_end') as $k)if(!array_key_exists($k,$source))return pay_fil_001_fail($error,'tt80_render_source_incomplete');
     foreach(array('taxpayer_tax_code','taxpayer_name','taxpayer_address','taxpayer_ward_code','taxpayer_ward_name','taxpayer_province_code','taxpayer_province_name','tax_office_code','tax_office_name') as $k)if(!array_key_exists($k,$taxpayer))return pay_fil_001_fail($error,'tt80_render_taxpayer_profile_incomplete');
     foreach(array('mapping_sha256','indicator_values') as $k)if(!array_key_exists($k,$mapping))return pay_fil_001_fail($error,'tt80_render_mapping_incomplete');
-    if(pay_fil_001_uint($source['company_id'])===false||pay_fil_001_posint($source['legal_entity_id'])===false||!pay_fil_001_sha($source['obligation_sha256'])||!pay_fil_001_sha($source['source_set_sha256'])||$source['currency_code']!=='VND'||!pay_fil_001_sha($mapping['mapping_sha256'])||!is_array($mapping['indicator_values']))return pay_fil_001_fail($error,'tt80_render_source_binding_invalid');
+    if(pay_fil_001_uint($source['company_id'])===false||pay_fil_001_posint($source['legal_entity_id'])===false||!is_sha256_hex($source['obligation_sha256'])||!is_sha256_hex($source['source_set_sha256'])||$source['currency_code']!=='VND'||!is_sha256_hex($mapping['mapping_sha256'])||!is_array($mapping['indicator_values']))return pay_fil_001_fail($error,'tt80_render_source_binding_invalid');
     $period=pay_fil_001_tt80_quarter_label($source['period_start'],$source['period_end'],$error);if($period===false)return false;
     $ind=array('mst_cu'=>$c['mst_cu'],'ct15'=>$c['ct15']);foreach(array('ct16','ct17','ct18','ct19','ct20','ct21','ct22','ct23','ct24','ct25','ct25_1','ct26','ct27','ct28','ct29','ct30','ct31','ct32') as $k){if(!array_key_exists($k,$mapping['indicator_values']))return pay_fil_001_fail($error,'tt80_render_mapping_indicator_missing');$ind[$k]=(string)$mapping['indicator_values'][$k];}
     $contact=$c['taxpayer_contact'];

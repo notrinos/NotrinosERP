@@ -159,14 +159,10 @@ function hrm_bank_account_verification_promotion_browser_rows(
 function hrm_bank_account_verification_promotion_browser_candidate(
     $employee_ref, $evidence_id, $evidence_row_version, $request_row_version, $bank_account_row_version
 ) {
-    $evidence_id = function_exists('hrm_bank_account_verification_request_positive_int')
-        ? hrm_bank_account_verification_request_positive_int($evidence_id) : false;
-    $evidence_row_version = function_exists('hrm_bank_account_verification_request_positive_int')
-        ? hrm_bank_account_verification_request_positive_int($evidence_row_version) : false;
-    $request_row_version = function_exists('hrm_bank_account_verification_request_positive_int')
-        ? hrm_bank_account_verification_request_positive_int($request_row_version) : false;
-    $bank_account_row_version = function_exists('hrm_bank_account_verification_request_positive_int')
-        ? hrm_bank_account_verification_request_positive_int($bank_account_row_version) : false;
+    $evidence_id = parse_positive_integer_strict($evidence_id);
+    $evidence_row_version = parse_positive_integer_strict($evidence_row_version);
+    $request_row_version = parse_positive_integer_strict($request_row_version);
+    $bank_account_row_version = parse_positive_integer_strict($bank_account_row_version);
     if ($evidence_id === false || $evidence_row_version === false
         || $request_row_version === false || $bank_account_row_version === false)
         return false;

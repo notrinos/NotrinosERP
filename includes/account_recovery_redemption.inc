@@ -8,6 +8,7 @@
  * external code; plaintext recovery/request secrets and source identity are never
  * persisted or audited.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 
 if (!defined('ACCOUNT_RECOVERY_REDEMPTION_REQUEST_SECRET_BYTES'))
     define('ACCOUNT_RECOVERY_REDEMPTION_REQUEST_SECRET_BYTES', 32);
@@ -35,18 +36,6 @@ if (!defined('ACCOUNT_RECOVERY_REDEMPTION_MAX_PENDING_SOURCE'))
 function account_recovery_redemption_failure_result()
 {
     return array('ok'=>false, 'external_code'=>ACCOUNT_RECOVERY_REDEMPTION_GENERIC_FAILURE);
-}
-
-function account_recovery_redemption_positive_id($value)
-{
-    if (function_exists('account_recovery_material_positive_id'))
-        return account_recovery_material_positive_id($value);
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    if (!is_string($value) || preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $integer = (int)$value;
-    return $integer > 0 && (string)$integer === $value ? $integer : false;
 }
 
 function account_recovery_redemption_source_bucket_hash_valid($hash)
@@ -81,8 +70,8 @@ function account_recovery_redemption_request_key_hash($secret)
 function account_recovery_redemption_control_key_hash($scope, $user_id, $material_id, $source_bucket_hash)
 {
     if ($scope === 'account_material') {
-        $user_id = account_recovery_redemption_positive_id($user_id);
-        $material_id = account_recovery_redemption_positive_id($material_id);
+        $user_id = parse_positive_integer_strict($user_id);
+        $material_id = parse_positive_integer_strict($material_id);
         if ($user_id === false || $material_id === false)
             return false;
         return hash('sha256', 'pay-sec-004:recovery-redemption:account-material:v1:'.$user_id.':'.$material_id);
@@ -253,7 +242,7 @@ function account_recovery_redemption_terminalize_request($row, $status, $reason,
 
 function account_recovery_redemption_user_for_update($user_id)
 {
-    $user_id = account_recovery_redemption_positive_id($user_id);
+    $user_id = parse_positive_integer_strict($user_id);
     if ($user_id === false)
         return false;
     $result = db_query(
@@ -307,8 +296,8 @@ function account_recovery_redemption_reset_audit($company, $user_id, $material_i
  */
 function account_recovery_redemption_pending_request_counts_for_update($user_id, $material_id, $source_bucket_hash, $now_epoch)
 {
-    $user_id = account_recovery_redemption_positive_id($user_id);
-    $material_id = account_recovery_redemption_positive_id($material_id);
+    $user_id = parse_positive_integer_strict($user_id);
+    $material_id = parse_positive_integer_strict($material_id);
     if ($user_id === false || $material_id === false
         || !account_recovery_redemption_source_bucket_hash_valid($source_bucket_hash)
         || !is_int($now_epoch) || $now_epoch <= 0)
@@ -332,8 +321,8 @@ function account_recovery_redemption_pending_request_counts_for_update($user_id,
 function account_recovery_redemption_create_request($company, $user_id, $material_id, $source_bucket_hash, $now_epoch = null)
 {
     $company = (int)$company;
-    $user_id = account_recovery_redemption_positive_id($user_id);
-    $material_id = account_recovery_redemption_positive_id($material_id);
+    $user_id = parse_positive_integer_strict($user_id);
+    $material_id = parse_positive_integer_strict($material_id);
     $now = $now_epoch === null ? time() : $now_epoch;
     if ($company < 0 || $user_id === false || $material_id === false || !is_int($now) || $now <= 0
         || !account_recovery_redemption_source_bucket_hash_valid($source_bucket_hash)
@@ -418,8 +407,8 @@ function account_recovery_redemption_reset_password($company, $request_secret, $
             $committed = true;
             break;
         }
-        $user_id = account_recovery_redemption_positive_id((int)$request['user_id']);
-        $material_id = account_recovery_redemption_positive_id((int)$request['recovery_material_id']);
+        $user_id = parse_positive_integer_strict((int)$request['user_id']);
+        $material_id = parse_positive_integer_strict((int)$request['recovery_material_id']);
         if ($user_id === false || $material_id === false)
             break;
         $controls = account_recovery_redemption_lock_controls($user_id, $material_id, $source_bucket_hash);

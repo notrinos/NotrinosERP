@@ -6,7 +6,8 @@
  * legacy plaintext or granting cleanup execution authority. It is intentionally
  * bounded to one cleanup request and one accepted conversion batch (max 25 items).
  */
-if (!function_exists('hrm_typed_attribute_legacy_mapping_positive_id'))
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
+if (!function_exists('hrm_typed_attribute_legacy_mapping_canonical_command'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_legacy_mapping_command_db.inc');
 if (!function_exists('hrm_typed_attribute_legacy_reconciliation_definition'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_legacy_reconciliation_db.inc');
@@ -97,7 +98,7 @@ function hrm_typed_attribute_legacy_cleanup_completion_result($status, $request,
 /** Return redacted evidence for exactly one cleanup request; never mutates rows. */
 function get_hrm_typed_attribute_legacy_cleanup_completion($cleanup_request_id)
 {
-    $cleanup_request_id = hrm_typed_attribute_legacy_mapping_positive_id($cleanup_request_id, false);
+    $cleanup_request_id = parse_positive_integer_strict($cleanup_request_id, false);
     if ($cleanup_request_id === false || !hrm_typed_attribute_legacy_cleanup_completion_user_can_view())
         return false;
 

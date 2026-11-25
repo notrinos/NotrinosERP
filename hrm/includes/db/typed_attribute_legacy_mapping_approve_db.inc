@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-007 distinct-checker approval of one immutable legacy custom_data mapping draft. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if(!function_exists('hrm_typed_attribute_legacy_mapping_append_draft'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_legacy_mapping_writer_db.inc');
 
@@ -15,7 +16,7 @@ function hrm_typed_attribute_legacy_mapping_approved_successor_matches($candidat
 
 function hrm_typed_attribute_legacy_mapping_approve($mapping_version_id)
 {
-    $mapping_version_id=hrm_typed_attribute_legacy_mapping_positive_id($mapping_version_id,false);
+    $mapping_version_id=parse_positive_integer_strict($mapping_version_id,false);
     $checker_id=function_exists('hrm_person_worker_actor_id')?hrm_person_worker_actor_id():0;
     if($mapping_version_id===false||$checker_id<=0||!hrm_typed_attribute_legacy_mapping_user_can_approve())return false;
     begin_transaction();$ok=true;$return_id=false;$target=false;$rows=array();$successor=array();$leaf_ids=array();$max_version=0;

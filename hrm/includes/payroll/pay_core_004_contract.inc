@@ -6,6 +6,7 @@
  * This file deliberately owns no database, session, request, accounting,
  * posting, payment or production calculation authority.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!defined('HRM_PAY_CORE_004_CONTRACT_VERSION'))
     define('HRM_PAY_CORE_004_CONTRACT_VERSION', '1.0');
 if (!defined('HRM_PAY_CORE_004_PRODUCTION_CALCULATION_ALLOWED'))
@@ -14,11 +15,6 @@ if (!defined('HRM_PAY_CORE_004_ACCOUNTING_AUTHORITY_ALLOWED'))
     define('HRM_PAY_CORE_004_ACCOUNTING_AUTHORITY_ALLOWED', false);
 if (!defined('HRM_PAY_CORE_004_HISTORICAL_MUTATION_ALLOWED'))
     define('HRM_PAY_CORE_004_HISTORICAL_MUTATION_ALLOWED', false);
-
-function hrm_pay_core_004_is_sha256($value)
-{
-    return is_string($value) && preg_match('/^[a-f0-9]{64}$/D', $value) === 1;
-}
 
 function hrm_pay_core_004_is_iso_date($value)
 {
@@ -72,7 +68,7 @@ function hrm_pay_core_004_hash_set($hashes)
         return false;
     $clean = array();
     foreach ($hashes as $hash) {
-        if (!hrm_pay_core_004_is_sha256($hash))
+        if (!is_sha256_hex($hash))
             return false;
         $clean[] = $hash;
     }
@@ -120,7 +116,7 @@ function hrm_pay_core_004_validate_snapshot_descriptor($row)
     if (isset($row['assignment_id']) && $row['assignment_id'] !== null && (int)$row['assignment_id'] <= 0)
         return false;
     foreach (array('approved_inputs_sha256','element_versions_sha256','eligibility_sha256','rule_artifacts_sha256','source_events_sha256','configuration_sha256') as $key)
-        if (!hrm_pay_core_004_is_sha256($row[$key])) return false;
+        if (!is_sha256_hex($row[$key])) return false;
     return true;
 }
 
@@ -159,7 +155,7 @@ function hrm_pay_core_004_validate_result_line($row)
         return false;
     foreach (array('amount','quantity','rate') as $key)
         if (!is_int($row[$key]) && !is_float($row[$key]) && !(is_string($row[$key]) && preg_match('/^-?\d+(?:\.\d+)?$/D', $row[$key]) === 1)) return false;
-    return hrm_pay_core_004_is_sha256($row['source_sha256']);
+    return is_sha256_hex($row['source_sha256']);
 }
 
 function hrm_pay_core_004_result_line_sha256($row)
@@ -186,13 +182,13 @@ function hrm_pay_core_004_validate_trace($row)
         if (!array_key_exists($key, $row)) return false;
     if ((int)$row['trace_seq'] < 1 || !is_string($row['trace_kind']) || preg_match('/^[A-Za-z0-9_.:-]{1,64}$/D', $row['trace_kind']) !== 1)
         return false;
-    if (!hrm_pay_core_004_is_sha256($row['artifact_sha256']) || !hrm_pay_core_004_is_sha256($row['input_sha256']) || !hrm_pay_core_004_is_sha256($row['output_sha256']))
+    if (!is_sha256_hex($row['artifact_sha256']) || !is_sha256_hex($row['input_sha256']) || !is_sha256_hex($row['output_sha256']))
         return false;
     if (!in_array($row['value_mode'], hrm_pay_core_004_trace_value_modes(), true))
         return false;
     if ($row['value_mode'] === 'none')
         return !isset($row['value_digest']) || $row['value_digest'] === null || $row['value_digest'] === '';
-    return isset($row['value_digest']) && hrm_pay_core_004_is_sha256($row['value_digest']);
+    return isset($row['value_digest']) && is_sha256_hex($row['value_digest']);
 }
 
 function hrm_pay_core_004_trace_sha256($row)
@@ -216,7 +212,7 @@ function hrm_pay_core_004_validate_result_descriptor($row)
         return false;
     foreach (array('snapshot_sha256','currency','gross_amount','deduction_amount','net_amount','line_set_sha256','trace_set_sha256') as $key)
         if (!array_key_exists($key, $row)) return false;
-    if (!hrm_pay_core_004_is_sha256($row['snapshot_sha256']) || !hrm_pay_core_004_is_sha256($row['line_set_sha256']) || !hrm_pay_core_004_is_sha256($row['trace_set_sha256']))
+    if (!is_sha256_hex($row['snapshot_sha256']) || !is_sha256_hex($row['line_set_sha256']) || !is_sha256_hex($row['trace_set_sha256']))
         return false;
     if (!is_string($row['currency']) || preg_match('/^[A-Z]{3}$/D', $row['currency']) !== 1)
         return false;
@@ -242,7 +238,7 @@ function hrm_pay_core_004_result_sha256($row)
 
 function hrm_pay_core_004_verify_result_bundle($snapshot_sha256, $result, $lines, $traces)
 {
-    if (!hrm_pay_core_004_is_sha256($snapshot_sha256) || !is_array($result) || !is_array($lines) || !is_array($traces))
+    if (!is_sha256_hex($snapshot_sha256) || !is_array($result) || !is_array($lines) || !is_array($traces))
         return false;
     $line_hashes = array();
     foreach ($lines as $line) {

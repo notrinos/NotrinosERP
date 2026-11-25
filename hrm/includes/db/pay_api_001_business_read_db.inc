@@ -1,5 +1,6 @@
 <?php
 /** PAY-API-001 governed payroll-period summary dispatcher and response-audit runtime. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once($path_to_root.'/includes/pay_api_001_business_read.inc');
 include_once(dirname(__FILE__).'/pay_api_001_runtime_db.inc');
 
@@ -9,8 +10,8 @@ function pay_api_001_record_read_response_audit(array $event,&$error=null)
     $request=pay_api_001_positive_id($event['api_read_request_id']??null);$company=pay_api_001_uint_value($event['company_id']??null,true,4294967295);
     $outcome=isset($event['outcome_code'])?pay_api_001_provisioning_token((string)$event['outcome_code'],48):false;
     $rows=isset($event['row_count'])?pay_api_001_uint_value($event['row_count'],true,100):false;
-    foreach(array('resource_key_sha256','object_scope_sha256') as $k)if(!isset($event[$k])||!pay_api_001_is_sha256($event[$k])){$error='read_response_audit_hash_invalid';return false;}
-    $payload=array_key_exists('payload_sha256',$event)&&$event['payload_sha256']!==null?(pay_api_001_is_sha256($event['payload_sha256'])?(string)$event['payload_sha256']:false):null;
+    foreach(array('resource_key_sha256','object_scope_sha256') as $k)if(!isset($event[$k])||!is_sha256_hex($event[$k])){$error='read_response_audit_hash_invalid';return false;}
+    $payload=array_key_exists('payload_sha256',$event)&&$event['payload_sha256']!==null?(is_sha256_hex($event['payload_sha256'])?(string)$event['payload_sha256']:false):null;
     if($request===false||$company===false||$outcome===false||$rows===false||$payload===false||!in_array($outcome,array('returned','not_found'),true)){$error='read_response_audit_input_invalid';return false;}
     if(($rows===0)!==($payload===null)){$error='read_response_audit_payload_cardinality_invalid';return false;}
     if(($outcome==='returned'&&$rows!==1)||($outcome==='not_found'&&$rows!==0)){$error='read_response_audit_outcome_cardinality_invalid';return false;}

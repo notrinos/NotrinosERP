@@ -9,6 +9,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /**
  * Check whether table exists in current company schema.
@@ -77,26 +78,6 @@ function ensure_payroll_periods_table() {
 }
 
 /**
- * Convert user/system date to SQL date format.
- *
- * @param string $date_value
- * @return string
- */
-function payroll_to_sql_date($date_value) {
-    $date_value = trim((string)$date_value);
-    if ($date_value === '')
-        return '';
-
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_value))
-        return $date_value;
-
-    if (is_date($date_value))
-        return date2sql($date_value);
-
-    return $date_value;
-}
-
-/**
  * Resolve payslip header table for totals aggregation.
  *
  * @return string|false
@@ -137,8 +118,8 @@ function add_payroll_period($period_name, $from_date, $to_date, $department_id=n
         return false;
 
     $period_name = trim((string)$period_name);
-    $from_sql = payroll_to_sql_date($from_date);
-    $to_sql = payroll_to_sql_date($to_date);
+    $from_sql = input_date_to_sql_date($from_date);
+    $to_sql = input_date_to_sql_date($to_date);
 
     if ($period_name === '' || $from_sql === '' || $to_sql === '')
         return false;

@@ -11,6 +11,7 @@
  * anonymous PHP/browser session. It exposes no public route or redirect and
  * never auto-links by email, display name, login id or another profile claim.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 
 if (!defined('FEDERATION_OIDC_EXISTING_LINK_DEFAULT_LEASE'))
     define('FEDERATION_OIDC_EXISTING_LINK_DEFAULT_LEASE', 45);
@@ -195,10 +196,10 @@ function federation_oidc_orchestrate_existing_link_callback($company, $state, $a
         return federation_oidc_existing_link_orchestration_result('denied', 'proof_unavailable');
     }
 
-    if (!function_exists('federation_control_valid_sha256')
-        || !federation_control_valid_sha256((string)$context['trust_material_ref_hash'])
-        || !federation_control_valid_sha256((string)$context['issuer_hash'])
-        || !federation_control_valid_sha256((string)$context['audience_hash']))
+    if (!function_exists('is_sha256_hex')
+        || !is_sha256_hex((string)$context['trust_material_ref_hash'])
+        || !is_sha256_hex((string)$context['issuer_hash'])
+        || !is_sha256_hex((string)$context['audience_hash']))
         return federation_oidc_existing_link_orchestration_result('retry_later', 'verifier_material_unavailable', array('retry_after_epoch'=>$retry_after));
     $bundle = federation_control_load_bundle($company, (string)$context['trust_material_ref_hash'], 'oidc', 'oidc_code_pkce_v1');
     if (!is_array($bundle) || !isset($bundle['materials']) || !is_array($bundle['materials']))

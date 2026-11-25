@@ -10,7 +10,7 @@ require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 
 $hrm_identifier_verification_evidence_repo_root = dirname(dirname(dirname(__DIR__)));
-if (!function_exists('hrm_identifier_verification_request_positive_int')) {
+if (!function_exists('hrm_identifier_verification_request_method')) {
     $candidate = isset($path_to_root)
         ? $path_to_root.'/hrm/includes/db/person_identifier_verification_request_db.inc'
         : '';
@@ -56,11 +56,11 @@ function hrm_identifier_verification_evidence_action_hash(
     $approval_draft_id, $verification_method, $evidence_source, $evidence_reference_hash,
     $evidence_payload_hash, $verified_at_epoch
 ) {
-    $request_id = hrm_identifier_verification_request_positive_int($request_id);
-    $request_row_version = hrm_identifier_verification_request_positive_int($request_row_version);
-    $identifier_id = hrm_identifier_verification_request_positive_int($identifier_id);
-    $identifier_row_version = hrm_identifier_verification_request_positive_int($identifier_row_version);
-    $approval_draft_id = hrm_identifier_verification_request_positive_int($approval_draft_id);
+    $request_id = parse_positive_integer_strict($request_id);
+    $request_row_version = parse_positive_integer_strict($request_row_version);
+    $identifier_id = parse_positive_integer_strict($identifier_id);
+    $identifier_row_version = parse_positive_integer_strict($identifier_row_version);
+    $approval_draft_id = parse_positive_integer_strict($approval_draft_id);
     $verification_method = hrm_identifier_verification_request_method($verification_method);
     $evidence_source = hrm_identifier_verification_evidence_source($evidence_source);
     $evidence_reference_hash = hrm_identifier_verification_evidence_hex64($evidence_reference_hash);
@@ -182,7 +182,7 @@ function hrm_identifier_verification_evidence_assurance_event_for_update($sessio
  */
 function hrm_identifier_verification_evidence_consume_assurance($company, $action_hash, $now_epoch)
 {
-    $session_id = federation_assurance_consumer_current_session_id();
+    $session_id = current_security_session_id_or_zero();
     if ($session_id <= 0) return false;
     $custody = federation_assurance_consumer_custody_for_update($session_id);
     if (!federation_assurance_consumer_current_custody_valid($custody, $now_epoch, true))
@@ -265,9 +265,9 @@ function register_hrm_person_identifier_verification_evidence(
     $evidence_source, $evidence_reference_hash, $evidence_payload_hash, $verified_at_epoch,
     $now_epoch = null
 ) {
-    $verification_request_id = hrm_identifier_verification_request_positive_int($verification_request_id);
-    $request_row_version = hrm_identifier_verification_request_positive_int($request_row_version);
-    $approval_draft_id = hrm_identifier_verification_request_positive_int($approval_draft_id);
+    $verification_request_id = parse_positive_integer_strict($verification_request_id);
+    $request_row_version = parse_positive_integer_strict($request_row_version);
+    $approval_draft_id = parse_positive_integer_strict($approval_draft_id);
     $verification_method = hrm_identifier_verification_request_method($verification_method);
     $evidence_source = hrm_identifier_verification_evidence_source($evidence_source);
     $evidence_reference_hash = hrm_identifier_verification_evidence_hex64($evidence_reference_hash);
@@ -447,10 +447,10 @@ function hrm_identifier_verification_promotion_assurance_for_update($assurance_e
 function promote_hrm_person_identifier_verification(
     $verification_evidence_id, $evidence_row_version, $request_row_version, $identifier_row_version
 ) {
-    $verification_evidence_id = hrm_identifier_verification_request_positive_int($verification_evidence_id);
-    $evidence_row_version = hrm_identifier_verification_request_positive_int($evidence_row_version);
-    $request_row_version = hrm_identifier_verification_request_positive_int($request_row_version);
-    $identifier_row_version = hrm_identifier_verification_request_positive_int($identifier_row_version);
+    $verification_evidence_id = parse_positive_integer_strict($verification_evidence_id);
+    $evidence_row_version = parse_positive_integer_strict($evidence_row_version);
+    $request_row_version = parse_positive_integer_strict($request_row_version);
+    $identifier_row_version = parse_positive_integer_strict($identifier_row_version);
     $actor = current_user_id_or_zero();
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if ($verification_evidence_id === false || $evidence_row_version === false

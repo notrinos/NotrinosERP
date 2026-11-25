@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-007 distinct-checker immutable Typed Attribute definition publication. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_typed_attribute_definition_append_draft'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_definition_writer_db.inc');
 
@@ -44,7 +45,7 @@ function hrm_typed_attribute_definition_publish_successor_matches($candidate, $t
 
 function hrm_typed_attribute_definition_publish($definition_version_id)
 {
-    $definition_version_id = hrm_typed_attribute_definition_positive_id($definition_version_id, false);
+    $definition_version_id = parse_positive_integer_strict($definition_version_id, false);
     $checker_id = function_exists('hrm_person_worker_actor_id') ? hrm_person_worker_actor_id() : 0;
     if ($definition_version_id === false || $checker_id <= 0 || !hrm_typed_attribute_definition_user_can_approve())
         return false;

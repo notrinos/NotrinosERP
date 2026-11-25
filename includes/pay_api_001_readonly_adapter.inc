@@ -1,12 +1,13 @@
 <?php
 /** PAY-API-001 pre-route read-only adapter contract. No public HTTP route is enabled by this file. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_api_001_authn.inc');
 include_once(dirname(__FILE__).'/pay_api_001_rate_limit.inc');
 include_once(dirname(__FILE__).'/pay_api_001_contract.inc');
 if(!defined('PAY_API_001_READONLY_ADAPTER_CONTRACT_VERSION'))define('PAY_API_001_READONLY_ADAPTER_CONTRACT_VERSION','1.0.873');
 function pay_api_001_readonly_page_request($limit,$cursor_sha256=null)
 {
-    $n=pay_api_001_uint_value($limit,false,100);if($n===false)return false;if($cursor_sha256!==null&&!pay_api_001_is_sha256($cursor_sha256))return false;return array('limit'=>$n,'cursor_sha256'=>$cursor_sha256===null?null:(string)$cursor_sha256);
+    $n=pay_api_001_uint_value($limit,false,100);if($n===false)return false;if($cursor_sha256!==null&&!is_sha256_hex($cursor_sha256))return false;return array('limit'=>$n,'cursor_sha256'=>$cursor_sha256===null?null:(string)$cursor_sha256);
 }
 function pay_api_001_readonly_adapter_gate($method,$transport_secure,$query,$authn,$resource,$scope,$company_id,$object_scope_type,$object_scope_key,$rate_decision,$limit,$cursor_sha256=null)
 {

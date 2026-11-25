@@ -1,5 +1,6 @@
 <?php
 /** PAY-FIL-001 generated TT80 payload validation contract. Pure/hash-only helpers; no production filing authority. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_fil_001_tt80_render_model_contract.inc');
 if (!defined('PAY_FIL_001_TT80_GENERATED_VALIDATION_CONTRACT_VERSION')) define('PAY_FIL_001_TT80_GENERATED_VALIDATION_CONTRACT_VERSION','1.0');
 
@@ -39,8 +40,8 @@ function pay_fil_001_tt80_validate_generated_candidate(array $generated,&$error=
         if(!array_key_exists($k,$generated))return pay_fil_001_fail($error,'tt80_generated_candidate_incomplete');
     $profile=pay_fil_001_tt80_generated_validation_profile();
     if(!is_string($generated['payload'])||$generated['payload']===''||strlen($generated['payload'])!==(int)$generated['byte_length']
-        ||!pay_fil_001_sha($generated['payload_sha256'])||!hash_equals(hash('sha256',$generated['payload']),(string)$generated['payload_sha256'])
-        ||!pay_fil_001_sha($generated['model_sha256'])||!pay_fil_001_sha($generated['semantic_mapping_sha256'])||!pay_fil_001_sha($generated['semantic_review_sha256'])||!pay_fil_001_sha($generated['activation_contract_sha256']))
+        ||!is_sha256_hex($generated['payload_sha256'])||!hash_equals(hash('sha256',$generated['payload']),(string)$generated['payload_sha256'])
+        ||!is_sha256_hex($generated['model_sha256'])||!is_sha256_hex($generated['semantic_mapping_sha256'])||!is_sha256_hex($generated['semantic_review_sha256'])||!is_sha256_hex($generated['activation_contract_sha256']))
         return pay_fil_001_fail($error,'tt80_generated_candidate_binding_invalid');
     if($generated['renderer_id']!=='pay-fil-001.vn.tt80.05-kk-tncn-xml'||$generated['renderer_version']!=='1.0'||$generated['schema_id']!==$profile['form_id']||$generated['schema_version']!==$profile['schema_version']||$generated['media_type']!=='application/xml')
         return pay_fil_001_fail($error,'tt80_generated_candidate_identity_invalid');
@@ -58,9 +59,9 @@ function pay_fil_001_tt80_generated_validation_receipt(array $generated,array $o
     $required=array('schema_resource','schema_resource_sha256','repository_xsd_validation','local_validator','local_validator_version','local_validator_result','observed_payload_sha256');
     foreach($required as $k)if(!array_key_exists($k,$observation))return pay_fil_001_fail($error,'tt80_generated_validation_observation_incomplete');
     $profile=pay_fil_001_tt80_generated_validation_profile();
-    if($observation['schema_resource']!==$profile['schema_resource']||!pay_fil_001_sha($observation['schema_resource_sha256'])||$observation['repository_xsd_validation']!=='PASS'
+    if($observation['schema_resource']!==$profile['schema_resource']||!is_sha256_hex($observation['schema_resource_sha256'])||$observation['repository_xsd_validation']!=='PASS'
         ||!is_string($observation['local_validator'])||trim($observation['local_validator'])===''||!is_string($observation['local_validator_version'])||trim($observation['local_validator_version'])===''||$observation['local_validator_result']!=='PASS'
-        ||!pay_fil_001_sha($observation['observed_payload_sha256'])||!hash_equals((string)$g['payload_sha256'],(string)$observation['observed_payload_sha256']))
+        ||!is_sha256_hex($observation['observed_payload_sha256'])||!hash_equals((string)$g['payload_sha256'],(string)$observation['observed_payload_sha256']))
         return pay_fil_001_fail($error,'tt80_generated_validation_observation_invalid');
     $receipt=array(
         'contract_sha256'=>pay_fil_001_tt80_generated_validation_contract_sha256(),

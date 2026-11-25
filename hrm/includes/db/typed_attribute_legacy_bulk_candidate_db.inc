@@ -7,6 +7,7 @@
  * 25 unconverted candidates for one exact approved mapping version. The future
  * batch command must revalidate every candidate under transaction locks.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_typed_attribute_legacy_custom_data_parity'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_legacy_custom_data_inventory_db.inc');
 if (!function_exists('hrm_typed_attribute_legacy_conversion_extract_scalar'))
@@ -26,7 +27,7 @@ function hrm_typed_attribute_legacy_bulk_candidate_request($input)
 {
     $allowed=array('mapping_version_id','after_employee_number','limit','as_of');
     if(!is_array($input)||array_diff(array_keys($input),$allowed)||!array_key_exists('mapping_version_id',$input))return false;
-    $mapping=hrm_typed_attribute_legacy_mapping_positive_id($input['mapping_version_id'],false);
+    $mapping=parse_positive_integer_strict($input['mapping_version_id'],false);
     $after=array_key_exists('after_employee_number',$input)?$input['after_employee_number']:0;
     if(is_string($after)&&preg_match('/^(0|[1-9][0-9]*)$/D',$after))$after=(int)$after;
     if(!is_int($after)||$after<0)return false;

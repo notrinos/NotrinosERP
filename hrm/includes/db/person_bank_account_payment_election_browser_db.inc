@@ -63,7 +63,7 @@ function get_hrm_bank_payment_election_browser_bank_candidates_masked($employee_
 
 function hrm_bank_payment_election_browser_current($person_id, $currency_code)
 {
-    $person_id = function_exists('hrm_bank_payment_election_positive_int') ? hrm_bank_payment_election_positive_int($person_id) : false;
+    $person_id = parse_positive_integer_strict($person_id);
     $currency_code = function_exists('hrm_bank_payment_election_currency') ? hrm_bank_payment_election_currency($currency_code) : false;
     if ($person_id === false || $currency_code === false || !defined('TB_PREF')) return false;
     $result = db_query("SELECT payment_election_id,row_version,effective_from FROM ".TB_PREF."hrm_person_bank_payment_elections "
@@ -84,8 +84,8 @@ function hrm_bank_payment_election_browser_prepare_submit($employee_ref, $curren
     $person_id = hrm_bank_payment_election_browser_person($employee_ref);
     $currency_code = function_exists('hrm_bank_payment_election_currency') ? hrm_bank_payment_election_currency($currency_code) : false;
     $effective = function_exists('hrm_bank_payment_election_datetime') ? hrm_bank_payment_election_datetime($effective_from) : false;
-    $bank_id = function_exists('hrm_bank_payment_election_positive_int') ? hrm_bank_payment_election_positive_int($bank_id) : false;
-    $bank_row_version = function_exists('hrm_bank_payment_election_positive_int') ? hrm_bank_payment_election_positive_int($bank_row_version) : false;
+    $bank_id = parse_positive_integer_strict($bank_id);
+    $bank_row_version = parse_positive_integer_strict($bank_row_version);
     if ($person_id === false || $currency_code === false || $effective === false || $bank_id === false || $bank_row_version === false
         || (int)$effective['epoch'] < time()) return false;
     $eligible = get_hrm_bank_payment_election_browser_bank_candidates_masked($employee_ref, $effective_from);
@@ -118,7 +118,7 @@ function hrm_bank_payment_election_browser_prepare_submit($employee_ref, $curren
 
 function hrm_bank_payment_election_browser_read_allocations($election_id)
 {
-    $election_id = function_exists('hrm_bank_payment_election_positive_int') ? hrm_bank_payment_election_positive_int($election_id) : false;
+    $election_id = parse_positive_integer_strict($election_id);
     if ($election_id === false || !defined('TB_PREF')) return false;
     $result = db_query("SELECT person_bank_account_id,bank_account_row_version,allocation_type,allocation_value,priority FROM "
         .TB_PREF."hrm_person_bank_payment_allocations WHERE payment_election_id=".$election_id." ORDER BY priority,payment_allocation_id",
@@ -144,7 +144,7 @@ function hrm_bank_payment_election_browser_retry_probe($prepared)
     if (!hrm_bank_payment_election_browser_permission() || !defined('TB_PREF') || !is_array($prepared)) return false;
     foreach (array('person_id','currency_code','effective_from','predecessor_payment_election_id','predecessor_row_version',
         'allocation_hash','action_hash') as $key) if (!array_key_exists($key,$prepared)) return false;
-    $person_id=hrm_bank_payment_election_positive_int($prepared['person_id']);
+    $person_id=parse_positive_integer_strict($prepared['person_id']);
     $currency_code=hrm_bank_payment_election_currency($prepared['currency_code']);
     $actor=function_exists('current_user_id_or_zero')?current_user_id_or_zero():0;
     if($person_id===false||$currency_code===false||$actor<=0||!is_string($prepared['allocation_hash'])
@@ -193,8 +193,8 @@ function hrm_bank_payment_election_browser_checker_candidate($employee_ref, $pay
     if (!hrm_bank_payment_election_browser_permission() || !defined('TB_PREF') || !function_exists('get_approval_workflow_service')
         || !function_exists('get_approval_draft')) return false;
     $person_id = hrm_bank_payment_election_browser_person($employee_ref);
-    $payment_election_id = hrm_bank_payment_election_positive_int($payment_election_id);
-    $row_version = hrm_bank_payment_election_positive_int($row_version);
+    $payment_election_id = parse_positive_integer_strict($payment_election_id);
+    $row_version = parse_positive_integer_strict($row_version);
     $actor = function_exists('current_user_id_or_zero') ? current_user_id_or_zero() : 0;
     if ($person_id===false||$payment_election_id===false||$row_version===false||$actor<=0) return false;
     $result=db_query("SELECT payment_election_id,person_id,currency_code,election_status,approval_status,approval_draft_id,row_version,effective_from,created_by,source "
@@ -245,7 +245,7 @@ function hrm_bank_payment_election_browser_step_up_context($employee_ref, $actio
     if (!hrm_bank_payment_election_browser_permission() || !is_string($action_hash) || preg_match('/^[a-f0-9]{64}$/D',$action_hash)!==1) return false;
     if ((string)$action_class === HRM_BANK_PAYMENT_ELECTION_SUBMIT_ACTION_CLASS) {
         $person_id=hrm_bank_payment_election_browser_person($employee_ref);
-        $object_id=hrm_bank_payment_election_positive_int($object_id);
+        $object_id=parse_positive_integer_strict($object_id);
         if($person_id===false||$object_id===false||$person_id!==$object_id||(int)$object_row_version!==0)return false;
         return array('employee_ref'=>(string)$employee_ref,'object_id'=>$object_id,'object_row_version'=>0,
             'action_class'=>HRM_BANK_PAYMENT_ELECTION_SUBMIT_ACTION_CLASS,'action_hash'=>$action_hash);

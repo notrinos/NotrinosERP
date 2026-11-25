@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-007 forward reauthorization for an expired, unexecuted approved bulk batch. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_typed_attribute_legacy_bulk_batch_lock'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_legacy_bulk_execute_db.inc');
 
@@ -18,7 +19,7 @@ function hrm_typed_attribute_legacy_bulk_batch_user_can_recover()
  */
 function hrm_typed_attribute_legacy_bulk_batch_recover($batch_id)
 {
-    $batch_id=hrm_typed_attribute_legacy_mapping_positive_id($batch_id,false);
+    $batch_id=parse_positive_integer_strict($batch_id,false);
     $actor=function_exists('hrm_person_worker_actor_id')?hrm_person_worker_actor_id():0;
     if($batch_id===false||$actor<=0||!hrm_typed_attribute_legacy_bulk_batch_user_can_recover())return false;
     begin_transaction();$ok=true;$mutated=false;

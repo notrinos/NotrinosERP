@@ -7,7 +7,8 @@
  * writes. Retired definitions are unavailable to current reads and writes.
  * A deprecated definition may be explicitly reactivated; retirement is final.
  */
-if (!function_exists('hrm_typed_attribute_definition_positive_id'))
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
+if (!function_exists('hrm_typed_attribute_definition_canonical_command'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_definition_command_db.inc');
 
 function hrm_typed_attribute_definition_lifecycle_user_can_manage()
@@ -61,7 +62,7 @@ function hrm_typed_attribute_definition_lifecycle_canonical_command($input)
         || !array_key_exists('definition_version_id',$input)
         || !array_key_exists('action',$input) || !is_string($input['action'])
         || !array_key_exists('effective_from',$input) || !is_string($input['effective_from'])) return false;
-    $id=hrm_typed_attribute_definition_positive_id($input['definition_version_id'],false);
+    $id=parse_positive_integer_strict($input['definition_version_id'],false);
     $date=hrm_typed_attribute_definition_date($input['effective_from'],false);
     if ($id===false || $date===false || !in_array($input['action'],hrm_typed_attribute_definition_lifecycle_actions(),true))
         return false;

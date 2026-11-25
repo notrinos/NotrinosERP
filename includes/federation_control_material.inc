@@ -6,6 +6,7 @@
  * issuance or provider enablement. It only validates and reads an explicitly
  * provisioned, company-scoped private bundle for a future reviewed verifier.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 
 if (!defined('FEDERATION_CONTROL_MANIFEST_SCHEMA'))
     define('FEDERATION_CONTROL_MANIFEST_SCHEMA', 'notrinoserp.federation-control.v1');
@@ -25,12 +26,6 @@ function federation_control_hash_equals($known, $actual)
     for ($i = 0, $length = strlen($known); $i < $length; $i++)
         $difference |= ord($known[$i]) ^ ord($actual[$i]);
     return $difference === 0;
-}
-
-/** Return true only for a lower-case SHA-256 hex digest. */
-function federation_control_valid_sha256($value)
-{
-    return is_string($value) && preg_match('/^[a-f0-9]{64}$/D', $value) === 1;
 }
 
 /** Return the application root resolved from the normal runtime context. */
@@ -185,7 +180,7 @@ function federation_control_manifest($company = null)
                 || !in_array($material['kind'], array('oidc_jwks','oidc_client_config','oidc_token_client_config','oidc_client_secret','oidc_client_private_key','federation_subject_hmac_key','oidc_assurance_policy','saml_idp_certificate'), true)
                 || isset($seen_kinds[$material['kind']])
                 || !federation_control_valid_material_filename($material['file'])
-                || !federation_control_valid_sha256($material['sha256']))
+                || !is_sha256_hex($material['sha256']))
                 return false;
             if ($bundle['protocol'] === 'oidc' && $material['kind'] === 'saml_idp_certificate')
                 return false;
@@ -207,7 +202,7 @@ function federation_control_manifest($company = null)
  */
 function federation_control_load_bundle($company, $reference_hash, $protocol, $verifier_profile)
 {
-    if (!federation_control_valid_sha256($reference_hash)
+    if (!is_sha256_hex($reference_hash)
         || !in_array($protocol, array('oidc','saml'), true)
         || !in_array($verifier_profile, array('oidc_code_pkce_v1','saml_sp_acs_v1'), true))
         return false;

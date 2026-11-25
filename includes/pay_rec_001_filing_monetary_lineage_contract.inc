@@ -1,5 +1,6 @@
 <?php
 /** PAY-REC-001 filing monetary-lineage contract. Pure helpers only; no DB or close authority. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_fil_001_contract.inc');
 include_once(dirname(__FILE__).'/pay_fil_001_tt80_semantic_source_custody_contract.inc');
 include_once(dirname(__FILE__).'/../hrm/includes/payroll/pay_core_004_contract.inc');
@@ -53,7 +54,7 @@ function pay_rec_001_hash($value)
 }
 function pay_rec_001_sha($value)
 {
-    return pay_fil_001_sha($value);
+    return is_sha256_hex($value);
 }
 function pay_rec_001_uint($value)
 {

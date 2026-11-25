@@ -6,6 +6,7 @@
  * access occurs here. The signed body is bounded, verified byte-for-byte and reduced
  * to hashes before database custody.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_api_001_webhook_transport.inc');
 if (!defined('PAY_API_001_WEBHOOK_INBOUND_PATH')) define('PAY_API_001_WEBHOOK_INBOUND_PATH', '/payroll_webhook.php');
 if (!defined('PAY_API_001_WEBHOOK_INBOUND_CANONICALIZATION')) define('PAY_API_001_WEBHOOK_INBOUND_CANONICALIZATION', 'notrinos-inbound-v1');
@@ -63,7 +64,7 @@ function pay_api_001_webhook_inbound_verify(array $source,array $headers,$body,$
     foreach($required as $k)if(!array_key_exists($k,$source)){$error='inbound_source_invalid';return false;}
     $sid=pay_api_001_positive_id($source['webhook_inbound_source_id']);$company=pay_api_001_uint_value($source['company_id'],true,4294967295);$source_key=pay_api_001_webhook_inbound_source_key($source['source_key']);$event=pay_api_001_webhook_inbound_event_type($source['event_type']);
     $skew=pay_api_001_uint_value($source['max_clock_skew_seconds'],false,900);$ttl=pay_api_001_uint_value($source['replay_ttl_seconds'],false,86400);
-    if($sid===false||$company===false||$source_key===false||$event===false||$skew===false||$skew<30||$ttl===false||$ttl<$skew||!pay_api_001_is_sha256($source['source_sha256'])||$source['canonicalization_code']!==PAY_API_001_WEBHOOK_INBOUND_CANONICALIZATION||$source['signature_algorithm']!=='hmac-sha256'||$source['signature_header_name']!=='X-Notrinos-Signature'||$source['timestamp_header_name']!=='X-Notrinos-Timestamp'){$error='inbound_source_invalid';return false;}
+    if($sid===false||$company===false||$source_key===false||$event===false||$skew===false||$skew<30||$ttl===false||$ttl<$skew||!is_sha256_hex($source['source_sha256'])||$source['canonicalization_code']!==PAY_API_001_WEBHOOK_INBOUND_CANONICALIZATION||$source['signature_algorithm']!=='hmac-sha256'||$source['signature_header_name']!=='X-Notrinos-Signature'||$source['timestamp_header_name']!=='X-Notrinos-Timestamp'){$error='inbound_source_invalid';return false;}
     if(array_keys($headers)!==array('event','delivery','timestamp','signature')){$error='inbound_headers_invalid';return false;}
     $got_event=pay_api_001_webhook_inbound_event_type($headers['event']);$delivery=pay_api_001_webhook_inbound_delivery_key($headers['delivery']);$stamp=(string)$headers['timestamp'];$signature=pay_api_001_webhook_inbound_signature($headers['signature']);$stamp_unix=pay_api_001_webhook_inbound_timestamp($stamp);
     $now=$unix_time===null?time():pay_api_001_uint_value($unix_time,true,PHP_INT_MAX);

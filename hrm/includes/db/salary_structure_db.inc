@@ -9,28 +9,9 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 	See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 include_once(dirname(__FILE__).'/../payroll_formula_policy.inc');
-
-/**
- * Convert date to SQL format.
- *
- * @param string $date_value
- * @return string
- */
-function salary_structure_to_sql_date($date_value) {
-	$date_value = trim((string)$date_value);
-	if ($date_value === '')
-		return '';
-
-	if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_value))
-		return $date_value;
-
-	if (is_date($date_value))
-		return date2sql($date_value);
-
-	return $date_value;
-}
 
 /**
  * Get salary_structure table columns map.
@@ -73,7 +54,7 @@ function salary_structure_has_column($column_name) {
  * @return float
  */
 function get_salary_structure_amount($position_id, $grade_id, $element_id, $as_of_date=null) {
-	$as_of_sql = salary_structure_to_sql_date($as_of_date === null ? Today() : $as_of_date);
+	$as_of_sql = input_date_to_sql_date($as_of_date === null ? Today() : $as_of_date);
 
 	$sql = "SELECT pay_amount FROM ".TB_PREF."salary_structure
 		WHERE position_id = ".db_escape((int)$position_id)."
@@ -107,7 +88,7 @@ function get_salary_structures($as_of_date=null) {
 	$sql = "SELECT * FROM ".TB_PREF."salary_structure WHERE 1=1";
 
 	if ($as_of_date !== null) {
-		$as_of_sql = salary_structure_to_sql_date($as_of_date);
+		$as_of_sql = input_date_to_sql_date($as_of_date);
 		if (salary_structure_has_column('effective_from') && $as_of_sql !== '')
 			$sql .= " AND effective_from <= ".db_escape($as_of_sql);
 		if (salary_structure_has_column('effective_to') && $as_of_sql !== '')
@@ -165,7 +146,7 @@ function add_salary_structure_element($position_id, $grade_id, $element_id, $amo
 	}
 
 	if (salary_structure_has_column('effective_from')) {
-		$effective_from = array_key_exists('effective_from', $data) ? salary_structure_to_sql_date($data['effective_from']) : date2sql(Today());
+		$effective_from = array_key_exists('effective_from', $data) ? input_date_to_sql_date($data['effective_from']) : date2sql(Today());
 		if ($effective_from === '')
 			$effective_from = date2sql(Today());
 		$fields[] = 'effective_from';
@@ -173,7 +154,7 @@ function add_salary_structure_element($position_id, $grade_id, $element_id, $amo
 	}
 
 	if (salary_structure_has_column('effective_to') && array_key_exists('effective_to', $data)) {
-		$effective_to = salary_structure_to_sql_date($data['effective_to']);
+		$effective_to = input_date_to_sql_date($data['effective_to']);
 		$fields[] = 'effective_to';
 		$values[] = ($effective_to === '' ? 'NULL' : db_escape($effective_to));
 	}
@@ -213,7 +194,7 @@ function update_salary_structure($position_id, $grade_id, $element_id, $pay_amou
 			." AND grade_id = ".db_escape((int)$grade_id)
 			." AND element_id = ".db_escape((int)$element_id);
 		if (salary_structure_has_column('effective_from') && array_key_exists('effective_from', $data)) {
-			$guard_effective_from = salary_structure_to_sql_date($data['effective_from']);
+			$guard_effective_from = input_date_to_sql_date($data['effective_from']);
 			if ($guard_effective_from !== '')
 				$formula_sql .= " AND effective_from = ".db_escape($guard_effective_from);
 		}
@@ -244,7 +225,7 @@ function update_salary_structure($position_id, $grade_id, $element_id, $pay_amou
 	if (salary_structure_has_column('formula') && array_key_exists('formula', $data))
 		$set[] = "formula = ".db_escape($data['formula']);
 	if (salary_structure_has_column('effective_to') && array_key_exists('effective_to', $data)) {
-		$effective_to = salary_structure_to_sql_date($data['effective_to']);
+		$effective_to = input_date_to_sql_date($data['effective_to']);
 		$set[] = "effective_to = ".($effective_to === '' ? 'NULL' : db_escape($effective_to));
 	}
 	if (salary_structure_has_column('is_active') && array_key_exists('is_active', $data))
@@ -256,7 +237,7 @@ function update_salary_structure($position_id, $grade_id, $element_id, $pay_amou
 		AND element_id = ".db_escape((int)$element_id);
 
 	if (salary_structure_has_column('effective_from') && array_key_exists('effective_from', $data)) {
-		$effective_from = salary_structure_to_sql_date($data['effective_from']);
+		$effective_from = input_date_to_sql_date($data['effective_from']);
 		if ($effective_from !== '')
 			$sql .= " AND effective_from = ".db_escape($effective_from);
 	}
@@ -277,7 +258,7 @@ function delete_salary_structure($position_id, $grade_id, $element_id, $effectiv
 	$sql = "DELETE FROM ".TB_PREF."salary_structure WHERE position_id = ".db_escape((int)$position_id)." AND grade_id = ".db_escape((int)$grade_id)." AND element_id = ".db_escape((int)$element_id);
 
 	if (salary_structure_has_column('effective_from') && $effective_from !== null) {
-		$effective_from_sql = salary_structure_to_sql_date($effective_from);
+		$effective_from_sql = input_date_to_sql_date($effective_from);
 		if ($effective_from_sql !== '')
 			$sql .= " AND effective_from = ".db_escape($effective_from_sql);
 	}
@@ -301,7 +282,7 @@ function salary_structure_element_exist($position_id, $grade_id, $element_id, $a
 		AND element_id = ".db_escape((int)$element_id);
 
 	if ($as_of_date !== null) {
-		$as_of_sql = salary_structure_to_sql_date($as_of_date);
+		$as_of_sql = input_date_to_sql_date($as_of_date);
 		if (salary_structure_has_column('effective_from') && $as_of_sql !== '')
 			$sql .= " AND effective_from <= ".db_escape($as_of_sql);
 		if (salary_structure_has_column('effective_to') && $as_of_sql !== '')
@@ -327,7 +308,7 @@ function salary_structure_element_exist($position_id, $grade_id, $element_id, $a
  * @return bool
  */
 function salary_structure_exact_row_exists($position_id, $grade_id, $element_id, $effective_from) {
-	$effective_from_sql = salary_structure_to_sql_date($effective_from);
+	$effective_from_sql = input_date_to_sql_date($effective_from);
 	if ($effective_from_sql === '')
 		return false;
 

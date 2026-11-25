@@ -1,5 +1,6 @@
 <?php
 /** Pure forward CORE-007/storage bridge; no source authentication, approval, DB write or lineage authority. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 require_once dirname(__FILE__).'/pay_core_007_contract.inc';
 require_once dirname(__FILE__).'/pay_glb_001_native_calculation_adapter.inc';
 
@@ -29,7 +30,7 @@ function pay_glb_001_native_retro_context(array $context,array $plan,&$error=nul
     if (!isset($plan['scenario'],$plan['metadata']['predecessor_result_sha256'],$plan['metadata']['lineage_evidence_sha256'])
         || !in_array($plan['scenario'],array('correction','reversal'),true)
         || $plan['metadata']['predecessor_result_sha256']!==$c['original_result_sha256']
-        || !hrm_pay_core_007_is_sha256($plan['metadata']['lineage_evidence_sha256'])) { $error='native_retro_plan_predecessor_binding_invalid';return false; }
+        || !is_sha256_hex($plan['metadata']['lineage_evidence_sha256'])) { $error='native_retro_plan_predecessor_binding_invalid';return false; }
     $v=hrm_pay_core_005_validate_plan($plan,$error);
     if ($v===false || (isset($plan['plan_sha256']) && $plan['plan_sha256']!==$v['plan_sha256'])) { $error='native_retro_plan_identity_invalid';return false; }
     return $c;

@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-007 atomic immutable Work Authorization writer. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_work_authorization_canonical_command'))
     include_once($path_to_root.'/hrm/includes/db/work_authorization_command_db.inc');
 if (!function_exists('hrm_person_worker_actor_id'))
@@ -53,7 +54,7 @@ function hrm_work_authorization_writer_document_matches_worker($worker_id, $docu
  */
 function hrm_work_authorization_append_version($worker_id, $input)
 {
-    $worker_id = hrm_work_authorization_positive_id($worker_id, false);
+    $worker_id = parse_positive_integer_strict($worker_id, false);
     $command = hrm_work_authorization_canonical_command($input);
     $actor_id = function_exists('hrm_person_worker_actor_id') ? hrm_person_worker_actor_id() : 0;
     if ($worker_id === false || $command === false || $actor_id <= 0

@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-004 final-checker opaque bank-account verification-evidence browser continuation. */
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 $bank_account_verification_evidence_raw_method=isset($_SERVER['REQUEST_METHOD'])?(string)$_SERVER['REQUEST_METHOD']:'';
 $bank_account_verification_evidence_raw_query=isset($_SERVER['QUERY_STRING'])?(string)$_SERVER['QUERY_STRING']:'';
 $bank_account_verification_evidence_script_name=isset($_SERVER['SCRIPT_NAME'])?(string)$_SERVER['SCRIPT_NAME']:'';
@@ -63,9 +64,9 @@ if($bank_account_verification_evidence_raw_method==='POST'&&$action==='start_ste
     }else{
         $candidate=isset($_POST['evidence_candidate'])?(string)$_POST['evidence_candidate']:'';
         $parts=explode(':',$candidate,3);
-        $request_id=count($parts)===3?hrm_bank_account_verification_request_positive_int($parts[0]):false;
-        $request_row_version=count($parts)===3?hrm_bank_account_verification_request_positive_int($parts[1]):false;
-        $approval_draft_id=count($parts)===3?hrm_bank_account_verification_request_positive_int($parts[2]):false;
+        $request_id=count($parts)===3?parse_positive_integer_strict($parts[0]):false;
+        $request_row_version=count($parts)===3?parse_positive_integer_strict($parts[1]):false;
+        $approval_draft_id=count($parts)===3?parse_positive_integer_strict($parts[2]):false;
         $verified_at_epoch=hrm_bank_account_verification_evidence_browser_verified_at_epoch(isset($_POST['verified_at_utc'])?(string)$_POST['verified_at_utc']:'');
         $prepared=($request_id===false||$request_row_version===false||$approval_draft_id===false||$verified_at_epoch===false)?false:
             hrm_bank_account_verification_evidence_prepare_browser_action(

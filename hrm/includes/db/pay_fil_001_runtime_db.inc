@@ -39,7 +39,7 @@ function pay_fil_001_current_approved_run($period_id,$for_update=false,&$error=n
     $results=hrm_pay_core_010_result_set_for_period($period_id,$for_update,$error);if($results===false)return false;
     $scope=$results['scope'];
     $state=hrm_pay_core_010_state_for_scope(array('payroll_group_id'=>(int)$scope['payroll_group_id'],'legal_entity_id'=>(int)$scope['legal_entity_id']),$for_update,$se);
-    if($state===false||$state['state']!=='active_new'||!hrm_pay_core_010_is_sha256($state['transition_sha256']))return pay_fil_001_runtime_fail($error,$se?$se:'pay_core_010_not_active_new');
+    if($state===false||$state['state']!=='active_new'||!is_sha256_hex($state['transition_sha256']))return pay_fil_001_runtime_fail($error,$se?$se:'pay_core_010_not_active_new');
     $projection=hrm_pay_core_010_existing_projection_set($period_id,$pe);if($projection===false)return pay_fil_001_runtime_fail($error,$pe?$pe:'projection_missing');
     $sql='SELECT a.approval_id,a.result_set_sha256,a.projection_set_sha256,a.intent_sha256,a.approval_sha256,a.approver_id,i.maker_id '
         .'FROM '.TB_PREF.'hrm_pay_core_010_approvals a INNER JOIN '.TB_PREF.'hrm_pay_core_010_approval_intents i ON i.approval_intent_id=a.approval_intent_id '

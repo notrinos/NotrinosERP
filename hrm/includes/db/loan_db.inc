@@ -9,30 +9,11 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /**
  * Employee loan request and repayment CRUD
  */
-
-/**
- * Convert user date to SQL date.
- *
- * @param string $date_value
- * @return string
- */
-function loan_to_sql_date($date_value) {
-    $date_value = trim((string)$date_value);
-    if ($date_value === '')
-        return '';
-
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_value))
-        return $date_value;
-
-    if (is_date($date_value))
-        return date2sql($date_value);
-
-    return $date_value;
-}
 
 /**
  * Validate that the repayment schedule starts on or after the loan date.
@@ -42,8 +23,8 @@ function loan_to_sql_date($date_value) {
  * @return bool
  */
 function loan_has_valid_repayment_start_date($loan_date, $first_repayment) {
-    $loan_date_sql = loan_to_sql_date($loan_date);
-    $first_repayment_sql = loan_to_sql_date($first_repayment);
+    $loan_date_sql = input_date_to_sql_date($loan_date);
+    $first_repayment_sql = input_date_to_sql_date($first_repayment);
 
     if ($loan_date_sql === '' || $first_repayment_sql === '')
         return false;
@@ -66,8 +47,8 @@ function loan_has_valid_repayment_start_date($loan_date, $first_repayment) {
  * @return int|false
  */
 function add_employee_loan($employee_id, $loan_type_id, $loan_amount, $interest_rate, $installments, $installment_amount, $loan_date, $first_repayment, $notes='') {
-    $loan_date_sql = loan_to_sql_date($loan_date);
-    $first_repayment_sql = loan_to_sql_date($first_repayment);
+    $loan_date_sql = input_date_to_sql_date($loan_date);
+    $first_repayment_sql = input_date_to_sql_date($first_repayment);
     if ($loan_date_sql === '' || $first_repayment_sql === '' || (int)$installments <= 0
         || !loan_has_valid_repayment_start_date($loan_date_sql, $first_repayment_sql))
         return false;
@@ -108,8 +89,8 @@ function add_employee_loan($employee_id, $loan_type_id, $loan_amount, $interest_
  * @return bool
  */
 function update_employee_loan($loan_id, $loan_type_id, $loan_amount, $interest_rate, $installments, $installment_amount, $loan_date, $first_repayment, $notes='') {
-    $loan_date_sql = loan_to_sql_date($loan_date);
-    $first_repayment_sql = loan_to_sql_date($first_repayment);
+    $loan_date_sql = input_date_to_sql_date($loan_date);
+    $first_repayment_sql = input_date_to_sql_date($first_repayment);
     if ($loan_date_sql === '' || $first_repayment_sql === '' || (int)$installments <= 0
         || !loan_has_valid_repayment_start_date($loan_date_sql, $first_repayment_sql))
         return false;
@@ -252,7 +233,7 @@ function generate_loan_repayment_schedule($loan_id) {
     $installments = max((int)$loan['installments'], 1);
     $loan_amount = (float)$loan['loan_amount'];
     $interest_rate = (float)$loan['interest_rate'];
-    $first_date = loan_to_sql_date($loan['first_repayment']);
+    $first_date = input_date_to_sql_date($loan['first_repayment']);
     if ($first_date === '')
         return false;
 
@@ -493,8 +474,8 @@ function get_loan_repayments($loan_id, $status=null) {
  * @return resource
  */
 function get_due_loan_repayments($employee_id, $from_date, $to_date) {
-    $from_sql = loan_to_sql_date($from_date);
-    $to_sql = loan_to_sql_date($to_date);
+    $from_sql = input_date_to_sql_date($from_date);
+    $to_sql = input_date_to_sql_date($to_date);
 
     $sql = "SELECT r.*, l.loan_id, l.employee_id, lt.loan_type_name, lt.account_code
         FROM ".TB_PREF."loan_repayments r
@@ -537,8 +518,8 @@ function get_due_loan_deduction_account($employee_id, $from_date, $to_date) {
  * @return float
  */
 function get_total_due_loan_deduction($employee_id, $from_date, $to_date) {
-    $from_sql = loan_to_sql_date($from_date);
-    $to_sql = loan_to_sql_date($to_date);
+    $from_sql = input_date_to_sql_date($from_date);
+    $to_sql = input_date_to_sql_date($to_date);
 
     $sql = "SELECT IFNULL(SUM(r.total_amount - IFNULL(r.paid_amount, 0)), 0) amount
         FROM ".TB_PREF."loan_repayments r
@@ -564,7 +545,7 @@ function get_total_due_loan_deduction($employee_id, $from_date, $to_date) {
  * @return bool
  */
 function apply_loan_repayment($repayment_id, $paid_amount, $paid_date='', $payslip_id=0) {
-    $paid_date_sql = loan_to_sql_date($paid_date);
+    $paid_date_sql = input_date_to_sql_date($paid_date);
     if ($paid_date_sql === '')
         $paid_date_sql = date2sql(Today());
 

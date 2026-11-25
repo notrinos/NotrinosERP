@@ -5,6 +5,7 @@
  * This layer resolves one published effective definition, validates subject
  * existence and canonicalizes one value command. It does not mutate values.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_typed_attribute_definition_validation_json'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_definition_command_db.inc');
 
@@ -45,15 +46,6 @@ function hrm_typed_attribute_value_user_can_access_object_scope($owner_scope)
     return $area !== false && function_exists('user_check_access') && user_check_access($area);
 }
 
-function hrm_typed_attribute_value_positive_id($value, $nullable = false)
-{
-    if (($value === null || $value === '') && $nullable) return null;
-    if (is_int($value)) return $value > 0 ? $value : false;
-    if (!is_string($value) || preg_match('/^[1-9][0-9]*$/D', $value) !== 1) return false;
-    $number = (int)$value;
-    return $number > 0 && (string)$number === $value ? $number : false;
-}
-
 function hrm_typed_attribute_value_datetime($value, $nullable = false)
 {
     if (($value === null || $value === '') && $nullable) return null;
@@ -83,7 +75,7 @@ function hrm_typed_attribute_value_subject_table($subject_type)
 function hrm_typed_attribute_value_subject_exists($subject_type, $subject_id, $for_update = false)
 {
     $binding = hrm_typed_attribute_value_subject_table($subject_type);
-    $subject_id = hrm_typed_attribute_value_positive_id($subject_id, false);
+    $subject_id = parse_positive_integer_strict($subject_id, false);
     if ($binding === false || $subject_id === false) return false;
     $sql = 'SELECT '.$binding['column'].' FROM '.TB_PREF.$binding['table']
         .' WHERE '.$binding['column'].'='.(int)$subject_id.' LIMIT 2'.($for_update ? ' FOR UPDATE' : '');
@@ -177,10 +169,10 @@ function hrm_typed_attribute_value_canonical_command($input, $definition)
     if (!array_key_exists('subject_id',$input) || !array_key_exists('value',$input)) return false;
     $code = hrm_typed_attribute_value_attribute_code($input['attribute_code']);
     $subject_type = in_array($input['subject_type'], hrm_typed_attribute_subject_types(), true) ? $input['subject_type'] : false;
-    $subject_id = hrm_typed_attribute_value_positive_id($input['subject_id'], false);
+    $subject_id = parse_positive_integer_strict($input['subject_id'], false);
     $from = hrm_typed_attribute_value_datetime($input['effective_from'], false);
     $to = hrm_typed_attribute_value_datetime(array_key_exists('effective_to',$input)?$input['effective_to']:null, true);
-    $predecessor = hrm_typed_attribute_value_positive_id(array_key_exists('predecessor_id',$input)?$input['predecessor_id']:null, true);
+    $predecessor = parse_positive_integer_strict(array_key_exists('predecessor_id',$input)?$input['predecessor_id']:null, true);
     $source = array_key_exists('source',$input) ? $input['source'] : 'manual';
     if ($code === false || $subject_type === false || $subject_id === false || $from === false || $to === false
         || $predecessor === false || !is_string($source) || $source !== 'manual'

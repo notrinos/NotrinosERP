@@ -6,6 +6,7 @@
  * production state is accessed here. Historical replay consumes only explicit
  * immutable movements and explicit period boundaries.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_core_005_contract.inc');
 if (!defined('HRM_PAY_CORE_006_CONTRACT_VERSION')) define('HRM_PAY_CORE_006_CONTRACT_VERSION', '1.0');
 if (!defined('HRM_PAY_CORE_006_PRODUCTION_BALANCE_CUTOVER_ALLOWED')) define('HRM_PAY_CORE_006_PRODUCTION_BALANCE_CUTOVER_ALLOWED', false);
@@ -14,7 +15,6 @@ if (!defined('HRM_PAY_CORE_006_PAYMENT_AUTHORITY_ALLOWED')) define('HRM_PAY_CORE
 if (!defined('HRM_PAY_CORE_006_HISTORICAL_MUTATION_ALLOWED')) define('HRM_PAY_CORE_006_HISTORICAL_MUTATION_ALLOWED', false);
 
 function hrm_pay_core_006_hash($v){return hrm_pay_core_005_hash($v);}
-function hrm_pay_core_006_is_sha256($v){return hrm_pay_core_005_is_sha256($v);}
 function hrm_pay_core_006_token($v,$max=128){return hrm_pay_core_005_token($v,$max);}
 function hrm_pay_core_006_decimal($v){return hrm_pay_core_005_decimal_string($v);}
 function hrm_pay_core_006_add($a,$b){return hrm_pay_core_005_decimal_add($a,$b);}
@@ -79,12 +79,12 @@ function hrm_pay_core_006_movement(array $m,&$error=null)
     $error=null;$scope=hrm_pay_core_006_scope($m['scope']??array(),$se);if($scope===false){$error=$se;return false;}
     $kind=(string)($m['movement_kind']??'');$source_system=hrm_pay_core_006_token($m['source_system']??'',32);$source_type=hrm_pay_core_006_token($m['source_type']??'',32);$source_key=hrm_pay_core_006_token($m['source_event_key']??'',128);
     $source_sha=$m['source_event_sha256']??'';$def_sha=$m['definition_sha256']??'';$effective=hrm_pay_core_006_date((string)($m['effective_date']??''));$recognition=hrm_pay_core_006_date((string)($m['recognition_date']??''));
-    if(!in_array($kind,hrm_pay_core_006_allowed_movement_kinds(),true)||!$source_system||!$source_type||!$source_key||!hrm_pay_core_006_is_sha256($source_sha)||!hrm_pay_core_006_is_sha256($def_sha)||!$effective||!$recognition){$error='movement_identity_invalid';return false;}
+    if(!in_array($kind,hrm_pay_core_006_allowed_movement_kinds(),true)||!$source_system||!$source_type||!$source_key||!is_sha256_hex($source_sha)||!is_sha256_hex($def_sha)||!$effective||!$recognition){$error='movement_identity_invalid';return false;}
     try{$amount=hrm_pay_core_006_decimal((string)($m['amount']??''));}catch(Throwable $e){$error='movement_amount_invalid';return false;}
     $currency=array_key_exists('currency_code',$m)&&$m['currency_code']!==null?strtoupper((string)$m['currency_code']):null;$unit=(string)($m['unit_code']??'');
     if(!in_array($unit,hrm_pay_core_006_allowed_units(),true)||($currency!==null&&!preg_match('/^[A-Z]{3}$/D',$currency))||($unit==='money'&&$currency===null)||($unit!=='money'&&$currency!==null)){$error='movement_unit_invalid';return false;}
     $pred=array_key_exists('predecessor_movement_sha256',$m)&&$m['predecessor_movement_sha256']!==null?$m['predecessor_movement_sha256']:null;
-    if($pred!==null&&!hrm_pay_core_006_is_sha256($pred)){$error='movement_predecessor_invalid';return false;}
+    if($pred!==null&&!is_sha256_hex($pred)){$error='movement_predecessor_invalid';return false;}
     if(in_array($kind,array('reversal','correction'),true)&&$pred===null){$error='lineage_required';return false;}
     $out=array('definition_sha256'=>$def_sha,'scope'=>$scope,'source_system'=>$source_system,'source_type'=>$source_type,'source_event_key'=>$source_key,'source_event_sha256'=>$source_sha,'movement_kind'=>$kind,'effective_date'=>$effective,'recognition_date'=>$recognition,'currency_code'=>$currency,'unit_code'=>$unit,'amount'=>$amount,'predecessor_movement_sha256'=>$pred);
     $out['movement_sha256']=hrm_pay_core_006_hash($out);return $out;
@@ -120,8 +120,8 @@ function hrm_pay_core_006_opening_from_inventory(array $inventory,&$error=null)
 {
     $error=null;$state=(string)($inventory['provenance_state']??'');
     if(!in_array($state,array('exact','aggregate_only','provenance_gap'),true)){$error='opening_provenance_invalid';return false;}
-    if(!hrm_pay_core_006_is_sha256($inventory['source_sha256']??'')){$error='opening_source_sha_invalid';return false;}
-    $inventory_sha=$inventory['inventory_sha256']??null;if($inventory_sha!==null&&!hrm_pay_core_006_is_sha256($inventory_sha)){$error='opening_inventory_sha_invalid';return false;}
+    if(!is_sha256_hex($inventory['source_sha256']??'')){$error='opening_source_sha_invalid';return false;}
+    $inventory_sha=$inventory['inventory_sha256']??null;if($inventory_sha!==null&&!is_sha256_hex($inventory_sha)){$error='opening_inventory_sha_invalid';return false;}
     $scope=$inventory['scope']??array();$as=(string)($inventory['as_of_date']??'');$identity=$inventory_sha?:hrm_pay_core_006_hash(array($inventory['source_type']??'aggregate',$inventory['source_sha256'],$scope,$as,$inventory['amount']??'0'));
     $m=array('definition_sha256'=>$inventory['definition_sha256']??'','scope'=>$scope,'source_system'=>'legacy','source_type'=>(string)($inventory['source_type']??'aggregate'),'source_event_key'=>'opening:'.substr($identity,0,48),'source_event_sha256'=>$inventory['source_sha256'],'movement_kind'=>'opening','effective_date'=>$as,'recognition_date'=>$as,'currency_code'=>$inventory['currency_code']??null,'unit_code'=>$inventory['unit_code']??'units','amount'=>$inventory['amount']??'0','predecessor_movement_sha256'=>null);
     return hrm_pay_core_006_movement($m,$error);
@@ -143,7 +143,7 @@ function hrm_pay_core_006_boundary_due(array $definition,$kind,$boundary_date,ar
         if($policy==='fixed_date'&&$date!==$d['expiry_date']){$error='expiry_boundary_not_due';return false;}
         if($policy==='age_days'){$origin=hrm_pay_core_006_date((string)($context['origin_date']??''));if(!$origin){$error='expiry_origin_required';return false;}$expected=date('Y-m-d',strtotime($origin.' +'.$d['expiry_days'].' days'));if($date!==$expected){$error='expiry_boundary_not_due';return false;}}
     }
-    if($policy==='explicit'&&!hrm_pay_core_006_is_sha256($context['boundary_evidence_sha256']??'')){$error='explicit_boundary_evidence_required';return false;}
+    if($policy==='explicit'&&!is_sha256_hex($context['boundary_evidence_sha256']??'')){$error='explicit_boundary_evidence_required';return false;}
     return true;
 }
 

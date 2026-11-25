@@ -10,6 +10,7 @@
  * callback route, parse tokens, consume transactions, link users or issue a
  * session/assurance level.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 
 if (!defined('FEDERATION_OIDC_CLIENT_CONFIG_SCHEMA'))
     define('FEDERATION_OIDC_CLIENT_CONFIG_SCHEMA', 'notrinoserp.oidc-client-config.v1');
@@ -312,9 +313,9 @@ function federation_oidc_load_enabled_configuration($verifier_config_id)
     $row = $result ? db_fetch_assoc($result) : false;
     if (!$row || (string)$row['protocol'] !== 'oidc' || (string)$row['verifier_profile'] !== 'oidc_code_pkce_v1'
         || (string)$row['provider_status'] !== 'enabled' || (string)$row['config_status'] !== 'enabled'
-        || !federation_control_valid_sha256((string)$row['issuer_hash'])
-        || !federation_control_valid_sha256((string)$row['audience_hash'])
-        || !federation_control_valid_sha256((string)$row['trust_material_ref_hash']))
+        || !is_sha256_hex((string)$row['issuer_hash'])
+        || !is_sha256_hex((string)$row['audience_hash'])
+        || !is_sha256_hex((string)$row['trust_material_ref_hash']))
         return false;
     return $row;
 }
@@ -342,9 +343,9 @@ function federation_oidc_resolve_configured_redirect_uri($company, $verifier_con
     if (!$row || db_fetch_assoc($result) !== false || (string)$row['protocol'] !== 'oidc'
         || (string)$row['verifier_profile'] !== 'oidc_code_pkce_v1' || (string)$row['provider_status'] !== 'enabled'
         || (string)$row['config_status'] !== 'enabled' || (int)$row['assurance_level_cap'] !== 1
-        || !federation_control_valid_sha256((string)$row['issuer_hash'])
-        || !federation_control_valid_sha256((string)$row['audience_hash'])
-        || !federation_control_valid_sha256((string)$row['trust_material_ref_hash']))
+        || !is_sha256_hex((string)$row['issuer_hash'])
+        || !is_sha256_hex((string)$row['audience_hash'])
+        || !is_sha256_hex((string)$row['trust_material_ref_hash']))
         return false;
     $bundle = federation_control_load_bundle($company, (string)$row['trust_material_ref_hash'], 'oidc', 'oidc_code_pkce_v1');
     if (!is_array($bundle) || !isset($bundle['materials']['oidc_client_config'])) return false;

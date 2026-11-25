@@ -149,7 +149,7 @@ function submit_hrm_lifecycle_employee_rehire($employee_number, $effective_date,
     $key_hash = idempotency_key_hash($idempotency_key);
     $actor = current_user_id_or_zero();
     if (!$employee_number || !$date || !$key_hash || $actor <= 0
-        || $date > hrm_lifecycle_separation_today_sql() || !hrm_lifecycle_rehire_permission()
+        || $date > today_as_sql_date() || !hrm_lifecycle_rehire_permission()
         || !hrm_lifecycle_rehire_workflow_is_maker_checker()) return false;
     begin_transaction();
     $return = false;
@@ -281,7 +281,7 @@ function execute_approved_hrm_lifecycle_rehire($data, $reserved_trans_no, $draft
         return $retry ? (int)$command['lifecycle_command_id'] : false;
     }
     if ($command['command_status'] !== 'pending' || (int)$command['row_version'] !== 1
-        || $data['effective_date'] > hrm_lifecycle_separation_today_sql()) return false;
+        || $data['effective_date'] > today_as_sql_date()) return false;
     $number = (int)$data['employee_number'];
     if (!function_exists('hrm_employee_projection_build'))
         include_once(dirname(__FILE__).'/employee_projection_command_db.inc');

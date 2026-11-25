@@ -1,5 +1,6 @@
 <?php
 /** PAY-CTRY-001 deterministic manifest parser, canonicalizer and verifier. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_ctry_001_contract.inc');
 include_once(dirname(__FILE__).'/pay_ctry_001_archive.inc');
 
@@ -131,7 +132,6 @@ function pay_ctry_001_ascii_token($v,$regex,$max)
 {
     return is_string($v)&&strlen($v)>0&&strlen($v)<=$max&&preg_match($regex,$v)===1;
 }
-function pay_ctry_001_sha($v){return is_string($v)&&preg_match('/^[a-f0-9]{64}$/D',$v)===1;}
 function pay_ctry_001_semver($v){return pay_ctry_001_ascii_token($v,'/^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$/D',64);}
 function pay_ctry_001_iso_utc_epoch($v)
 {
@@ -172,8 +172,8 @@ function pay_ctry_001_validate_manifest($m, &$error)
     $dep_seen=array(); foreach($m['dependencies'] as $dep){if(!pay_ctry_001_closed_object($dep,array('pack_id','version'),array(),$error,'dependency'))return false;if(!pay_ctry_001_ascii_token($dep['pack_id'],'/^[a-z0-9][a-z0-9._-]{2,63}$/D',64)||!pay_ctry_001_semver($dep['version']))return pay_ctry_001_fail($error,'dependency_invalid');if($dep['pack_id']===$m['pack']['id'])return pay_ctry_001_fail($error,'dependency_self_reference');if(isset($dep_seen[$dep['pack_id']]))return pay_ctry_001_fail($error,'dependency_duplicate');$dep_seen[$dep['pack_id']]=true;}
 
     if(!is_array($m['artifacts'])||!pay_ctry_001_is_list_array($m['artifacts'])||count($m['artifacts'])<1||count($m['artifacts'])>PAY_CTRY_001_MAX_MEMBERS-1)return pay_ctry_001_fail($error,'artifact_list_invalid');
-    $types=pay_ctry_001_allowed_artifact_types();$path_seen=array(); foreach($m['artifacts'] as $a){if(!pay_ctry_001_closed_object($a,array('path','type','media_type','sha256','bytes'),array(),$error,'artifact'))return false;$pe=null;$p=pay_ctry_001_normalize_member_path($a['path'],$pe);if($p===false||substr($p,-1)==='/')return pay_ctry_001_fail($error,'artifact_path_invalid');if(strpos($p,'artifacts/')!==0&&strpos($p,'evidence/')!==0)return pay_ctry_001_fail($error,'artifact_path_prefix_denied');if(isset($path_seen[strtolower($p)]))return pay_ctry_001_fail($error,'artifact_duplicate_path');$path_seen[strtolower($p)]=true;if(!isset($types[$a['type']])||!in_array($a['media_type'],$types[$a['type']],true))return pay_ctry_001_fail($error,'artifact_type_or_media_denied');if(!pay_ctry_001_sha($a['sha256'])||!is_int($a['bytes'])||$a['bytes']<0||$a['bytes']>PAY_CTRY_001_MAX_MEMBER_BYTES)return pay_ctry_001_fail($error,'artifact_digest_or_size_invalid');$suffix=strtolower(pathinfo($p,PATHINFO_EXTENSION));if(!in_array($suffix,pay_ctry_001_allowed_suffixes(),true))return pay_ctry_001_fail($error,'artifact_suffix_denied');}
-    if(!pay_ctry_001_sha($m['semantic_root'])||!pay_ctry_001_sha($m['evidence_root']))return pay_ctry_001_fail($error,'root_digest_invalid');
+    $types=pay_ctry_001_allowed_artifact_types();$path_seen=array(); foreach($m['artifacts'] as $a){if(!pay_ctry_001_closed_object($a,array('path','type','media_type','sha256','bytes'),array(),$error,'artifact'))return false;$pe=null;$p=pay_ctry_001_normalize_member_path($a['path'],$pe);if($p===false||substr($p,-1)==='/')return pay_ctry_001_fail($error,'artifact_path_invalid');if(strpos($p,'artifacts/')!==0&&strpos($p,'evidence/')!==0)return pay_ctry_001_fail($error,'artifact_path_prefix_denied');if(isset($path_seen[strtolower($p)]))return pay_ctry_001_fail($error,'artifact_duplicate_path');$path_seen[strtolower($p)]=true;if(!isset($types[$a['type']])||!in_array($a['media_type'],$types[$a['type']],true))return pay_ctry_001_fail($error,'artifact_type_or_media_denied');if(!is_sha256_hex($a['sha256'])||!is_int($a['bytes'])||$a['bytes']<0||$a['bytes']>PAY_CTRY_001_MAX_MEMBER_BYTES)return pay_ctry_001_fail($error,'artifact_digest_or_size_invalid');$suffix=strtolower(pathinfo($p,PATHINFO_EXTENSION));if(!in_array($suffix,pay_ctry_001_allowed_suffixes(),true))return pay_ctry_001_fail($error,'artifact_suffix_denied');}
+    if(!is_sha256_hex($m['semantic_root'])||!is_sha256_hex($m['evidence_root']))return pay_ctry_001_fail($error,'root_digest_invalid');
 
     if(!pay_ctry_001_closed_object($m['signing'],array('signer_id','key_id','algorithm','signed_at','signature_base64'),array(),$error,'signing'))return false;
     if(!pay_ctry_001_ascii_token($m['signing']['signer_id'],'/^[a-z0-9][a-z0-9._-]{2,63}$/D',64)||!pay_ctry_001_ascii_token($m['signing']['key_id'],'/^[A-Za-z0-9._:-]{3,96}$/D',96))return pay_ctry_001_fail($error,'signer_or_key_id_invalid');

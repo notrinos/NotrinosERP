@@ -18,12 +18,6 @@ if (!function_exists('hrm_person_sensitive_active_key'))
 if (!function_exists('hrm_person_private_profile_text'))
     include_once($path_to_root.'/hrm/includes/db/employee_person_private_profile_db.inc');
 
-/** Validate one lowercase SHA-256 custody digest. */
-function hrm_ess_self_change_digest_is_valid($value)
-{
-    return is_string($value) && preg_match('/^[a-f0-9]{64}$/D', $value) === 1;
-}
-
 /** Require the dedicated self-change maker authority. */
 function hrm_ess_self_change_user_can_request()
 {

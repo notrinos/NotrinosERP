@@ -8,6 +8,7 @@
  * the consumer only after the existing authorization and idempotent already-
  * posted checks, and before any financial side effect is written.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 require_once(dirname(__FILE__).DIRECTORY_SEPARATOR.'session_registry.inc');
 
 if (!defined('FEDERATION_ASSURANCE_PAYROLL_POST_ACTION_CLASS'))
@@ -16,21 +17,6 @@ if (!defined('FEDERATION_ASSURANCE_PAYROLL_POST_HASH_CONTRACT'))
     define('FEDERATION_ASSURANCE_PAYROLL_POST_HASH_CONTRACT', 'notrinoserp.pay-sec-004.payroll-post-action');
 if (!defined('FEDERATION_ASSURANCE_PAYROLL_POST_HASH_VERSION'))
     define('FEDERATION_ASSURANCE_PAYROLL_POST_HASH_VERSION', '1');
-
-function federation_assurance_consumer_hex64($value)
-{
-    return is_string($value) && preg_match('/^[a-f0-9]{64}$/D', $value) === 1;
-}
-
-function federation_assurance_consumer_positive_int($value)
-{
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    if (!is_string($value) || preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $integer = (int)$value;
-    return $integer > 0 && (string)$integer === $value ? $integer : false;
-}
 
 /**
  * Build the only action hash accepted by this foundation.
@@ -48,8 +34,8 @@ function federation_assurance_consumer_positive_int($value)
 function federation_assurance_payroll_post_action_hash($company, $period_id, $approval_draft_id, $binding)
 {
     $company = (int)$company;
-    $period_id = federation_assurance_consumer_positive_int($period_id);
-    $approval_draft_id = federation_assurance_consumer_positive_int($approval_draft_id);
+    $period_id = parse_positive_integer_strict($period_id);
+    $approval_draft_id = parse_positive_integer_strict($approval_draft_id);
     if ($company < 0 || $period_id === false || $approval_draft_id === false || !is_array($binding))
         return false;
     foreach (array('contract','version','approval_hash') as $key)
@@ -57,7 +43,7 @@ function federation_assurance_payroll_post_action_hash($company, $period_id, $ap
             return false;
     if ($binding['contract'] !== 'notrinoserp.hrm.payroll.approval-binding'
         || !in_array($binding['version'], array('1.0.0','1.1.0'), true)
-        || !federation_assurance_consumer_hex64($binding['approval_hash']))
+        || !is_sha256_hex($binding['approval_hash']))
         return false;
 
     $payload = FEDERATION_ASSURANCE_PAYROLL_POST_HASH_CONTRACT
@@ -103,12 +89,6 @@ function federation_assurance_consumer_custody_for_update($session_id)
     return $row;
 }
 
-function federation_assurance_consumer_current_session_id()
-{
-    return isset($_SESSION['security_session_registry_id'])
-        ? (int)$_SESSION['security_session_registry_id'] : 0;
-}
-
 function federation_assurance_consumer_current_custody_valid($row, $now_epoch, $require_level_two)
 {
     if (!is_array($row) || !is_int($now_epoch) || $now_epoch <= 0
@@ -125,7 +105,7 @@ function federation_assurance_consumer_current_custody_valid($row, $now_epoch, $
         return false;
     if ($now_epoch >= $idle || $now_epoch >= $absolute || $now_epoch >= $decision_valid_until)
         return false;
-    if (federation_assurance_consumer_current_session_id() !== (int)$row['session_id']
+    if (current_security_session_id_or_zero() !== (int)$row['session_id']
         || (int)$row['user_id'] !== (int)$row['linked_user_id']
         || (int)$row['user_id'] !== (int)$user->user
         || (int)$row['role_id'] !== (int)$row['current_role_id']
@@ -158,7 +138,7 @@ function federation_assurance_consumer_event_for_update($session_id, $action_cla
 {
     $session_id = (int)$session_id;
     if ($session_id <= 0 || $action_class !== FEDERATION_ASSURANCE_PAYROLL_POST_ACTION_CLASS
-        || !federation_assurance_consumer_hex64($action_hash) || !defined('TB_PREF'))
+        || !is_sha256_hex($action_hash) || !defined('TB_PREF'))
         return false;
     $result = db_query("SELECT assurance_event_id,session_id,assurance_level,assurance_method,action_class,action_hash,nonce_hash,issued_at,expires_at,consumed_at "
         ."FROM ".TB_PREF."user_session_assurance_events WHERE session_id=".$session_id
@@ -246,7 +226,7 @@ function federation_consume_payroll_post_assurance($company, $period_id, $approv
     if (empty($transaction_level))
         return false;
     $action_hash = federation_assurance_payroll_post_action_hash($company, $period_id, $approval_draft_id, $binding);
-    $session_id = federation_assurance_consumer_current_session_id();
+    $session_id = current_security_session_id_or_zero();
     if ($action_hash === false || $session_id <= 0)
         return false;
     if (!function_exists('append_domain_audit_event')) {
@@ -332,7 +312,7 @@ function federation_reset_expired_privileged_assurance($company, $session_id, $n
     $session_id = (int)$session_id;
     $now = $now_epoch === null ? time() : $now_epoch;
     if ($company < 0 || $session_id <= 0 || !is_int($now) || $now <= 0
-        || federation_assurance_consumer_current_session_id() !== $session_id)
+        || current_security_session_id_or_zero() !== $session_id)
         return false;
     if (function_exists('user_company') && (int)user_company() !== $company)
         return false;

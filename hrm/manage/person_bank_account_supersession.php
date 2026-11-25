@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-004 governed Person bank-account supersession browser route. */
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 $person_bank_supersession_raw_method=isset($_SERVER['REQUEST_METHOD'])?(string)$_SERVER['REQUEST_METHOD']:'';
 $person_bank_supersession_raw_query=isset($_SERVER['QUERY_STRING'])?(string)$_SERVER['QUERY_STRING']:'';
 $person_bank_supersession_script_name=isset($_SERVER['SCRIPT_NAME'])?(string)$_SERVER['SCRIPT_NAME']:'';
@@ -83,8 +84,8 @@ if($person_bank_supersession_raw_method==='POST' && $action==='start_step_up'){
     } else {
         $candidate=isset($_POST['bank_candidate'])?(string)$_POST['bank_candidate']:'';
         $parts=explode(':',$candidate,2);
-        $bank_id=count($parts)===2?hrm_person_bank_supersession_positive_int($parts[0]):false;
-        $row_version=count($parts)===2?hrm_person_bank_supersession_positive_int($parts[1]):false;
+        $bank_id=count($parts)===2?parse_positive_integer_strict($parts[0]):false;
+        $row_version=count($parts)===2?parse_positive_integer_strict($parts[1]):false;
         $new_payload=hrm_person_bank_supersession_browser_payload_from_post();
         $prepared=($bank_id===false||$row_version===false)?false:hrm_person_bank_supersession_prepare_browser_action(
             $employee_ref,$bank_id,$row_version,$new_payload

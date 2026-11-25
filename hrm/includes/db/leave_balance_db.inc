@@ -9,6 +9,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
 include_once($path_to_root.'/hrm/includes/db/leave_policy_db.inc');
@@ -58,7 +59,7 @@ function get_leave_balance_fiscal_year_bounds($fiscal_year) {
  * @return int
  */
 function get_leave_balance_fiscal_year_for_date($date_value) {
-    $date_sql = leave_policy_to_sql_date($date_value);
+    $date_sql = input_date_to_sql_date($date_value);
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_sql))
         return 0;
 
@@ -272,14 +273,14 @@ function ensure_leave_balance_entitlement($employee_id, $leave_id, $fiscal_year,
     if (function_exists('hrm_lve_001_tables_ready') && hrm_lve_001_tables_ready()) {
         if (trim((string)$as_of_date) === '') { list(, $as_of_date) = get_leave_balance_fiscal_year_bounds($fiscal_year); }
         $lve_error = null;
-        hrm_lve_001_sync_legacy_projection($employee_id, $leave_id, $fiscal_year, leave_policy_to_sql_date($as_of_date), $lve_error);
+        hrm_lve_001_sync_legacy_projection($employee_id, $leave_id, $fiscal_year, input_date_to_sql_date($as_of_date), $lve_error);
         return get_leave_balance($employee_id, $leave_id, $fiscal_year);
     }
     if (!function_exists('get_employee_leave_policy_context_projection') || !function_exists('get_leave_policy_for_employee'))
         return get_leave_balance($employee_id, $leave_id, $fiscal_year);
 
     list($fiscal_year_start, $fiscal_year_end) = get_leave_balance_fiscal_year_bounds($fiscal_year);
-    $as_of_sql = leave_policy_to_sql_date($as_of_date);
+    $as_of_sql = input_date_to_sql_date($as_of_date);
     if ($as_of_sql === '')
         $as_of_sql = $fiscal_year_end;
 

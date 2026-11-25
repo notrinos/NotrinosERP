@@ -9,30 +9,11 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     See the License here <http://www.gnu.org/licenses/gpl-3.0.html>.
 ***********************************************************************/
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /**
  * Income tax bracket CRUD
  */
-
-/**
- * Convert user date to SQL date.
- *
- * @param string $date_value
- * @return string
- */
-function tax_bracket_to_sql_date($date_value) {
-    $date_value = trim((string)$date_value);
-    if ($date_value === '')
-        return '';
-
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_value))
-        return $date_value;
-
-    if (is_date($date_value))
-        return date2sql($date_value);
-
-    return $date_value;
-}
 
 /**
  * Add income tax bracket.
@@ -47,8 +28,8 @@ function tax_bracket_to_sql_date($date_value) {
  * @return int|false
  */
 function add_tax_bracket($bracket_name, $from_amount, $to_amount, $rate, $fixed_amount, $effective_from, $effective_to='') {
-    $from_sql = tax_bracket_to_sql_date($effective_from);
-    $to_sql = tax_bracket_to_sql_date($effective_to);
+    $from_sql = input_date_to_sql_date($effective_from);
+    $to_sql = input_date_to_sql_date($effective_to);
     if ($from_sql === '')
         return false;
 
@@ -82,8 +63,8 @@ function add_tax_bracket($bracket_name, $from_amount, $to_amount, $rate, $fixed_
  * @return bool
  */
 function update_tax_bracket($bracket_id, $bracket_name, $from_amount, $to_amount, $rate, $fixed_amount, $effective_from, $effective_to='') {
-    $from_sql = tax_bracket_to_sql_date($effective_from);
-    $to_sql = tax_bracket_to_sql_date($effective_to);
+    $from_sql = input_date_to_sql_date($effective_from);
+    $to_sql = input_date_to_sql_date($effective_to);
     if ($from_sql === '')
         return false;
 
@@ -122,7 +103,7 @@ function get_tax_brackets($as_of_date='') {
     $sql = "SELECT * FROM ".TB_PREF."tax_brackets WHERE 1=1";
 
     if (trim((string)$as_of_date) !== '') {
-        $as_of_sql = tax_bracket_to_sql_date($as_of_date);
+        $as_of_sql = input_date_to_sql_date($as_of_date);
         if ($as_of_sql !== '') {
             $sql .= " AND effective_from <= ".db_escape($as_of_sql)
                 ." AND (effective_to IS NULL OR effective_to >= ".db_escape($as_of_sql).")";

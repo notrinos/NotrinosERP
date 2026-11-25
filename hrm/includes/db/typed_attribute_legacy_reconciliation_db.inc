@@ -6,6 +6,7 @@
  * at a time. It never returns legacy or decrypted Typed Attribute plaintext and
  * performs no mutation. The result is control/status evidence only.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_typed_attribute_legacy_conversion_canonical_command'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_legacy_conversion_db.inc');
 
@@ -33,7 +34,7 @@ function hrm_typed_attribute_legacy_reconciliation_user_can_view($definition)
  */
 function hrm_typed_attribute_legacy_reconciliation_definition($definition_version_id)
 {
-    $definition_version_id = hrm_typed_attribute_legacy_mapping_positive_id($definition_version_id, false);
+    $definition_version_id = parse_positive_integer_strict($definition_version_id, false);
     if ($definition_version_id === false)
         return false;
     $result = db_query(

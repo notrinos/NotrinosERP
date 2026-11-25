@@ -8,7 +8,8 @@
  * rewritten by this boundary. Exact retries are receipt-based and any failure
  * rolls back the value, receipt, and audit evidence together.
  */
-if (!function_exists('hrm_typed_attribute_legacy_mapping_positive_id'))
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
+if (!function_exists('hrm_typed_attribute_legacy_mapping_canonical_command'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_legacy_mapping_command_db.inc');
 if (!function_exists('hrm_typed_attribute_legacy_custom_data_parity'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_legacy_custom_data_inventory_db.inc');
@@ -35,8 +36,8 @@ function hrm_typed_attribute_legacy_conversion_canonical_command($input)
 {
     if (!is_array($input) || array_diff(array_keys($input), array('employee_number','mapping_version_id'))
         || !array_key_exists('employee_number',$input) || !array_key_exists('mapping_version_id',$input)) return false;
-    $employee_number = hrm_typed_attribute_legacy_mapping_positive_id($input['employee_number'], false);
-    $mapping_version_id = hrm_typed_attribute_legacy_mapping_positive_id($input['mapping_version_id'], false);
+    $employee_number = parse_positive_integer_strict($input['employee_number'], false);
+    $mapping_version_id = parse_positive_integer_strict($input['mapping_version_id'], false);
     return $employee_number === false || $mapping_version_id === false ? false : array(
         'employee_number'=>$employee_number,
         'mapping_version_id'=>$mapping_version_id,

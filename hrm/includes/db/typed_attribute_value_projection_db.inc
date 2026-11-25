@@ -6,6 +6,7 @@
  * remains classification metadata; explicit no-auto-grant object-scope access
  * is required before metadata or plaintext is returned.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_typed_attribute_value_read_as_of'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_value_reader_db.inc');
 
@@ -24,7 +25,7 @@ function hrm_typed_attribute_value_projection_limit($limit)
  */
 function hrm_typed_attribute_value_projection_candidates($subject_type, $subject_id, $as_of, $for_manage = false)
 {
-    $subject_id = hrm_typed_attribute_value_positive_id($subject_id, false);
+    $subject_id = parse_positive_integer_strict($subject_id, false);
     $as_of = hrm_typed_attribute_value_datetime($as_of, false);
     if ($subject_id === false || $as_of === false || !is_bool($for_manage)
         || !in_array($subject_type, hrm_typed_attribute_subject_types(), true)
@@ -107,8 +108,8 @@ function get_hrm_typed_attribute_current_values($subject_type, $subject_id, $as_
  */
 function hrm_typed_attribute_value_current_leaf_id($definition_id, $subject_type, $subject_id)
 {
-    $definition_id = hrm_typed_attribute_value_positive_id($definition_id, false);
-    $subject_id = hrm_typed_attribute_value_positive_id($subject_id, false);
+    $definition_id = parse_positive_integer_strict($definition_id, false);
+    $subject_id = parse_positive_integer_strict($subject_id, false);
     if ($definition_id === false || $subject_id === false
         || !in_array($subject_type, hrm_typed_attribute_subject_types(), true)
         || !hrm_typed_attribute_value_subject_exists($subject_type, $subject_id, false))

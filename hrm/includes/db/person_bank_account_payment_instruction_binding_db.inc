@@ -10,6 +10,7 @@
  * authorization, result/obligation binding, trusted decryption, persistence, and all
  * external payment side effects.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 if (!defined('HRM_BANK_PAYMENT_INSTRUCTION_BINDING_CONTRACT'))
     define('HRM_BANK_PAYMENT_INSTRUCTION_BINDING_CONTRACT', 'notrinoserp.hrm-fnd-004.payment-instruction-binding');
@@ -17,16 +18,6 @@ if (!defined('HRM_BANK_PAYMENT_INSTRUCTION_BINDING_VERSION'))
     define('HRM_BANK_PAYMENT_INSTRUCTION_BINDING_VERSION', '1');
 if (!defined('HRM_BANK_PAYMENT_INSTRUCTION_BINDING_MAX_ALLOCATIONS'))
     define('HRM_BANK_PAYMENT_INSTRUCTION_BINDING_MAX_ALLOCATIONS', 16);
-
-function hrm_bank_payment_instruction_binding_positive_int($value)
-{
-    if (is_int($value))
-        return $value > 0 ? $value : false;
-    if (!is_string($value) || preg_match('/^[1-9][0-9]*$/D', $value) !== 1)
-        return false;
-    $integer = (int)$value;
-    return $integer > 0 && (string)$integer === $value ? $integer : false;
-}
 
 function hrm_bank_payment_instruction_binding_currency($value)
 {
@@ -63,7 +54,7 @@ function hrm_bank_payment_instruction_binding_percentage($value)
  */
 function get_hrm_bank_payment_instruction_binding_election_sql($person_id, $currency_code, $value_at_utc)
 {
-    $person_id = hrm_bank_payment_instruction_binding_positive_int($person_id);
+    $person_id = parse_positive_integer_strict($person_id);
     $currency_code = hrm_bank_payment_instruction_binding_currency($currency_code);
     $value_at_utc = hrm_bank_payment_instruction_binding_datetime($value_at_utc);
     if ($person_id === false || $currency_code === false || $value_at_utc === false || !defined('TB_PREF'))
@@ -87,8 +78,8 @@ function get_hrm_bank_payment_instruction_binding_election_sql($person_id, $curr
  */
 function get_hrm_bank_payment_instruction_binding_allocations_sql($payment_election_id, $person_id, $value_at_utc)
 {
-    $payment_election_id = hrm_bank_payment_instruction_binding_positive_int($payment_election_id);
-    $person_id = hrm_bank_payment_instruction_binding_positive_int($person_id);
+    $payment_election_id = parse_positive_integer_strict($payment_election_id);
+    $person_id = parse_positive_integer_strict($person_id);
     $value_at_utc = hrm_bank_payment_instruction_binding_datetime($value_at_utc);
     if ($payment_election_id === false || $person_id === false || $value_at_utc === false || !defined('TB_PREF'))
         return false;
@@ -124,7 +115,7 @@ function hrm_bank_payment_instruction_binding_expected_approval_status()
  */
 function get_hrm_person_bank_payment_instruction_binding($person_id, $currency_code, $value_at_utc)
 {
-    $person_id = hrm_bank_payment_instruction_binding_positive_int($person_id);
+    $person_id = parse_positive_integer_strict($person_id);
     $currency_code = hrm_bank_payment_instruction_binding_currency($currency_code);
     $value_at_utc = hrm_bank_payment_instruction_binding_datetime($value_at_utc);
     if ($person_id === false || $currency_code === false || $value_at_utc === false
@@ -165,10 +156,10 @@ function get_hrm_person_bank_payment_instruction_binding($person_id, $currency_c
     while ($row = db_fetch_assoc($alloc_result)) {
         if (!is_array($row) || count($rows) >= HRM_BANK_PAYMENT_INSTRUCTION_BINDING_MAX_ALLOCATIONS)
             return false;
-        $allocation_id = hrm_bank_payment_instruction_binding_positive_int((string)$row['payment_allocation_id']);
-        $bank_id = hrm_bank_payment_instruction_binding_positive_int((string)$row['person_bank_account_id']);
-        $bank_version = hrm_bank_payment_instruction_binding_positive_int((string)$row['bank_account_row_version']);
-        $priority = hrm_bank_payment_instruction_binding_positive_int((string)$row['priority']);
+        $allocation_id = parse_positive_integer_strict((string)$row['payment_allocation_id']);
+        $bank_id = parse_positive_integer_strict((string)$row['person_bank_account_id']);
+        $bank_version = parse_positive_integer_strict((string)$row['bank_account_row_version']);
+        $priority = parse_positive_integer_strict((string)$row['priority']);
         $percentage = hrm_bank_payment_instruction_binding_percentage((string)$row['allocation_value']);
         if ($allocation_id === false || $bank_id === false || $bank_version === false || $priority === false
             || $priority > HRM_BANK_PAYMENT_INSTRUCTION_BINDING_MAX_ALLOCATIONS || $percentage === false

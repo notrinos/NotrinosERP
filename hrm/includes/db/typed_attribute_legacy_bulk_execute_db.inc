@@ -7,6 +7,7 @@
  * conversion receipts, item links and audit evidence inside one transaction.
  * Any failure rolls the entire batch back to its pre-execution approved state.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_typed_attribute_legacy_bulk_batch_command_from_locked_rows'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_legacy_bulk_batch_approve_db.inc');
 if (!function_exists('hrm_typed_attribute_legacy_conversion_receipt_digest'))
@@ -81,7 +82,7 @@ function hrm_typed_attribute_legacy_bulk_batch_completed_matches($batch,$items)
 /** Execute exactly one approved batch. Exact completed retry is idempotent. */
 function hrm_typed_attribute_legacy_bulk_batch_execute($batch_id)
 {
-    $batch_id=hrm_typed_attribute_legacy_mapping_positive_id($batch_id,false);
+    $batch_id=parse_positive_integer_strict($batch_id,false);
     $actor=function_exists('hrm_person_worker_actor_id')?hrm_person_worker_actor_id():0;
     if($batch_id===false||$actor<=0||!hrm_typed_attribute_legacy_bulk_batch_user_can_execute())return false;
 

@@ -11,7 +11,7 @@ require_once(__DIR__.'/../../../includes/value_helpers.inc');
 $pay_ctry_002_activation_root = isset($path_to_root) ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $pay_ctry_002_activation_dependencies = array(
     array('/includes/pay_ctry_002_contract.inc', 'pay_ctry_002_validate_execution_descriptor'),
-    array('/includes/federation_assurance_consumer.inc', 'federation_assurance_consumer_current_session_id'),
+    array('/includes/federation_assurance_consumer.inc', 'current_security_session_id_or_zero'),
     array('/includes/db/domain_audit_db.inc', 'append_domain_audit_event'),
 );
 foreach ($pay_ctry_002_activation_dependencies as $dependency) {
@@ -81,8 +81,8 @@ function pay_ctry_002_execution_assurance_event_for_update($session_id,$action_h
 }
 function pay_ctry_002_consume_execution_assurance($company,$action_hash,$now_epoch)
 {
-    if(!function_exists('federation_assurance_consumer_current_session_id')||!function_exists('federation_assurance_consumer_custody_for_update')||!function_exists('federation_assurance_consumer_current_custody_valid')||!function_exists('federation_assurance_consumer_restore_level_one_sql')||!function_exists('append_domain_audit_event'))return false;
-    $session_id=federation_assurance_consumer_current_session_id();if($session_id<=0)return false;
+    if(!function_exists('federation_assurance_consumer_custody_for_update')||!function_exists('federation_assurance_consumer_current_custody_valid')||!function_exists('federation_assurance_consumer_restore_level_one_sql')||!function_exists('append_domain_audit_event'))return false;
+    $session_id=current_security_session_id_or_zero();if($session_id<=0)return false;
     $custody=federation_assurance_consumer_custody_for_update($session_id);if(!federation_assurance_consumer_current_custody_valid($custody,$now_epoch,true))return false;
     $event=pay_ctry_002_execution_assurance_event_for_update($session_id,$action_hash);
     if(!is_array($event)||(int)$event['assurance_level']!==2||(string)$event['assurance_method']!=='oidc_acr_amr'||(string)$event['action_class']!==PAY_CTRY_002_EXECUTION_ACTION_CLASS||!pay_ctry_002_activation_hash_equals((string)$event['action_hash'],$action_hash)||$event['consumed_at']!==null)return false;
@@ -103,8 +103,8 @@ function pay_ctry_002_lifecycle_assurance_event_for_update($session_id,$action_h
 }
 function pay_ctry_002_consume_lifecycle_assurance($company,$action_hash,$now_epoch)
 {
-    if(!function_exists('federation_assurance_consumer_current_session_id')||!function_exists('federation_assurance_consumer_custody_for_update')||!function_exists('federation_assurance_consumer_current_custody_valid')||!function_exists('federation_assurance_consumer_restore_level_one_sql')||!function_exists('append_domain_audit_event'))return false;
-    $session_id=federation_assurance_consumer_current_session_id();if($session_id<=0)return false;$custody=federation_assurance_consumer_custody_for_update($session_id);if(!federation_assurance_consumer_current_custody_valid($custody,$now_epoch,true))return false;
+    if(!function_exists('federation_assurance_consumer_custody_for_update')||!function_exists('federation_assurance_consumer_current_custody_valid')||!function_exists('federation_assurance_consumer_restore_level_one_sql')||!function_exists('append_domain_audit_event'))return false;
+    $session_id=current_security_session_id_or_zero();if($session_id<=0)return false;$custody=federation_assurance_consumer_custody_for_update($session_id);if(!federation_assurance_consumer_current_custody_valid($custody,$now_epoch,true))return false;
     $event=pay_ctry_002_lifecycle_assurance_event_for_update($session_id,$action_hash);if(!is_array($event)||(int)$event['assurance_level']!==2||(string)$event['assurance_method']!=='oidc_acr_amr'||(string)$event['action_class']!==PAY_CTRY_002_LIFECYCLE_ACTION_CLASS||!pay_ctry_002_activation_hash_equals((string)$event['action_hash'],$action_hash)||$event['consumed_at']!==null)return false;
     $issued=strtotime((string)$event['issued_at'].' UTC');$expires=strtotime((string)$event['expires_at'].' UTC');if($issued===false||$expires===false||$now_epoch<$issued||$now_epoch>=$expires)return false;$at=gmdate('Y-m-d H:i:s',$now_epoch);
     if(!db_query('UPDATE '.TB_PREF.'user_session_assurance_events SET consumed_at='.db_escape($at).' WHERE assurance_event_id='.(int)$event['assurance_event_id'].' AND consumed_at IS NULL AND expires_at>'.db_escape($at),'could not consume PAY-CTRY-002 lifecycle assurance')||(function_exists('db_num_affected_rows')&&(int)db_num_affected_rows()!==1))return false;

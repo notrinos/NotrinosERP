@@ -11,6 +11,7 @@
  * This file exposes no HTTP route, performs no payroll/payment/accounting write,
  * consumes no privileged action, and accepts no browser-controlled return URL.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 
 if (!defined('FEDERATION_OIDC_PAYROLL_STEP_UP_CSRF_TTL'))
     define('FEDERATION_OIDC_PAYROLL_STEP_UP_CSRF_TTL', 600);
@@ -44,7 +45,7 @@ function federation_oidc_payroll_step_up_dependencies()
         'federation_issue_privileged_assurance'=>'federation_assurance_issuer.inc',
         'federation_control_load_bundle'=>'federation_control_material.inc',
         'federation_control_hash_equals'=>'federation_control_material.inc',
-        'federation_control_valid_sha256'=>'federation_control_material.inc',
+        'is_sha256_hex'=>'federation_control_material.inc',
         'federation_verifier_dependency_configured_status'=>'federation_verifier_dependencies.inc'
     );
     foreach ($required as $function=>$file) {
@@ -97,12 +98,6 @@ function federation_oidc_payroll_step_up_result($status, $reason, $extra = array
 function federation_oidc_payroll_step_up_authorized()
 {
     return function_exists('user_check_access') && user_check_access('SA_PAYROLLPOST');
-}
-
-/** Current durable federated session id, never a browser parameter. */
-function federation_oidc_payroll_step_up_current_session_id()
-{
-    return isset($_SESSION['security_session_registry_id']) ? (int)$_SESSION['security_session_registry_id'] : 0;
 }
 
 /**
@@ -198,10 +193,10 @@ function federation_oidc_payroll_step_up_material_context($company, $session_con
         || strpos($required_path, '?') !== false || strpos($required_path, '#') !== false
         || preg_match('/[\x00-\x20\x7f]/', $required_path))
         return false;
-    if (!function_exists('federation_control_valid_sha256')
-        || !federation_control_valid_sha256((string)$session_context['trust_material_ref_hash'])
-        || !federation_control_valid_sha256((string)$session_context['issuer_hash'])
-        || !federation_control_valid_sha256((string)$session_context['audience_hash']))
+    if (!function_exists('is_sha256_hex')
+        || !is_sha256_hex((string)$session_context['trust_material_ref_hash'])
+        || !is_sha256_hex((string)$session_context['issuer_hash'])
+        || !is_sha256_hex((string)$session_context['audience_hash']))
         return false;
     $bundle = federation_control_load_bundle($company, (string)$session_context['trust_material_ref_hash'], 'oidc', 'oidc_code_pkce_v1');
     if (!is_array($bundle) || !isset($bundle['materials']) || !is_array($bundle['materials'])
@@ -255,7 +250,7 @@ function federation_oidc_payroll_step_up_issue_csrf($company, $period_id, $now_e
 {
     $company = (int)$company; $period_id = (int)$period_id;
     $now = $now_epoch === null ? time() : $now_epoch;
-    $session_id = federation_oidc_payroll_step_up_current_session_id();
+    $session_id = current_security_session_id_or_zero();
     if ($company < 0 || $period_id <= 0 || !is_int($now) || $now <= 0 || $session_id <= 0
         || !federation_oidc_payroll_step_up_authorized())
         return false;
@@ -285,7 +280,7 @@ function federation_oidc_payroll_step_up_consume_csrf($company, $period_id, $tok
     if (!is_array($row) || !is_string($token) || preg_match('/^[A-Za-z0-9_-]{43}$/D', $token) !== 1
         || !is_int($now_epoch) || $now_epoch <= 0 || $company < 0 || $period_id <= 0)
         return false;
-    return (int)$row['company'] === $company && (int)$row['session_id'] === federation_oidc_payroll_step_up_current_session_id()
+    return (int)$row['company'] === $company && (int)$row['session_id'] === current_security_session_id_or_zero()
         && (int)$row['period_id'] === $period_id && (int)$row['expires_at_epoch'] > $now_epoch
         && hash_equals((string)$row['token_hash'], hash('sha256', $token));
 }
@@ -353,7 +348,7 @@ function federation_oidc_payroll_step_up_pending($company, $state, $now_epoch)
         || !is_array($_SESSION['federation_payroll_post_step_up_pending'][$hash]))
         return false;
     $row = $_SESSION['federation_payroll_post_step_up_pending'][$hash];
-    if ((int)$row['company'] !== $company || (int)$row['session_id'] !== federation_oidc_payroll_step_up_current_session_id()
+    if ((int)$row['company'] !== $company || (int)$row['session_id'] !== current_security_session_id_or_zero()
         || (string)$row['action_class'] !== FEDERATION_ASSURANCE_PAYROLL_POST_ACTION_CLASS)
         return false;
     return $row;
@@ -408,7 +403,7 @@ function federation_oidc_start_payroll_post_step_up($company, $period_id, $csrf_
     $dependency = $root === false ? false : federation_verifier_dependency_configured_status($root);
     if (!is_array($dependency) || empty($dependency['available']))
         return federation_oidc_payroll_step_up_result('retry_later', 'verifier_dependency_unavailable');
-    $session_id = federation_oidc_payroll_step_up_current_session_id();
+    $session_id = current_security_session_id_or_zero();
     $session_context = federation_oidc_payroll_step_up_session_context($session_id, $now);
     if (!is_array($session_context))
         return federation_oidc_payroll_step_up_result('denied', 'federated_session_ineligible');

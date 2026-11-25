@@ -15,10 +15,10 @@ function hrm_ess_self_change_envelope_matches($request)
     if (!is_array($request) || !isset($request['payload_ciphertext'],$request['payload_digest'],$request['request_digest'],
         $request['baseline_auth_tag'],$request['request_nonce_hash']))
         return false;
-    return hrm_ess_self_change_digest_is_valid((string)$request['payload_digest'])
+    return is_sha256_hex((string)$request['payload_digest'])
         && hash_equals((string)$request['payload_digest'], hash('sha256', (string)$request['payload_ciphertext']))
-        && hrm_ess_self_change_digest_is_valid((string)$request['baseline_auth_tag'])
-        && hrm_ess_self_change_digest_is_valid((string)$request['request_digest'])
+        && is_sha256_hex((string)$request['baseline_auth_tag'])
+        && is_sha256_hex((string)$request['request_digest'])
         && hash_equals((string)$request['request_digest'], hrm_ess_self_change_request_digest(
             (int)$request['user_id'], (int)$request['worker_id'], (string)$request['payload_digest'],
             (string)$request['baseline_auth_tag'], (string)$request['request_nonce_hash']));

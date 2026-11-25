@@ -3,6 +3,7 @@
  * Pure governance helpers for PAY-CORE-003 mapping, writers and approved inputs.
  * No database/session/request dependency and no production payroll authority.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/pay_core_003_contract.inc');
 
 if (!defined('HRM_PAY_CORE_003_GOVERNANCE_VERSION'))
@@ -83,8 +84,8 @@ function hrm_pay_core_003_validate_eligibility_version($row)
         return false;
     if (!in_array($row['eligibility_kind'], hrm_pay_core_003_eligibility_kinds(), true)) return false;
     $artifact = isset($row['rule_artifact_sha256']) ? $row['rule_artifact_sha256'] : null;
-    if ($row['eligibility_kind'] === 'rule') return hrm_pay_core_003_is_sha256($artifact);
-    return $artifact === null || $artifact === '' || hrm_pay_core_003_is_sha256($artifact);
+    if ($row['eligibility_kind'] === 'rule') return is_sha256_hex($artifact);
+    return $artifact === null || $artifact === '' || is_sha256_hex($artifact);
 }
 
 function hrm_pay_core_003_validate_typed_value($value_type, $value)
@@ -111,8 +112,8 @@ function hrm_pay_core_003_validate_approved_input_candidate($row)
         || !hrm_pay_core_003_validate_typed_value($row['value_type'],$row['value'])) return false;
     if (hrm_pay_core_003_token($row['source_kind'],32) === false
         || hrm_pay_core_003_token($row['source_event_id'],128) === false) return false;
-    if (!hrm_pay_core_003_is_sha256($row['source_sha256'])
-        || !hrm_pay_core_003_is_sha256($row['approval_evidence_sha256'])) return false;
+    if (!is_sha256_hex($row['source_sha256'])
+        || !is_sha256_hex($row['approval_evidence_sha256'])) return false;
     if (isset($row['override_reason']) && $row['override_reason'] !== null
         && (trim((string)$row['override_reason']) === '' || strlen((string)$row['override_reason']) > 255)) return false;
     if (isset($row['supersedes_input_id']) && $row['supersedes_input_id'] !== null
@@ -129,7 +130,7 @@ function hrm_pay_core_003_validate_mapping_resolution($source_kind, $resolution)
     $kind = $resolution['target_kind'];
     if ($kind === 'documented_exception')
         return hrm_pay_core_003_token(isset($resolution['reason_code'])?$resolution['reason_code']:'',96) !== false
-            && isset($resolution['evidence_sha256']) && hrm_pay_core_003_is_sha256($resolution['evidence_sha256']);
+            && isset($resolution['evidence_sha256']) && is_sha256_hex($resolution['evidence_sha256']);
     if ($kind === 'element_version_bundle') {
         return $source_kind === 'pay_element'
             && isset($resolution['legacy_default_amount_action'])
@@ -150,7 +151,7 @@ function hrm_pay_core_003_validate_mapping_resolution($source_kind, $resolution)
 
 function hrm_pay_core_003_mapping_plan_hash($source_kind,$source_row_id,$source_sha256,$resolution,$supersedes_mapping_plan_id,$maker_id)
 {
-    if (!hrm_pay_core_003_is_sha256($source_sha256) || (int)$source_row_id <= 0 || (int)$maker_id <= 0
+    if (!is_sha256_hex($source_sha256) || (int)$source_row_id <= 0 || (int)$maker_id <= 0
         || !hrm_pay_core_003_validate_mapping_resolution($source_kind,$resolution)) return false;
     return hrm_pay_core_003_hash(array(
         'source_kind'=>$source_kind,
@@ -165,7 +166,7 @@ function hrm_pay_core_003_mapping_plan_hash($source_kind,$source_row_id,$source_
 
 function hrm_pay_core_003_parity_projection_sha256($source_sha256,$target_set_sha256,$scope_token)
 {
-    if (!hrm_pay_core_003_is_sha256($source_sha256) || !hrm_pay_core_003_is_sha256($target_set_sha256)
+    if (!is_sha256_hex($source_sha256) || !is_sha256_hex($target_set_sha256)
         || hrm_pay_core_003_token($scope_token,96) === false) return false;
     return hrm_pay_core_003_hash(array(
         'source_sha256'=>$source_sha256,

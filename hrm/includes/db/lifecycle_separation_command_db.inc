@@ -55,16 +55,6 @@ function hrm_lifecycle_separation_permission()
     return function_exists('user_check_access') && user_check_access('SA_EMPSEPARATION');
 }
 
-function hrm_lifecycle_separation_today_sql()
-{
-    if (function_exists('Today') && function_exists('date2sql')) {
-        $today = date2sql(Today());
-        if (parse_iso_calendar_date($today) !== false)
-            return $today;
-    }
-    return date('Y-m-d');
-}
-
 function hrm_lifecycle_separation_workflow_is_maker_checker()
 {
     if (!defined('ST_HRM_LIFECYCLE_SEPARATION') || !class_exists('ApprovalWorkflow')
@@ -241,7 +231,7 @@ function submit_hrm_lifecycle_employee_separation($employee_id, $effective_date,
     $company = function_exists('user_company') ? (int)user_company() : 0;
     if ($employee_id === '' || strlen($employee_id) > 20 || $effective_date === false
         || $is_resignation === false || !in_array($is_resignation, array(0,1), true)
-        || $idempotency_hash === false || strcmp($effective_date, hrm_lifecycle_separation_today_sql()) > 0
+        || $idempotency_hash === false || strcmp($effective_date, today_as_sql_date()) > 0
         || $actor <= 0 || $company < 0 || !hrm_lifecycle_separation_permission()
         || !hrm_lifecycle_separation_workflow_is_maker_checker()
         || !function_exists('get_hrm_person_worker_binding') || !function_exists('get_hrm_legacy_current_employment')
@@ -392,7 +382,7 @@ function execute_approved_hrm_lifecycle_separation($draft_data, $reserved_trans_
         || (int)$command['requested_by'] <= 0 || (int)$command['requested_by'] === $actor)
         return false;
     $effective_date = (string)$draft_data['effective_date'];
-    if (strcmp($effective_date, hrm_lifecycle_separation_today_sql()) > 0)
+    if (strcmp($effective_date, today_as_sql_date()) > 0)
         return false;
 
     $employee_number = (int)$draft_data['employee_number'];

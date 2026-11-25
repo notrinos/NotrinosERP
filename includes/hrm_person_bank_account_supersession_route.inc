@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-004 governed Person bank-account supersession browser boundary policy. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 if (!defined('HRM_PERSON_BANK_SUPERSESSION_ROUTE_DB_VERSION')) define('HRM_PERSON_BANK_SUPERSESSION_ROUTE_DB_VERSION','1.0.306');
 if (!defined('HRM_PERSON_BANK_SUPERSESSION_ROUTE_MAX_QUERY_BYTES')) define('HRM_PERSON_BANK_SUPERSESSION_ROUTE_MAX_QUERY_BYTES',8192);
 if (!defined('HRM_PERSON_BANK_SUPERSESSION_ROUTE_MAX_CODE_BYTES')) define('HRM_PERSON_BANK_SUPERSESSION_ROUTE_MAX_CODE_BYTES',4096);
@@ -131,7 +132,7 @@ function hrm_person_bank_supersession_route_assured($employee_ref,$now=null)
     $row=isset($_SESSION['hrm_person_bank_supersession_assured'])?$_SESSION['hrm_person_bank_supersession_assured']:false;
     if(!is_array($row)||$employee_ref===false||$now<=0||(int)($row['expires_at_epoch']??0)<=$now
         ||(string)($row['employee_ref']??'')!==$employee_ref
-        ||(int)($row['session_id']??0)!==federation_oidc_bank_account_supersession_step_up_current_session_id()
+        ||(int)($row['session_id']??0)!==current_security_session_id_or_zero()
         ||(string)($row['action_class']??'')!==HRM_PERSON_BANK_SUPERSESSION_ACTION_CLASS)return false;
     return $row;
 }

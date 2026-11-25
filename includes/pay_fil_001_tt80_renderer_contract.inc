@@ -1,5 +1,6 @@
 <?php
 /** PAY-FIL-001 TT80 05/KK-TNCN renderer candidate contract. Pure helpers; no DB/network/signing authority. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 if (!defined('PAY_FIL_001_TT80_RENDERER_CONTRACT_VERSION')) define('PAY_FIL_001_TT80_RENDERER_CONTRACT_VERSION', '1.0');
 
 /** Exact development-only renderer identity pinned to the locally accepted compatibility stack. */
@@ -83,7 +84,7 @@ function pay_fil_001_validate_tt80_render_model(array $m, &$error=null)
     foreach(array('source_binding','header','taxpayer','tax_office','tax_agent','extension','indicators') as $k) if(!isset($m[$k])||!is_array($m[$k])) { $error='tt80_model_section_missing'; return false; }
     $b=$m['source_binding'];
     foreach(array('company_id','legal_entity_id','obligation_sha256','source_set_sha256','semantic_mapping_sha256','currency_code') as $k) if(!array_key_exists($k,$b)) { $error='tt80_source_binding_field_missing'; return false; }
-    if (pay_fil_001_uint($b['company_id'])===false || pay_fil_001_posint($b['legal_entity_id'])===false || !pay_fil_001_sha($b['obligation_sha256']) || !pay_fil_001_sha($b['source_set_sha256']) || !pay_fil_001_sha($b['semantic_mapping_sha256']) || $b['currency_code']!=='VND') { $error='tt80_source_binding_invalid'; return false; }
+    if (pay_fil_001_uint($b['company_id'])===false || pay_fil_001_posint($b['legal_entity_id'])===false || !is_sha256_hex($b['obligation_sha256']) || !is_sha256_hex($b['source_set_sha256']) || !is_sha256_hex($b['semantic_mapping_sha256']) || $b['currency_code']!=='VND') { $error='tt80_source_binding_invalid'; return false; }
     $h=$m['header'];
     foreach(array('record_id','service_name','service_version','provider_info','declaration_kind','sequence_no','period','period_start','period_end','prepared_on','signer_name','signed_on') as $k) if(!array_key_exists($k,$h)) { $error='tt80_header_field_missing'; return false; }
     if(pay_fil_001_tt80_text($h['record_id'],64,$error,'record_id')===false || pay_fil_001_tt80_text($h['service_name'],128,$error,'service_name')===false || pay_fil_001_tt80_text($h['service_version'],32,$error,'service_version')===false || pay_fil_001_tt80_text($h['provider_info'],160,$error,'provider_info')===false || !in_array($h['declaration_kind'],array('C','B'),true) || pay_fil_001_posint($h['sequence_no'])===false || preg_match('#^[1-4]/20[0-9]{2}$#D',(string)$h['period'])!==1 || pay_fil_001_date($h['period_start'])===false || pay_fil_001_date($h['period_end'])===false || pay_fil_001_date($h['prepared_on'])===false || pay_fil_001_tt80_text($h['signer_name'],160,$error,'signer_name')===false || pay_fil_001_date($h['signed_on'])===false) { if(!$error)$error='tt80_header_invalid'; return false; }

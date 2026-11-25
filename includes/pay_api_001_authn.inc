@@ -2,11 +2,6 @@
 /** PAY-API-001 pure credential verification and internal read-only request gate. */
 if (!defined('PAY_API_001_AUTHN_CONTRACT_VERSION')) define('PAY_API_001_AUTHN_CONTRACT_VERSION', '1.0.868');
 
-function pay_api_001_is_sha256($value)
-{
-    return is_string($value) && preg_match('/^[a-f0-9]{64}$/D', $value) === 1;
-}
-
 function pay_api_001_uint_value($value, $allow_zero=false, $max=null)
 {
     if (is_int($value)) $n=$value;

@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-007 permissioned exact-version decrypted Typed Attribute reader. */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!function_exists('hrm_typed_attribute_value_append_version'))
     include_once($path_to_root.'/hrm/includes/db/typed_attribute_value_writer_db.inc');
 
@@ -21,7 +22,7 @@ function hrm_typed_attribute_value_definition_metadata_matches($left,$right)
 
 function hrm_typed_attribute_value_definition_version_row($definition_version_id)
 {
-    $definition_version_id=hrm_typed_attribute_value_positive_id($definition_version_id,false);
+    $definition_version_id=parse_positive_integer_strict($definition_version_id,false);
     if($definition_version_id===false)return false;
     $r=db_query('SELECT definition_version_id,definition_id,predecessor_id,value_type,allowed_subject,sensitivity,'
         .'owner_scope,validation_json,definition_status,effective_from,effective_to FROM '
@@ -76,7 +77,7 @@ function hrm_typed_attribute_value_bound_definition_matches_state($bound,$state)
 function hrm_typed_attribute_value_read_as_of($attribute_code,$subject_type,$subject_id,$as_of)
 {
     $attribute_code=hrm_typed_attribute_value_attribute_code($attribute_code);
-    $subject_id=hrm_typed_attribute_value_positive_id($subject_id,false);
+    $subject_id=parse_positive_integer_strict($subject_id,false);
     $as_of=hrm_typed_attribute_value_datetime($as_of,false);
     if($attribute_code===false||$subject_id===false||$as_of===false
         ||!in_array($subject_type,hrm_typed_attribute_subject_types(),true)
