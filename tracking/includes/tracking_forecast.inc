@@ -211,7 +211,7 @@ function dimension_forecast_propose($fiscal_year, $basis_version_id, $changes, $
 		return dimension_commit_fail($result, 'permission_denied', _('The proposing user could not be identified.'));
 	$commentary = dimension_forecast_check_commentary($commentary, $result);
 	$normalized = dimension_forecast_normalize_changes($changes, $result);
-	if (!dimension_commit_valid_date((string)$as_of_date))
+	if (!is_iso_calendar_date((string)$as_of_date))
 		dimension_commit_fail($result, 'invalid_date', _('The as-of date is not valid.'));
 	if (!$result['ok'])
 		return $result;
@@ -445,7 +445,7 @@ function dimension_forecast_position($fiscal_year, $account, $coordinate_1, $coo
 		$out['version_no'] = (int)$version['version_no'];
 	}
 	$as_of = $as_of_date !== '' ? $as_of_date : ($version ? $version['as_of_date'] : $year['period_to']);
-	if (!dimension_commit_valid_date($as_of) || $as_of < $year['period_from'] || $as_of > $year['period_to'])
+	if (!is_iso_calendar_date($as_of) || $as_of < $year['period_from'] || $as_of > $year['period_to'])
 		return false;
 	$position = dimension_commit_position_unchecked($account, $coordinate_1 === 0 ? -1 : $coordinate_1, $coordinate_2 === 0 ? -1 : $coordinate_2, $year['period_from'], $year['period_to']);
 	if ($position === false)

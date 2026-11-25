@@ -1,5 +1,7 @@
 <?php
 /** PAY-SEC-004 public existing-link OIDC authorization-start/login-entry route. */
+require_once(__DIR__.'/../includes/federation_oidc_route_helpers.inc');
+require_once(__DIR__.'/../includes/value_helpers.inc');
 $federation_oidc_raw_method = isset($_SERVER['REQUEST_METHOD']) ? (string)$_SERVER['REQUEST_METHOD'] : '';
 $federation_oidc_raw_content_type = isset($_SERVER['CONTENT_TYPE']) ? (string)$_SERVER['CONTENT_TYPE'] : '';
 $federation_oidc_raw_body = @file_get_contents('php://input');
@@ -13,14 +15,14 @@ include_once($path_to_root.'/includes/federation_oidc_existing_link_authorizatio
 include_once($path_to_root.'/includes/federation_oidc_transaction.inc');
 include_once($path_to_root.'/includes/federation_first_link_administration.inc');
 
-federation_oidc_authorization_start_security_headers();
+federation_oidc_route_security_headers(FEDERATION_OIDC_ROUTE_CSP_REDIRECT);
 $request = federation_oidc_authorization_start_parse_request(
     $federation_oidc_raw_method,
     $federation_oidc_raw_content_type,
     is_string($federation_oidc_raw_body) ? $federation_oidc_raw_body : ''
 );
 $now = time();
-if (!session_transport_is_https() || !federation_oidc_authorization_start_is_anonymous_session()
+if (!session_transport_is_https() || !current_session_is_anonymous()
     || !is_array($request) || !federation_oidc_authorization_start_consume_csrf($request['csrf'], $now)
     || !federation_oidc_authorization_start_consume_attempt($now)) {
     federation_oidc_authorization_start_redirect_local($federation_oidc_script_name, 'restart');
@@ -56,5 +58,5 @@ if (!is_array($issued) || empty($issued['browser_callback_bound']) || !isset($is
     exit;
 }
 federation_oidc_authorization_start_reset_attempts();
-federation_oidc_authorization_start_redirect_provider((string)$issued['authorization_url']);
+federation_oidc_redirect_to_provider((string)$issued['authorization_url']);
 exit;

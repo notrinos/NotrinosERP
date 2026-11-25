@@ -8,6 +8,7 @@
  * email/display name, redirect URI or verifier configuration is accepted from
  * the browser.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 
 if (!defined('FEDERATION_OIDC_AUTH_START_CSRF_KEY'))
     define('FEDERATION_OIDC_AUTH_START_CSRF_KEY', 'federation_oidc_existing_link_authorization_start_csrf');
@@ -42,16 +43,9 @@ function federation_oidc_authorization_start_random_bytes($length)
     return $strong && is_string($bytes) && strlen($bytes) === $length ? $bytes : false;
 }
 
-function federation_oidc_authorization_start_is_anonymous_session()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && method_exists($_SESSION['wa_current_user'], 'logged_in')
-        && !$_SESSION['wa_current_user']->logged_in();
-}
-
 function federation_oidc_authorization_start_issue_csrf($now = null)
 {
-    if (!federation_oidc_authorization_start_is_anonymous_session())
+    if (!current_session_is_anonymous())
         return false;
     $now = $now === null ? time() : (int)$now;
     if ($now <= 0)
@@ -186,25 +180,3 @@ function federation_oidc_authorization_start_redirect_local($script_name, $resul
     return true;
 }
 
-function federation_oidc_authorization_start_redirect_provider($authorization_url)
-{
-    if (!function_exists('federation_oidc_valid_https_uri') || !federation_oidc_valid_https_uri($authorization_url, true)
-        || headers_sent())
-        return false;
-    header('HTTP/1.1 303 See Other');
-    header('Location: '.$authorization_url);
-    return true;
-}
-
-function federation_oidc_authorization_start_security_headers()
-{
-    if (headers_sent()) return false;
-    header('Cache-Control: no-store, max-age=0');
-    header('Pragma: no-cache');
-    header('Referrer-Policy: no-referrer');
-    header('X-Frame-Options: DENY');
-    header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
-    header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
-    header('X-Content-Type-Options: nosniff');
-    return true;
-}

@@ -3,10 +3,12 @@
 	Shared value helpers.
 
 	One copy of small checks that modules used to repeat under their own
-	names: the signed-in user's id, the security session id, whole-number
-	and calendar-date input parsing, today and entered dates for SQL, the
-	SHA-256 digest format and the hash of a client idempotency key. Load this file with require_once from every
-	file that calls one of these functions.
+	names: the signed-in user's id, the security session id, the anonymous
+	session and security-area checks, whole-number and calendar-date input
+	parsing, today and entered dates for SQL, the SHA-256 digest format, the
+	hash of a client idempotency key, employee reference and employee number
+	input, and URL component decoding. Load this file with require_once from
+	every file that calls one of these functions.
 ***********************************************************************/
 
 /**
@@ -183,4 +185,90 @@ function today_as_sql_date()
 			return $today;
 	}
 	return date('Y-m-d');
+}
+
+/**
+ * Check a calendar date written as YYYY-MM-DD (no trimming).
+ *
+ * @param mixed $date
+ * @return bool true for a string that is a real date such as 2028-02-29
+ */
+function is_iso_calendar_date($date)
+{
+	return is_string($date) && preg_match('/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/D', $date, $match)
+		&& checkdate((int)$match[2], (int)$match[3], (int)$match[1]);
+}
+
+/**
+ * Tell whether the session holds a user object that is not signed in
+ * (the state of a public page before login).
+ *
+ * @return bool false when there is no session user or the user is signed in
+ */
+function current_session_is_anonymous()
+{
+	return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
+		&& method_exists($_SESSION['wa_current_user'], 'logged_in')
+		&& !$_SESSION['wa_current_user']->logged_in();
+}
+
+/**
+ * Tell whether the signed-in user holds a security area (SA_*).
+ *
+ * False when user_check_access() is not loaded, so a file used outside the
+ * application never grants access.
+ *
+ * @param string $permission
+ * @return bool
+ */
+function current_user_has_access($permission)
+{
+	return function_exists('user_check_access') && user_check_access($permission);
+}
+
+/**
+ * Parse an employee reference sent by a browser page.
+ *
+ * Trims the value. Accepts 1 to 64 characters from A-Z, a-z, 0-9 and
+ * "_ . : @ -".
+ *
+ * @param mixed $value
+ * @return string|false the trimmed reference
+ */
+function parse_employee_reference($value)
+{
+	if (!is_scalar($value)) return false;
+	$value = trim((string)$value);
+	return $value !== '' && strlen($value) <= 64 && preg_match('/^[A-Za-z0-9_.:@-]+$/D', $value) === 1 ? $value : false;
+}
+
+/**
+ * Parse an employee number as entered: trimmed, 1 to 20 characters.
+ *
+ * @param mixed $employee_id
+ * @return string|false
+ */
+function parse_employee_id_text($employee_id)
+{
+	$employee_id = trim((string)$employee_id);
+	if ($employee_id === '' || strlen($employee_id) > 20)
+		return false;
+	return $employee_id;
+}
+
+/**
+ * Decode one URL query component.
+ *
+ * Refuses a "%" that is not followed by two hex digits. With $plus_as_space
+ * a "+" becomes a space first (form encoding).
+ *
+ * @param mixed $value
+ * @param bool $plus_as_space
+ * @return string|false
+ */
+function decode_url_component($value, $plus_as_space)
+{
+	if (!is_string($value) || preg_match('/%(?![0-9A-Fa-f]{2})/', $value)) return false;
+	if ($plus_as_space) $value = str_replace('+', ' ', $value);
+	return rawurldecode($value);
 }

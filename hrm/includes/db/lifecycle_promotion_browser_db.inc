@@ -27,15 +27,6 @@ unset($hrm_lifecycle_promotion_browser_root, $hrm_lifecycle_promotion_browser_de
 if (!defined('HRM_LIFECYCLE_PROMOTION_BROWSER_SESSION_NAMESPACE'))
     define('HRM_LIFECYCLE_PROMOTION_BROWSER_SESSION_NAMESPACE', 'hrm_fnd_005_employee_promotion_browser_idempotency');
 
-/** @return string|false */
-function hrm_lifecycle_promotion_browser_employee_id($employee_id)
-{
-    $employee_id = trim((string)$employee_id);
-    if ($employee_id === '' || strlen($employee_id) > 20)
-        return false;
-    return $employee_id;
-}
-
 /** @return string */
 function hrm_lifecycle_promotion_browser_session_slot($employee_id)
 {
@@ -45,7 +36,7 @@ function hrm_lifecycle_promotion_browser_session_slot($employee_id)
 /** @return string|false */
 function hrm_lifecycle_promotion_browser_idempotency_key($employee_id)
 {
-    $employee_id = hrm_lifecycle_promotion_browser_employee_id($employee_id);
+    $employee_id = parse_employee_id_text($employee_id);
     if ($employee_id === false || !isset($_SESSION) || !is_array($_SESSION))
         return false;
     if (!isset($_SESSION[HRM_LIFECYCLE_PROMOTION_BROWSER_SESSION_NAMESPACE])
@@ -84,7 +75,7 @@ function hrm_lifecycle_promotion_browser_idempotency_key($employee_id)
 /** @return void */
 function hrm_lifecycle_promotion_browser_forget_idempotency_key($employee_id)
 {
-    $employee_id = hrm_lifecycle_promotion_browser_employee_id($employee_id);
+    $employee_id = parse_employee_id_text($employee_id);
     if ($employee_id === false || !isset($_SESSION[HRM_LIFECYCLE_PROMOTION_BROWSER_SESSION_NAMESPACE])
         || !is_array($_SESSION[HRM_LIFECYCLE_PROMOTION_BROWSER_SESSION_NAMESPACE]))
         return;
@@ -104,7 +95,7 @@ function hrm_lifecycle_promotion_browser_forget_idempotency_key($employee_id)
  */
 function get_hrm_lifecycle_employee_promotion_browser_snapshot($employee_id)
 {
-    $employee_id = hrm_lifecycle_promotion_browser_employee_id($employee_id);
+    $employee_id = parse_employee_id_text($employee_id);
     if ($employee_id === false || !function_exists('hrm_lifecycle_promotion_permission')
         || !hrm_lifecycle_promotion_permission() || !function_exists('get_hrm_person_worker_binding')
         || !function_exists('get_hrm_legacy_current_employment')
@@ -180,7 +171,7 @@ function hrm_lifecycle_promotion_browser_pending_row_is_valid($row)
 function get_hrm_lifecycle_employee_promotion_browser_status($employee_id)
 {
     $none = array('status'=>'none','own'=>false,'lifecycle_command_id'=>0,'approval_draft_id'=>0);
-    $employee_id = hrm_lifecycle_promotion_browser_employee_id($employee_id);
+    $employee_id = parse_employee_id_text($employee_id);
     $actor = function_exists('current_user_id_or_zero') ? current_user_id_or_zero() : 0;
     if ($employee_id === false || $actor <= 0 || !function_exists('hrm_lifecycle_promotion_permission')
         || !hrm_lifecycle_promotion_permission() || !function_exists('get_hrm_person_worker_binding'))

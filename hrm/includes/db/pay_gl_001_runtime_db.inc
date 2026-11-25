@@ -22,8 +22,7 @@ include_once($path_to_root.'/includes/date_functions.inc');
 
 function pay_gl_001_runtime_fail(&$error,$code){$error=$code;return false;}
 function pay_gl_001_current_company(){return isset($_SESSION['wa_current_user']->company)?(int)$_SESSION['wa_current_user']->company:0;}
-function pay_gl_001_has_access($permission){return function_exists('user_check_access')&&user_check_access($permission);}
-function pay_gl_001_require_access($permission,&$error){return pay_gl_001_has_access($permission)?true:pay_gl_001_runtime_fail($error,'permission_denied');}
+function pay_gl_001_require_access($permission,&$error){return current_user_has_access($permission)?true:pay_gl_001_runtime_fail($error,'permission_denied');}
 function pay_gl_001_now(){return date('Y-m-d H:i:s');}
 function pay_gl_001_db_one($sql){$q=db_query($sql);if(!$q||db_num_rows($q)!==1)return false;return db_fetch_assoc($q);}
 function pay_gl_001_db_rows($sql){$q=db_query($sql);if(!$q)return false;$rows=array();while($r=db_fetch_assoc($q))$rows[]=$r;return $rows;}

@@ -15,13 +15,6 @@ function hrm_identifier_verification_request_browser_permission()
         && hrm_identifier_verification_request_permission();
 }
 
-function hrm_identifier_verification_request_browser_employee_ref($value)
-{
-    if (!is_scalar($value)) return false;
-    $value = trim((string)$value);
-    return $value !== '' && strlen($value) <= 64 && preg_match('/^[A-Za-z0-9_.:@-]+$/D', $value) === 1 ? $value : false;
-}
-
 function hrm_identifier_verification_request_browser_method($value)
 {
     if (!is_scalar($value)) return false;
@@ -39,7 +32,7 @@ function hrm_identifier_verification_request_browser_successor($employee_ref, $i
     if (!hrm_identifier_verification_request_browser_permission() || !defined('TB_PREF')) return false;
     $identifier_id = parse_positive_integer_strict($identifier_id);
     $row_version = parse_positive_integer_strict($row_version);
-    $employee_ref = hrm_identifier_verification_request_browser_employee_ref($employee_ref);
+    $employee_ref = parse_employee_reference($employee_ref);
     if ($identifier_id === false || $row_version === false || $employee_ref === false) return false;
     $column = is_numeric($employee_ref) ? 'employee_number' : 'employee_id';
     $employee = is_numeric($employee_ref) ? (int)$employee_ref : $employee_ref;
@@ -70,7 +63,7 @@ function hrm_identifier_verification_request_browser_successor($employee_ref, $i
 function get_hrm_identifier_verification_request_browser_candidates_masked($employee_ref)
 {
     if (!hrm_identifier_verification_request_browser_permission() || !defined('TB_PREF')) return false;
-    $employee_ref = hrm_identifier_verification_request_browser_employee_ref($employee_ref);
+    $employee_ref = parse_employee_reference($employee_ref);
     if ($employee_ref === false) return false;
     $column = is_numeric($employee_ref) ? 'employee_number' : 'employee_id';
     $employee = is_numeric($employee_ref) ? (int)$employee_ref : $employee_ref;

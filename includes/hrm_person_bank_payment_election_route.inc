@@ -23,20 +23,6 @@ function hrm_bank_payment_election_route_authenticated()
         && hrm_bank_payment_election_permission();
 }
 
-function hrm_bank_payment_election_route_employee_ref($value)
-{
-    if (!is_scalar($value)) return false;
-    $value=trim((string)$value);
-    return $value!=='' && strlen($value)<=64 && preg_match('/^[A-Za-z0-9_.:@-]+$/D',$value)===1 ? $value : false;
-}
-
-function hrm_bank_payment_election_route_decode_component($value,$plus_as_space)
-{
-    if (!is_string($value)||preg_match('/%(?![0-9A-Fa-f]{2})/',$value)) return false;
-    if ($plus_as_space) $value=str_replace('+',' ',$value);
-    return rawurldecode($value);
-}
-
 /** Exact OIDC callback parser; employee/action/return parameters are forbidden. */
 function hrm_bank_payment_election_route_parse_callback($method,$raw_query)
 {
@@ -44,8 +30,8 @@ function hrm_bank_payment_election_route_parse_callback($method,$raw_query)
     $values=array();
     foreach(explode('&',$raw_query) as $pair){
         if($pair==='') return false; $parts=explode('=',$pair,2); if(count($parts)!==2)return false;
-        $key=hrm_bank_payment_election_route_decode_component($parts[0],false);
-        $value=hrm_bank_payment_election_route_decode_component($parts[1],false);
+        $key=decode_url_component($parts[0],false);
+        $value=decode_url_component($parts[1],false);
         if($key===false||$value===false||!in_array($key,array('state','code','error','error_description'),true)||isset($values[$key]))return false;
         $values[$key]=$value;
     }
@@ -84,7 +70,7 @@ function hrm_bank_payment_election_route_callback_path($script_name)
 
 function hrm_bank_payment_election_route_local_path($script_name,$employee_ref,$result)
 {
-    $callback=hrm_bank_payment_election_route_callback_path($script_name);$employee_ref=hrm_bank_payment_election_route_employee_ref($employee_ref);
+    $callback=hrm_bank_payment_election_route_callback_path($script_name);$employee_ref=parse_employee_reference($employee_ref);
     if($callback===false||$employee_ref===false)return false;
     $fixed=array('assured'=>'assured','retry'=>'retry','failed'=>'failed','success'=>'success');
     $status=isset($fixed[$result])?$fixed[$result]:'failed';
@@ -102,7 +88,7 @@ function hrm_bank_payment_election_route_invalid_callback_path($script_name,$emp
 {
     $callback=hrm_bank_payment_election_route_callback_path($script_name);
     if($callback===false)return false;
-    $employee_ref=hrm_bank_payment_election_route_employee_ref($employee_ref);
+    $employee_ref=parse_employee_reference($employee_ref);
     return $employee_ref===false?$callback:$callback.'?employee_id='.rawurlencode($employee_ref).'&step_up=failed';
 }
 
@@ -111,20 +97,6 @@ function hrm_bank_payment_election_route_redirect_invalid_callback($script_name,
     $location=hrm_bank_payment_election_route_invalid_callback_path($script_name,$employee_ref);
     if($location===false||headers_sent())return false;
     header('HTTP/1.1 303 See Other');header('Location: '.$location);return true;
-}
-
-function hrm_bank_payment_election_route_redirect_provider($authorization_url)
-{
-    if(!function_exists('federation_oidc_valid_https_uri')||!federation_oidc_valid_https_uri($authorization_url,true)||headers_sent())return false;
-    header('HTTP/1.1 303 See Other');header('Location: '.$authorization_url);return true;
-}
-
-function hrm_bank_payment_election_route_terminalize_error($company,$state,$error)
-{
-    if(!function_exists('federation_oidc_acquire_callback_claim'))require_once(dirname(__FILE__).DIRECTORY_SEPARATOR.'federation_oidc_callback_claim.inc');
-    $claim=federation_oidc_acquire_callback_claim((int)$company,$state,15);if(!is_array($claim)||!isset($claim['claim_token']))return false;
-    $reason=$error==='access_denied'?'exchange_rejected':'exchange_uncertain';
-    return federation_oidc_terminalize_callback_claim((int)$company,(string)$claim['claim_token'],$reason)!==false;
 }
 
 /** Store only non-secret proof-of-step-up context; never store target bank material. */
@@ -144,7 +116,7 @@ function hrm_bank_payment_election_route_bind_assured($result,$now=null)
 
 function hrm_bank_payment_election_route_assured($employee_ref,$now=null)
 {
-    $now=$now===null?time():(int)$now;$employee_ref=hrm_bank_payment_election_route_employee_ref($employee_ref);
+    $now=$now===null?time():(int)$now;$employee_ref=parse_employee_reference($employee_ref);
     $row=isset($_SESSION['hrm_bank_payment_election_assured'])?$_SESSION['hrm_bank_payment_election_assured']:false;
     if(!is_array($row)||$employee_ref===false||$now<=0||(int)($row['expires_at_epoch']??0)<=$now
         ||(string)($row['employee_ref']??'')!==$employee_ref
@@ -175,7 +147,7 @@ function hrm_bank_payment_election_route_consume_confirm_csrf($assured,$token,$n
 
 function hrm_bank_payment_election_route_set_flash($employee_ref,$result)
 {
-    $employee_ref=hrm_bank_payment_election_route_employee_ref($employee_ref);
+    $employee_ref=parse_employee_reference($employee_ref);
     if($employee_ref===false||!is_array($result)||!isset($result['payment_election_id'],$result['status']))return false;
     $status=(string)$result['status'];
     if(strlen($status)>32||preg_match('/^[A-Za-z0-9_.:-]+$/D',$status)!==1)return false;
@@ -187,15 +159,9 @@ function hrm_bank_payment_election_route_set_flash($employee_ref,$result)
 }
 function hrm_bank_payment_election_route_take_flash($employee_ref)
 {
-    $employee_ref=hrm_bank_payment_election_route_employee_ref($employee_ref);
+    $employee_ref=parse_employee_reference($employee_ref);
     $row=isset($_SESSION['hrm_bank_payment_election_flash'])?$_SESSION['hrm_bank_payment_election_flash']:false;
     unset($_SESSION['hrm_bank_payment_election_flash']);
     return is_array($row)&&$employee_ref!==false&&(string)$row['employee_ref']===$employee_ref?$row:false;
 }
 
-function hrm_bank_payment_election_route_security_headers()
-{
-    if(headers_sent())return false;header('Cache-Control: no-store, max-age=0');header('Pragma: no-cache');header('Referrer-Policy: no-referrer');
-    header('X-Frame-Options: DENY');header("Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https:");
-    header('Permissions-Policy: geolocation=(), microphone=(), camera=()');header('X-Content-Type-Options: nosniff');return true;
-}

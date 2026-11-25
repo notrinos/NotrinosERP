@@ -97,11 +97,6 @@ function hrm_pay_rule_003_prepare_binding($artifact, $custody_status, $source_cl
     );
 }
 
-function hrm_pay_rule_003_store_user_can($permission)
-{
-    return function_exists('user_check_access') && user_check_access($permission);
-}
-
 function hrm_pay_rule_003_store_row_matches($row, $binding, $actor_id)
 {
     foreach (array('artifact_semver','custody_status','source_class','artifact_json','artifact_sha256',
@@ -172,7 +167,7 @@ function hrm_pay_rule_003_append_artifact_version($artifact, $custody_status, $s
         $actor_id = current_user_id_or_zero();
     $error = null;
     $binding = hrm_pay_rule_003_prepare_binding($artifact, $custody_status, $source_class, $evidence, $error);
-    if ($binding === false || $actor_id <= 0 || !hrm_pay_rule_003_store_user_can($permission))
+    if ($binding === false || $actor_id <= 0 || !current_user_has_access($permission))
         return false;
 
     if ($permission === 'SA_HRM_MANAGE_PAY_RULE_ARTIFACT') {
@@ -349,7 +344,7 @@ function hrm_pay_rule_003_read_artifact_version_internal($artifact_version_id, &
 
 function hrm_pay_rule_003_read_artifact_version($artifact_version_id, &$error)
 {
-    if (!hrm_pay_rule_003_store_user_can('SA_HRM_VIEW_PAY_RULE_ARTIFACT')) {
+    if (!current_user_has_access('SA_HRM_VIEW_PAY_RULE_ARTIFACT')) {
         $error = 'unauthorized';
         return false;
     }

@@ -26,15 +26,6 @@ unset($hrm_lifecycle_transfer_browser_root, $hrm_lifecycle_transfer_browser_depe
 if (!defined('HRM_LIFECYCLE_TRANSFER_BROWSER_SESSION_NAMESPACE'))
     define('HRM_LIFECYCLE_TRANSFER_BROWSER_SESSION_NAMESPACE', 'hrm_fnd_005_employee_transfer_browser_idempotency');
 
-/** @return string|false */
-function hrm_lifecycle_transfer_browser_employee_id($employee_id)
-{
-    $employee_id = trim((string)$employee_id);
-    if ($employee_id === '' || strlen($employee_id) > 20)
-        return false;
-    return $employee_id;
-}
-
 /** @return string */
 function hrm_lifecycle_transfer_browser_session_slot($employee_id)
 {
@@ -50,7 +41,7 @@ function hrm_lifecycle_transfer_browser_session_slot($employee_id)
  */
 function hrm_lifecycle_transfer_browser_idempotency_key($employee_id)
 {
-    $employee_id = hrm_lifecycle_transfer_browser_employee_id($employee_id);
+    $employee_id = parse_employee_id_text($employee_id);
     if ($employee_id === false)
         return false;
     if (!isset($_SESSION) || !is_array($_SESSION))
@@ -90,7 +81,7 @@ function hrm_lifecycle_transfer_browser_idempotency_key($employee_id)
 /** @return void */
 function hrm_lifecycle_transfer_browser_forget_idempotency_key($employee_id)
 {
-    $employee_id = hrm_lifecycle_transfer_browser_employee_id($employee_id);
+    $employee_id = parse_employee_id_text($employee_id);
     if ($employee_id === false || !isset($_SESSION[HRM_LIFECYCLE_TRANSFER_BROWSER_SESSION_NAMESPACE])
         || !is_array($_SESSION[HRM_LIFECYCLE_TRANSFER_BROWSER_SESSION_NAMESPACE]))
         return;
@@ -121,7 +112,7 @@ function hrm_lifecycle_transfer_browser_forget_idempotency_key($employee_id)
 function get_hrm_lifecycle_employee_transfer_browser_status($employee_id)
 {
     $none = array('status'=>'none','own'=>false,'lifecycle_command_id'=>0,'approval_draft_id'=>0);
-    $employee_id = hrm_lifecycle_transfer_browser_employee_id($employee_id);
+    $employee_id = parse_employee_id_text($employee_id);
     $actor = function_exists('current_user_id_or_zero') ? current_user_id_or_zero() : 0;
     if ($employee_id === false || $actor <= 0 || !function_exists('hrm_lifecycle_transfer_permission')
         || !hrm_lifecycle_transfer_permission() || !function_exists('get_hrm_person_worker_binding'))

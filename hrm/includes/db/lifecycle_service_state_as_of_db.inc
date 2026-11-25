@@ -6,25 +6,16 @@
  * attendance or scheduling eligibility. It resolves only the temporary
  * Suspension/Reinstatement overlay from lifecycle-owned history.
  */
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 if (!defined('HRM_HIST_SUSPENSION') || !defined('HRM_HIST_REINSTATE'))
     include_once($path_to_root.'/hrm/includes/hrm_constants.inc');
-
-/** Normalize one canonical SQL date without accepting SQL fragments. */
-function hrm_lifecycle_service_state_as_of_date($date)
-{
-    $date = trim((string)$date);
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/D', $date) !== 1)
-        return false;
-    $parsed = DateTime::createFromFormat('!Y-m-d', $date);
-    return $parsed && $parsed->format('Y-m-d') === $date ? $date : false;
-}
 
 /** Validate and replay already-projected lifecycle service-state rows. */
 function hrm_lifecycle_service_state_as_of_resolve_rows($employee_id, $as_of_date, $worker_id, $rows)
 {
     $employee_id = trim((string)$employee_id);
-    $as_of_date = hrm_lifecycle_service_state_as_of_date($as_of_date);
+    $as_of_date = parse_iso_calendar_date($as_of_date);
     $worker_id = (int)$worker_id;
     if ($employee_id === '' || strlen($employee_id) > 20 || $as_of_date === false || $worker_id <= 0 || !is_array($rows))
         return false;
@@ -46,7 +37,7 @@ function hrm_lifecycle_service_state_as_of_resolve_rows($employee_id, $as_of_dat
 
         $history_id = isset($row['history_id']) ? (int)$row['history_id'] : 0;
         $change_type = isset($row['change_type']) ? (string)$row['change_type'] : '';
-        $effective_date = isset($row['effective_date']) ? hrm_lifecycle_service_state_as_of_date((string)$row['effective_date']) : false;
+        $effective_date = isset($row['effective_date']) ? parse_iso_calendar_date((string)$row['effective_date']) : false;
         $reason = isset($row['reason']) ? (string)$row['reason'] : '';
         $command_id = isset($row['lifecycle_command_id']) ? (int)$row['lifecycle_command_id'] : 0;
         $command_worker_id = isset($row['worker_id']) ? (int)$row['worker_id'] : 0;
@@ -134,7 +125,7 @@ function hrm_lifecycle_service_state_as_of_resolve_rows($employee_id, $as_of_dat
 function get_hrm_lifecycle_employee_service_state_as_of($employee_id, $as_of_date, $for_update=false)
 {
     $employee_id = trim((string)$employee_id);
-    $as_of_date = hrm_lifecycle_service_state_as_of_date($as_of_date);
+    $as_of_date = parse_iso_calendar_date($as_of_date);
     if ($employee_id === '' || strlen($employee_id) > 20 || $as_of_date === false)
         return false;
 

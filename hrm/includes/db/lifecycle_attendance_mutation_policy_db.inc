@@ -5,16 +5,7 @@
  * This file is deliberately side-effect-free. It does not query the database,
  * call the service-state resolver, or mutate attendance/leave/payroll state.
  */
-
-/** Return one canonical SQL date or false. */
-function hrm_lifecycle_attendance_policy_date($date)
-{
-    $date = trim((string)$date);
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/D', $date) !== 1)
-        return false;
-    $parsed = DateTime::createFromFormat('!Y-m-d', $date);
-    return $parsed && $parsed->format('Y-m-d') === $date ? $date : false;
-}
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /**
  * Decide policy for a future attendance/scheduling-adjacent mutation.
@@ -29,7 +20,7 @@ function hrm_lifecycle_attendance_policy_date($date)
 function hrm_lifecycle_attendance_mutation_policy_decide($service_state, $mutation_date, $mutation_kind,
     $has_existing_evidence, $payroll_locked)
 {
-    $date = hrm_lifecycle_attendance_policy_date($mutation_date);
+    $date = parse_iso_calendar_date($mutation_date);
     $kind = trim((string)$mutation_kind);
     $supported = array(
         'attendance_write', 'attendance_meta_write', 'attendance_delete',
@@ -52,7 +43,7 @@ function hrm_lifecycle_attendance_mutation_policy_decide($service_state, $mutati
         return $base;
     if (!isset($service_state['scope'], $service_state['service_state'], $service_state['as_of_date'])
         || $service_state['scope'] !== 'temporary_suspension_overlay_only'
-        || hrm_lifecycle_attendance_policy_date($service_state['as_of_date']) !== $date
+        || parse_iso_calendar_date($service_state['as_of_date']) !== $date
         || !in_array($service_state['service_state'], array('active', 'suspended'), true))
         return $base;
 

@@ -7,6 +7,7 @@
  * one-time server-issued CSRF token. Provider/configuration, callback URI,
  * durable session, action hash and local return target remain server-derived.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 if (!defined('FEDERATION_OIDC_PAYROLL_STEP_UP_ROUTE_MAX_BODY_BYTES'))
     define('FEDERATION_OIDC_PAYROLL_STEP_UP_ROUTE_MAX_BODY_BYTES', 1024);
 if (!defined('FEDERATION_OIDC_PAYROLL_STEP_UP_ROUTE_MAX_QUERY_BYTES'))
@@ -27,15 +28,6 @@ function federation_oidc_payroll_step_up_route_authenticated()
         && function_exists('user_check_access') && user_check_access('SA_PAYROLLPOST');
 }
 
-function federation_oidc_payroll_step_up_route_decode_component($value, $plus_as_space)
-{
-    if (!is_string($value) || preg_match('/%(?![0-9A-Fa-f]{2})/', $value))
-        return false;
-    if ($plus_as_space)
-        $value = str_replace('+', ' ', $value);
-    return rawurldecode($value);
-}
-
 /** Exact HTTPS authenticated POST start parser. */
 function federation_oidc_payroll_step_up_route_parse_start($method, $content_type, $raw_body)
 {
@@ -48,8 +40,8 @@ function federation_oidc_payroll_step_up_route_parse_start($method, $content_typ
         if ($pair === '') return false;
         $parts = explode('=', $pair, 2);
         if (count($parts) !== 2) return false;
-        $key = federation_oidc_payroll_step_up_route_decode_component($parts[0], true);
-        $value = federation_oidc_payroll_step_up_route_decode_component($parts[1], true);
+        $key = decode_url_component($parts[0], true);
+        $value = decode_url_component($parts[1], true);
         if ($key === false || $value === false || !in_array($key, array('period_id','step_up_csrf'), true) || isset($values[$key]))
             return false;
         $values[$key] = $value;
@@ -75,8 +67,8 @@ function federation_oidc_payroll_step_up_route_parse_callback($method, $raw_quer
         if ($pair === '') return false;
         $parts = explode('=', $pair, 2);
         if (count($parts) !== 2) return false;
-        $key = federation_oidc_payroll_step_up_route_decode_component($parts[0], false);
-        $value = federation_oidc_payroll_step_up_route_decode_component($parts[1], false);
+        $key = decode_url_component($parts[0], false);
+        $value = decode_url_component($parts[1], false);
         if ($key === false || $value === false || !in_array($key, array('state','code','error','error_description'), true)
             || isset($values[$key]))
             return false;
@@ -154,36 +146,3 @@ function federation_oidc_payroll_step_up_route_redirect_local($script_name, $res
     return true;
 }
 
-function federation_oidc_payroll_step_up_route_redirect_provider($authorization_url)
-{
-    if (!function_exists('federation_oidc_valid_https_uri') || !federation_oidc_valid_https_uri($authorization_url, true)
-        || headers_sent())
-        return false;
-    header('HTTP/1.1 303 See Other');
-    header('Location: '.$authorization_url);
-    return true;
-}
-
-function federation_oidc_payroll_step_up_route_terminalize_error($company, $state, $error)
-{
-    if (!function_exists('federation_oidc_acquire_callback_claim'))
-        require_once(dirname(__FILE__).DIRECTORY_SEPARATOR.'federation_oidc_callback_claim.inc');
-    $claim = federation_oidc_acquire_callback_claim((int)$company, $state, 15);
-    if (!is_array($claim) || !isset($claim['claim_token']))
-        return false;
-    $reason = $error === 'access_denied' ? 'exchange_rejected' : 'exchange_uncertain';
-    return federation_oidc_terminalize_callback_claim((int)$company, (string)$claim['claim_token'], $reason) !== false;
-}
-
-function federation_oidc_payroll_step_up_route_security_headers()
-{
-    if (headers_sent()) return false;
-    header('Cache-Control: no-store, max-age=0');
-    header('Pragma: no-cache');
-    header('Referrer-Policy: no-referrer');
-    header('X-Frame-Options: DENY');
-    header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
-    header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
-    header('X-Content-Type-Options: nosniff');
-    return true;
-}

@@ -78,13 +78,6 @@ function dimension_driver_parse_uint($value, $max)
 	return $value;
 }
 
-/** Valid SQL date (Y-m-d)? */
-function dimension_driver_valid_date($date)
-{
-	return is_string($date) && preg_match('/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/D', $date, $match)
-		&& checkdate((int)$match[2], (int)$match[3], (int)$match[1]);
-}
-
 /**
  * Normalize and validate one driver version proposal without touching the database.
  *
@@ -122,7 +115,7 @@ function dimension_driver_normalize_spec($spec)
 		dimension_allocation_fail($result, 'payroll_unit', _('A payroll aggregate driver may only use the units headcount, fte or hours.'));
 	$from = isset($spec['period_from']) ? $spec['period_from'] : '';
 	$to = isset($spec['period_to']) ? $spec['period_to'] : '';
-	if (!dimension_driver_valid_date($from) || !dimension_driver_valid_date($to) || strcmp($from, $to) > 0)
+	if (!is_iso_calendar_date($from) || !is_iso_calendar_date($to) || strcmp($from, $to) > 0)
 		dimension_allocation_fail($result, 'invalid_period', _('The effective period needs a valid start date that is not after its end date.'));
 	$note = isset($spec['note']) && is_string($spec['note']) ? trim($spec['note']) : '';
 	if (strlen($note) > 200)

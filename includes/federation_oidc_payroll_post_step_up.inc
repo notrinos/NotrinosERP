@@ -11,6 +11,7 @@
  * This file exposes no HTTP route, performs no payroll/payment/accounting write,
  * consumes no privileged action, and accepts no browser-controlled return URL.
  */
+require_once(__DIR__.'/../includes/federation_oidc_route_helpers.inc');
 require_once(__DIR__.'/../includes/value_helpers.inc');
 
 if (!defined('FEDERATION_OIDC_PAYROLL_STEP_UP_CSRF_TTL'))
@@ -183,68 +184,6 @@ function federation_oidc_payroll_step_up_action_context($company, $period_id)
     );
 }
 
-/** Parse and validate the private step-up client/policy for one current config. */
-function federation_oidc_payroll_step_up_material_context($company, $session_context, $required_path)
-{
-    $company = (int)$company;
-    if ($company < 0 || !is_array($session_context) || !isset($session_context['trust_material_ref_hash'], $session_context['issuer_hash'],
-        $session_context['audience_hash'], $session_context['verifier_config_id']) || !is_string($required_path)
-        || strlen($required_path) < 1 || strlen($required_path) > 1024 || $required_path[0] !== '/'
-        || strpos($required_path, '?') !== false || strpos($required_path, '#') !== false
-        || preg_match('/[\x00-\x20\x7f]/', $required_path))
-        return false;
-    if (!function_exists('is_sha256_hex')
-        || !is_sha256_hex((string)$session_context['trust_material_ref_hash'])
-        || !is_sha256_hex((string)$session_context['issuer_hash'])
-        || !is_sha256_hex((string)$session_context['audience_hash']))
-        return false;
-    $bundle = federation_control_load_bundle($company, (string)$session_context['trust_material_ref_hash'], 'oidc', 'oidc_code_pkce_v1');
-    if (!is_array($bundle) || !isset($bundle['materials']) || !is_array($bundle['materials'])
-        || !isset($bundle['materials']['oidc_client_config'], $bundle['materials']['oidc_assurance_policy']))
-        return false;
-    $materials = $bundle['materials'];
-    $client = federation_oidc_client_config($materials['oidc_client_config']);
-    $policy = federation_oidc_assurance_policy($materials['oidc_assurance_policy']);
-    if ($client === false || $policy === false
-        || !federation_control_hash_equals(hash('sha256', $client['issuer']), (string)$session_context['issuer_hash'])
-        || !federation_control_hash_equals(hash('sha256', $client['client_id']), (string)$session_context['audience_hash']))
-        return false;
-    $matches = array();
-    foreach ($client['redirect_uris'] as $uri) {
-        $parts = @parse_url($uri);
-        $path = is_array($parts) && isset($parts['path']) ? (string)$parts['path'] : '/';
-        if ($path === $required_path && !isset($parts['query']) && !isset($parts['fragment']))
-            $matches[] = $uri;
-    }
-    if (count($matches) !== 1)
-        return false;
-    return array('redirect_uri'=>$matches[0], 'client'=>$client, 'policy'=>$policy, 'materials'=>$materials);
-}
-
-/** Add only server-derived reauthentication hints to the accepted authorization URL. */
-function federation_oidc_payroll_step_up_authorization_url($authorization_url, $policy)
-{
-    if (!is_string($authorization_url) || !is_array($policy) || !isset($policy['required_acr'], $policy['max_auth_age_seconds'])
-        || federation_oidc_assurance_policy(json_encode($policy)) === false)
-        return false;
-    $parts = @parse_url($authorization_url);
-    if (!is_array($parts) || !isset($parts['scheme'], $parts['host'], $parts['query'])
-        || strtolower((string)$parts['scheme']) !== 'https' || isset($parts['fragment']))
-        return false;
-    $query = array();
-    parse_str((string)$parts['query'], $query);
-    foreach (array('prompt','max_age','acr_values') as $key)
-        if (array_key_exists($key, $query))
-            return false;
-    $query['prompt'] = 'login';
-    $query['max_age'] = (string)(int)$policy['max_auth_age_seconds'];
-    $query['acr_values'] = (string)$policy['required_acr'];
-    $authority = (isset($parts['user']) ? rawurlencode($parts['user']).(isset($parts['pass']) ? ':'.rawurlencode($parts['pass']) : '').'@' : '')
-        .$parts['host'].(isset($parts['port']) ? ':'.(int)$parts['port'] : '');
-    $path = isset($parts['path']) ? $parts['path'] : '';
-    return $parts['scheme'].'://'.$authority.$path.'?'.http_build_query($query, '', '&', PHP_QUERY_RFC3986);
-}
-
 /** Generate one PHP-session-confined CSRF token bound to the current action. */
 function federation_oidc_payroll_step_up_issue_csrf($company, $period_id, $now_epoch = null)
 {
@@ -364,20 +303,6 @@ function federation_oidc_payroll_step_up_forget_pending($state)
         unset($_SESSION['federation_payroll_post_step_up_pending'][$hash]);
 }
 
-/** Parse only nonce structure before the pinned verifier authenticates the JWT. */
-function federation_oidc_payroll_step_up_nonce($jwt, $expected_nonce_hash)
-{
-    if (!is_string($expected_nonce_hash) || preg_match('/^[a-f0-9]{64}$/D', $expected_nonce_hash) !== 1
-        || !function_exists('federation_oidc_token_verifier_parse'))
-        return false;
-    $parsed = federation_oidc_token_verifier_parse($jwt);
-    if (!is_array($parsed) || !isset($parsed['claims']['nonce']) || !is_string($parsed['claims']['nonce'])
-        || preg_match('/^[A-Za-z0-9_-]{32,128}$/D', $parsed['claims']['nonce']) !== 1)
-        return false;
-    $actual = hash('sha256', $parsed['claims']['nonce']);
-    return federation_control_hash_equals($expected_nonce_hash, $actual) ? $parsed['claims']['nonce'] : false;
-}
-
 /**
  * Start one authenticated, action-bound OIDC reauthentication transaction.
  *
@@ -410,7 +335,7 @@ function federation_oidc_start_payroll_post_step_up($company, $period_id, $csrf_
     $action = federation_oidc_payroll_step_up_action_context($company, $period_id);
     if (!is_array($action))
         return federation_oidc_payroll_step_up_result('denied', 'payroll_approval_stale');
-    $material = federation_oidc_payroll_step_up_material_context($company, $session_context, $required_callback_path);
+    $material = federation_oidc_step_up_material_context($company, $session_context, $required_callback_path);
     if (!is_array($material))
         return federation_oidc_payroll_step_up_result('retry_later', 'step_up_material_unavailable');
 
@@ -423,7 +348,7 @@ function federation_oidc_start_payroll_post_step_up($company, $period_id, $csrf_
         (string)$material['redirect_uri'], $ttl_seconds);
     if (!is_array($transaction) || !isset($transaction['state'], $transaction['authorization_url'], $transaction['expires_at_epoch'], $transaction['verifier_transaction_id']))
         return federation_oidc_payroll_step_up_result('retry_later', 'transaction_issue_failed');
-    $authorization_url = federation_oidc_payroll_step_up_authorization_url((string)$transaction['authorization_url'], $material['policy']);
+    $authorization_url = federation_oidc_step_up_authorization_url((string)$transaction['authorization_url'], $material['policy']);
     if ($authorization_url === false || !federation_oidc_payroll_step_up_bind_pending((string)$transaction['state'], $session_context,
         $action, $transaction, (string)$material['redirect_uri'], $now))
         return federation_oidc_payroll_step_up_result('denied', 'browser_correlation_failed');
@@ -477,7 +402,7 @@ function federation_oidc_complete_payroll_post_step_up($company, $state, $author
         federation_oidc_payroll_step_up_forget_pending($state);
         return federation_oidc_payroll_step_up_result('denied', 'federated_session_changed');
     }
-    $material = federation_oidc_payroll_step_up_material_context($company, $session_context, $required_callback_path);
+    $material = federation_oidc_step_up_material_context($company, $session_context, $required_callback_path);
     if (!is_array($material) || !hash_equals((string)$pending['redirect_uri_hash'], hash('sha256', (string)$material['redirect_uri'])))
         return federation_oidc_payroll_step_up_result('retry_later', 'step_up_material_unavailable');
 
@@ -523,7 +448,7 @@ function federation_oidc_complete_payroll_post_step_up($company, $state, $author
         return federation_oidc_payroll_step_up_result('denied', $reason);
     }
 
-    $nonce = federation_oidc_payroll_step_up_nonce((string)$exchange['id_token'], (string)$claim['nonce_hash']);
+    $nonce = federation_oidc_step_up_nonce((string)$exchange['id_token'], (string)$claim['nonce_hash']);
     if ($nonce === false) {
         federation_oidc_terminalize_callback_claim($company, $claim_token, 'verifier_rejected');
         federation_oidc_payroll_step_up_forget_pending($state);

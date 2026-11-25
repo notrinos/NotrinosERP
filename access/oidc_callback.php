@@ -1,5 +1,7 @@
 <?php
 /** PAY-SEC-004 public existing-link OIDC callback route. */
+require_once(__DIR__.'/../includes/federation_oidc_route_helpers.inc');
+require_once(__DIR__.'/../includes/value_helpers.inc');
 $federation_oidc_raw_method = isset($_SERVER['REQUEST_METHOD']) ? (string)$_SERVER['REQUEST_METHOD'] : '';
 $federation_oidc_raw_query = isset($_SERVER['QUERY_STRING']) ? (string)$_SERVER['QUERY_STRING'] : '';
 $federation_oidc_script_name = isset($_SERVER['SCRIPT_NAME']) ? (string)$_SERVER['SCRIPT_NAME'] : '';
@@ -14,7 +16,7 @@ include_once($path_to_root.'/includes/federation_first_link_administration.inc')
 federation_oidc_callback_route_security_headers();
 $request = federation_oidc_callback_route_parse_request($federation_oidc_raw_method, $federation_oidc_raw_query);
 $now = time();
-if (!session_transport_is_https() || !federation_oidc_callback_route_is_anonymous_session()
+if (!session_transport_is_https() || !current_session_is_anonymous()
     || !federation_oidc_callback_route_consume_attempt($now) || !is_array($request)) {
     federation_oidc_callback_route_redirect($federation_oidc_script_name, 'restart');
     exit;
@@ -44,7 +46,7 @@ if (!federation_oidc_callback_route_transaction_matches_binding($request['state'
 }
 
 if ($request['kind'] === 'error') {
-    federation_oidc_callback_route_terminalize_authorization_error($company, $request['state'], $request['error']);
+    federation_oidc_terminalize_callback_error($company, $request['state'], $request['error']);
     federation_oidc_callback_route_clear_pending($request['state']);
     federation_oidc_callback_route_redirect($federation_oidc_script_name, 'failed');
     exit;

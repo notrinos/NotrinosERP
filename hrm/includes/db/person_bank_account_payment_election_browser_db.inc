@@ -11,18 +11,11 @@ function hrm_bank_payment_election_browser_permission()
     return function_exists('hrm_bank_payment_election_permission') && hrm_bank_payment_election_permission();
 }
 
-function hrm_bank_payment_election_browser_employee_ref($value)
-{
-    if (!is_scalar($value)) return false;
-    $value = trim((string)$value);
-    return $value !== '' && strlen($value) <= 64 && preg_match('/^[A-Za-z0-9_.:@-]+$/D', $value) === 1 ? $value : false;
-}
-
 /** Resolve exactly one current Person for the selected employee/Worker containment. */
 function hrm_bank_payment_election_browser_person($employee_ref)
 {
     if (!hrm_bank_payment_election_browser_permission() || !defined('TB_PREF')) return false;
-    $employee_ref = hrm_bank_payment_election_browser_employee_ref($employee_ref);
+    $employee_ref = parse_employee_reference($employee_ref);
     if ($employee_ref === false) return false;
     $column = is_numeric($employee_ref) ? 'employee_number' : 'employee_id';
     $employee = is_numeric($employee_ref) ? (int)$employee_ref : $employee_ref;

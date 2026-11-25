@@ -115,7 +115,7 @@ function hrm_pay_rule_003_reconcile_legacy_candidate($candidate, $for_update, &$
 
 function hrm_pay_rule_003_inventory_legacy_source($kind)
 {
-    if (!hrm_pay_rule_003_store_user_can('SA_HRM_MANAGE_PAY_RULE_ARTIFACT'))
+    if (!current_user_has_access('SA_HRM_MANAGE_PAY_RULE_ARTIFACT'))
         return false;
     $definition = hrm_pay_rule_003_legacy_source_definition($kind);
     if ($definition === false)
@@ -143,7 +143,7 @@ function hrm_pay_rule_003_persist_legacy_candidate($snapshot)
     if (!is_array($snapshot)
         || !isset($snapshot['source_kind'],$snapshot['source_row_id'],$snapshot['source_snapshot_json'],
                   $snapshot['source_snapshot_sha256'],$snapshot['diagnostics'])
-        || !hrm_pay_rule_003_store_user_can('SA_HRM_MANAGE_PAY_RULE_ARTIFACT'))
+        || !current_user_has_access('SA_HRM_MANAGE_PAY_RULE_ARTIFACT'))
         return false;
 
     $actor = current_user_id_or_zero();

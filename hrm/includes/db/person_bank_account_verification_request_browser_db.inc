@@ -12,13 +12,6 @@ function hrm_bank_account_verification_request_browser_permission()
         && hrm_bank_account_verification_request_permission();
 }
 
-function hrm_bank_account_verification_request_browser_employee_ref($value)
-{
-    if (!is_scalar($value)) return false;
-    $value = trim((string)$value);
-    return $value !== '' && strlen($value) <= 64 && preg_match('/^[A-Za-z0-9_.:@-]+$/D', $value) === 1 ? $value : false;
-}
-
 /**
  * Resolve one exact current governed-supersession bank successor for a selected employee.
  * Only masked/governance metadata leaves this helper. Protected bank material is never selected.
@@ -30,7 +23,7 @@ function hrm_bank_account_verification_request_browser_successor($employee_ref, 
         || !function_exists('current_user_id_or_zero')) return false;
     $person_bank_account_id = parse_positive_integer_strict($person_bank_account_id);
     $row_version = parse_positive_integer_strict($row_version);
-    $employee_ref = hrm_bank_account_verification_request_browser_employee_ref($employee_ref);
+    $employee_ref = parse_employee_reference($employee_ref);
     $actor = current_user_id_or_zero();
     if ($person_bank_account_id === false || $row_version === false || $employee_ref === false || $actor <= 0) return false;
     $column = is_numeric($employee_ref) ? 'employee_number' : 'employee_id';
@@ -65,7 +58,7 @@ function get_hrm_bank_account_verification_request_browser_candidates_masked($em
 {
     if (!hrm_bank_account_verification_request_browser_permission() || !defined('TB_PREF')
         || !function_exists('current_user_id_or_zero')) return false;
-    $employee_ref = hrm_bank_account_verification_request_browser_employee_ref($employee_ref);
+    $employee_ref = parse_employee_reference($employee_ref);
     $actor = current_user_id_or_zero();
     if ($employee_ref === false || $actor <= 0) return false;
     $column = is_numeric($employee_ref) ? 'employee_number' : 'employee_id';

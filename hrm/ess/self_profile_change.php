@@ -1,5 +1,6 @@
 <?php
 /** HRM-ESS-001 current-user bounded self-profile request/cancel route. */
+require_once(__DIR__.'/../../includes/federation_oidc_route_helpers.inc');
 $ess_self_raw_method=isset($_SERVER['REQUEST_METHOD'])?(string)$_SERVER['REQUEST_METHOD']:'';
 $ess_self_raw_query=isset($_SERVER['QUERY_STRING'])?(string)$_SERVER['QUERY_STRING']:'';
 $ess_self_script=isset($_SERVER['SCRIPT_NAME'])?(string)$_SERVER['SCRIPT_NAME']:'';
@@ -24,7 +25,7 @@ if($ess_self_raw_method==='GET'&&isset($_GET['state'])){
     if(!$secure||!$authorized||!$ready||!hrm_ess_self_change_route_consume_attempt($now)||$company<0||$callback_path===false){http_response_code(403);exit;}
     $request=hrm_ess_self_change_route_parse_callback($ess_self_raw_method,$ess_self_raw_query);if(!is_array($request)){http_response_code(400);exit;}
     if($request['kind']==='error'){
-        hrm_ess_self_change_route_terminalize_error($company,(string)$request['state'],(string)$request['error']);
+        federation_oidc_terminalize_callback_error($company,(string)$request['state'],(string)$request['error']);
         hrm_ess_self_change_reauth_forget_pending((string)$request['state']);
         hrm_ess_self_change_route_redirect_local($ess_self_script,$suffix,'failed');exit;
     }
@@ -60,7 +61,7 @@ if($ess_self_raw_method==='POST'){
         $step_csrf=is_array($prepared)?hrm_ess_self_change_reauth_issue_csrf($prepared,$now):false;
         $result=$step_csrf===false?false:hrm_ess_self_change_reauth_start_oidc($prepared,$step_csrf,$callback_path,HRM_ESS_SELF_CHANGE_REAUTH_TRANSACTION_TTL,$now);
         if(is_array($result)&&($result['status']??'')==='authorization_required'&&isset($result['authorization_url'])
-            &&hrm_ess_self_change_route_redirect_provider((string)$result['authorization_url']))exit;
+            &&federation_oidc_redirect_to_provider((string)$result['authorization_url']))exit;
         $message=is_array($result)&&($result['status']??'')==='retry_later'
             ?_('Independent reauthentication is temporarily unavailable. No request was submitted.')
             :_('Independent reauthentication could not be started. No request was submitted.');
@@ -70,7 +71,7 @@ if($ess_self_raw_method==='POST'){
         $step_csrf=is_array($prepared)?hrm_ess_self_change_reauth_issue_csrf($prepared,$now):false;
         $result=$step_csrf===false?false:hrm_ess_self_change_reauth_start_oidc($prepared,$step_csrf,$callback_path,HRM_ESS_SELF_CHANGE_REAUTH_TRANSACTION_TTL,$now);
         if(is_array($result)&&($result['status']??'')==='authorization_required'&&isset($result['authorization_url'])
-            &&hrm_ess_self_change_route_redirect_provider((string)$result['authorization_url']))exit;
+            &&federation_oidc_redirect_to_provider((string)$result['authorization_url']))exit;
         $message=is_array($result)&&($result['status']??'')==='retry_later'
             ?_('Independent reauthentication is temporarily unavailable. No request was cancelled.')
             :_('Independent reauthentication could not be started. No request was cancelled.');

@@ -23,8 +23,7 @@ function pay_rec_001_runtime_approval_matches(array $row,array $approval){return
 function pay_rec_001_runtime_review_response(array $row){$row['close_state_mutation_authorized']=false;return $row;}
 function pay_rec_001_runtime_approval_response(array $row){$row['close_state_mutation_authorized']=false;$row['production_close_authorized']=false;return $row;}
 function pay_rec_001_runtime_company(){return isset($_SESSION['wa_current_user']->company)?(int)$_SESSION['wa_current_user']->company:0;}
-function pay_rec_001_runtime_access($permission){return function_exists('user_check_access')&&user_check_access($permission);}
-function pay_rec_001_runtime_require_access($permission,&$error){return pay_rec_001_runtime_access($permission)?true:pay_rec_001_runtime_fail($error,'permission_denied');}
+function pay_rec_001_runtime_require_access($permission,&$error){return current_user_has_access($permission)?true:pay_rec_001_runtime_fail($error,'permission_denied');}
 function pay_rec_001_runtime_now(){return date('Y-m-d H:i:s');}
 function pay_rec_001_runtime_one($sql){$q=db_query($sql);if(!$q||db_num_rows($q)!==1)return false;return db_fetch_assoc($q);}
 function pay_rec_001_runtime_rows($sql){$q=db_query($sql);if(!$q)return false;$rows=array();while($r=db_fetch_assoc($q))$rows[]=$r;return $rows;}

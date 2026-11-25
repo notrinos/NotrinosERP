@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-004 evidence-bound identifier promotion browser boundary policy. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 if (!defined('HRM_IDENTIFIER_VERIFICATION_PROMOTION_ROUTE_DB_VERSION')) define('HRM_IDENTIFIER_VERIFICATION_PROMOTION_ROUTE_DB_VERSION','1.0.298');
 if (!defined('HRM_IDENTIFIER_VERIFICATION_PROMOTION_ROUTE_INTENT_TTL')) define('HRM_IDENTIFIER_VERIFICATION_PROMOTION_ROUTE_INTENT_TTL',300);
 if (!defined('HRM_IDENTIFIER_VERIFICATION_PROMOTION_ROUTE_MAX_INTENTS')) define('HRM_IDENTIFIER_VERIFICATION_PROMOTION_ROUTE_MAX_INTENTS',32);
@@ -18,16 +19,10 @@ function hrm_identifier_verification_promotion_route_authenticated()
         && hrm_identifier_verification_request_permission();
 }
 
-function hrm_identifier_verification_promotion_route_employee_ref($value)
-{
-    return function_exists('hrm_identifier_verification_promotion_browser_employee_ref')
-        ? hrm_identifier_verification_promotion_browser_employee_ref($value) : false;
-}
-
 function hrm_identifier_verification_promotion_route_issue_intent($employee_ref, $candidate, $now = null)
 {
     $now = $now === null ? time() : (int)$now;
-    $employee_ref = hrm_identifier_verification_promotion_route_employee_ref($employee_ref);
+    $employee_ref = parse_employee_reference($employee_ref);
     if ($employee_ref === false || !is_array($candidate) || $now <= 0) return false;
     foreach (array('verification_evidence_id','evidence_row_version','request_row_version','identifier_row_version') as $key)
         if (!isset($candidate[$key]) || (int)$candidate[$key] <= 0) return false;
@@ -57,7 +52,7 @@ function hrm_identifier_verification_promotion_route_issue_intent($employee_ref,
 function hrm_identifier_verification_promotion_route_consume_intent($employee_ref, $token, $now = null)
 {
     $now = $now === null ? time() : (int)$now;
-    $employee_ref = hrm_identifier_verification_promotion_route_employee_ref($employee_ref);
+    $employee_ref = parse_employee_reference($employee_ref);
     if ($employee_ref === false || !is_string($token) || preg_match('/^[A-Za-z0-9_-]{43}$/D',$token)!==1 || $now <= 0)
         return false;
     $key = hash('sha256',$token);
@@ -73,7 +68,7 @@ function hrm_identifier_verification_promotion_route_local_path($script_name, $e
 {
     $suffix='/hrm/manage/identifier_verification_promotion.php';
     if (!is_string($script_name) || substr($script_name,-strlen($suffix)) !== $suffix) return false;
-    $employee_ref=hrm_identifier_verification_promotion_route_employee_ref($employee_ref);
+    $employee_ref=parse_employee_reference($employee_ref);
     if ($employee_ref===false) return false;
     $status=in_array($result,array('success','failed'),true)?$result:'failed';
     return $script_name.'?employee_id='.rawurlencode($employee_ref).'&promotion='.$status;
@@ -88,7 +83,7 @@ function hrm_identifier_verification_promotion_route_redirect_local($script_name
 
 function hrm_identifier_verification_promotion_route_set_flash($employee_ref, $result)
 {
-    $employee_ref=hrm_identifier_verification_promotion_route_employee_ref($employee_ref);
+    $employee_ref=parse_employee_reference($employee_ref);
     if($employee_ref===false||!is_array($result)||!isset($result['verification_evidence_id'],$result['identifier_id'],$result['identifier_row_version'],$result['status']))return false;
     $status=(string)$result['status'];
     if(!in_array($status,array('promoted','already_promoted'),true))return false;
@@ -102,16 +97,9 @@ function hrm_identifier_verification_promotion_route_set_flash($employee_ref, $r
 
 function hrm_identifier_verification_promotion_route_take_flash($employee_ref)
 {
-    $employee_ref=hrm_identifier_verification_promotion_route_employee_ref($employee_ref);
+    $employee_ref=parse_employee_reference($employee_ref);
     $row=isset($_SESSION['hrm_identifier_verification_promotion_flash'])?$_SESSION['hrm_identifier_verification_promotion_flash']:false;
     unset($_SESSION['hrm_identifier_verification_promotion_flash']);
     return is_array($row)&&$employee_ref!==false&&(string)$row['employee_ref']===$employee_ref?$row:false;
 }
 
-function hrm_identifier_verification_promotion_route_security_headers()
-{
-    if(headers_sent())return false;
-    header('Cache-Control: no-store, max-age=0');header('Pragma: no-cache');header('Referrer-Policy: no-referrer');
-    header('X-Frame-Options: DENY');header("Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");
-    header('Permissions-Policy: geolocation=(), microphone=(), camera=()');header('X-Content-Type-Options: nosniff');return true;
-}

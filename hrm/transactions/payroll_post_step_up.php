@@ -1,5 +1,6 @@
 <?php
 /** PAY-SEC-004 authenticated public payroll-post OIDC step-up route. */
+require_once(__DIR__.'/../../includes/federation_oidc_route_helpers.inc');
 $payroll_step_up_raw_method = isset($_SERVER['REQUEST_METHOD']) ? (string)$_SERVER['REQUEST_METHOD'] : '';
 $payroll_step_up_raw_content_type = isset($_SERVER['CONTENT_TYPE']) ? (string)$_SERVER['CONTENT_TYPE'] : '';
 $payroll_step_up_raw_query = isset($_SERVER['QUERY_STRING']) ? (string)$_SERVER['QUERY_STRING'] : '';
@@ -12,7 +13,7 @@ include_once($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/federation_oidc_payroll_post_step_up.inc');
 include_once($path_to_root.'/includes/federation_oidc_payroll_post_step_up_route.inc');
 
-federation_oidc_payroll_step_up_route_security_headers();
+federation_oidc_route_security_headers(FEDERATION_OIDC_ROUTE_CSP_REDIRECT);
 $now = time();
 if (!session_transport_is_https() || !federation_oidc_payroll_step_up_route_authenticated()
     || !federation_oidc_payroll_step_up_route_consume_attempt($now)) {
@@ -44,7 +45,7 @@ if ($payroll_step_up_raw_method === 'POST') {
     );
     $status = is_array($result) && isset($result['status']) ? (string)$result['status'] : 'denied';
     if ($status === 'authorization_required' && isset($result['authorization_url'])
-        && federation_oidc_payroll_step_up_route_redirect_provider((string)$result['authorization_url']))
+        && federation_oidc_redirect_to_provider((string)$result['authorization_url']))
         exit;
     federation_oidc_payroll_step_up_route_redirect_local(
         $payroll_step_up_script_name,
@@ -66,7 +67,7 @@ if (!is_array($pending)) {
     exit;
 }
 if ($request['kind'] === 'error') {
-    federation_oidc_payroll_step_up_route_terminalize_error($company, (string)$request['state'], (string)$request['error']);
+    federation_oidc_terminalize_callback_error($company, (string)$request['state'], (string)$request['error']);
     federation_oidc_payroll_step_up_forget_pending((string)$request['state']);
     federation_oidc_payroll_step_up_route_redirect_local($payroll_step_up_script_name, 'failed', $period_id);
     exit;

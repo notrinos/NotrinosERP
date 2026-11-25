@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-004 governed Person bank payment-election maker/final-checker browser continuation. */
+require_once(__DIR__.'/../../includes/federation_oidc_route_helpers.inc');
 require_once(__DIR__.'/../../includes/value_helpers.inc');
 $bank_payment_election_raw_method=isset($_SERVER['REQUEST_METHOD'])?(string)$_SERVER['REQUEST_METHOD']:'';
 $bank_payment_election_raw_query=isset($_SERVER['QUERY_STRING'])?(string)$_SERVER['QUERY_STRING']:'';
@@ -12,8 +13,8 @@ $path_to_root='../..';
 include_once($path_to_root.'/includes/hrm_person_bank_payment_election_route.inc');
 if($bank_payment_election_raw_method==='GET' && isset($_GET['state'])
     && !is_array(hrm_bank_payment_election_route_parse_callback($bank_payment_election_raw_method,$bank_payment_election_raw_query))){
-    hrm_bank_payment_election_route_security_headers();
-    $invalid_employee_ref=hrm_bank_payment_election_route_employee_ref(isset($_GET['employee_id'])?$_GET['employee_id']:'');
+    federation_oidc_route_security_headers(FEDERATION_OIDC_ROUTE_CSP_STEP_UP);
+    $invalid_employee_ref=parse_employee_reference(isset($_GET['employee_id'])?$_GET['employee_id']:'');
     if(hrm_bank_payment_election_route_redirect_invalid_callback($bank_payment_election_script_name,$invalid_employee_ref))exit;
     http_response_code(400);exit;
 }
@@ -26,7 +27,7 @@ include_once($path_to_root.'/hrm/includes/db/person_bank_account_payment_electio
 include_once($path_to_root.'/includes/federation_oidc_person_bank_payment_election_step_up.inc');
 include_once($path_to_root.'/includes/hrm_person_bank_payment_election_route.inc');
 
-hrm_bank_payment_election_route_security_headers();
+federation_oidc_route_security_headers(FEDERATION_OIDC_ROUTE_CSP_STEP_UP);
 $now=time();
 $company=function_exists('user_company')?(int)user_company():-1;
 $callback_path=hrm_bank_payment_election_route_callback_path($bank_payment_election_script_name);
@@ -41,7 +42,7 @@ if($bank_payment_election_raw_method==='GET' && isset($_GET['state'])){
     $employee_ref=is_array($pending)&&isset($pending['employee_ref'])?(string)$pending['employee_ref']:false;
     if($employee_ref===false){http_response_code(403);exit;}
     if($request['kind']==='error'){
-        hrm_bank_payment_election_route_terminalize_error($company,(string)$request['state'],(string)$request['error']);
+        federation_oidc_terminalize_callback_error($company,(string)$request['state'],(string)$request['error']);
         federation_oidc_bank_payment_election_step_up_forget_pending((string)$request['state']);
         hrm_bank_payment_election_route_redirect_local($bank_payment_election_script_name,$employee_ref,'failed');exit;
     }
@@ -55,7 +56,7 @@ if($bank_payment_election_raw_method==='GET' && isset($_GET['state'])){
     hrm_bank_payment_election_route_redirect_local($bank_payment_election_script_name,$employee_ref,$status==='retry_later'?'retry':'failed');exit;
 }
 
-$employee_ref=hrm_bank_payment_election_route_employee_ref(isset($_POST['employee_id'])?$_POST['employee_id']:(isset($_GET['employee_id'])?$_GET['employee_id']:''));
+$employee_ref=parse_employee_reference(isset($_POST['employee_id'])?$_POST['employee_id']:(isset($_GET['employee_id'])?$_GET['employee_id']:''));
 if(!hrm_bank_payment_election_route_authenticated()||$employee_ref===false){
     page(_($help_context='Bank Payment Election'));display_error(_('Dedicated bank payment-election authority is required.'));end_page();exit;
 }
@@ -97,7 +98,7 @@ if($bank_payment_election_raw_method==='POST'&&$action==='start_submit_step_up')
                 HRM_BANK_PAYMENT_ELECTION_SUBMIT_ACTION_CLASS,(int)$prepared['object_id'],(int)$prepared['object_row_version'],
                 (string)$prepared['action_hash'],$step_csrf,$callback_path,FEDERATION_OIDC_BANK_PAYMENT_ELECTION_STEP_UP_TRANSACTION_TTL,$now);
             if(is_array($result)&&($result['status']??'')==='authorization_required'&&isset($result['authorization_url'])
-                &&hrm_bank_payment_election_route_redirect_provider((string)$result['authorization_url']))exit;
+                &&federation_oidc_redirect_to_provider((string)$result['authorization_url']))exit;
             $generic_error=_('Fresh independent reauthentication could not be completed. No payment election was submitted.');
         }else{
             $generic_error=_('The payment-election recovery state could not be proven. No new assurance was issued.');
@@ -118,7 +119,7 @@ if($bank_payment_election_raw_method==='POST'&&$action==='start_checker_step_up'
             HRM_BANK_PAYMENT_ELECTION_APPROVE_ACTION_CLASS,(int)$prepared['object_id'],(int)$prepared['object_row_version'],
             (string)$prepared['action_hash'],$step_csrf,$callback_path,FEDERATION_OIDC_BANK_PAYMENT_ELECTION_STEP_UP_TRANSACTION_TTL,$now);
         if(is_array($result)&&($result['status']??'')==='authorization_required'&&isset($result['authorization_url'])
-            &&hrm_bank_payment_election_route_redirect_provider((string)$result['authorization_url']))exit;
+            &&federation_oidc_redirect_to_provider((string)$result['authorization_url']))exit;
         $generic_error=_('Fresh final-checker reauthentication could not be completed. No approval was recorded.');
     }
 }

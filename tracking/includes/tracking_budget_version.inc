@@ -144,13 +144,6 @@ function dimension_budget_version_active_memory($key, $value = null)
 	return isset($memory[$key]) ? $memory[$key] : null;
 }
 
-/** Valid SQL date (Y-m-d)? */
-function dimension_budget_version_valid_date($date)
-{
-	return is_string($date) && preg_match('/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/D', $date, $match)
-		&& checkdate((int)$match[2], (int)$match[3], (int)$match[1]);
-}
-
 /**
  * Parse a budget amount to six decimals (an explicit zero stays 0.0, never absent).
  *
@@ -221,7 +214,7 @@ function dimension_budget_version_normalize_change($change, $period_from, $perio
 	if ($coordinate_1 === false || $coordinate_2 === false)
 		return $bad('invalid_coordinate', _('Each tracking value coordinate must be 0 (unassigned) or a tracking value number.'));
 	$date = isset($change['period_start']) ? $change['period_start'] : '';
-	if (!dimension_budget_version_valid_date($date) || strcmp($date, $period_from) < 0 || strcmp($date, $period_to) > 0)
+	if (!is_iso_calendar_date($date) || strcmp($date, $period_from) < 0 || strcmp($date, $period_to) > 0)
 		return $bad('invalid_date', _('Each change needs a valid date inside the fiscal year of the version.'));
 	$amount = null;
 	if (isset($change['amount']) && $change['amount'] !== '' && $change['amount'] !== null) {
@@ -448,7 +441,7 @@ function dimension_budget_version_capture_baseline($fiscal_year, $commentary = '
 	$lines = array();
 	while ($row = db_fetch_assoc($source)) {
 		$amount = dimension_budget_version_parse_amount((float)$row['amount']);
-		if (!preg_match('/^[\x21-\x7e]{1,15}$/D', (string)$row['account']) || $amount === false || !dimension_budget_version_valid_date((string)$row['tran_date'])) {
+		if (!preg_match('/^[\x21-\x7e]{1,15}$/D', (string)$row['account']) || $amount === false || !is_iso_calendar_date((string)$row['tran_date'])) {
 			cancel_transaction();
 			return dimension_budget_version_fail($result, 'unsupported_budget_row', sprintf(_('The live budget row of account "%s" cannot be versioned; correct it first.'),
 				preg_replace('/[^\x20-\x7e]/', '?', (string)$row['account'])));

@@ -1,5 +1,6 @@
 <?php
 /** PAY-SEC-004 public anonymous recovery-redemption route. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 $account_recovery_raw_method = isset($_SERVER['REQUEST_METHOD']) ? (string)$_SERVER['REQUEST_METHOD'] : '';
 $account_recovery_raw_content_type = isset($_SERVER['CONTENT_TYPE']) ? (string)$_SERVER['CONTENT_TYPE'] : '';
 $account_recovery_raw_body = @file_get_contents('php://input');
@@ -14,7 +15,7 @@ include_once($path_to_root.'/includes/account_recovery_redemption.inc');
 include_once($path_to_root.'/includes/account_recovery_redemption_route.inc');
 
 account_recovery_route_security_headers();
-if (!account_recovery_route_is_anonymous_session()) {
+if (!current_session_is_anonymous()) {
     header('Location: '.account_recovery_route_local_index($account_recovery_script_name), true, 303);
     exit;
 }

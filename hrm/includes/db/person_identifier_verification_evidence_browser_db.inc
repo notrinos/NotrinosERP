@@ -19,14 +19,6 @@ if (!function_exists('hrm_identifier_verification_evidence_action_hash')) {
 }
 unset($hrm_identifier_verification_evidence_browser_repo_root, $candidate);
 
-function hrm_identifier_verification_evidence_browser_employee_ref($value)
-{
-    if (!is_scalar($value)) return false;
-    $value = trim((string)$value);
-    return $value !== '' && strlen($value) <= 64
-        && preg_match('/^[A-Za-z0-9_.:@-]+$/D', $value) === 1 ? $value : false;
-}
-
 /** Validate one UTC timestamp entered by the checker as YYYY-MM-DD HH:MM:SS. */
 function hrm_identifier_verification_evidence_browser_verified_at_epoch($value)
 {
@@ -48,7 +40,7 @@ function hrm_identifier_verification_evidence_browser_verified_at_epoch($value)
  */
 function hrm_identifier_verification_evidence_browser_rows($employee_ref, $request_id = 0, $request_row_version = 0, $approval_draft_id = 0)
 {
-    $employee_ref = hrm_identifier_verification_evidence_browser_employee_ref($employee_ref);
+    $employee_ref = parse_employee_reference($employee_ref);
     $request_id = (int)$request_id;
     $request_row_version = (int)$request_row_version;
     $approval_draft_id = (int)$approval_draft_id;
@@ -166,7 +158,7 @@ function hrm_identifier_verification_evidence_prepare_browser_action(
         return false;
     return array(
         'company'=>$company,
-        'employee_ref'=>hrm_identifier_verification_evidence_browser_employee_ref($employee_ref),
+        'employee_ref'=>parse_employee_reference($employee_ref),
         'verification_request_id'=>(int)$candidate['verification_request_id'],
         'request_row_version'=>(int)$candidate['request_row_version'],
         'identifier_id'=>(int)$candidate['identifier_id'],

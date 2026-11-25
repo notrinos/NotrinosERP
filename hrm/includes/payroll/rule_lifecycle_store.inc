@@ -41,11 +41,6 @@ function hrm_pay_rule_004_digest($parts)
     return is_string($json) ? hash('sha256', $json) : false;
 }
 
-function hrm_pay_rule_004_store_user_can($permission)
-{
-    return function_exists('user_check_access') && user_check_access($permission);
-}
-
 function hrm_pay_rule_004_validate_version_chain_rows($rows, &$leaf_id, &$max_version)
 {
     $leaf_id = null; $max_version = 0;
@@ -142,7 +137,7 @@ function hrm_pay_rule_004_create_draft_version($rule,$predecessor_version_id=nul
     global $path_to_root;
     if (!function_exists('append_domain_audit_event')) include_once($path_to_root.'/includes/db/domain_audit_db.inc');
     if ($actor_id===null) $actor_id=current_user_id_or_zero();
-    if ($actor_id<=0 || !hrm_pay_rule_004_store_user_can('SA_HRM_AUTHOR_PAY_RULE')) return false;
+    if ($actor_id<=0 || !current_user_has_access('SA_HRM_AUTHOR_PAY_RULE')) return false;
     if (!is_array($rule)) return false;
     $rule['author_id']=(int)$actor_id;
     if ($predecessor_version_id!==null && (!is_int($predecessor_version_id)||$predecessor_version_id<=0)) return false;

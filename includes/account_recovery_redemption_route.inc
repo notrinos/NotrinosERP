@@ -7,6 +7,7 @@
  * trust, recovery/request secrets in URLs/session state, and authenticated use
  * are prohibited. All unresolved claims receive the same continuation shape.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 if (!defined('ACCOUNT_RECOVERY_ROUTE_CSRF_KEY'))
     define('ACCOUNT_RECOVERY_ROUTE_CSRF_KEY', 'pay_sec_004_account_recovery_route_csrf');
 if (!defined('ACCOUNT_RECOVERY_ROUTE_ATTEMPT_KEY'))
@@ -26,13 +27,6 @@ if (!defined('ACCOUNT_RECOVERY_ROUTE_ACTIVE_DB_VERSION'))
 if (!defined('ACCOUNT_RECOVERY_ROUTE_ACTIVATION_ACTION'))
     define('ACCOUNT_RECOVERY_ROUTE_ACTIVATION_ACTION', 'security.account_recovery.public_route.activated');
 
-function account_recovery_route_is_anonymous_session()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && method_exists($_SESSION['wa_current_user'], 'logged_in')
-        && !$_SESSION['wa_current_user']->logged_in();
-}
-
 function account_recovery_route_random_bytes($length)
 {
     $length = (int)$length;
@@ -48,7 +42,7 @@ function account_recovery_route_base64url($bytes)
 
 function account_recovery_route_issue_csrf($now = null)
 {
-    if (!account_recovery_route_is_anonymous_session())
+    if (!current_session_is_anonymous())
         return false;
     $now = $now === null ? time() : (int)$now;
     $bytes = account_recovery_route_random_bytes(32);

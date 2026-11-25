@@ -1,5 +1,6 @@
 <?php
 /** HRM-FND-004 governed Person bank-account supersession browser route. */
+require_once(__DIR__.'/../../includes/federation_oidc_route_helpers.inc');
 require_once(__DIR__.'/../../includes/value_helpers.inc');
 $person_bank_supersession_raw_method=isset($_SERVER['REQUEST_METHOD'])?(string)$_SERVER['REQUEST_METHOD']:'';
 $person_bank_supersession_raw_query=isset($_SERVER['QUERY_STRING'])?(string)$_SERVER['QUERY_STRING']:'';
@@ -14,7 +15,7 @@ include_once($path_to_root.'/hrm/includes/db/person_bank_account_supersession_db
 include_once($path_to_root.'/includes/federation_oidc_person_bank_account_supersession_step_up.inc');
 include_once($path_to_root.'/includes/hrm_person_bank_account_supersession_route.inc');
 
-hrm_person_bank_supersession_route_security_headers();
+federation_oidc_route_security_headers(FEDERATION_OIDC_ROUTE_CSP_STEP_UP);
 $now=time();
 $company=function_exists('user_company')?(int)user_company():-1;
 $callback_path=hrm_person_bank_supersession_route_callback_path($person_bank_supersession_script_name);
@@ -31,7 +32,7 @@ if($person_bank_supersession_raw_method==='GET' && isset($_GET['state'])){
     $employee_ref=is_array($pending)&&isset($pending['employee_ref'])?(string)$pending['employee_ref']:false;
     if($employee_ref===false){http_response_code(403);exit;}
     if($request['kind']==='error'){
-        hrm_person_bank_supersession_route_terminalize_error($company,(string)$request['state'],(string)$request['error']);
+        federation_oidc_terminalize_callback_error($company,(string)$request['state'],(string)$request['error']);
         federation_oidc_bank_account_supersession_step_up_forget_pending((string)$request['state']);
         hrm_person_bank_supersession_route_redirect_local($person_bank_supersession_script_name,$employee_ref,'failed');exit;
     }
@@ -45,7 +46,7 @@ if($person_bank_supersession_raw_method==='GET' && isset($_GET['state'])){
     hrm_person_bank_supersession_route_redirect_local($person_bank_supersession_script_name,$employee_ref,$status==='retry_later'?'retry':'failed');exit;
 }
 
-$employee_ref=hrm_person_bank_supersession_route_employee_ref(
+$employee_ref=parse_employee_reference(
     isset($_POST['employee_id'])?$_POST['employee_id']:(isset($_GET['employee_id'])?$_GET['employee_id']:'')
 );
 if(!hrm_person_bank_supersession_route_authenticated()||$employee_ref===false){
@@ -97,7 +98,7 @@ if($person_bank_supersession_raw_method==='POST' && $action==='start_step_up'){
             (string)$prepared['action_hash'],$step_up_csrf,$callback_path,FEDERATION_OIDC_BANK_ACCOUNT_SUPERSESSION_STEP_UP_TRANSACTION_TTL,$now
         );
         if(is_array($result)&&($result['status']??'')==='authorization_required'&&isset($result['authorization_url'])
-            &&hrm_person_bank_supersession_route_redirect_provider((string)$result['authorization_url']))exit;
+            &&federation_oidc_redirect_to_provider((string)$result['authorization_url']))exit;
         $generic_error=is_array($result)&&($result['status']??'')==='retry_later'
             ?_('Reauthentication is temporarily unavailable. No bank-detail change was made.')
             :_('The governed bank-detail change could not be prepared. No bank-detail change was made.');

@@ -163,7 +163,7 @@ function hrm_pay_rule_003_review_import($candidate_ids, $artifact, $evidence_id,
     global $path_to_root;
     if (!function_exists('append_domain_audit_event'))
         include_once($path_to_root.'/includes/db/domain_audit_db.inc');
-    if (!hrm_pay_rule_003_store_user_can('SA_HRM_REVIEW_PAY_RULE_IMPORT')
+    if (!current_user_has_access('SA_HRM_REVIEW_PAY_RULE_IMPORT')
         || !in_array($decision, array('approved_for_simulation','rejected'), true))
         return false;
     $reviewer = current_user_id_or_zero();
@@ -267,7 +267,7 @@ function hrm_pay_rule_003_execute_import($review_id, $predecessor_id=null)
     global $path_to_root;
     if (!function_exists('append_domain_audit_event'))
         include_once($path_to_root.'/includes/db/domain_audit_db.inc');
-    if (!hrm_pay_rule_003_store_user_can('SA_HRM_EXECUTE_PAY_RULE_IMPORT')
+    if (!current_user_has_access('SA_HRM_EXECUTE_PAY_RULE_IMPORT')
         || !is_int($review_id) || $review_id <= 0)
         return false;
     $executor = current_user_id_or_zero();

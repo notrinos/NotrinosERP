@@ -1,5 +1,7 @@
 <?php
 /** HRM-FND-004 final-checker evidence-bound Person bank-account verification promotion continuation. */
+require_once(__DIR__.'/../../includes/federation_oidc_route_helpers.inc');
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 $bank_account_verification_promotion_raw_method=isset($_SERVER['REQUEST_METHOD'])?(string)$_SERVER['REQUEST_METHOD']:'';
 $bank_account_verification_promotion_script_name=isset($_SERVER['SCRIPT_NAME'])?(string)$_SERVER['SCRIPT_NAME']:'';
 $page_security='SA_EMPLOYEE';
@@ -11,9 +13,9 @@ include_once($path_to_root.'/hrm/includes/db/person_bank_account_verification_ev
 include_once($path_to_root.'/hrm/includes/db/person_bank_account_verification_promotion_browser_db.inc');
 include_once($path_to_root.'/includes/hrm_person_bank_account_verification_promotion_route.inc');
 
-hrm_bank_account_verification_promotion_route_security_headers();
+federation_oidc_route_security_headers(FEDERATION_OIDC_ROUTE_CSP_LOCAL_FORM);
 $now=time();
-$employee_ref=hrm_bank_account_verification_promotion_route_employee_ref(
+$employee_ref=parse_employee_reference(
     isset($_POST['employee_id'])?$_POST['employee_id']:(isset($_GET['employee_id'])?$_GET['employee_id']:'')
 );
 if(!hrm_bank_account_verification_promotion_route_authenticated()||$employee_ref===false){

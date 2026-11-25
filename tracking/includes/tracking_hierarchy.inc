@@ -68,19 +68,12 @@ function dimension_hier_fail(&$result, $code, $text)
 	return $result;
 }
 
-/** Valid SQL date (Y-m-d)? */
-function dimension_hier_valid_date($date)
-{
-	return is_string($date) && preg_match('/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/D', $date, $match)
-		&& checkdate((int)$match[2], (int)$match[3], (int)$match[1]);
-}
-
 /** Today as a SQL date (the application's own clock). */
 function dimension_hier_today()
 {
 	if (function_exists('Today') && function_exists('date2sql')) {
 		$today = date2sql(Today());
-		if (dimension_hier_valid_date($today))
+		if (is_iso_calendar_date($today))
 			return $today;
 	}
 	return date('Y-m-d');
@@ -243,7 +236,7 @@ function dimension_hier_approved_versions($axis)
  */
 function dimension_hier_effective_version($axis, $date)
 {
-	if (!dimension_hier_has_access(array('SA_DIMTRANSVIEW')) || dimension_hier_schema_ready() !== true || !dimension_hier_valid_date($date))
+	if (!dimension_hier_has_access(array('SA_DIMTRANSVIEW')) || dimension_hier_schema_ready() !== true || !is_iso_calendar_date($date))
 		return false;
 	$versions = dimension_hier_approved_versions($axis);
 	if ($versions === false)
@@ -319,7 +312,7 @@ function dimension_hier_propose($axis, $changes, $effective_from, $parent_policy
 		dimension_hier_fail($result, 'commentary_required', _('Commentary of 1 to 500 characters is required.'));
 	if (!in_array($parent_policy, dimension_hier_policies(), true))
 		dimension_hier_fail($result, 'invalid_policy', _('The parent posting policy must be allowed or leaf_only.'));
-	if (!dimension_hier_valid_date((string)$effective_from))
+	if (!is_iso_calendar_date((string)$effective_from))
 		dimension_hier_fail($result, 'invalid_date', _('The effective date is not valid.'));
 	$normalized = dimension_hier_normalize_changes($changes, $result);
 	if (!$result['ok'])
@@ -633,7 +626,7 @@ function dimension_hier_rollup($axis, $from, $to, $view = 'as_posted', $allowed_
 {
 	if (!dimension_hier_has_access(array('SA_DIMTRANSVIEW', 'SA_GLANALYTIC')) || dimension_hier_schema_ready() !== true)
 		return false;
-	if (($axis !== 1 && $axis !== 2) || !dimension_hier_valid_date($from) || !dimension_hier_valid_date($to) || $from > $to || !in_array($view, array('as_posted', 'current'), true))
+	if (($axis !== 1 && $axis !== 2) || !is_iso_calendar_date($from) || !is_iso_calendar_date($to) || $from > $to || !in_array($view, array('as_posted', 'current'), true))
 		return false;
 	$allowed = null;
 	if ($allowed_ids !== null) {

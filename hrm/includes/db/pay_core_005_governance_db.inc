@@ -10,8 +10,6 @@ require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(dirname(__FILE__)).'/payroll/pay_core_005_runtime.inc');
 include_once(dirname(__FILE__).'/pay_core_004_governance_db.inc');
 
-function hrm_pay_core_005_access($permission){return function_exists('user_check_access')&&user_check_access($permission);}
-
 function hrm_pay_core_005_snapshot_from_row(array $row,&$error=null)
 {
     $error=null;
@@ -41,7 +39,7 @@ function hrm_pay_core_005_scope_matches(array $descriptor,array $expected)
 function hrm_pay_core_005_execute_sealed_snapshot($snapshot_id,array $expected_scope,array $plan,&$error=null)
 {
     $error=null;$snapshot_id=(int)$snapshot_id;$actor=current_user_id_or_zero();
-    if($snapshot_id<=0||$actor<=0||!hrm_pay_core_005_access('SA_HRM_EXECUTE_PAY_CORE_CALC')||!hrm_pay_core_005_access('SA_HRM_WRITE_PAY_CORE_RESULT')){$error='pc5_access_denied';return false;}
+    if($snapshot_id<=0||$actor<=0||!current_user_has_access('SA_HRM_EXECUTE_PAY_CORE_CALC')||!current_user_has_access('SA_HRM_WRITE_PAY_CORE_RESULT')){$error='pc5_access_denied';return false;}
     if(!empty($GLOBALS['transaction_level'])){$error='pc5_top_level_transaction_required';return false;}
     begin_transaction();
     $q=db_query('SELECT snapshot_id,snapshot_payload_json,snapshot_sha256,sealed_by FROM '.TB_PREF.'hrm_pay_core_004_snapshots WHERE snapshot_id='.$snapshot_id.' LIMIT 2 FOR UPDATE');

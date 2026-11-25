@@ -16,7 +16,7 @@ function hrm_pay_rule_006_shadow_compare_formula($legacy_formula,$target_formula
 
 function hrm_pay_rule_006_record_shadow_run(array $scope,array $comparisons,&$error=null)
 {
-    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_rule_006_access('SA_HRM_RUN_PAY_RULE_SHADOW')){$error='access_denied';return false;}
+    $error=null;$actor=current_user_id_or_zero();if($actor<=0||!current_user_has_access('SA_HRM_RUN_PAY_RULE_SHADOW')){$error='access_denied';return false;}
     foreach(array('company_id','payroll_period_id','department_id','source_state_sha256','jurisdiction_evidence_sha256','idempotency_sha256') as $k)if(!isset($scope[$k])){$error='scope_incomplete';return false;}
     if((int)$scope['company_id']<0||(int)$scope['payroll_period_id']<=0||(int)$scope['department_id']<=0||hrm_pay_rule_006_sha($scope['source_state_sha256'])===false||hrm_pay_rule_006_sha($scope['jurisdiction_evidence_sha256'])===false||hrm_pay_rule_006_sha($scope['idempotency_sha256'])===false){$error='scope_invalid';return false;}
     if(!hash_equals((string)$scope['source_state_sha256'],hrm_pay_rule_006_source_state_sha256())){$error='stale_source_state';return false;}

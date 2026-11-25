@@ -7,6 +7,7 @@
  * creates/reassigns an external-subject link, elevates assurance, accepts an
  * arbitrary redirect, or persists raw state/code/token material.
  */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 
 if (!defined('FEDERATION_OIDC_CALLBACK_ROUTE_BINDING_KEY'))
     define('FEDERATION_OIDC_CALLBACK_ROUTE_BINDING_KEY', 'federation_oidc_existing_link_callback_bindings');
@@ -22,13 +23,6 @@ if (!defined('FEDERATION_OIDC_CALLBACK_ROUTE_MAX_ATTEMPTS'))
     define('FEDERATION_OIDC_CALLBACK_ROUTE_MAX_ATTEMPTS', 8);
 if (!defined('FEDERATION_OIDC_CALLBACK_ROUTE_ATTEMPT_WINDOW'))
     define('FEDERATION_OIDC_CALLBACK_ROUTE_ATTEMPT_WINDOW', 60);
-
-function federation_oidc_callback_route_is_anonymous_session()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && method_exists($_SESSION['wa_current_user'], 'logged_in')
-        && !$_SESSION['wa_current_user']->logged_in();
-}
 
 function federation_oidc_callback_route_valid_state($state)
 {
@@ -90,7 +84,7 @@ function federation_oidc_callback_route_bind_pending($company, $verifier_config_
         || $expires_at_epoch > $now + 900
         || !federation_oidc_callback_route_valid_state($state)
         || !federation_oidc_callback_route_valid_redirect_uri($redirect_uri)
-        || !federation_oidc_callback_route_is_anonymous_session()
+        || !current_session_is_anonymous()
         || !isset($_SESSION['wa_current_user']->company)
         || (int)$_SESSION['wa_current_user']->company !== $company)
         return false;
@@ -227,17 +221,6 @@ function federation_oidc_callback_route_transaction_matches_binding($state, $bin
     return (int)$row['verifier_config_id'] === (int)$binding['verifier_config_id']
         && $row['consumed_at'] === null
         && strtotime((string)$row['expires_at'].' UTC') > time();
-}
-
-function federation_oidc_callback_route_terminalize_authorization_error($company, $state, $error)
-{
-    if (!function_exists('federation_oidc_acquire_callback_claim'))
-        require_once(dirname(__FILE__).DIRECTORY_SEPARATOR.'federation_oidc_callback_claim.inc');
-    $claim = federation_oidc_acquire_callback_claim((int)$company, $state, 15);
-    if (!is_array($claim) || !isset($claim['claim_token']))
-        return false;
-    $reason = $error === 'access_denied' ? 'exchange_rejected' : 'exchange_uncertain';
-    return federation_oidc_terminalize_callback_claim((int)$company, (string)$claim['claim_token'], $reason) !== false;
 }
 
 function federation_oidc_callback_route_security_headers()

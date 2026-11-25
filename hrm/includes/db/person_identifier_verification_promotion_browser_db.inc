@@ -22,14 +22,6 @@ if (!function_exists('promote_hrm_person_identifier_verification')) {
 }
 unset($hrm_identifier_verification_promotion_browser_repo_root, $candidate);
 
-function hrm_identifier_verification_promotion_browser_employee_ref($value)
-{
-    if (!is_scalar($value)) return false;
-    $value = trim((string)$value);
-    return $value !== '' && strlen($value) <= 64
-        && preg_match('/^[A-Za-z0-9_.:@-]+$/D', $value) === 1 ? $value : false;
-}
-
 /** Compare the stored assurance hash without widening the session API surface. */
 function hrm_identifier_verification_promotion_browser_hash_equals($known, $actual)
 {
@@ -46,7 +38,7 @@ function hrm_identifier_verification_promotion_browser_rows(
     $employee_ref, $evidence_id = 0, $evidence_row_version = 0,
     $request_row_version = 0, $identifier_row_version = 0
 ) {
-    $employee_ref = hrm_identifier_verification_promotion_browser_employee_ref($employee_ref);
+    $employee_ref = parse_employee_reference($employee_ref);
     $evidence_id = (int)$evidence_id;
     $evidence_row_version = (int)$evidence_row_version;
     $request_row_version = (int)$request_row_version;

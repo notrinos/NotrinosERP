@@ -1,4 +1,5 @@
 <?php
+require_once(__DIR__.'/../../includes/value_helpers.inc');
 // DIM-NAM-003: the company name of each tracking category (also when this file is loaded without a page).
 include_once(dirname(__FILE__).'/tracking_axis_label.inc');
 
@@ -54,7 +55,7 @@ function dimension_availability_result($state, $extra = array())
  */
 function dimension_availability_year($date)
 {
-	if (!dimension_commit_valid_date($date))
+	if (!is_iso_calendar_date($date))
 		return false;
 	$rows = db_query('SELECT `begin`, `end` FROM '.TB_PREF.'fiscal_year WHERE `begin`<='.dimension_commit_quote($date).' AND `end`>='.dimension_commit_quote($date).' ORDER BY `begin` LIMIT 1');
 	$row = $rows ? db_fetch_row($rows) : false;
@@ -210,7 +211,7 @@ function dimension_availability_evaluate($lines, $date, $exclude_order_no = 0)
 		return dimension_availability_result('denied');
 	if (dimension_commit_schema_ready() !== true)
 		return dimension_availability_result('unready');
-	if (!dimension_commit_valid_date($date))
+	if (!is_iso_calendar_date($date))
 		return dimension_availability_result('bad_date');
 	if (count($lines) > dimension_commit_max_lines())
 		return dimension_availability_result('too_many');

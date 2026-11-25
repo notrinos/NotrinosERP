@@ -1,5 +1,6 @@
 <?php
 /** HRM-ESS-001 independent checker route for bounded self-profile requests. */
+require_once(__DIR__.'/../../includes/federation_oidc_route_helpers.inc');
 $ess_review_raw_method=isset($_SERVER['REQUEST_METHOD'])?(string)$_SERVER['REQUEST_METHOD']:'';
 $ess_review_raw_query=isset($_SERVER['QUERY_STRING'])?(string)$_SERVER['QUERY_STRING']:'';
 $ess_review_script=isset($_SERVER['SCRIPT_NAME'])?(string)$_SERVER['SCRIPT_NAME']:'';
@@ -15,7 +16,7 @@ $authorized=hrm_ess_self_change_review_checker_authorized();$ready=hrm_ess_self_
 if($ess_review_raw_method==='GET'&&isset($_GET['state'])){
     if(!$secure||!$authorized||!$ready||!hrm_ess_self_change_route_consume_attempt($now)||$company<0||$callback_path===false){http_response_code(403);exit;}
     $request=hrm_ess_self_change_route_parse_callback($ess_review_raw_method,$ess_review_raw_query);if(!is_array($request)){http_response_code(400);exit;}
-    if($request['kind']==='error'){hrm_ess_self_change_route_terminalize_error($company,(string)$request['state'],(string)$request['error']);hrm_ess_self_change_reauth_forget_pending((string)$request['state']);hrm_ess_self_change_route_redirect_local($ess_review_script,$suffix,'failed');exit;}
+    if($request['kind']==='error'){federation_oidc_terminalize_callback_error($company,(string)$request['state'],(string)$request['error']);hrm_ess_self_change_reauth_forget_pending((string)$request['state']);hrm_ess_self_change_route_redirect_local($ess_review_script,$suffix,'failed');exit;}
     $result=hrm_ess_self_change_reauth_complete_oidc($company,(string)$request['state'],(string)$request['code'],$callback_path);$status=is_array($result)?(string)($result['status']??'denied'):'denied';
     if($status==='assured'&&hrm_ess_self_change_route_bind_assured($result,$now)){hrm_ess_self_change_route_reset_attempts();hrm_ess_self_change_route_redirect_local($ess_review_script,$suffix,'assured');exit;}
     if($status==='retry_later')hrm_ess_self_change_reauth_forget_pending((string)$request['state']);hrm_ess_self_change_route_redirect_local($ess_review_script,$suffix,$status==='retry_later'?'retry':'failed');exit;
@@ -40,7 +41,7 @@ if($ess_review_raw_method==='POST'){
         if(in_array($action,array('start_approve_step_up','start_reject_step_up'),true)){
             $operation=$action==='start_approve_step_up'?'approve':'reject';$prepared=$request_id===false?false:hrm_ess_self_change_reauth_action_context($operation,$request_id,'');
             $token=is_array($prepared)?hrm_ess_self_change_reauth_issue_csrf($prepared,$now):false;$result=$token===false?false:hrm_ess_self_change_reauth_start_oidc($prepared,$token,$callback_path,HRM_ESS_SELF_CHANGE_REAUTH_TRANSACTION_TTL,$now);
-            if(is_array($result)&&($result['status']??'')==='authorization_required'&&isset($result['authorization_url'])&&hrm_ess_self_change_route_redirect_provider((string)$result['authorization_url']))exit;
+            if(is_array($result)&&($result['status']??'')==='authorization_required'&&isset($result['authorization_url'])&&federation_oidc_redirect_to_provider((string)$result['authorization_url']))exit;
             $message=is_array($result)&&($result['status']??'')==='retry_later'?_('Independent reauthentication is temporarily unavailable. No review action was applied.'):_('Independent reauthentication could not be started. No review action was applied.');
         }elseif(in_array($action,array('approve_request','reject_request'),true)){
             $operation=$action==='approve_request'?'approve':'reject';$prepared=$request_id===false?false:hrm_ess_self_change_reauth_action_context($operation,$request_id,'');$password=(string)($_POST['current_password']??'');

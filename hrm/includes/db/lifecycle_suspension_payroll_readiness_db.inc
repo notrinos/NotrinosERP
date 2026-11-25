@@ -6,16 +6,7 @@
  * proration, absence, leave, earnings, deductions, tax or accounting behavior.
  * No production payroll consumer is wired to this helper in the foundation.
  */
-
-/** Canonical SQL date or false. */
-function hrm_fnd_005_suspension_payroll_readiness_date($date)
-{
-    $date = trim((string)$date);
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/D', $date) !== 1)
-        return false;
-    $parsed = DateTime::createFromFormat('!Y-m-d', $date);
-    return $parsed && $parsed->format('Y-m-d') === $date ? $date : false;
-}
+require_once(__DIR__.'/../../../includes/value_helpers.inc');
 
 /** Fail-closed result; deliberately not a payroll result or eligibility skip. */
 function hrm_fnd_005_suspension_payroll_readiness_denied($employee_id, $from_date, $to_date, $decision)
@@ -37,8 +28,8 @@ function hrm_fnd_005_suspension_payroll_readiness_denied($employee_id, $from_dat
 /** Build a bounded inclusive canonical date list. */
 function hrm_fnd_005_suspension_payroll_readiness_dates($from_date, $to_date)
 {
-    $from_date = hrm_fnd_005_suspension_payroll_readiness_date($from_date);
-    $to_date = hrm_fnd_005_suspension_payroll_readiness_date($to_date);
+    $from_date = parse_iso_calendar_date($from_date);
+    $to_date = parse_iso_calendar_date($to_date);
     if ($from_date === false || $to_date === false || strcmp($from_date, $to_date) > 0)
         return false;
 

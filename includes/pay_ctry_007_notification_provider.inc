@@ -1,5 +1,6 @@
 <?php
 /** PAY-CTRY-007 in-app regulatory update notification provider. */
+require_once(__DIR__.'/../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/notification_manager.inc');
 include_once(dirname(__FILE__).'/../hrm/includes/db/pay_ctry_007_notification_db.inc');
 
@@ -9,7 +10,7 @@ class PayCtry007NotificationProvider implements NotificationProvider
     private $count_cache=null;
     public function __construct($user_id){$this->user_id=(int)$user_id;}
     /** Return whether the current user has the canonical PAY-CTRY-007 view permission. */
-    private function can_view(){return pay_ctry_007_has_access(PAY_CTRY_007_VIEW_PERMISSION);}
+    private function can_view(){return current_user_has_access(PAY_CTRY_007_VIEW_PERMISSION);}
     public function getSectionId(){return 'pay_ctry_update';}
     public function getSectionLabel(){return _('Regulatory Updates');}
     public function getSectionIcon(){return 'alert-triangle';}

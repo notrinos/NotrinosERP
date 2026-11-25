@@ -183,20 +183,6 @@ function hrm_ess_self_change_route_redirect_local($script_name,$suffix,$result)
     header('HTTP/1.1 303 See Other');header('Location: '.$path.'?step_up='.$status);return true;
 }
 
-function hrm_ess_self_change_route_redirect_provider($authorization_url)
-{
-    if(!function_exists('federation_oidc_valid_https_uri')||!federation_oidc_valid_https_uri($authorization_url,true)||headers_sent())return false;
-    header('HTTP/1.1 303 See Other');header('Location: '.$authorization_url);return true;
-}
-
-function hrm_ess_self_change_route_terminalize_error($company,$state,$error)
-{
-    if(!function_exists('federation_oidc_acquire_callback_claim'))require_once(dirname(__FILE__).DIRECTORY_SEPARATOR.'federation_oidc_callback_claim.inc');
-    $claim=federation_oidc_acquire_callback_claim((int)$company,$state,15);if(!is_array($claim)||!isset($claim['claim_token']))return false;
-    $reason=$error==='access_denied'?'exchange_rejected':'exchange_uncertain';
-    return federation_oidc_terminalize_callback_claim((int)$company,(string)$claim['claim_token'],$reason)!==false;
-}
-
 /** Retain only proof metadata; profile values/passwords/tokens never enter this session record. */
 function hrm_ess_self_change_route_bind_assured($result,$now=null)
 {

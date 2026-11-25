@@ -56,14 +56,6 @@ function federation_oidc_existing_link_orchestration_result($status, $reason, $e
     return $result;
 }
 
-/** The successful existing-link callback must start from an anonymous browser session. */
-function federation_oidc_existing_link_orchestration_anonymous()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && method_exists($_SESSION['wa_current_user'], 'logged_in')
-        && !$_SESSION['wa_current_user']->logged_in();
-}
-
 /** Read the immutable transaction/configuration/provider binding for this claim. */
 function federation_oidc_existing_link_orchestration_context($transaction_id)
 {
@@ -130,7 +122,7 @@ function federation_oidc_orchestrate_existing_link_callback($company, $state, $a
     $company = (int)$company; $lease_seconds = (int)$lease_seconds;
     if ($company < 0)
         return federation_oidc_existing_link_orchestration_result('denied', 'callback_invalid');
-    if (!federation_oidc_existing_link_orchestration_anonymous())
+    if (!current_session_is_anonymous())
         return federation_oidc_existing_link_orchestration_result('denied', 'browser_session_not_anonymous');
     if (!federation_oidc_existing_link_orchestration_dependencies())
         return federation_oidc_existing_link_orchestration_result('retry_later', 'runtime_dependency_unavailable');

@@ -8,19 +8,12 @@
     external subjects, tokens, email/display-name/login profile claims, and it
     never issues or adopts a browser session.
 ***********************************************************************/
+require_once(__DIR__.'/../includes/value_helpers.inc');
 
 if (!defined('FEDERATION_FIRST_LINK_PENDING_REQUEST_KEY'))
     define('FEDERATION_FIRST_LINK_PENDING_REQUEST_KEY', 'federation_first_link_pending_request');
 if (!defined('FEDERATION_FIRST_LINK_PENDING_REQUEST_TTL'))
     define('FEDERATION_FIRST_LINK_PENDING_REQUEST_TTL', 300);
-
-/** Return true only for the current anonymous browser session. */
-function federation_first_link_pending_request_is_anonymous()
-{
-    return isset($_SESSION['wa_current_user']) && is_object($_SESSION['wa_current_user'])
-        && method_exists($_SESSION['wa_current_user'], 'logged_in')
-        && !$_SESSION['wa_current_user']->logged_in();
-}
 
 /** Bind one numeric first-link request reference to this anonymous company session. */
 function federation_first_link_pending_request_bind($company, $verifier_decision_id, $now_epoch=null)
@@ -29,7 +22,7 @@ function federation_first_link_pending_request_bind($company, $verifier_decision
     $verifier_decision_id = (int)$verifier_decision_id;
     $now = $now_epoch === null ? time() : $now_epoch;
     if ($company < 0 || $verifier_decision_id <= 0 || !is_int($now) || $now <= 0
-        || !federation_first_link_pending_request_is_anonymous()
+        || !current_session_is_anonymous()
         || !isset($_SESSION['wa_current_user']->company)
         || (int)$_SESSION['wa_current_user']->company !== $company)
         return false;
@@ -46,7 +39,7 @@ function federation_first_link_pending_request_bind($company, $verifier_decision
 function federation_first_link_pending_request($now_epoch=null)
 {
     $now = $now_epoch === null ? time() : $now_epoch;
-    if (!is_int($now) || $now <= 0 || !federation_first_link_pending_request_is_anonymous()
+    if (!is_int($now) || $now <= 0 || !current_session_is_anonymous()
         || !isset($_SESSION[FEDERATION_FIRST_LINK_PENDING_REQUEST_KEY])
         || !is_array($_SESSION[FEDERATION_FIRST_LINK_PENDING_REQUEST_KEY]))
         return false;

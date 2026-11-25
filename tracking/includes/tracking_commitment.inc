@@ -74,13 +74,6 @@ function dimension_commit_fail(&$result, $code, $text)
 	return $result;
 }
 
-/** Valid SQL date (Y-m-d)? */
-function dimension_commit_valid_date($date)
-{
-	return is_string($date) && preg_match('/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/D', $date, $match)
-		&& checkdate((int)$match[2], (int)$match[3], (int)$match[1]);
-}
-
 /**
  * Parse an amount or quantity to six decimals.
  *
@@ -296,7 +289,7 @@ function dimension_commit_resolve_line($row)
 {
 	$fail = function ($code, $text) { return array('ok' => false, 'code' => $code, 'text' => $text); };
 	$date = (string)$row['ord_date'];
-	if (!dimension_commit_valid_date($date))
+	if (!is_iso_calendar_date($date))
 		return $fail('order_date_invalid', _('The purchase order has no valid order date.'));
 	foreach (array('quantity_ordered', 'quantity_received', 'qty_invoiced', 'unit_price') as $field)
 		if (dimension_commit_parse_amount((float)$row[$field]) === false)
@@ -609,7 +602,7 @@ function dimension_commit_funds_position($account, $scope1, $scope2, $from, $to)
 {
 	if (!dimension_commit_has_access(array('SA_GLANALYTIC', 'SA_BUDGETENTRY')) || dimension_commit_schema_ready() !== true)
 		return false;
-	if (!is_string($account) || !preg_match('/^[\x21-\x7e]{1,15}$/D', $account) || !dimension_commit_valid_date($from) || !dimension_commit_valid_date($to) || $from > $to)
+	if (!is_string($account) || !preg_match('/^[\x21-\x7e]{1,15}$/D', $account) || !is_iso_calendar_date($from) || !is_iso_calendar_date($to) || $from > $to)
 		return false;
 	return dimension_commit_position_unchecked($account, $scope1, $scope2, $from, $to);
 }
@@ -751,7 +744,7 @@ function dimension_commit_reserve($reference, $account, $coordinate_1, $coordina
 	$reason = is_string($reason) ? trim($reason) : '';
 	if ($reason === '' || strlen($reason) > 200)
 		return dimension_commit_fail($result, 'reason_required', _('A reason of 1 to 200 characters is required.'));
-	if (!is_string($account) || !preg_match('/^[\x21-\x7e]{1,15}$/D', $account) || !dimension_commit_valid_date($from) || !dimension_commit_valid_date($to) || $from > $to)
+	if (!is_string($account) || !preg_match('/^[\x21-\x7e]{1,15}$/D', $account) || !is_iso_calendar_date($from) || !is_iso_calendar_date($to) || $from > $to)
 		return dimension_commit_fail($result, 'invalid_scope', _('The account or period of the reservation is not valid.'));
 	if (!is_int($coordinate_1) || !is_int($coordinate_2) || $coordinate_1 < 0 || $coordinate_2 < 0)
 		return dimension_commit_fail($result, 'invalid_scope', _('A reservation names an exact tracking value of each axis, or none.'));
