@@ -1,6 +1,7 @@
 <?php
 /** Current agreement status/renewal custody through the existing shared core. */
 require_once __DIR__.'/purch_agreement_tracking_db.inc';
+require_once __DIR__ . '/purchasing_custom_data.inc';
 
 /** Bind a native command to actor, role, company configuration and connection. */
 function purch_agreement_lifecycle_context($portable = false)
@@ -154,7 +155,7 @@ function purch_agreement_lifecycle_store($source, $changes)
     $id = (int)$source['header']['id'];
     return dimension_ordinary_master_write('purch_agreements',$id,$changes,function($admitted) use ($id,$changes) {
         $sets = array();
-        foreach ($changes as $field=>$value) $sets[] = $field.'='.($field === 'custom_data' ? sql_purch_agreement_custom_data($value) : db_escape($value));
+        foreach ($changes as $field=>$value) $sets[] = $field.'='.($field === 'custom_data' ? sql_purchasing_custom_data($value) : db_escape($value));
         return count($sets) && db_query('UPDATE '.TB_PREF.'purch_agreements SET '.implode(',',$sets).' WHERE id='.$id) !== false;
     },true);
 }

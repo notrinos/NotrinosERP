@@ -8,6 +8,7 @@
  * not a generic training, checklist, recruitment, or employee-status workflow.
  */
 require_once(__DIR__.'/../../../includes/value_helpers.inc');
+require_once(__DIR__.'/lifecycle_other_pending_db.inc');
 $hrm_lifecycle_training_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_training_dependencies = array(
@@ -196,15 +197,6 @@ function hrm_lifecycle_training_assignment_by_idempotency_for_update($worker_id,
     return $result ? db_fetch_assoc($result) : false;
 }
 
-/** @param int $worker_id @return bool */
-function hrm_lifecycle_training_assignment_other_pending_exists($worker_id)
-{
-    $result = db_query("SELECT lifecycle_command_id FROM ".TB_PREF."hrm_lifecycle_commands WHERE worker_id=".(int)$worker_id
-        ." AND command_status='pending' ORDER BY lifecycle_command_id LIMIT 1 FOR UPDATE",
-        'could not inspect pending Employee lifecycle command');
-    return $result && db_fetch_assoc($result) ? true : false;
-}
-
 /** @return bool */
 function hrm_lifecycle_training_assignment_audit($action, $command, $legal_entity_id, $restricted_diff)
 {
@@ -336,7 +328,7 @@ function submit_hrm_lifecycle_employee_training_assignment($employee_id, $course
                 'row_version'=>(int)$existing['row_version'], 'exact_retry'=>true);
             break;
         }
-        if (hrm_lifecycle_training_assignment_other_pending_exists($binding['worker_id']))
+        if (hrm_lifecycle_other_pending_exists($binding['worker_id']))
             break;
         if (!db_query("INSERT INTO ".TB_PREF."hrm_lifecycle_commands (worker_id,employment_id,assignment_id,"
             ."command_type,command_status,effective_at,idempotency_key_hash,request_hash,approval_draft_id,row_version,requested_by) VALUES ("

@@ -1,6 +1,7 @@
 <?php
 /** Atomic Warehouse draft bridge; approval transitions belong to the shared core. */
 require_once __DIR__.'/purch_requisition_header_db.inc';
+require_once __DIR__ . '/purchasing_custom_data.inc';
 
 /** Recheck both native permissions before reading the source or returning its link. */
 function purch_requisition_bridge_context()
@@ -65,7 +66,7 @@ function write_purch_requisition_bridge($material_request_id)
             }
             $result = dimension_ordinary_master_write('wh_material_request_lines', (int)$line['line_id'], array(),
                 function($ignored) use ($line, $items, $id, $supplier, $price) {
-                    $payload = encode_purch_requisition_custom_data(array('bridged_from_material_request_line'=>(int)$line['line_id']));
+                    $payload = encode_purchasing_custom_data(array('bridged_from_material_request_line'=>(int)$line['line_id']));
                     return dimension_ordinary_master_write('purch_requisition_lines', null, array('custom_data'=>$payload),
                         function($admitted) use ($line, $items, $id, $supplier, $price, $payload) {
                             return db_query('INSERT INTO '.TB_PREF.'purch_requisition_lines SET requisition_id='.(int)$id

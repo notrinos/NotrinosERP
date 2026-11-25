@@ -12,6 +12,7 @@
  * accounting, formulas, and approval comments are never rewritten here.
  */
 require_once(__DIR__.'/../../../includes/value_helpers.inc');
+require_once(__DIR__.'/lifecycle_other_pending_db.inc');
 $hrm_lifecycle_salary_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_salary_dependencies = array(
@@ -226,16 +227,6 @@ function hrm_lifecycle_salary_revision_by_idempotency_for_update($worker_id, $id
     return $result ? db_fetch_assoc($result) : false;
 }
 
-function hrm_lifecycle_salary_revision_other_pending_exists($worker_id)
-{
-    if ((int)$worker_id <= 0)
-        return true;
-    $result = db_query("SELECT lifecycle_command_id FROM ".TB_PREF."hrm_lifecycle_commands WHERE worker_id=".(int)$worker_id
-        ." AND command_status='pending' ORDER BY lifecycle_command_id LIMIT 1 FOR UPDATE",
-        'could not inspect conflicting Employee lifecycle command');
-    return $result && db_fetch_assoc($result) ? true : false;
-}
-
 function hrm_lifecycle_salary_revision_audit($action, $reason_code, $command, $legal_entity_id, $restricted_diff)
 {
     if (!function_exists('append_domain_audit_event') || !is_array($command)
@@ -398,7 +389,7 @@ function submit_hrm_lifecycle_employee_salary_revision($employee_id, $new_salary
                 'row_version'=>(int)$existing['row_version'],'request_hash'=>$request_hash,'exact_retry'=>true);
             break;
         }
-        if (hrm_lifecycle_salary_revision_other_pending_exists((int)$binding['worker_id']))
+        if ((int)$binding['worker_id'] <= 0 || hrm_lifecycle_other_pending_exists((int)$binding['worker_id']))
             break;
 
         if (!db_query("INSERT INTO ".TB_PREF."hrm_lifecycle_commands "

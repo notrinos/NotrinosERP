@@ -133,24 +133,6 @@ function format_purch_requisition_reference($requisition_id)
 }
 
 /**
- * Encode custom data for storage.
- *
- * @param mixed $custom_data
- * @return string|null
- */
-function encode_purch_requisition_custom_data($custom_data)
-{
-	if ($custom_data === null || $custom_data === '' || $custom_data === array())
-		return null;
-
-	if (is_string($custom_data))
-		return $custom_data;
-
-	$encoded = json_encode($custom_data);
-	return $encoded === false ? null : $encoded;
-}
-
-/**
  * Decode custom data from storage.
  *
  * @param string|null $custom_data

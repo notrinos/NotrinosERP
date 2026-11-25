@@ -1,6 +1,7 @@
 <?php
 /** Immutable RFQ source conversion through the existing purchase-order workflow. */
 require_once __DIR__.'/purchasing_classification_db.inc';
+require_once __DIR__ . '/purchasing_custom_data.inc';
 
 /** Read current locked RFQ rows in deterministic source order. */
 function read_rfq_purchase_rows($query) {
@@ -40,7 +41,7 @@ function prepare_rfq_purchase_order($rfq_id, $vendor_id, $line_ids = array(), $o
 	$lines = read_rfq_purchase_rows($queries['lines']);
 	$queries['effects'] = 'SELECT po.*, detail.po_detail_item, detail.item_code, detail.description AS line_description, detail.quantity_ordered, detail.quantity_received, detail.qty_invoiced, detail.unit_price, detail.delivery_date FROM '.TB_PREF.'purch_orders po LEFT JOIN '.TB_PREF.'purch_order_details detail ON detail.order_no=po.order_no WHERE po.rfq_id='.(int)$rfq_id.' ORDER BY po.order_no,detail.po_detail_item FOR UPDATE';
 	$effects = read_rfq_purchase_rows($queries['effects']);
-	$custom = decode_purch_rfq_custom_data($vendor['custom_data']); $consumed = array();
+	$custom = decode_purchasing_custom_data($vendor['custom_data']); $consumed = array();
 	foreach ($effects as $row) {
 		if ((int)$row['supplier_id'] !== (int)$vendor['supplier_id']) continue;
 		// Historical PO numbers alone cannot establish which RFQ line remains unconsumed.
@@ -283,7 +284,7 @@ function write_rfq_purchase_order($snapshot, $approval_draft_id = 0) {
 	verify_agreement_purchase_order_effect($intent, $cart, $number);
 	$expected = $snapshot;
 	foreach (array('header'=>'purch_rfq','vendor'=>'purch_rfq_vendors') as $key=>$table) {
-		$custom = decode_purch_rfq_custom_data($snapshot[$key]['custom_data']);
+		$custom = decode_purchasing_custom_data($snapshot[$key]['custom_data']);
 		if (!isset($custom['created_po_numbers'])) $custom['created_po_numbers'] = array();
 		if (!is_array($custom['created_po_numbers'])) throw new RuntimeException('RFQ prior linkage is unavailable.');
 		$custom['created_po_numbers'][] = (int)$number;
@@ -292,9 +293,9 @@ function write_rfq_purchase_order($snapshot, $approval_draft_id = 0) {
 				throw new RuntimeException('RFQ line linkage is unavailable.');
 			$custom['po_line_ids'][$number] = $snapshot['used'];
 		}
-		$sql = sql_purch_rfq_custom_data($custom);
+		$sql = sql_purchasing_custom_data($custom);
 		if (!db_query('UPDATE '.TB_PREF.$table.' SET custom_data='.$sql.' WHERE id='.(int)$snapshot[$key]['id'], 'could not link RFQ purchase order')) throw new RuntimeException('RFQ source linkage failed.');
-		$expected[$key]['custom_data'] = encode_purch_rfq_custom_data($custom);
+		$expected[$key]['custom_data'] = encode_purchasing_custom_data($custom);
 	}
 	$payload = array('rfq_id'=>(int)$snapshot['header']['id'],'rfq_vendor_id'=>(int)$snapshot['vendor']['id'],'po_no'=>(int)$number);
 	hook_invoke_all('purch_rfq_po_created', $payload);

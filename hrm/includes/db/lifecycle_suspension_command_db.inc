@@ -10,6 +10,7 @@
  * payslips, payments, bank transactions and GL are outside this command.
  */
 require_once(__DIR__.'/../../../includes/value_helpers.inc');
+require_once(__DIR__.'/lifecycle_other_pending_db.inc');
 $hrm_lifecycle_suspension_root = isset($path_to_root) ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_suspension_dependencies = array(
     array('/includes/approval/approval_workflow.inc', 'class', 'ApprovalWorkflow'),
@@ -157,13 +158,6 @@ function hrm_lifecycle_suspension_by_idempotency_for_update($worker_id, $idempot
         'could not lock idempotent Employee Suspension lifecycle command');
     return $result ? db_fetch_assoc($result) : false;
 }
-function hrm_lifecycle_suspension_other_pending_exists($worker_id)
-{
-    $result = db_query("SELECT lifecycle_command_id,command_type FROM ".TB_PREF."hrm_lifecycle_commands WHERE worker_id=".(int)$worker_id
-        ." AND command_status='pending' ORDER BY lifecycle_command_id LIMIT 1 FOR UPDATE",
-        'could not inspect pending Employee lifecycle conflict');
-    return $result && db_fetch_assoc($result) ? true : false;
-}
 function hrm_lifecycle_suspension_audit($action, $reason_code, $command, $legal_entity_id, $restricted_diff)
 {
     if (!function_exists('append_domain_audit_event') || !is_array($command)
@@ -282,7 +276,7 @@ function submit_hrm_lifecycle_employee_suspension($employee_id, $effective_date,
             break;
         $request_hash = hrm_lifecycle_suspension_request_hash($company,(int)$binding['worker_id'],(int)$employment['employment_id'],
             (int)$assignment['assignment_id'],$employee_number,$effective_date);
-        if ($request_hash === false || hrm_lifecycle_suspension_other_pending_exists((int)$binding['worker_id'])) break;
+        if ($request_hash === false || hrm_lifecycle_other_pending_exists((int)$binding['worker_id'])) break;
         if (!db_query("INSERT INTO ".TB_PREF."hrm_lifecycle_commands "
             ."(worker_id,employment_id,assignment_id,command_type,command_status,effective_at,idempotency_key_hash,"
             ."request_hash,approval_draft_id,row_version,requested_by) VALUES ("

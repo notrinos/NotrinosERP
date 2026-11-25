@@ -1,6 +1,7 @@
 <?php
 /** Native requisition lines and their exact Warehouse partners commit together. */
 require_once __DIR__.'/purch_requisition_header_db.inc';
+require_once __DIR__ . '/purchasing_custom_data.inc';
 
 /**
  * Admit a native line under current parent/source locks. A line hint only locates
@@ -75,7 +76,7 @@ function write_purch_requisition_line($operation, $key, $data)
                     if ($data['unit_of_measure'] !== $items[0]['units']
                         && (!$old || $data['stock_id'] !== $old['stock_id'] || $data['unit_of_measure'] !== $old['unit_of_measure'])) return false;
                     if ($data['custom_data'] === null && $old) $data['custom_data'] = $old['custom_data'];
-                    $encoded = encode_purch_requisition_custom_data($data['custom_data']);
+                    $encoded = encode_purchasing_custom_data($data['custom_data']);
                     if ($encoded === null && !in_array($data['custom_data'], array(null,'',array()), true)) return false;
                     $data['custom_data'] = $encoded;
                 }

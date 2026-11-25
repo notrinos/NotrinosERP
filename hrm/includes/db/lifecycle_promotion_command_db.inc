@@ -9,6 +9,7 @@
  * only business mutation authority.
  */
 require_once(__DIR__.'/../../../includes/value_helpers.inc');
+require_once(__DIR__.'/lifecycle_other_pending_db.inc');
 $hrm_lifecycle_promotion_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_promotion_dependencies = array(
@@ -156,16 +157,6 @@ function hrm_lifecycle_promotion_by_idempotency_for_update($worker_id, $idempote
         ." AND idempotency_key_hash=".db_escape($idempotency_hash)." LIMIT 1 FOR UPDATE",
         'could not lock idempotent Employee Promotion lifecycle command');
     return $result ? db_fetch_assoc($result) : false;
-}
-
-/** @param int $worker_id @return bool */
-function hrm_lifecycle_promotion_other_pending_exists($worker_id)
-{
-    $result = db_query("SELECT lifecycle_command_id,command_type FROM ".TB_PREF
-        ."hrm_lifecycle_commands WHERE worker_id=".(int)$worker_id
-        ." AND command_status='pending' ORDER BY lifecycle_command_id LIMIT 1 FOR UPDATE",
-        'could not inspect pending Employee lifecycle conflict');
-    return $result && db_fetch_assoc($result) ? true : false;
 }
 
 /** @return bool */
@@ -357,7 +348,7 @@ function submit_hrm_lifecycle_employee_promotion($employee_id, $effective_date, 
             (int)$assignment['assignment_id'], $employee_number, $effective_date,
             (int)$new_department_id, (int)$new_position_id, (int)$new_grade_id,
             (int)$new_job_id, (int)$new_work_location_id, (int)$manager_employee_number);
-        if ($request_hash === false || hrm_lifecycle_promotion_other_pending_exists(
+        if ($request_hash === false || hrm_lifecycle_other_pending_exists(
             (int)$binding['worker_id']))
             break;
         if (!db_query("INSERT INTO ".TB_PREF."hrm_lifecycle_commands "

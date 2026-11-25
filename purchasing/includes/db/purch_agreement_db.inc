@@ -18,6 +18,7 @@ include_once($path_to_root . '/purchasing/includes/db/suppliers_db.inc');
 include_once(__DIR__.'/purch_agreement_po_approval_db.inc');
 require_once __DIR__.'/purch_agreement_tracking_db.inc';
 require_once __DIR__.'/purch_agreement_lifecycle_db.inc';
+require_once __DIR__ . '/purchasing_custom_data.inc';
 
 /**
  * Get available purchase agreement types.
@@ -93,54 +94,6 @@ function purch_agreement_status_badge($status)
 function format_purch_agreement_reference($agreement_id)
 {
 	return 'AGR-' . str_pad((int)$agreement_id, 4, '0', STR_PAD_LEFT);
-}
-
-/**
- * Encode agreement custom data for JSON columns.
- *
- * @param mixed $custom_data
- * @return string|null
- */
-function encode_purch_agreement_custom_data($custom_data)
-{
-	if ($custom_data === null || $custom_data === '' || $custom_data === array())
-		return null;
-
-	if (is_string($custom_data))
-		return $custom_data;
-
-	$encoded = json_encode($custom_data);
-	return $encoded === false ? null : $encoded;
-}
-
-/**
- * Build a SQL-safe JSON literal for agreement custom data columns.
- *
- * @param mixed $custom_data
- * @return string
- */
-function sql_purch_agreement_custom_data($custom_data)
-{
-	$encoded = encode_purch_agreement_custom_data($custom_data);
-	return $encoded === null ? 'NULL' : "'" . db_escape_function($encoded) . "'";
-}
-
-/**
- * Decode agreement custom data from storage.
- *
- * @param string|null $custom_data
- * @return array
- */
-function decode_purch_agreement_custom_data($custom_data)
-{
-	if (!$custom_data)
-		return array();
-
-	$decoded = json_decode($custom_data, true);
-	if (!is_array($decoded))
-		$decoded = json_decode(html_entity_decode($custom_data, ENT_QUOTES, 'UTF-8'), true);
-
-	return is_array($decoded) ? $decoded : array();
 }
 
 /**
@@ -304,7 +257,7 @@ function get_purch_agreement_line($line_id)
 	$row = db_fetch($result);
 
 	if ($row) {
-		$row['custom_data_array'] = decode_purch_agreement_custom_data($row['custom_data']);
+		$row['custom_data_array'] = decode_purchasing_custom_data($row['custom_data']);
 		$row['remaining_qty'] = max(0, (float)$row['committed_qty'] - (float)$row['ordered_qty']);
 		$row['effective_unit_price'] = round((float)$row['unit_price'] * (1 - ((float)$row['discount_percent'] / 100)), user_price_dec());
 	}
@@ -344,7 +297,7 @@ function get_purch_agreement($agreement_id)
 	$row = db_fetch($result);
 
 	if ($row) {
-		$row['custom_data_array'] = decode_purch_agreement_custom_data($row['custom_data']);
+		$row['custom_data_array'] = decode_purchasing_custom_data($row['custom_data']);
 		$row['ordered_progress_pct'] = (float)$row['total_committed'] > 0
 			? min(100, round(((float)$row['total_ordered'] / (float)$row['total_committed']) * 100, 2))
 			: 0;
@@ -442,7 +395,7 @@ function get_purchase_agreement_submission_data($agreement_id)
 		'rfq_reference' => isset($agreement['rfq_reference']) ? $agreement['rfq_reference'] : '',
 		'dimension_id' => (int)$agreement['dimension_id'],
 		'dimension2_id' => (int)$agreement['dimension2_id'],
-		'custom_data' => decode_purch_agreement_custom_data($agreement['custom_data']),
+		'custom_data' => decode_purchasing_custom_data($agreement['custom_data']),
 		'line_items' => array(),
 	);
 
@@ -535,7 +488,7 @@ function add_purch_agreement($agreement_type, $supplier_id, $date_start, $date_e
 	if (purch_agreement_dimension_context() !== $context) return false;
 
 	$next = array('dimension_id'=>$hook_data['dimension_id'], 'dimension2_id'=>$hook_data['dimension2_id'],
-		'custom_data'=>encode_purch_agreement_custom_data($hook_data['custom_data']));
+		'custom_data'=>encode_purchasing_custom_data($hook_data['custom_data']));
 	return purch_agreement_dimension_write('purch_agreements', null, $next, function($admitted) use ($hook_data, $classification_intents) {
 		$sql = "INSERT INTO " . TB_PREF . "purch_agreements (
 			reference,
@@ -578,7 +531,7 @@ function add_purch_agreement($agreement_type, $supplier_id, $date_start, $date_e
 			" . (int)$hook_data['dimension2_id'] . ",
 			" . (int)$hook_data['created_by'] . ",
 			NOW(),
-			" . sql_purch_agreement_custom_data($hook_data['custom_data']) . "
+			" . sql_purchasing_custom_data($hook_data['custom_data']) . "
 		)";
 		if (!db_query($sql, 'could not insert purchase agreement')) return false;
 
@@ -662,7 +615,7 @@ function update_purch_agreement($agreement_id, $agreement_type, $supplier_id, $d
 	if (purch_agreement_dimension_context() !== $context) return false;
 
 	$next = array('dimension_id'=>$hook_data['dimension_id'], 'dimension2_id'=>$hook_data['dimension2_id'],
-		'custom_data'=>encode_purch_agreement_custom_data($hook_data['custom_data']));
+		'custom_data'=>encode_purchasing_custom_data($hook_data['custom_data']));
 	return purch_agreement_dimension_write('purch_agreements', $agreement_id, $next, function($admitted) use ($hook_data, $agreement_id, $classification_intents) {
 		$sql = "UPDATE " . TB_PREF . "purch_agreements SET
 			agreement_type = " . db_escape($hook_data['agreement_type']) . ",
@@ -681,7 +634,7 @@ function update_purch_agreement($agreement_id, $agreement_type, $supplier_id, $d
 			dimension_id = " . (int)$hook_data['dimension_id'] . ",
 			dimension2_id = " . (int)$hook_data['dimension2_id'] . ",
 			reference = " . db_escape($hook_data['reference']) . ",
-			custom_data = " . sql_purch_agreement_custom_data($hook_data['custom_data']) . "
+			custom_data = " . sql_purchasing_custom_data($hook_data['custom_data']) . "
 			WHERE id = " . (int)$agreement_id;
 		if (!db_query($sql, 'could not update purchase agreement')) return false;
 
@@ -847,7 +800,7 @@ function add_agreement_line($agreement_id, $stock_id, $committed_qty, $unit_pric
 	$description = '', $min_qty_per_order = 0, $price_valid_until = null, $custom_data = array(),
 	$classification_intents = null)
 {
-	return purch_agreement_dimension_write('purch_agreement_lines', null, array('agreement_id'=>$agreement_id, 'custom_data'=>encode_purch_agreement_custom_data($custom_data)), function($admitted) use ($agreement_id, $stock_id, $committed_qty, $unit_price, $discount, $description, $min_qty_per_order, $price_valid_until, $custom_data, $classification_intents) {
+	return purch_agreement_dimension_write('purch_agreement_lines', null, array('agreement_id'=>$agreement_id, 'custom_data'=>encode_purchasing_custom_data($custom_data)), function($admitted) use ($agreement_id, $stock_id, $committed_qty, $unit_price, $discount, $description, $min_qty_per_order, $price_valid_until, $custom_data, $classification_intents) {
 		$agreement = get_editable_purch_agreement($agreement_id);
 		$item = get_purchase_agreement_item($stock_id);
 		if (!$agreement
@@ -884,7 +837,7 @@ function add_agreement_line($agreement_id, $stock_id, $committed_qty, $unit_pric
 			" . db_escape($unit_price) . ",
 			" . db_escape($discount) . ",
 			" . ($price_valid_until ? db_escape($price_valid_until) : 'NULL') . ",
-			" . sql_purch_agreement_custom_data($custom_data) . "
+			" . sql_purchasing_custom_data($custom_data) . "
 		)";
 		if (!db_query($sql, 'could not insert purchase agreement line')) return false;
 		$line_id = db_insert_id();
@@ -928,7 +881,7 @@ function update_agreement_line($line_id, $stock_id, $committed_qty, $unit_price,
 		if (!$current) return false;
 		$custom_data = $current['custom_data'];
 	}
-	return purch_agreement_dimension_write('purch_agreement_lines', $line_id, array('custom_data'=>encode_purch_agreement_custom_data($custom_data)), function($admitted) use ($line_id, $stock_id, $committed_qty, $unit_price, $discount, $description, $min_qty_per_order, $price_valid_until, $custom_data, $classification_intents) {
+	return purch_agreement_dimension_write('purch_agreement_lines', $line_id, array('custom_data'=>encode_purchasing_custom_data($custom_data)), function($admitted) use ($line_id, $stock_id, $committed_qty, $unit_price, $discount, $description, $min_qty_per_order, $price_valid_until, $custom_data, $classification_intents) {
 		$line = get_purch_agreement_line($line_id);
 		if (!$line)
 			return false;
@@ -958,7 +911,7 @@ function update_agreement_line($line_id, $stock_id, $committed_qty, $unit_price,
 			unit_price = " . db_escape($unit_price) . ",
 			discount_percent = " . db_escape($discount) . ",
 			price_valid_until = " . ($price_valid_until ? db_escape($price_valid_until) : 'NULL') . ",
-			custom_data = " . sql_purch_agreement_custom_data($custom_data) . "
+			custom_data = " . sql_purchasing_custom_data($custom_data) . "
 			WHERE id = " . (int)$line_id;
 		if (!db_query($sql, 'could not update purchase agreement line')) return false;
 

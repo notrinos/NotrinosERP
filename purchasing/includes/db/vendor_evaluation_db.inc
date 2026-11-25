@@ -14,6 +14,7 @@ include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/hooks.inc');
 include_once($path_to_root . '/purchasing/includes/db/suppliers_db.inc');
 require_once __DIR__ . '/vendor_evaluation_tracking_db.inc';
+require_once __DIR__ . '/purchasing_custom_data.inc';
 
 /**
  * Get supported vendor tier labels.
@@ -193,54 +194,6 @@ function normalize_vendor_evaluation_sql_date($date, $fallback = '')
 }
 
 /**
- * Encode custom data for JSON storage.
- *
- * @param mixed $custom_data
- * @return string|null
- */
-function encode_vendor_evaluation_custom_data($custom_data)
-{
-	if ($custom_data === null || $custom_data === '' || $custom_data === array())
-		return null;
-
-	if (is_string($custom_data))
-		return $custom_data;
-
-	$encoded = json_encode($custom_data);
-	return $encoded === false ? null : $encoded;
-}
-
-/**
- * Build a SQL-safe JSON literal for custom data columns.
- *
- * @param mixed $custom_data
- * @return string
- */
-function sql_vendor_evaluation_custom_data($custom_data)
-{
-	$encoded = encode_vendor_evaluation_custom_data($custom_data);
-	return $encoded === null ? 'NULL' : "'" . db_escape_function($encoded) . "'";
-}
-
-/**
- * Decode custom data from storage.
- *
- * @param string|null $custom_data
- * @return array
- */
-function decode_vendor_evaluation_custom_data($custom_data)
-{
-	if (!$custom_data)
-		return array();
-
-	$decoded = json_decode($custom_data, true);
-	if (!is_array($decoded))
-		$decoded = json_decode(html_entity_decode($custom_data, ENT_QUOTES, 'UTF-8'), true);
-
-	return is_array($decoded) ? $decoded : array();
-}
-
-/**
  * Derive a vendor tier from an overall score.
  *
  * @param float $overall_score
@@ -413,7 +366,7 @@ function get_vendor_evaluation($evaluation_id)
 	$result = db_query($sql, 'could not retrieve vendor evaluation');
 	$row = db_fetch($result);
 	if ($row)
-		$row['custom_data_decoded'] = decode_vendor_evaluation_custom_data($row['custom_data']);
+		$row['custom_data_decoded'] = decode_purchasing_custom_data($row['custom_data']);
 
 	return $row;
 }
@@ -503,7 +456,7 @@ function add_vendor_evaluation($supplier_id, $period_from, $period_to, $evaluato
 		'custom_data' => $custom_data,
 	);
 	hook_invoke_all('vendor_evaluation_before_save', $hook_data);
-	$encoded_metadata = encode_vendor_evaluation_custom_data($hook_data['custom_data']);
+	$encoded_metadata = encode_purchasing_custom_data($hook_data['custom_data']);
 	if ($encoded_metadata === null && $hook_data['custom_data'] !== null && $hook_data['custom_data'] !== '' && $hook_data['custom_data'] !== array())
 		return false;
 
@@ -519,7 +472,7 @@ function add_vendor_evaluation($supplier_id, $period_from, $period_to, $evaluato
 			" . db_escape($hook_data['recommendation']) . ",
 			" . db_escape($hook_data['action_plan']) . ",
 			" . db_escape($hook_data['notes']) . ",
-			" . sql_vendor_evaluation_custom_data($encoded_metadata) . ")";
+			" . sql_purchasing_custom_data($encoded_metadata) . ")";
 
 	// New references must be open on their axis; the stored bytes must equal the admitted payload.
 	return vendor_evaluation_dimension_write('vendor_evaluations', null, array('custom_data' => $encoded_metadata), function() use ($sql) {
@@ -567,7 +520,7 @@ function update_vendor_evaluation($evaluation_id, $supplier_id, $period_from, $p
 	hook_invoke_all('vendor_evaluation_before_save', $hook_data);
 	// A save hook may supply metadata even when the caller omitted it.
 	$has_custom_data = $has_custom_data || $hook_data['custom_data'] !== null;
-	$encoded_metadata = $has_custom_data ? encode_vendor_evaluation_custom_data($hook_data['custom_data']) : null;
+	$encoded_metadata = $has_custom_data ? encode_purchasing_custom_data($hook_data['custom_data']) : null;
 	if ($has_custom_data && $encoded_metadata === null && $hook_data['custom_data'] !== null && $hook_data['custom_data'] !== '' && $hook_data['custom_data'] !== array())
 		return false;
 
@@ -582,7 +535,7 @@ function update_vendor_evaluation($evaluation_id, $supplier_id, $period_from, $p
 		action_plan = " . db_escape($hook_data['action_plan']) . ",
 		notes = " . db_escape($hook_data['notes'])
 		. ($has_custom_data ? ",
-		custom_data = " . sql_vendor_evaluation_custom_data($encoded_metadata) : "") . "
+		custom_data = " . sql_purchasing_custom_data($encoded_metadata) : "") . "
 		WHERE id = " . (int)$evaluation_id;
 
 	if (!begin_transaction())
@@ -746,16 +699,16 @@ function update_vendor_evaluation_category_snapshot($evaluation_id, $category_sc
 			return;
 		}
 
-		$custom_data = decode_vendor_evaluation_custom_data($evaluation['custom_data']);
+		$custom_data = decode_purchasing_custom_data($evaluation['custom_data']);
 		$custom_data['category_scores'] = $category_scores;
-		$encoded_metadata = encode_vendor_evaluation_custom_data($custom_data);
+		$encoded_metadata = encode_purchasing_custom_data($custom_data);
 		if ($encoded_metadata === null)
 			dimension_financial_reference_failure();
 
 		// Retained references must stay at their paths; opaque/legacy-envelope bytes cannot be rewritten.
 		if ($encoded_metadata !== $evaluation['custom_data']) {
 			$sql = "UPDATE " . TB_PREF . "vendor_evaluations SET
-				custom_data = " . sql_vendor_evaluation_custom_data($encoded_metadata) . "
+				custom_data = " . sql_purchasing_custom_data($encoded_metadata) . "
 				WHERE id = " . (int)$evaluation_id;
 			vendor_evaluation_dimension_guard('vendor_evaluations', $evaluation_id, array('custom_data' => $encoded_metadata), function() use ($sql) {
 				return db_query($sql, 'could not update vendor evaluation category snapshot') ? true : false;
@@ -1226,7 +1179,7 @@ function log_vendor_event($supplier_id, $event_type, $event_date, $reference_typ
 {
 	$event_date = normalize_vendor_evaluation_sql_date($event_date, date2sql(Today()));
 	$recorded_by = isset($_SESSION['wa_current_user']) ? (int)$_SESSION['wa_current_user']->user : 0;
-	$encoded_metadata = encode_vendor_evaluation_custom_data($custom_data);
+	$encoded_metadata = encode_purchasing_custom_data($custom_data);
 	if ($encoded_metadata === null && $custom_data !== null && $custom_data !== '' && $custom_data !== array())
 		dimension_financial_reference_failure();
 
@@ -1241,7 +1194,7 @@ function log_vendor_event($supplier_id, $event_type, $event_date, $reference_typ
 			" . db_escape($details) . ",
 			" . db_escape($impact_score) . ",
 			" . (int)$recorded_by . ",
-			" . sql_vendor_evaluation_custom_data($encoded_metadata) . ")";
+			" . sql_purchasing_custom_data($encoded_metadata) . ")";
 
 	// GRN callers ignore the result, so a refused log entry unwinds the whole receipt.
 	$event_id = vendor_evaluation_dimension_guard('vendor_performance_log', null, array('custom_data' => $encoded_metadata), function() use ($sql) {

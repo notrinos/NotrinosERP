@@ -14,6 +14,7 @@ require_once __DIR__.'/vendor_pricelist_tracking_db.inc';
 include_once($path_to_root . '/includes/date_functions.inc');
 include_once($path_to_root . '/includes/hooks.inc');
 include_once($path_to_root . '/purchasing/includes/db/suppliers_db.inc');
+require_once __DIR__ . '/purchasing_custom_data.inc';
 
 /**
  * Normalize a vendor pricelist date into SQL format.
@@ -31,54 +32,6 @@ function normalize_vendor_pricelist_sql_date($date, $fallback = '')
 		return $date;
 
 	return is_date($date) ? date2sql($date) : $fallback;
-}
-
-/**
- * Encode custom data for vendor pricelist JSON columns.
- *
- * @param mixed $custom_data
- * @return string|null
- */
-function encode_vendor_pricelist_custom_data($custom_data)
-{
-	if ($custom_data === null || $custom_data === '' || $custom_data === array())
-		return null;
-
-	if (is_string($custom_data))
-		return $custom_data;
-
-	$encoded = json_encode($custom_data);
-	return $encoded === false ? null : $encoded;
-}
-
-/**
- * Build a SQL-safe JSON literal for vendor pricelist custom data.
- *
- * @param mixed $custom_data
- * @return string
- */
-function sql_vendor_pricelist_custom_data($custom_data)
-{
-	$encoded = encode_vendor_pricelist_custom_data($custom_data);
-	return $encoded === null ? 'NULL' : "'" . db_escape_function($encoded) . "'";
-}
-
-/**
- * Decode vendor pricelist custom data from storage.
- *
- * @param string|null $custom_data
- * @return array
- */
-function decode_vendor_pricelist_custom_data($custom_data)
-{
-	if (!$custom_data)
-		return array();
-
-	$decoded = json_decode($custom_data, true);
-	if (!is_array($decoded))
-		$decoded = json_decode(html_entity_decode($custom_data, ENT_QUOTES, 'UTF-8'), true);
-
-	return is_array($decoded) ? $decoded : array();
 }
 
 /**
@@ -208,7 +161,7 @@ function enrich_vendor_pricelist_row($pricelist_row, $quantity)
 		: 0;
 
 	$pricelist_row['conversion_factor'] = $conversion_factor;
-	$pricelist_row['custom_data_array'] = decode_vendor_pricelist_custom_data($pricelist_row['custom_data']);
+	$pricelist_row['custom_data_array'] = decode_purchasing_custom_data($pricelist_row['custom_data']);
 	$pricelist_row['effective_source_price'] = round($break_price['break_price'], user_price_dec());
 	$pricelist_row['effective_unit_price'] = round($effective_unit_price, user_price_dec());
 	$pricelist_row['matched_break_level'] = $break_price['break_level'];
@@ -554,7 +507,7 @@ function get_best_vendor_price($stock_id, $quantity, $currency = '', $date = '',
  */
 function add_vendor_pricelist_entry($supplier_id, $stock_id, $vendor_product_code, $currency, $prices, $vendor_product_name = '', $vendor_uom = '', $conversion_factor = 1, $min_order_qty = 0, $lead_time_days = 0, $valid_from = '', $valid_until = '', $discount_percent = 0, $notes = '', $is_preferred = 0, $inactive = 0, $custom_data = array())
 {
-	$encoded_metadata=encode_vendor_pricelist_custom_data($custom_data);
+	$encoded_metadata=encode_purchasing_custom_data($custom_data);
 	if($encoded_metadata===null && $custom_data!==null && $custom_data!=='' && $custom_data!==array())return false;
 	$prices = normalize_vendor_pricelist_prices($prices);
 	$valid_from = normalize_vendor_pricelist_sql_date($valid_from, null);
@@ -593,7 +546,7 @@ function add_vendor_pricelist_entry($supplier_id, $stock_id, $vendor_product_cod
 			" . db_escape($notes) . ",
 			" . db_escape((int)$is_preferred) . ",
 			" . db_escape((int)$inactive) . ",
-			" . sql_vendor_pricelist_custom_data($encoded_metadata) . ")";
+			" . sql_purchasing_custom_data($encoded_metadata) . ")";
 	return dimension_master_metadata_write('vendor_pricelists',null,array('custom_data'=>$encoded_metadata),function($admitted)use($sql){return db_query($sql, 'could not add vendor pricelist entry')?db_insert_id():false;});
 }
 
@@ -623,7 +576,7 @@ function add_vendor_pricelist_entry($supplier_id, $stock_id, $vendor_product_cod
 function update_vendor_pricelist_entry($id, $supplier_id, $stock_id, $vendor_product_code, $currency, $prices, $vendor_product_name = '', $vendor_uom = '', $conversion_factor = 1, $min_order_qty = 0, $lead_time_days = 0, $valid_from = '', $valid_until = '', $discount_percent = 0, $notes = '', $is_preferred = 0, $inactive = 0, $custom_data = array())
 {
 	$has_custom_data=func_num_args()>=18;
-	$encoded_metadata=$has_custom_data?encode_vendor_pricelist_custom_data($custom_data):null;
+	$encoded_metadata=$has_custom_data?encode_purchasing_custom_data($custom_data):null;
 	if($has_custom_data && $encoded_metadata===null && $custom_data!==null && $custom_data!=='' && $custom_data!==array())return false;
 	$next=$has_custom_data?array('custom_data'=>$encoded_metadata):array();
 	$prices = normalize_vendor_pricelist_prices($prices);
@@ -654,7 +607,7 @@ function update_vendor_pricelist_entry($id, $supplier_id, $stock_id, $vendor_pro
 		notes = " . db_escape($notes) . ",
 		is_preferred = " . db_escape((int)$is_preferred) . ",
 		inactive = " . db_escape((int)$inactive)
-		. ($has_custom_data ? ",custom_data = " . sql_vendor_pricelist_custom_data($encoded_metadata) : "")
+		. ($has_custom_data ? ",custom_data = " . sql_purchasing_custom_data($encoded_metadata) : "")
 		. " WHERE id = " . (int)$id;
 	return dimension_master_metadata_write('vendor_pricelists',$id,$next,function($admitted)use($sql){return db_query($sql, 'could not update vendor pricelist entry')?true:false;});
 }

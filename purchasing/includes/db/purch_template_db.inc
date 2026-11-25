@@ -16,54 +16,7 @@ include_once($path_to_root . '/purchasing/includes/po_class.inc');
 include_once($path_to_root . '/purchasing/includes/db/po_db.inc');
 require_once __DIR__ . '/purch_policy_tracking_db.inc';
 require_once __DIR__ . '/purchasing_classification_db.inc';
-
-/**
- * Encode purchase template custom data for JSON storage.
- *
- * @param mixed $custom_data
- * @return string|null
- */
-function encode_purch_template_custom_data($custom_data)
-{
-	if ($custom_data === null || $custom_data === '' || $custom_data === array())
-		return null;
-
-	if (is_string($custom_data))
-		return $custom_data;
-
-	$encoded = json_encode($custom_data);
-	return $encoded === false ? null : $encoded;
-}
-
-/**
- * Build a SQL-safe JSON literal for purchase template custom data.
- *
- * @param mixed $custom_data
- * @return string
- */
-function sql_purch_template_custom_data($custom_data)
-{
-	$encoded = encode_purch_template_custom_data($custom_data);
-	return $encoded === null ? 'NULL' : "'" . db_escape_function($encoded) . "'";
-}
-
-/**
- * Decode purchase template custom data from storage.
- *
- * @param string|null $custom_data
- * @return array
- */
-function decode_purch_template_custom_data($custom_data)
-{
-	if (!$custom_data)
-		return array();
-
-	$decoded = json_decode($custom_data, true);
-	if (!is_array($decoded))
-		$decoded = json_decode(html_entity_decode($custom_data, ENT_QUOTES, 'UTF-8'), true);
-
-	return is_array($decoded) ? $decoded : array();
-}
+require_once __DIR__ . '/purchasing_custom_data.inc';
 
 /**
  * Get one purchase order template header.
@@ -87,7 +40,7 @@ function get_purch_template($template_id)
 	$row = db_fetch($result);
 
 	if ($row)
-		$row['custom_data_array'] = decode_purch_template_custom_data($row['custom_data']);
+		$row['custom_data_array'] = decode_purchasing_custom_data($row['custom_data']);
 
 	return $row;
 }
@@ -156,7 +109,7 @@ function get_purch_template_options($supplier_id = 0)
  */
 function add_purch_template($name, $description, $supplier_id, $location, $payment_terms, $notes = '', $inactive = 0, $custom_data = array(), $header_intents = null)
 {
-	$encoded = encode_purch_template_custom_data($custom_data);
+	$encoded = encode_purchasing_custom_data($custom_data);
 	if ($encoded === null && $custom_data !== null && $custom_data !== '' && $custom_data !== array())
 		return false;
 	$sql = "INSERT INTO " . TB_PREF . "purch_order_templates
@@ -169,7 +122,7 @@ function add_purch_template($name, $description, $supplier_id, $location, $payme
 			" . db_escape((int)$payment_terms) . ",
 			" . db_escape($notes) . ",
 			" . db_escape((int)$inactive) . ",
-			" . sql_purch_template_custom_data($encoded) . ")";
+			" . sql_purchasing_custom_data($encoded) . ")";
 
 	// A fresh reference must be open on its axis; the stored bytes must equal the admitted payload.
 	return purch_policy_dimension_write('purch_order_templates', null, array('custom_data' => $encoded), function() use ($sql, $header_intents) {
@@ -201,7 +154,7 @@ function add_purch_template($name, $description, $supplier_id, $location, $payme
 function update_purch_template($template_id, $name, $description, $supplier_id, $location, $payment_terms, $notes = '', $inactive = 0, $custom_data = null, $header_intents = null)
 {
 	$has_custom_data = $custom_data !== null;
-	$encoded = $has_custom_data ? encode_purch_template_custom_data($custom_data) : null;
+	$encoded = $has_custom_data ? encode_purchasing_custom_data($custom_data) : null;
 	if ($has_custom_data && $encoded === null && $custom_data !== '' && $custom_data !== array())
 		return false;
 	$sql = "UPDATE " . TB_PREF . "purch_order_templates SET
@@ -213,7 +166,7 @@ function update_purch_template($template_id, $name, $description, $supplier_id, 
 		notes = " . db_escape($notes) . ",
 		inactive = " . db_escape((int)$inactive)
 		. ($has_custom_data ? ",
-		custom_data = " . sql_purch_template_custom_data($encoded) : "") . "
+		custom_data = " . sql_purchasing_custom_data($encoded) : "") . "
 		WHERE id = " . (int)$template_id;
 
 	return purch_policy_dimension_write('purch_order_templates', $template_id, $has_custom_data ? array('custom_data' => $encoded) : array(), function() use ($sql, $template_id, $header_intents) {
@@ -255,7 +208,7 @@ function delete_purch_template($template_id)
  */
 function add_template_line($template_id, $stock_id, $description, $default_qty, $sort, $custom_data = array(), $line_intents = null)
 {
-	$encoded = encode_purch_template_custom_data($custom_data);
+	$encoded = encode_purchasing_custom_data($custom_data);
 	if ($encoded === null && $custom_data !== null && $custom_data !== '' && $custom_data !== array())
 		return false;
 	$sql = "INSERT INTO " . TB_PREF . "purch_order_template_lines
@@ -266,7 +219,7 @@ function add_template_line($template_id, $stock_id, $description, $default_qty, 
 			" . db_escape($description) . ",
 			" . db_escape((float)$default_qty) . ",
 			" . db_escape((int)$sort) . ",
-			" . sql_purch_template_custom_data($encoded) . ")";
+			" . sql_purchasing_custom_data($encoded) . ")";
 
 	return purch_policy_dimension_write('purch_order_template_lines', null, array('custom_data' => $encoded), function() use ($sql, $template_id, $stock_id, $default_qty, $line_intents) {
 		$rows = db_query('SELECT id FROM ' . TB_PREF . 'purch_order_templates WHERE id=' . (int)$template_id . ' FOR UPDATE');
@@ -300,7 +253,7 @@ function add_template_line($template_id, $stock_id, $description, $default_qty, 
 function update_template_line($line_id, $stock_id, $description, $default_qty, $sort, $custom_data = null, $template_id_or_intents = null, $line_intents = null)
 {
 	$has_custom_data = $custom_data !== null;
-	$encoded = $has_custom_data ? encode_purch_template_custom_data($custom_data) : null;
+	$encoded = $has_custom_data ? encode_purchasing_custom_data($custom_data) : null;
 	if ($has_custom_data && $encoded === null && $custom_data !== '' && $custom_data !== array())
 		return false;
 	// The legacy 7th positional argument is the parent template identity. Intent carriers are
@@ -316,7 +269,7 @@ function update_template_line($line_id, $stock_id, $description, $default_qty, $
 		default_quantity = " . db_escape((float)$default_qty) . ",
 		sort_order = " . db_escape((int)$sort)
 		. ($has_custom_data ? ",
-		custom_data = " . sql_purch_template_custom_data($encoded) : "") . "
+		custom_data = " . sql_purchasing_custom_data($encoded) : "") . "
 		WHERE id = " . (int)$line_id;
 
 	if ($template_id > 0)

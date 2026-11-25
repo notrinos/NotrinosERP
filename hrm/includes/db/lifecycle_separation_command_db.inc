@@ -11,6 +11,7 @@
  * is introduced here.
  */
 require_once(__DIR__.'/../../../includes/value_helpers.inc');
+require_once(__DIR__.'/lifecycle_other_pending_db.inc');
 $hrm_lifecycle_separation_root = isset($path_to_root)
     ? $path_to_root : dirname(dirname(dirname(__DIR__)));
 $hrm_lifecycle_separation_dependencies = array(
@@ -129,14 +130,6 @@ function hrm_lifecycle_separation_by_idempotency_for_update($worker_id, $idempot
         ." AND idempotency_key_hash=".db_escape($idempotency_hash)." LIMIT 1 FOR UPDATE",
         'could not lock idempotent Employee Separation lifecycle command');
     return $result ? db_fetch_assoc($result) : false;
-}
-
-function hrm_lifecycle_separation_other_pending_exists($worker_id)
-{
-    $result = db_query("SELECT lifecycle_command_id,command_type FROM ".TB_PREF."hrm_lifecycle_commands WHERE worker_id=".(int)$worker_id
-        ." AND command_status='pending' ORDER BY lifecycle_command_id LIMIT 1 FOR UPDATE",
-        'could not inspect pending Employee lifecycle conflict');
-    return $result && db_fetch_assoc($result) ? true : false;
 }
 
 function hrm_lifecycle_separation_audit($action, $reason_code, $command, $legal_entity_id, $restricted_diff)
@@ -289,7 +282,7 @@ function submit_hrm_lifecycle_employee_separation($employee_id, $effective_date,
                 'row_version'=>(int)$existing['row_version'],'request_hash'=>$request_hash,'exact_retry'=>true);
             break;
         }
-        if (hrm_lifecycle_separation_other_pending_exists((int)$binding['worker_id']))
+        if (hrm_lifecycle_other_pending_exists((int)$binding['worker_id']))
             break;
 
         if (!db_query("INSERT INTO ".TB_PREF."hrm_lifecycle_commands "

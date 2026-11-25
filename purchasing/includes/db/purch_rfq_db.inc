@@ -20,6 +20,7 @@ include_once($path_to_root . '/purchasing/includes/db/purch_requisition_db.inc')
 include_once($path_to_root . '/purchasing/includes/po_class.inc');
 include_once($path_to_root . '/purchasing/includes/db/po_db.inc');
 include_once($path_to_root . '/purchasing/includes/db/suppliers_db.inc');
+require_once __DIR__ . '/purchasing_custom_data.inc';
 
 /**
  * Get available RFQ types.
@@ -149,54 +150,6 @@ function purch_rfq_vendor_status_badge($status)
 function format_purch_rfq_reference($rfq_id)
 {
 	return 'RFQ-' . str_pad((int)$rfq_id, 4, '0', STR_PAD_LEFT);
-}
-
-/**
- * Encode RFQ custom data for storage.
- *
- * @param mixed $custom_data
- * @return string|null
- */
-function encode_purch_rfq_custom_data($custom_data)
-{
-	if ($custom_data === null || $custom_data === '' || $custom_data === array())
-		return null;
-
-	if (is_string($custom_data))
-		return $custom_data;
-
-	$encoded = json_encode($custom_data);
-	return $encoded === false ? null : $encoded;
-}
-
-/**
- * Build a SQL-safe JSON literal for RFQ custom data columns.
- *
- * @param mixed $custom_data
- * @return string
- */
-function sql_purch_rfq_custom_data($custom_data)
-{
-	$encoded = encode_purch_rfq_custom_data($custom_data);
-	return $encoded === null ? 'NULL' : "'" . db_escape_function($encoded) . "'";
-}
-
-/**
- * Decode RFQ custom data from storage.
- *
- * @param string|null $custom_data
- * @return array
- */
-function decode_purch_rfq_custom_data($custom_data)
-{
-	if (!$custom_data)
-		return array();
-
-	$decoded = json_decode($custom_data, true);
-	if (!is_array($decoded))
-		$decoded = json_decode(html_entity_decode($custom_data, ENT_QUOTES, 'UTF-8'), true);
-
-	return is_array($decoded) ? $decoded : array();
 }
 
 /**
@@ -463,7 +416,7 @@ function get_editable_purch_rfq($rfq_id)
 function get_purch_rfq_award_map($custom_data)
 {
 	$award_map = array();
-	$decoded = is_array($custom_data) ? $custom_data : decode_purch_rfq_custom_data($custom_data);
+	$decoded = is_array($custom_data) ? $custom_data : decode_purchasing_custom_data($custom_data);
 
 	if (!isset($decoded['line_awards']) || !is_array($decoded['line_awards']))
 		return $award_map;
@@ -489,14 +442,14 @@ function update_purch_rfq_award_map($rfq_id, $award_map)
 		$rows = db_query('SELECT custom_data FROM '.TB_PREF.'purch_rfq WHERE id='.(int)$rfq_id.' FOR UPDATE');
 		$row = $rows ? db_fetch($rows) : false;
 		if (!$row || !is_array($award_map)) return false;
-		$custom_data = decode_purch_rfq_custom_data($row['custom_data']);
+		$custom_data = decode_purchasing_custom_data($row['custom_data']);
 		$custom_data['line_awards'] = array();
 		foreach ($award_map as $rfq_item_id=>$rfq_vendor_id)
 			if ((int)$rfq_item_id > 0 && (int)$rfq_vendor_id > 0)
 				$custom_data['line_awards'][(int)$rfq_item_id] = (int)$rfq_vendor_id;
-		$encoded = encode_purch_rfq_custom_data($custom_data);
+		$encoded = encode_purchasing_custom_data($custom_data);
 		if ($encoded === null || dimension_master_payload_transition($row['custom_data'], $encoded) === false) return false;
-		return db_query('UPDATE '.TB_PREF.'purch_rfq SET custom_data='.sql_purch_rfq_custom_data($encoded).' WHERE id='.(int)$rfq_id);
+		return db_query('UPDATE '.TB_PREF.'purch_rfq SET custom_data='.sql_purchasing_custom_data($encoded).' WHERE id='.(int)$rfq_id);
 	}, true);
 }
 
@@ -648,7 +601,7 @@ function add_purch_rfq($rfq_type, $description, $deadline_date, $requisition_id,
 			'custom_data' => $custom_data,
 		);
 		hook_invoke_all('purch_rfq_before_save', $hook_data);
-		$encoded = encode_purch_rfq_custom_data($hook_data['custom_data']);
+		$encoded = encode_purchasing_custom_data($hook_data['custom_data']);
 		if ($encoded === null && !in_array($hook_data['custom_data'], array(null, '', array()), true)) { cancel_transaction(); return false; }
 		$next = array('dimension_id'=>$hook_data['dimension_id'], 'dimension2_id'=>$hook_data['dimension2_id'], 'custom_data'=>$encoded);
 		$result = dimension_ordinary_master_write('purch_rfq', null, $next, function($admitted) use ($hook_data, $classification_intents) {
@@ -690,7 +643,7 @@ function add_purch_rfq($rfq_type, $description, $deadline_date, $requisition_id,
 				" . ($hook_data['evaluation_criteria'] !== '' ? db_escape($hook_data['evaluation_criteria']) : 'NULL') . ",
 				" . (int)$hook_data['dimension_id'] . ",
 				" . (int)$hook_data['dimension2_id'] . ",
-				" . sql_purch_rfq_custom_data($hook_data['custom_data']) . "
+				" . sql_purchasing_custom_data($hook_data['custom_data']) . "
 			)";
 			if (!db_query($sql)) return false;
 
@@ -801,7 +754,7 @@ function update_purch_rfq($rfq_id, $rfq_type, $description, $deadline_date, $req
 			'custom_data' => $custom_data,
 		);
 		hook_invoke_all('purch_rfq_before_save', $hook_data);
-		$encoded = encode_purch_rfq_custom_data($hook_data['custom_data']);
+		$encoded = encode_purchasing_custom_data($hook_data['custom_data']);
 		if ($encoded === null && !in_array($hook_data['custom_data'], array(null, '', array()), true)) { cancel_transaction(); return false; }
 		$next = array('dimension_id'=>$hook_data['dimension_id'], 'dimension2_id'=>$hook_data['dimension2_id'], 'custom_data'=>$encoded);
 		$result = dimension_ordinary_master_write('purch_rfq', $rfq_id, $next, function($admitted) use ($hook_data, $rfq_id, $classification_intents) {
@@ -823,7 +776,7 @@ function update_purch_rfq($rfq_id, $rfq_type, $description, $deadline_date, $req
 				dimension_id = " . (int)$hook_data['dimension_id'] . ",
 				dimension2_id = " . (int)$hook_data['dimension2_id'] . ",
 				reference = " . db_escape($hook_data['reference']) . ",
-				custom_data = " . sql_purch_rfq_custom_data($hook_data['custom_data']) . "
+				custom_data = " . sql_purchasing_custom_data($hook_data['custom_data']) . "
 				WHERE id = " . (int)$rfq_id;
 			if (!db_query($sql)) return false;
 			// DIM-PUR-002: capture only an explicit decision or the first decision of a legacy RFQ.
@@ -913,7 +866,7 @@ function add_rfq_item($rfq_id, $stock_id, $quantity, $target_price, $specificati
 	$description = '', $unit_of_measure = '', $sort_order = 0, $custom_data = array(), &$error_message = null,
 	$classification_intents = null)
 {
-	$encoded = encode_purch_rfq_custom_data($custom_data);
+	$encoded = encode_purchasing_custom_data($custom_data);
 	if ($encoded === null && !in_array($custom_data, array(null, '', array()), true)) return false;
 	return dimension_rfq_child_write('purch_rfq_items', null,
 		array('rfq_id'=>$rfq_id, 'custom_data'=>$encoded), function($admitted) use ($rfq_id, $stock_id, $quantity, $target_price, $specifications, $description, $unit_of_measure, $sort_order, $custom_data, $classification_intents, &$error_message) {
@@ -966,7 +919,7 @@ function add_rfq_item($rfq_id, $stock_id, $quantity, $target_price, $specificati
 			" . db_escape($target_price) . ",
 			" . ($specifications !== '' ? db_escape($specifications) : 'NULL') . ",
 			" . (int)$sort_order . ",
-			" . sql_purch_rfq_custom_data($custom_data) . "
+			" . sql_purchasing_custom_data($custom_data) . "
 		)";
 		if (!db_query($sql)) return false;
 
@@ -1002,7 +955,7 @@ function update_rfq_item($item_id, $stock_id, $quantity, $target_price, $specifi
 {
 	$next = array();
 	if ($custom_data !== null) {
-		$next['custom_data'] = encode_purch_rfq_custom_data($custom_data);
+		$next['custom_data'] = encode_purchasing_custom_data($custom_data);
 		if ($next['custom_data'] === null && !in_array($custom_data, array('', array()), true)) return false;
 	}
 	return dimension_rfq_child_write('purch_rfq_items', $item_id, $next,
@@ -1044,7 +997,7 @@ function update_rfq_item($item_id, $stock_id, $quantity, $target_price, $specifi
 			target_price = " . db_escape($target_price) . ",
 			specifications = " . ($specifications !== '' ? db_escape($specifications) : 'NULL') . ",
 			sort_order = " . (int)$sort_order . ",
-			custom_data = " . sql_purch_rfq_custom_data($custom_data) . "
+			custom_data = " . sql_purchasing_custom_data($custom_data) . "
 			WHERE id = " . (int)$item_id;
 		if (!db_query($sql)) return false;
 		// DIM-PUR-002: capture only an explicit decision or the first decision of a legacy line.
@@ -1121,7 +1074,7 @@ function get_purch_rfq_vendor($rfq_vendor_id)
 	$row = db_fetch($result);
 
 	if ($row)
-		$row['custom_data_array'] = decode_purch_rfq_custom_data($row['custom_data']);
+		$row['custom_data_array'] = decode_purchasing_custom_data($row['custom_data']);
 
 	return $row;
 }
@@ -1175,7 +1128,7 @@ function resolve_purch_rfq_vendor_reference($rfq_id, $vendor_reference)
  */
 function add_rfq_vendor($rfq_id, $supplier_id, $custom_data = array())
 {
-	$encoded = encode_purch_rfq_custom_data($custom_data);
+	$encoded = encode_purchasing_custom_data($custom_data);
 	if ($encoded === null && !in_array($custom_data, array(null, '', array()), true)) return false;
 	return dimension_rfq_child_write('purch_rfq_vendors', null,
 		array('rfq_id'=>$rfq_id, 'custom_data'=>$encoded), function($admitted) use ($rfq_id, $supplier_id, $custom_data) {
@@ -1204,7 +1157,7 @@ function add_rfq_vendor($rfq_id, $supplier_id, $custom_data = array())
 			" . (int)$supplier_id . ",
 			'invited',
 			0,
-			" . sql_purch_rfq_custom_data($custom_data) . "
+			" . sql_purchasing_custom_data($custom_data) . "
 		)";
 		if (!db_query($sql)) return false;
 
@@ -1274,7 +1227,7 @@ function get_rfq_vendor_line_map($rfq_vendor_id)
 	$result = db_query($sql, 'could not get RFQ vendor response lines');
 
 	while ($row = db_fetch($result)) {
-		$row['custom_data_array'] = decode_purch_rfq_custom_data($row['custom_data']);
+		$row['custom_data_array'] = decode_purchasing_custom_data($row['custom_data']);
 		$line_map[(int)$row['rfq_item_id']] = $row;
 	}
 
@@ -1451,13 +1404,13 @@ function record_vendor_response($rfq_id, $supplier_id, $lines, $total, $lead_day
             if (isset($seen[$item])) return false;
             $seen[$item] = true;
             $previous = isset($old[$item]) ? $old[$item] : null;
-            $payload = $line['custom_data'] === null ? ($previous ? $previous['custom_data'] : null) : encode_purch_rfq_custom_data($line['custom_data']);
+            $payload = $line['custom_data'] === null ? ($previous ? $previous['custom_data'] : null) : encode_purchasing_custom_data($line['custom_data']);
             if ($payload === null && $line['custom_data'] !== null && !in_array($line['custom_data'], array('',array()), true)) return false;
             $ok = dimension_ordinary_master_write('purch_rfq_vendor_lines', $previous ? $previous['id'] : null,
                 array('custom_data'=>$payload), function($admitted) use ($previous, $vendor, $item, $line, $payload) {
                     $values = 'quoted_price='.db_escape($line['quoted_price']).', quoted_quantity='.db_escape($line['quoted_quantity'])
                         .', delivery_lead_days='.(int)$line['delivery_lead_days'].', notes='.db_escape($line['notes'])
-                        .', custom_data='.sql_purch_rfq_custom_data($payload);
+                        .', custom_data='.sql_purchasing_custom_data($payload);
                     $sql = $previous ? 'UPDATE '.TB_PREF.'purch_rfq_vendor_lines SET '.$values.' WHERE id='.(int)$previous['id']
                         : 'INSERT INTO '.TB_PREF.'purch_rfq_vendor_lines SET rfq_vendor_id='.(int)$vendor['id'].', rfq_item_id='.$item.', '.$values;
                     return (bool)db_query($sql);
@@ -1470,7 +1423,7 @@ function record_vendor_response($rfq_id, $supplier_id, $lines, $total, $lead_day
                 return (bool)db_query('DELETE FROM '.TB_PREF.'purch_rfq_vendor_lines WHERE id='.(int)$previous['id']);
             }, true, true)) return false;
         }
-        $payload = $custom_data === null ? $vendor['custom_data'] : encode_purch_rfq_custom_data($custom_data);
+        $payload = $custom_data === null ? $vendor['custom_data'] : encode_purchasing_custom_data($custom_data);
         if ($payload === null && $custom_data !== null && !in_array($custom_data, array('',array()), true)) return false;
         $amount = (float)$total > 0 ? (float)$total : $computed;
         if (!is_finite($amount)) return false;
@@ -1478,7 +1431,7 @@ function record_vendor_response($rfq_id, $supplier_id, $lines, $total, $lead_day
             function($admitted) use ($vendor, $amount, $lead, $payment_terms, $notes, $payload) {
                 return (bool)db_query("UPDATE ".TB_PREF."purch_rfq_vendors SET status='responded', response_date=NOW(), total_quoted=".db_escape($amount)
                     .', delivery_lead_days='.(int)$lead.', payment_terms='.db_escape($payment_terms).', vendor_notes='.db_escape($notes)
-                    .', custom_data='.sql_purch_rfq_custom_data($payload).' WHERE id='.(int)$vendor['id']);
+                    .', custom_data='.sql_purchasing_custom_data($payload).' WHERE id='.(int)$vendor['id']);
             }, true)) return false;
         if (!update_purch_rfq_status_from_activity($rfq['id'])) return false;
         $data = array('rfq_id'=>(int)$rfq['id'], 'supplier_id'=>(int)$supplier_id, 'rfq_vendor_id'=>(int)$vendor['id']);
@@ -1873,7 +1826,7 @@ function create_rfq_from_requisition($requisition_id, $supplier_ids = array(), $
         $where = array('id='.(int)$rfq_id);
         foreach ($expected as $field=>$value) $where[] = $field.' <=> '.($value === null ? 'NULL' : db_escape($value));
         if (count(read_requisition_rfq_rows('SELECT id FROM '.TB_PREF.'purch_rfq WHERE '.implode(' AND ', $where).' FOR UPDATE')) !== 1
-            || $headers[0]['custom_data'] !== encode_purch_rfq_custom_data(array('created_from_requisition'=>1)))
+            || $headers[0]['custom_data'] !== encode_purchasing_custom_data(array('created_from_requisition'=>1)))
             throw new RuntimeException('RFQ destination intent changed.');
         if (!commit_transaction()) { cancel_transaction(); return false; }
         return $rfq_id;

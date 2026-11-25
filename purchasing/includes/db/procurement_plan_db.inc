@@ -15,6 +15,7 @@ include_once($path_to_root . '/includes/hooks.inc');
 include_once($path_to_root . '/purchasing/includes/po_class.inc');
 include_once($path_to_root . '/purchasing/includes/db/po_db.inc');
 require_once __DIR__ . '/purch_policy_tracking_db.inc';
+require_once __DIR__ . '/purchasing_custom_data.inc';
 
 /**
  * Generate the next procurement plan reference.
@@ -60,36 +61,6 @@ function get_procurement_plan_line_statuses()
 }
 
 /**
- * Convert arbitrary custom data to JSON string.
- *
- * @param mixed $custom_data
- * @return string|null
- */
-function encode_procurement_plan_custom_data($custom_data)
-{
-	if ($custom_data === null || $custom_data === '' || $custom_data === array())
-		return null;
-
-	if (is_string($custom_data))
-		return $custom_data;
-
-	$encoded = json_encode($custom_data);
-	return $encoded === false ? null : $encoded;
-}
-
-/**
- * Build an SQL-safe JSON literal.
- *
- * @param mixed $custom_data
- * @return string
- */
-function sql_procurement_plan_custom_data($custom_data)
-{
-	$encoded = encode_procurement_plan_custom_data($custom_data);
-	return $encoded === null ? 'NULL' : "'" . db_escape_function($encoded) . "'";
-}
-
-/**
  * Generate one procurement plan from current replenishment suggestions.
  *
  * @param string $plan_type
@@ -107,7 +78,7 @@ function generate_procurement_plan($plan_type, $location = '', $date_range = nul
 	if (empty($suggestions))
 		return false;
 
-	$header_metadata = encode_procurement_plan_custom_data($date_range);
+	$header_metadata = encode_purchasing_custom_data($date_range);
 	if ($header_metadata === null && $date_range !== null && $date_range !== '' && $date_range !== array())
 		return false;
 
@@ -117,7 +88,7 @@ function generate_procurement_plan($plan_type, $location = '', $date_range = nul
 	$sql = "INSERT INTO " . TB_PREF . "procurement_plan
 		(reference, plan_date, plan_type, status, created_by, notes, custom_data)
 		VALUES ('', " . db_escape(date2sql(Today())) . ", " . db_escape($plan_type) . ", 'draft', "
-		. (int)$_SESSION['wa_current_user']->user . ", '', " . sql_procurement_plan_custom_data($header_metadata) . ")";
+		. (int)$_SESSION['wa_current_user']->user . ", '', " . sql_purchasing_custom_data($header_metadata) . ")";
 	// A fresh reference must be open on its axis; a refusal unwinds this whole transaction.
 	$plan_id = purch_policy_dimension_write('procurement_plan', null, array('custom_data' => $header_metadata), function() use ($sql) {
 		return db_query($sql, 'could not create procurement plan header') ? db_insert_id() : false;
@@ -178,9 +149,9 @@ function generate_procurement_plan($plan_type, $location = '', $date_range = nul
 			. db_escape($estimated_lead_time) . ","
 			. db_escape(isset($suggestion['priority']) ? $suggestion['priority'] : 'normal') . ","
 			. "'pending',0,"
-			. sql_procurement_plan_custom_data($line_custom_data)
+			. sql_purchasing_custom_data($line_custom_data)
 			. ")";
-		if (!purch_policy_dimension_write('procurement_plan_lines', null, array('custom_data' => encode_procurement_plan_custom_data($line_custom_data)), function() use ($sql) {
+		if (!purch_policy_dimension_write('procurement_plan_lines', null, array('custom_data' => encode_purchasing_custom_data($line_custom_data)), function() use ($sql) {
 			return db_query($sql, 'could not insert procurement plan line') ? db_insert_id() : false;
 		})) {
 			cancel_transaction();
@@ -520,10 +491,10 @@ function skip_plan_line($line_id, $reason = '')
 
 	$sql = "UPDATE " . TB_PREF . "procurement_plan_lines SET
 		status = 'skipped',
-		custom_data = " . sql_procurement_plan_custom_data($custom_data) . "
+		custom_data = " . sql_purchasing_custom_data($custom_data) . "
 	WHERE id = " . $line_id;
 	// Existing keys (including retained references) are carried over; only the skip keys are added.
-	if (!purch_policy_dimension_write('procurement_plan_lines', $line_id, array('custom_data' => encode_procurement_plan_custom_data($custom_data)), function() use ($sql) {
+	if (!purch_policy_dimension_write('procurement_plan_lines', $line_id, array('custom_data' => encode_purchasing_custom_data($custom_data)), function() use ($sql) {
 		return db_query($sql, 'could not skip procurement plan line') ? true : false;
 	}) || !commit_transaction()) {
 		cancel_transaction();

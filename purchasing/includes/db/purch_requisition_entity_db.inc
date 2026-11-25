@@ -16,7 +16,7 @@ function write_purch_requisition_entity($owner, $operation, $key, $next, $valida
         || !in_array($owner, array('purch_requisitions','purch_requisition_lines'), true)
         || !in_array($operation, array('insert','update','delete'), true)) return false;
     // Generic callers need the same native serializers and Warehouse helpers.
-    if (!function_exists('encode_purch_requisition_custom_data')) require_once __DIR__.'/purch_requisition_db.inc';
+    if (!function_exists('decode_purch_requisition_custom_data')) require_once __DIR__.'/purch_requisition_db.inc';
     $header = $owner === 'purch_requisitions';
     // Existing Warehouse sources belong to the complete native bridge command.
     // Generic insert must not bypass its draft/current-policy admission.

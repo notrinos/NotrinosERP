@@ -4,6 +4,7 @@ require_once __DIR__.'/../../../tracking/includes/tracking_reference_writer_fenc
 // require_once __DIR__.'/purchasing_classification_db.inc';
 require_once __DIR__.'/../../../tracking/includes/tracking_source_revision.inc';
 require_once __DIR__.'/../../../tracking/includes/tracking_category_policy.inc';
+require_once __DIR__ . '/purchasing_custom_data.inc';
 if (!defined('ST_PURCHTEMPLATE')) define('ST_PURCHTEMPLATE', 66);
 foreach (array('ST_PURCHORDER' => 18, 'ST_PURCHREQUISITION' => 58, 'ST_PURCHRFQ' => 59,
 	'ST_PURCHAGREEMENT' => 60, 'ST_PROCUREMENTPLAN' => 61) as $dbg_type => $dbg_value)
@@ -103,7 +104,7 @@ function write_purch_requisition_header($operation, $key, $data)
             }
             if (!isset($data['required_date']) || $data['required_date'] === '') $data['required_date'] = null;
             $data['department_id'] = dimension_writer_reference_id($data['department_id']);
-            $encoded = encode_purch_requisition_custom_data($data['custom_data']);
+            $encoded = encode_purchasing_custom_data($data['custom_data']);
             if ($encoded === null && !in_array($data['custom_data'], array(null,'',array()), true)) { cancel_transaction(); return false; }
             $data['custom_data'] = $encoded;
         }
