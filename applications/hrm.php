@@ -98,7 +98,6 @@ class HrmApp extends application {
 		$this->add_lapp_function(2, _('Leave P&olicies'),           'hrm/manage/leave_policies.php?',                      'SA_HRM_MANAGE_LEAVE_POLICY',       MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Compensation &Governance'),'hrm/manage/compensation_governance.php?',             'SA_HRM_MANAGE_COMPENSATION', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Compensation Go-Live &Plan'),'hrm/manage/compensation_cutover.php?',                 'SA_HRM_MIGRATE_COMPENSATION', MENU_MAINTENANCE);
-		$this->add_lapp_function(2, _('Compensation Go-Live &Review'),'hrm/manage/compensation_cutover_review.php?',        'SA_HRM_REVIEW_COMPENSATION', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Compensation Go-Live E&xecute'),'hrm/manage/compensation_cutover_execute.php?',      'SA_HRM_EXECUTE_COMPENSATION', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Compensation Payroll &Mapping'),'hrm/manage/compensation_payroll_mapping.php?',      'SA_HRM_MAP_COMPENSATION_PAYROLL', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Compensation &Recovery'),'hrm/manage/compensation_recovery.php?',                    'SA_HRM_RECOVER_COMPENSATION', MENU_MAINTENANCE);

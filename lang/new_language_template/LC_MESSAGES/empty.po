@@ -40,6 +40,9 @@ msgstr ""
 msgid "Too many failed login attempts.<br>Please wait a while or try later."
 msgstr ""
 
+msgid "The login form has expired. Please sign in again."
+msgstr ""
+
 msgid "Invalid password or username. Please, try again."
 msgstr ""
 
@@ -3090,19 +3093,19 @@ msgstr ""
 msgid "Signer code:"
 msgstr ""
 
-msgid "Import trusted public key"
+msgid "Signer ID:"
 msgstr ""
 
 msgid "Key ID:"
 msgstr ""
 
-msgid "Predecessor trust-key ID (optional rotation):"
-msgstr ""
-
 msgid "RSA public key PEM:"
 msgstr ""
 
-msgid "Signer ID:"
+msgid "Predecessor trust-key ID (optional rotation):"
+msgstr ""
+
+msgid "Import trusted public key"
 msgstr ""
 
 msgid "Key compromised:"
@@ -3622,13 +3625,13 @@ msgstr ""
 msgid "Package pictures"
 msgstr ""
 
-msgid "Open full size"
-msgstr ""
-
 msgid "Open full size picture"
 msgstr ""
 
 msgid "Package picture"
+msgstr ""
+
+msgid "Open full size"
 msgstr ""
 
 msgid "Log View"
@@ -4208,7 +4211,7 @@ msgstr ""
 msgid "Leave &Balance"
 msgstr ""
 
-msgid "Tracking &Compatibility"
+msgid "Department &Tracking Check"
 msgstr ""
 
 msgid "Pa&yslip History"
@@ -4298,13 +4301,10 @@ msgstr ""
 msgid "Compensation &Governance"
 msgstr ""
 
-msgid "Compensation C&utover Plan"
+msgid "Compensation Go-Live &Plan"
 msgstr ""
 
-msgid "Compensation Cutover &Review"
-msgstr ""
-
-msgid "Compensation Cutover E&xecute"
+msgid "Compensation Go-Live E&xecute"
 msgstr ""
 
 msgid "Compensation Payroll &Mapping"
@@ -4343,7 +4343,7 @@ msgstr ""
 msgid "&Training"
 msgstr ""
 
-msgid "Typed Attribute &Values"
+msgid "Employee Custom &Fields"
 msgstr ""
 
 msgid "&Holiday Calendar"
@@ -4376,7 +4376,7 @@ msgstr ""
 msgid "Import/Export Atte&ndance"
 msgstr ""
 
-msgid "Migration &Validation"
+msgid "HR Data &Check"
 msgstr ""
 
 msgid "Appraisa&ls"
@@ -4388,7 +4388,7 @@ msgstr ""
 msgid "HR Settin&gs"
 msgstr ""
 
-msgid "Employee Compatibility"
+msgid "Employee Record &Sync"
 msgstr ""
 
 msgid "&Inventory"
@@ -9455,16 +9455,16 @@ msgstr ""
 msgid "Action Inbox"
 msgstr ""
 
-msgid "Approval notifications"
+msgid "Self scope unavailable."
 msgstr ""
 
 msgid "Notifications are informational only. Opening an action does not confer approval authority; current authorization is always rechecked."
 msgstr ""
 
-msgid "Read"
+msgid "Approval notifications"
 msgstr ""
 
-msgid "Self scope unavailable."
+msgid "Read"
 msgstr ""
 
 msgid "My Benefits"
@@ -9512,25 +9512,22 @@ msgstr ""
 msgid "Record governed election"
 msgstr ""
 
-msgid "Action inbox"
-msgstr ""
-
-msgid "As-of direct/delegated team experience."
-msgstr ""
-
-msgid "Benefits"
-msgstr ""
-
-msgid "Current approval notifications without sensitive payload expansion."
-msgstr ""
-
-msgid "Documents"
-msgstr ""
-
-msgid "Eligible optional-benefit elections from HRM-BEN-001."
-msgstr ""
-
 msgid "Employee Self Service"
+msgstr ""
+
+msgid "Your self-service identity or active assignment is ambiguous or unavailable."
+msgstr ""
+
+msgid "Your identity, Employment, Assignment and Legal Entity scope are resolved from the signed-in account. No employee identifier from the browser is trusted."
+msgstr ""
+
+msgid "Profile change"
+msgstr ""
+
+msgid "Submit a governed personal-data change request through HRM-ESS-001."
+msgstr ""
+
+msgid "Reviewed and approved time plus governed overtime requests."
 msgstr ""
 
 msgid "Governed leave projections and requests."
@@ -9539,37 +9536,40 @@ msgstr ""
 msgid "Leave"
 msgstr ""
 
-msgid "My team"
+msgid "Benefits"
 msgstr ""
 
-msgid "Pay"
-msgstr ""
-
-msgid "Profile change"
-msgstr ""
-
-msgid "Protected access to your workforce documents."
-msgstr ""
-
-msgid "Reviewed and approved time plus governed overtime requests."
+msgid "Eligible optional-benefit elections from HRM-BEN-001."
 msgstr ""
 
 msgid "Skills & Certifications"
 msgstr ""
 
-msgid "Submit a governed personal-data change request through HRM-ESS-001."
-msgstr ""
-
 msgid "Your governed read-only skills and certification evidence."
 msgstr ""
 
-msgid "Your identity, Employment, Assignment and Legal Entity scope are resolved from the signed-in account. No employee identifier from the browser is trusted."
+msgid "Pay"
 msgstr ""
 
 msgid "Your scoped payslip history."
 msgstr ""
 
-msgid "Your self-service identity or active assignment is ambiguous or unavailable."
+msgid "Documents"
+msgstr ""
+
+msgid "Protected access to your workforce documents."
+msgstr ""
+
+msgid "Action inbox"
+msgstr ""
+
+msgid "Current approval notifications without sensitive payload expansion."
+msgstr ""
+
+msgid "As-of direct/delegated team experience."
+msgstr ""
+
+msgid "My team"
 msgstr ""
 
 msgid "ESS Delegation"
@@ -9611,16 +9611,43 @@ msgstr ""
 msgid "Capability ID"
 msgstr ""
 
-msgid "Download protected attachment"
+msgid "My Documents"
 msgstr ""
 
-msgid "My Documents"
+msgid "Protected document list"
 msgstr ""
 
 msgid "No documents are available."
 msgstr ""
 
-msgid "Protected document list"
+msgid "Download protected attachment"
+msgstr ""
+
+msgid "My Leave"
+msgstr ""
+
+msgid "The request was rejected by CSRF protection."
+msgstr ""
+
+msgid "Leave request submitted through the governed workflow."
+msgstr ""
+
+msgid "Governed leave balances"
+msgstr ""
+
+msgid "Leave type"
+msgstr ""
+
+msgid "Reserved"
+msgstr ""
+
+msgid "Leave requests"
+msgstr ""
+
+msgid "Request leave"
+msgstr ""
+
+msgid "Leave type ID"
 msgstr ""
 
 msgid "Day portion"
@@ -9632,58 +9659,31 @@ msgstr ""
 msgid "Full day"
 msgstr ""
 
-msgid "Governed leave balances"
-msgstr ""
-
-msgid "Leave request submitted through the governed workflow."
-msgstr ""
-
-msgid "Leave requests"
-msgstr ""
-
-msgid "Leave type"
-msgstr ""
-
-msgid "Leave type ID"
-msgstr ""
-
-msgid "My Leave"
-msgstr ""
-
-msgid "Request leave"
-msgstr ""
-
-msgid "Reserved"
-msgstr ""
-
 msgid "Second half"
 msgstr ""
 
 msgid "Submit leave request"
 msgstr ""
 
-msgid "The request was rejected by CSRF protection."
-msgstr ""
-
 msgid "My Pay"
-msgstr ""
-
-msgid "No payslips are available."
 msgstr ""
 
 msgid "Payslip history"
 msgstr ""
 
-msgid "Gross pay"
-msgstr ""
-
-msgid "Net pay"
+msgid "No payslips are available."
 msgstr ""
 
 msgid "Payslip"
 msgstr ""
 
 msgid "Payslip access denied."
+msgstr ""
+
+msgid "Gross pay"
+msgstr ""
+
+msgid "Net pay"
 msgstr ""
 
 msgid "This view is self-scoped and does not grant payroll calculation, posting or payment authority."
@@ -9872,10 +9872,10 @@ msgstr ""
 msgid "This route is executor-only. The executor must be distinct from both maker and checker. Before application, current identity binding, encrypted payload integrity and stale baseline are revalidated. Bank, tax, identifier, compensation, payroll and accounting authority are excluded."
 msgstr ""
 
-msgid "Approved execution queue"
+msgid "Execution candidates could not be resolved safely."
 msgstr ""
 
-msgid "Execution candidates could not be resolved safely."
+msgid "Approved execution queue"
 msgstr ""
 
 msgid "No approved request is eligible for this distinct executor."
@@ -9885,23 +9885,23 @@ msgstr ""
 msgid "Request #%d"
 msgstr ""
 
-msgid "Application writes only the frozen bounded field set and creates an immutable execution receipt. A stale baseline or changed authorization fails closed."
-msgstr ""
-
-msgid "Apply Approved Request"
+msgid "The selected request is not available to this executor."
 msgstr ""
 
 #, php-format
 msgid "Apply request #%d"
 msgstr ""
 
+msgid "Application writes only the frozen bounded field set and creates an immutable execution receipt. A stale baseline or changed authorization fails closed."
+msgstr ""
+
 msgid "Confirm Apply Request"
 msgstr ""
 
-msgid "Reauthenticate to Apply Request"
+msgid "Apply Approved Request"
 msgstr ""
 
-msgid "The selected request is not available to this executor."
+msgid "Reauthenticate to Apply Request"
 msgstr ""
 
 msgid "The review action was rejected. No request state was changed."
@@ -10070,16 +10070,16 @@ msgstr ""
 msgid "Window start"
 msgstr ""
 
+msgid "My Team"
+msgstr ""
+
+msgid "Team access is evaluated for the current effective date. Direct and delegated membership is resolved from effective-dated Assignment reporting relationships; historical or future manager scope is not accepted by this interactive route. Delegated rows require an explicit unrevoked capability for the same Legal Entity."
+msgstr ""
+
 msgid "Assignment"
 msgstr ""
 
 msgid "Legal Entity"
-msgstr ""
-
-msgid "My Team"
-msgstr ""
-
-msgid "Open scoped team approvals"
 msgstr ""
 
 msgid "Scope"
@@ -10088,25 +10088,13 @@ msgstr ""
 msgid "Scoped team"
 msgstr ""
 
-msgid "Team access is evaluated for the current effective date. Direct and delegated membership is resolved from effective-dated Assignment reporting relationships; historical or future manager scope is not accepted by this interactive route. Delegated rows require an explicit unrevoked capability for the same Legal Entity."
+msgid "Worker"
 msgstr ""
 
 msgid "View scoped team skills & certifications"
 msgstr ""
 
-msgid "Worker"
-msgstr ""
-
-msgid "Approve scoped request"
-msgstr ""
-
-msgid "Overtime requests"
-msgstr ""
-
-msgid "Reject scoped request"
-msgstr ""
-
-msgid "Remarks"
+msgid "Open scoped team approvals"
 msgstr ""
 
 msgid "Team Approvals"
@@ -10116,6 +10104,18 @@ msgid "The action was rejected by CSRF protection."
 msgstr ""
 
 msgid "The existing approval workflow accepted the action."
+msgstr ""
+
+msgid "Overtime requests"
+msgstr ""
+
+msgid "Remarks"
+msgstr ""
+
+msgid "Approve scoped request"
+msgstr ""
+
+msgid "Reject scoped request"
 msgstr ""
 
 msgid "Team Talent Profile"
@@ -10204,6 +10204,12 @@ msgid "Reinstatement"
 msgstr ""
 
 msgid "The Pay Grade status could not be synchronized."
+msgstr ""
+
+msgid "Compensation go-live: "
+msgstr ""
+
+msgid "Compensation opening review: "
 msgstr ""
 
 #, php-format
@@ -10576,19 +10582,19 @@ msgstr ""
 msgid "View team"
 msgstr ""
 
+msgid "You are not authorized to complete this action in the current scope."
+msgstr ""
+
+msgid "The record or approval state changed. Reload and review it before trying again."
+msgstr ""
+
 msgid "Some required details are invalid. Check the form and try again."
 msgstr ""
 
 msgid "The governed workflow could not complete this action. Contact HR support if the problem persists."
 msgstr ""
 
-msgid "The record or approval state changed. Reload and review it before trying again."
-msgstr ""
-
 msgid "This action could not be completed. Try again or contact HR support."
-msgstr ""
-
-msgid "You are not authorized to complete this action in the current scope."
 msgstr ""
 
 msgid "You do not have permission to change restricted employee bank details."
@@ -10981,28 +10987,28 @@ msgstr ""
 msgid "Inactive"
 msgstr ""
 
-msgid "Automatically approved"
-msgstr ""
-
 msgid "Delegated"
 msgstr ""
 
 msgid "Direct"
 msgstr ""
 
-msgid "Enrolled"
+msgid "Reviewed"
 msgstr ""
 
-msgid "Reviewed"
+msgid "Automatically approved"
+msgstr ""
+
+msgid "Enrolled"
 msgstr ""
 
 msgid "Terminated"
 msgstr ""
 
-msgid "Unread"
+msgid "Waived"
 msgstr ""
 
-msgid "Waived"
+msgid "Unread"
 msgstr ""
 
 msgid "No records available."
@@ -11590,7 +11596,7 @@ msgstr ""
 msgid "Payslip #"
 msgstr ""
 
-msgid "HRM Tracking Compatibility"
+msgid "Department Tracking Check"
 msgstr ""
 
 msgid "You are not authorized to read HRM tracking compatibility diagnostics."
@@ -12000,19 +12006,16 @@ msgstr ""
 msgid "Immutable adapter contract created."
 msgstr ""
 
-msgid "Adapter Code:"
-msgstr ""
-
 msgid "Adapter Kind:"
 msgstr ""
 
-msgid "Append Adapter Version"
+msgid "Provider"
 msgstr ""
 
-msgid "Capability JSON:"
+msgid "Adapter Code:"
 msgstr ""
 
-msgid "Data Contract SHA-256:"
+msgid "Version Token:"
 msgstr ""
 
 msgid "Effective From:"
@@ -12021,22 +12024,25 @@ msgstr ""
 msgid "Effective To:"
 msgstr ""
 
+msgid "Capability JSON:"
+msgstr ""
+
+msgid "Data Contract SHA-256:"
+msgstr ""
+
 msgid "Mapping SHA-256:"
-msgstr ""
-
-msgid "Predecessor Adapter Version ID:"
-msgstr ""
-
-msgid "Provider"
 msgstr ""
 
 msgid "Provider Minimization SHA-256:"
 msgstr ""
 
-msgid "Provider adapters receive only explicitly minimized hashed participant/dependant references and governed plan/effective-date data."
+msgid "Predecessor Adapter Version ID:"
 msgstr ""
 
-msgid "Version Token:"
+msgid "Append Adapter Version"
+msgstr ""
+
+msgid "Provider adapters receive only explicitly minimized hashed participant/dependant references and governed plan/effective-date data."
 msgstr ""
 
 msgid "Benefit Contributions, Arrears and Continuation"
@@ -12072,10 +12078,10 @@ msgstr ""
 msgid "Continuation rejected: "
 msgstr ""
 
-msgid "Append Contribution Version"
+msgid "Plan Version ID:"
 msgstr ""
 
-msgid "Costing Adapter Version ID:"
+msgid "Unit Code:"
 msgstr ""
 
 msgid "Employee Fixed Amount:"
@@ -12084,10 +12090,7 @@ msgstr ""
 msgid "Employer Fixed Amount:"
 msgstr ""
 
-msgid "Plan Version ID:"
-msgstr ""
-
-msgid "Predecessor Contribution Version ID:"
+msgid "Costing Adapter Version ID:"
 msgstr ""
 
 msgid "Rounding Contract SHA-256:"
@@ -12096,34 +12099,34 @@ msgstr ""
 msgid "Source Evidence SHA-256:"
 msgstr ""
 
-msgid "Unit Code:"
+msgid "Predecessor Contribution Version ID:"
 msgstr ""
 
-msgid "Coverage End:"
-msgstr ""
-
-msgid "Coverage Start:"
-msgstr ""
-
-msgid "Derive Contribution Receipt"
-msgstr ""
-
-msgid "Effective Date:"
+msgid "Append Contribution Version"
 msgstr ""
 
 msgid "Enrollment ID:"
 msgstr ""
 
+msgid "Coverage Start:"
+msgstr ""
+
+msgid "Coverage End:"
+msgstr ""
+
+msgid "Effective Date:"
+msgstr ""
+
 msgid "Idempotency Key:"
+msgstr ""
+
+msgid "Derive Contribution Receipt"
 msgstr ""
 
 msgid "Contribution Receipt ID:"
 msgstr ""
 
 msgid "Employer"
-msgstr ""
-
-msgid "Open Governed Arrears"
 msgstr ""
 
 msgid "Portion:"
@@ -12135,16 +12138,13 @@ msgstr ""
 msgid "Source Obligation SHA-256:"
 msgstr ""
 
-msgid "Append Arrears Movement"
+msgid "Open Governed Arrears"
 msgstr ""
 
 msgid "Arrears ID:"
 msgstr ""
 
 msgid "Movement Kind:"
-msgstr ""
-
-msgid "Predecessor Movement ID:"
 msgstr ""
 
 msgid "Recovery"
@@ -12156,22 +12156,28 @@ msgstr ""
 msgid "Source SHA-256:"
 msgstr ""
 
-msgid "All monetary arithmetic is exact fixed-point. Rates, matches and continuation periods are not invented by BEN core."
+msgid "Predecessor Movement ID:"
 msgstr ""
 
-msgid "Append Configured Continuation"
-msgstr ""
-
-msgid "Entitlement Evidence SHA-256:"
+msgid "Append Arrears Movement"
 msgstr ""
 
 msgid "Pack Adapter Version ID:"
 msgstr ""
 
+msgid "Status Change Evidence SHA-256:"
+msgstr ""
+
+msgid "Entitlement Evidence SHA-256:"
+msgstr ""
+
 msgid "Predecessor Continuation ID:"
 msgstr ""
 
-msgid "Status Change Evidence SHA-256:"
+msgid "Append Configured Continuation"
+msgstr ""
+
+msgid "All monetary arithmetic is exact fixed-point. Rates, matches and continuation periods are not invented by BEN core."
 msgstr ""
 
 msgid "Optional Benefits Governance"
@@ -12210,37 +12216,46 @@ msgstr ""
 msgid "Plan Code:"
 msgstr ""
 
-msgid "Append Plan Version"
-msgstr ""
-
-msgid "Contribution Basis Code:"
+msgid "Plan ID:"
 msgstr ""
 
 msgid "Coverage Basis Code:"
 msgstr ""
 
-msgid "Plan ID:"
-msgstr ""
-
-msgid "Predecessor Plan Version ID:"
+msgid "Contribution Basis Code:"
 msgstr ""
 
 msgid "Provider Adapter Version ID:"
 msgstr ""
 
-msgid "Append Eligibility Version"
+msgid "Predecessor Plan Version ID:"
 msgstr ""
 
-msgid "Predecessor Eligibility Version ID:"
-msgstr ""
-
-msgid "Rule Artifact SHA-256:"
+msgid "Append Plan Version"
 msgstr ""
 
 msgid "Scope-match Rule JSON:"
 msgstr ""
 
-msgid "Append Enrollment Window"
+msgid "Rule Artifact SHA-256:"
+msgstr ""
+
+msgid "Predecessor Eligibility Version ID:"
+msgstr ""
+
+msgid "Append Eligibility Version"
+msgstr ""
+
+msgid "Window Code:"
+msgstr ""
+
+msgid "Window Start:"
+msgstr ""
+
+msgid "Window End:"
+msgstr ""
+
+msgid "Qualifying Basis Code:"
 msgstr ""
 
 msgid "Evidence SHA-256:"
@@ -12249,16 +12264,7 @@ msgstr ""
 msgid "Predecessor Window ID:"
 msgstr ""
 
-msgid "Qualifying Basis Code:"
-msgstr ""
-
-msgid "Window Code:"
-msgstr ""
-
-msgid "Window End:"
-msgstr ""
-
-msgid "Window Start:"
+msgid "Append Enrollment Window"
 msgstr ""
 
 msgid "BEN core is provider-neutral and country-neutral. No benefit types, rates, statutory schemes or national eligibility rules are created by this route."
@@ -12267,31 +12273,25 @@ msgstr ""
 msgid "Benefit Life Event Review"
 msgstr ""
 
-msgid "Decision:"
-msgstr ""
-
 msgid "Independent review recorded: "
-msgstr ""
-
-msgid "Life Event Request ID:"
-msgstr ""
-
-msgid "Record Independent Review"
 msgstr ""
 
 msgid "Review rejected: "
 msgstr ""
 
+msgid "Life Event Request ID:"
+msgstr ""
+
+msgid "Decision:"
+msgstr ""
+
+msgid "Record Independent Review"
+msgstr ""
+
 msgid "The reviewer must be distinct from the requester. Approval does not itself execute the life event."
 msgstr ""
 
-msgid "Balance mapping rejected: "
-msgstr ""
-
 msgid "Benefit Payroll and Balance Mapping"
-msgstr ""
-
-msgid "PAY-CORE-006 boundary mapping created: "
 msgstr ""
 
 msgid "Payroll mapping created: "
@@ -12300,7 +12300,10 @@ msgstr ""
 msgid "Payroll mapping rejected: "
 msgstr ""
 
-msgid "Create PAY-CORE-003 Mapping"
+msgid "Balance mapping rejected: "
+msgstr ""
+
+msgid "PAY-CORE-006 boundary mapping created: "
 msgstr ""
 
 msgid "Element Version ID:"
@@ -12312,16 +12315,19 @@ msgstr ""
 msgid "Predecessor Mapping ID:"
 msgstr ""
 
-msgid "BEN never calculates final payroll, posts payroll/GL, executes payments, or calculates statutory tax."
-msgstr ""
-
-msgid "Create PAY-CORE-006 Boundary Mapping"
+msgid "Create PAY-CORE-003 Mapping"
 msgstr ""
 
 msgid "PAY-CORE-006 Balance Definition ID:"
 msgstr ""
 
 msgid "Predecessor Balance Mapping ID:"
+msgstr ""
+
+msgid "Create PAY-CORE-006 Boundary Mapping"
+msgstr ""
+
+msgid "BEN never calculates final payroll, posts payroll/GL, executes payments, or calculates statutory tax."
 msgstr ""
 
 msgid "Benefit Provider Operation and Reconciliation"
@@ -12339,34 +12345,40 @@ msgstr ""
 msgid "Provider reconciliation rejected: "
 msgstr ""
 
-msgid "Acknowledged"
-msgstr ""
-
-msgid "Acknowledgement Ref SHA-256:"
+msgid "Operation Code:"
 msgstr ""
 
 msgid "Attempt Number:"
 msgstr ""
 
-msgid "Exhausted"
+msgid "Acknowledged"
+msgstr ""
+
+msgid "Response Status:"
+msgstr ""
+
+msgid "Response SHA-256:"
+msgstr ""
+
+msgid "Acknowledgement Ref SHA-256:"
 msgstr ""
 
 msgid "Matched"
 msgstr ""
 
-msgid "Mismatch"
-msgstr ""
-
-msgid "Operation Code:"
-msgstr ""
-
-msgid "Quarantined"
-msgstr ""
-
 msgid "Reconciliation State:"
 msgstr ""
 
-msgid "Record Provider Attempt"
+msgid "Mismatch"
+msgstr ""
+
+msgid "Exhausted"
+msgstr ""
+
+msgid "Retry State:"
+msgstr ""
+
+msgid "Retryable"
 msgstr ""
 
 msgid "Recovered"
@@ -12378,16 +12390,13 @@ msgstr ""
 msgid "Required"
 msgstr ""
 
-msgid "Response SHA-256:"
+msgid "Quarantined"
 msgstr ""
 
-msgid "Response Status:"
+msgid "Record Provider Attempt"
 msgstr ""
 
-msgid "Retry State:"
-msgstr ""
-
-msgid "Retryable"
+msgid "Provider Operation ID:"
 msgstr ""
 
 msgid "Expected Operation SHA-256:"
@@ -12399,28 +12408,33 @@ msgstr ""
 msgid "Predecessor Reconciliation ID:"
 msgstr ""
 
-msgid "Provider Operation ID:"
-msgstr ""
-
 msgid "Record Independent Reconciliation"
 msgstr ""
 
 msgid "Unknown provider outcomes never become success automatically. Provider payloads are minimized before hashing/persistence."
 msgstr ""
 
-msgid "Compensation Opening and Cutover Plan"
+msgid "Compensation Go-Live Plan"
 msgstr ""
 
-msgid "Cutover plan recorded: "
+msgid "waiting for approval in the Approval Dashboard"
 msgstr ""
 
-msgid "Cutover plan rejected: "
+msgid "already reviewed"
 msgstr ""
 
-msgid "Opening inventory recorded: "
+#, php-format
+msgid "Opening inventory %d recorded, %s."
 msgstr ""
 
 msgid "Opening inventory rejected: "
+msgstr ""
+
+#, php-format
+msgid "Cutover plan %d recorded, %s."
+msgstr ""
+
+msgid "Cutover plan rejected: "
 msgstr ""
 
 msgid "As-of Date:"
@@ -12441,7 +12455,10 @@ msgstr ""
 msgid "Idempotency Request Key:"
 msgstr ""
 
-msgid "Approved Cutover Plan ID:"
+msgid "A different user approves each opening inventory and cutover plan in the Approval Dashboard. A third user executes the approved plan."
+msgstr ""
+
+msgid "Execute Compensation Go-Live"
 msgstr ""
 
 msgid "Cutover completed: "
@@ -12450,37 +12467,10 @@ msgstr ""
 msgid "Cutover execution rejected: "
 msgstr ""
 
-msgid "Execute Compensation Cutover"
+msgid "Approved Cutover Plan ID:"
 msgstr ""
 
 msgid "Execute Governed Cutover"
-msgstr ""
-
-msgid "Compensation Cutover Review"
-msgstr ""
-
-msgid "Cutover approval recorded: "
-msgstr ""
-
-msgid "Cutover review rejected: "
-msgstr ""
-
-msgid "Opening review recorded: "
-msgstr ""
-
-msgid "Opening review rejected: "
-msgstr ""
-
-msgid "Cutover Plan ID:"
-msgstr ""
-
-msgid "Opening Inventory ID:"
-msgstr ""
-
-msgid "Review Cutover"
-msgstr ""
-
-msgid "Review Opening"
 msgstr ""
 
 msgid "Compensation Governance"
@@ -12504,34 +12494,43 @@ msgstr ""
 msgid "Immutable budget created: "
 msgstr ""
 
-msgid "Collective"
-msgstr ""
-
-msgid "Create Range"
-msgstr ""
-
-msgid "Governed Correction"
-msgstr ""
-
 msgid "Grade ID:"
-msgstr ""
-
-msgid "Legacy Review"
-msgstr ""
-
-msgid "Maximum:"
-msgstr ""
-
-msgid "Midpoint:"
-msgstr ""
-
-msgid "Minimum:"
 msgstr ""
 
 msgid "Range Code:"
 msgstr ""
 
+msgid "Minimum:"
+msgstr ""
+
+msgid "Midpoint:"
+msgstr ""
+
+msgid "Maximum:"
+msgstr ""
+
+msgid "Collective"
+msgstr ""
+
+msgid "Legacy Review"
+msgstr ""
+
+msgid "Governed Correction"
+msgstr ""
+
 msgid "Source Reference:"
+msgstr ""
+
+msgid "Create Range"
+msgstr ""
+
+msgid "Cycle Code:"
+msgstr ""
+
+msgid "Open Date:"
+msgstr ""
+
+msgid "Close Date:"
 msgstr ""
 
 msgid "Award Effective From:"
@@ -12540,40 +12539,28 @@ msgstr ""
 msgid "Award Effective To:"
 msgstr ""
 
-msgid "Close Date:"
-msgstr ""
-
-msgid "Create Review Cycle"
-msgstr ""
-
-msgid "Cycle Code:"
-msgstr ""
-
 msgid "Open"
-msgstr ""
-
-msgid "Open Date:"
 msgstr ""
 
 msgid "Purpose Code:"
 msgstr ""
 
-msgid "Budget Amount:"
-msgstr ""
-
-msgid "CMP-001 stores immutable effective-dated configuration. No statutory rates, currency conversions or country defaults are inferred."
-msgstr ""
-
-msgid "Create Budget Version"
+msgid "Create Review Cycle"
 msgstr ""
 
 msgid "Review Cycle ID:"
 msgstr ""
 
-msgid "Compensation Payroll Mapping"
+msgid "Budget Amount:"
 msgstr ""
 
-msgid "Create Mapping Successor"
+msgid "Create Budget Version"
+msgstr ""
+
+msgid "CMP-001 stores immutable effective-dated configuration. No statutory rates, currency conversions or country defaults are inferred."
+msgstr ""
+
+msgid "Compensation Payroll Mapping"
 msgstr ""
 
 msgid "Immutable payroll mapping created: "
@@ -12588,19 +12575,10 @@ msgstr ""
 msgid "PAY-CORE-003 Input Definition ID:"
 msgstr ""
 
-msgid "Assignment ID:"
+msgid "Create Mapping Successor"
 msgstr ""
 
 msgid "Compensation Reconciliation and Recovery"
-msgstr ""
-
-msgid "Forward Recovery Action Token:"
-msgstr ""
-
-msgid "Match"
-msgstr ""
-
-msgid "Reconciliation ID:"
 msgstr ""
 
 msgid "Reconciliation recorded: "
@@ -12609,16 +12587,28 @@ msgstr ""
 msgid "Reconciliation rejected: "
 msgstr ""
 
-msgid "Record Reconciliation"
-msgstr ""
-
-msgid "Record Recovery Evidence"
-msgstr ""
-
 msgid "Recovery evidence recorded: "
 msgstr ""
 
 msgid "Recovery evidence rejected: "
+msgstr ""
+
+msgid "Assignment ID:"
+msgstr ""
+
+msgid "Match"
+msgstr ""
+
+msgid "Record Reconciliation"
+msgstr ""
+
+msgid "Reconciliation ID:"
+msgstr ""
+
+msgid "Forward Recovery Action Token:"
+msgstr ""
+
+msgid "Record Recovery Evidence"
 msgstr ""
 
 msgid "Deduction Codes"
@@ -12775,6 +12765,9 @@ msgid "Notify Before (days):"
 msgstr ""
 
 msgid "Required by default:"
+msgstr ""
+
+msgid "Employee Record Sync"
 msgstr ""
 
 msgid "Employee maintenance access is also required."
@@ -14474,7 +14467,7 @@ msgstr ""
 msgid "Inactive:"
 msgstr ""
 
-msgid "HRM Migration Validation"
+msgid "HR Data Check"
 msgstr ""
 
 #, php-format
@@ -15335,22 +15328,22 @@ msgstr ""
 msgid " (idempotent replay)"
 msgstr ""
 
-msgid "Confidential case recorded with immutable ID"
-msgstr ""
-
 msgid "Confidential case rejected: "
 msgstr ""
 
-msgid "Access evidence recorded with immutable ID"
+msgid "Confidential case recorded with immutable ID"
 msgstr ""
 
 msgid "Access grant rejected: "
 msgstr ""
 
-msgid "Access revocation evidence recorded with immutable ID"
+msgid "Access evidence recorded with immutable ID"
 msgstr ""
 
 msgid "Access revocation rejected: "
+msgstr ""
+
+msgid "Access revocation evidence recorded with immutable ID"
 msgstr ""
 
 msgid "Confidential case read rejected: "
@@ -15359,22 +15352,19 @@ msgstr ""
 msgid "This surface is restricted to SA_HRSETTINGS and one exact confidential-case object at a time. It stores hash-only title/reference evidence, requires explicit purpose and retention, grants no automatic manager access, provides no case search/list/export, and has no payroll, compensation, accounting or employment-decision authority."
 msgstr ""
 
-msgid "Case reference SHA-256:"
+msgid "Open minimized confidential case"
+msgstr ""
+
+msgid "Subject Employee ID:"
 msgstr ""
 
 msgid "Case type (employee_relations / grievance / investigation / accommodation / ethics / other_restricted):"
 msgstr ""
 
-msgid "Open minimized confidential case"
-msgstr ""
-
-msgid "Opened on (YYYY-MM-DD):"
-msgstr ""
-
 msgid "Purpose (case_management / investigation / employee_relations / legal_hold):"
 msgstr ""
 
-msgid "Record Confidential Case"
+msgid "Opened on (YYYY-MM-DD):"
 msgstr ""
 
 msgid "Retention until (YYYY-MM-DD):"
@@ -15383,31 +15373,28 @@ msgstr ""
 msgid "Sensitivity (restricted / highly_restricted):"
 msgstr ""
 
-msgid "Subject Employee ID:"
-msgstr ""
-
 msgid "Title/reference SHA-256 (raw title is not accepted):"
 msgstr ""
 
-msgid "Confidential Case ID:"
+msgid "Case reference SHA-256:"
+msgstr ""
+
+msgid "Record Confidential Case"
 msgstr ""
 
 msgid "Grant explicit case-object access"
 msgstr ""
 
-msgid "Grant reference SHA-256:"
+msgid "Confidential Case ID:"
 msgstr ""
 
 msgid "Grantee User ID:"
 msgstr ""
 
-msgid "Purpose (must match case):"
-msgstr ""
-
-msgid "Record Explicit Access"
-msgstr ""
-
 msgid "Role (case_owner / case_reviewer / case_reader):"
+msgstr ""
+
+msgid "Purpose (must match case):"
 msgstr ""
 
 msgid "Valid from (YYYY-MM-DD):"
@@ -15416,16 +15403,22 @@ msgstr ""
 msgid "Valid to (optional YYYY-MM-DD):"
 msgstr ""
 
+msgid "Grant reference SHA-256:"
+msgstr ""
+
+msgid "Record Explicit Access"
+msgstr ""
+
 msgid "Append access revocation"
 msgstr ""
 
 msgid "Effective on (YYYY-MM-DD):"
 msgstr ""
 
-msgid "Record Access Revocation"
+msgid "Revocation reference SHA-256:"
 msgstr ""
 
-msgid "Revocation reference SHA-256:"
+msgid "Record Access Revocation"
 msgstr ""
 
 msgid "Exact Confidential Case ID:"
@@ -15443,7 +15436,7 @@ msgstr ""
 msgid "Case Type"
 msgstr ""
 
-msgid "Current Access Role"
+msgid "Subject Employee ID"
 msgstr ""
 
 msgid "Opened On"
@@ -15455,7 +15448,7 @@ msgstr ""
 msgid "Sensitivity"
 msgstr ""
 
-msgid "Subject Employee ID"
+msgid "Current Access Role"
 msgstr ""
 
 msgid "Governed talent export is not enabled for this company version."
@@ -16010,7 +16003,7 @@ msgstr ""
 msgid "Unsupported Typed Attribute route action."
 msgstr ""
 
-msgid "Governed Typed Attribute Values"
+msgid "Employee Custom Fields"
 msgstr ""
 
 msgid "Employee-management authority is also required for governed Typed Attribute values."
@@ -16604,10 +16597,13 @@ msgstr ""
 msgid "Dependant binding rejected: "
 msgstr ""
 
-msgid "Election Evidence SHA-256:"
+msgid "Enrollment Window ID:"
 msgstr ""
 
-msgid "Enrollment Window ID:"
+msgid "Terminate"
+msgstr ""
+
+msgid "Election Evidence SHA-256:"
 msgstr ""
 
 msgid "Predecessor Enrollment ID:"
@@ -16616,16 +16612,22 @@ msgstr ""
 msgid "Record Governed Election"
 msgstr ""
 
-msgid "Terminate"
-msgstr ""
-
 msgid "Authoritative Dependant ID:"
 msgstr ""
 
-msgid "Bind Authoritative Dependant"
+msgid "Granted"
+msgstr ""
+
+msgid "Withdrawn"
 msgstr ""
 
 msgid "Consent Evidence SHA-256:"
+msgstr ""
+
+msgid "Predecessor Consent ID:"
+msgstr ""
+
+msgid "Record Restricted Consent"
 msgstr ""
 
 msgid "Consent ID:"
@@ -16634,25 +16636,16 @@ msgstr ""
 msgid "Coverage Relation Code:"
 msgstr ""
 
-msgid "Granted"
-msgstr ""
-
-msgid "Predecessor Consent ID:"
-msgstr ""
-
 msgid "Privacy Classification:"
-msgstr ""
-
-msgid "Record Restricted Consent"
-msgstr ""
-
-msgid "Relationship Evidence SHA-256:"
 msgstr ""
 
 msgid "Sensitive"
 msgstr ""
 
-msgid "Withdrawn"
+msgid "Relationship Evidence SHA-256:"
+msgstr ""
+
+msgid "Bind Authoritative Dependant"
 msgstr ""
 
 msgid "Eligibility, worker/employment/assignment scope and legal entity are resolved server-side. Dependant identity remains owned by the existing HR authority."
@@ -16664,37 +16657,31 @@ msgstr ""
 msgid "Configured event type version recorded: "
 msgstr ""
 
+msgid "Life-event type rejected: "
+msgstr ""
+
 msgid "Life-event request recorded: "
 msgstr ""
 
 msgid "Life-event request rejected: "
 msgstr ""
 
-msgid "Life-event type rejected: "
-msgstr ""
-
 msgid "Configured Life Event Type Version ID:"
-msgstr ""
-
-msgid "Enrollment After ID:"
 msgstr ""
 
 msgid "Enrollment Before ID:"
 msgstr ""
 
-msgid "Event Evidence SHA-256:"
+msgid "Enrollment After ID:"
 msgstr ""
 
 msgid "Occurrence Date:"
 msgstr ""
 
+msgid "Event Evidence SHA-256:"
+msgstr ""
+
 msgid "Request Life Event"
-msgstr ""
-
-msgid "Append Configured Event Type"
-msgstr ""
-
-msgid "Configuration SHA-256:"
 msgstr ""
 
 msgid "Configured Event Type Code:"
@@ -16703,7 +16690,13 @@ msgstr ""
 msgid "Independent Approval Required:"
 msgstr ""
 
+msgid "Configuration SHA-256:"
+msgstr ""
+
 msgid "Predecessor Event Type Version ID:"
+msgstr ""
+
+msgid "Append Configured Event Type"
 msgstr ""
 
 msgid "BEN does not invent national qualifying-life-event definitions; event types must come from explicit governed configuration."
@@ -16712,22 +16705,16 @@ msgstr ""
 msgid "Execute Reviewed Benefit Life Event"
 msgstr ""
 
-msgid "Execute Reviewed Life Event"
-msgstr ""
-
 msgid "Execution rejected: "
-msgstr ""
-
-msgid "For approval-required events the executor must be distinct from requester and reviewer."
 msgstr ""
 
 msgid "Life event executed under immutable receipt: "
 msgstr ""
 
-msgid "Authoritative PAY-CORE-006 movement receipt recorded: "
+msgid "Execute Reviewed Life Event"
 msgstr ""
 
-msgid "Balance handoff rejected: "
+msgid "For approval-required events the executor must be distinct from requester and reviewer."
 msgstr ""
 
 msgid "Benefit Payroll and Balance Handoff"
@@ -16739,10 +16726,16 @@ msgstr ""
 msgid "Payroll handoff rejected: "
 msgstr ""
 
-msgid "Command Key:"
+msgid "Authoritative PAY-CORE-006 movement receipt recorded: "
+msgstr ""
+
+msgid "Balance handoff rejected: "
 msgstr ""
 
 msgid "Payroll Period ID:"
+msgstr ""
+
+msgid "Command Key:"
 msgstr ""
 
 msgid "Send Governed Approved Input"
@@ -16763,7 +16756,7 @@ msgstr ""
 msgid "The balance boundary records only a verified authoritative PAY-CORE-006 movement; BEN cannot create balance movements here."
 msgstr ""
 
-msgid "Award Kind:"
+msgid "Governed Base Compensation Award"
 msgstr ""
 
 msgid "Award request rejected: "
@@ -16772,7 +16765,10 @@ msgstr ""
 msgid "Award submitted to central approval workflow. Command ID: "
 msgstr ""
 
-msgid "Base Adjustment"
+msgid "New Base Amount:"
+msgstr ""
+
+msgid "Award Kind:"
 msgstr ""
 
 msgid "Base Merit"
@@ -16781,13 +16777,7 @@ msgstr ""
 msgid "Base Promotion"
 msgstr ""
 
-msgid "Final approval only seals the command. A different executor must apply the award; payroll calculation/posting/payment authority is not granted here."
-msgstr ""
-
-msgid "Governed Base Compensation Award"
-msgstr ""
-
-msgid "New Base Amount:"
+msgid "Base Adjustment"
 msgstr ""
 
 msgid "Pay-equity Purpose Code:"
@@ -16796,7 +16786,10 @@ msgstr ""
 msgid "Submit for Approval"
 msgstr ""
 
-msgid "Approved Award Command ID:"
+msgid "Final approval only seals the command. A different executor must apply the award; payroll calculation/posting/payment authority is not granted here."
+msgstr ""
+
+msgid "Execute Approved Compensation Award"
 msgstr ""
 
 msgid "Award executed under immutable receipt: "
@@ -16805,25 +16798,25 @@ msgstr ""
 msgid "Award execution rejected: "
 msgstr ""
 
-msgid "Execute Approved Award"
-msgstr ""
-
-msgid "Execute Approved Compensation Award"
+msgid "Approved Award Command ID:"
 msgstr ""
 
 msgid "Execution Idempotency Key:"
 msgstr ""
 
-msgid "Award Receipt ID:"
+msgid "Execute Approved Award"
 msgstr ""
 
 msgid "Compensation Payroll Handoff"
 msgstr ""
 
-msgid "Handoff Idempotency Key:"
+msgid "PAY-CORE-003 approved input recorded: "
 msgstr ""
 
-msgid "PAY-CORE-003 approved input recorded: "
+msgid "Award Receipt ID:"
+msgstr ""
+
+msgid "Handoff Idempotency Key:"
 msgstr ""
 
 msgid "Send Approved Base Award to PAY-CORE-003"
@@ -17206,13 +17199,13 @@ msgstr ""
 msgid "Calculate EOS Preview"
 msgstr ""
 
-msgid "Complete Separation Acknowledgement Task"
+msgid "Submit Separation for Approval"
 msgstr ""
 
 msgid "Create Separation Acknowledgement Task"
 msgstr ""
 
-msgid "Submit Separation for Approval"
+msgid "Complete Separation Acknowledgement Task"
 msgstr ""
 
 msgid "Link Separation Supporting Document"
@@ -20273,6 +20266,12 @@ msgstr ""
 msgid "Source Ref"
 msgstr ""
 
+msgid "Compensation Opening Review"
+msgstr ""
+
+msgid "Compensation Go-Live Approval"
+msgstr ""
+
 msgid "You do not have permission to recover leave approvals."
 msgstr ""
 
@@ -21232,7 +21231,7 @@ msgstr ""
 msgid "Package '%s' cannot be activated: its tracking posting parity is not accepted (%s)."
 msgstr ""
 
-msgid "Delegation"
+msgid "Skip to main content"
 msgstr ""
 
 msgid "Employee self service"
@@ -21241,7 +21240,7 @@ msgstr ""
 msgid "Home"
 msgstr ""
 
-msgid "Skip to main content"
+msgid "Delegation"
 msgstr ""
 
 msgid "Requested bounded profile changes"
@@ -21368,11 +21367,11 @@ msgid "Regulatory Updates"
 msgstr ""
 
 #, php-format
-msgid "%s  %s  %s  action: %s"
+msgid "Country pack update: %s"
 msgstr ""
 
 #, php-format
-msgid "Country pack update: %s"
+msgid "%s  %s  %s  action: %s"
 msgstr ""
 
 msgid "Purchase Alerts"
@@ -21886,10 +21885,21 @@ msgstr ""
 msgid "Required "
 msgstr ""
 
-msgid "MySQL version"
+msgid "Database server version"
 msgstr ""
 
-msgid "Upgrade MySQL server to version at least 4.1"
+msgid "Upgrade the database server to MariaDB 10.5 or MySQL 8.0 or later"
+msgstr ""
+
+msgid "Company tables store text as utf8mb4"
+msgstr ""
+
+#, php-format
+msgid "%d tables need conversion"
+msgstr ""
+
+#, php-format
+msgid "After a backup, run: php admin/convert_database_charset.php convert --company=%d"
 msgstr ""
 
 msgid "PHP MySQL extension"

@@ -293,6 +293,10 @@ function hrm_cmp_001_inventory_opening($employee_id,$as_of,$currency_code,$pay_b
       $error='opening_input_invalid';
       return false;
     }
+    if(!hrm_cmp_001_workflow_ready(ST_HRM_COMPENSATION_OPENING_REVIEW)){
+      $error='opening_review_workflow_missing';
+      return false;
+    }
     begin_transaction();
     $scope=hrm_cmp_001_resolve_employee_scope($employee_id,$date,true,$error);
     $legacy=$scope?hrm_cmp_001_legacy_base_source($scope,$date,true,$error):false;
@@ -312,45 +316,109 @@ function hrm_cmp_001_inventory_opening($employee_id,$as_of,$currency_code,$pay_b
       .','.db_escape($legacy['source_sha256']).','.db_escape($legacy['amount']).','.db_escape($currency).','.db_escape($basis)
       .','.$legacy['basic_element_id'].','.db_escape($evidence).','.db_escape($sha).','.$actor.')';
     $id=hrm_cmp_001_insert_idempotent('hrm_comp_opening_inventory','opening_inventory_id','inventory_sha256',$sha,$sql,$error);
-    if($id===false){
+    $review=$id===false?false:compensation_go_live_submit(ST_HRM_COMPENSATION_OPENING_REVIEW,'opening_inventory_id',$id,$sha,
+      $payload['employee_id'],$error);
+    if($review===false){
       cancel_transaction();
       return false;
     }
     commit_transaction();
-    return array('opening_inventory_id'=>$id,'inventory_sha256'=>$sha);
+    return array('opening_inventory_id'=>$id,'inventory_sha256'=>$sha,'approval_draft_id'=>$review['approval_draft_id'],
+      'approval_status'=>$review['status']);
 }
-function hrm_cmp_001_review_opening($opening_inventory_id,$decision,$evidence_sha256,&$error=null)
+/**
+ * Evidence digest that binds a go-live decision row to the shared approval draft that decided it.
+ *
+ * @param int $trans_type ST_HRM_COMPENSATION_OPENING_REVIEW or ST_HRM_COMPENSATION_GO_LIVE
+ * @param int $draft_id Shared approval draft id
+ * @param string $subject_sha256 Digest of the decided opening inventory or cutover plan
+ * @return string|false SHA-256 hex digest
+ */
+function compensation_go_live_approval_evidence($trans_type,$draft_id,$subject_sha256)
+{
+    return hrm_cmp_001_hash(array('trans_type'=>(int)$trans_type,'approval_draft_id'=>(int)$draft_id,
+      'subject_sha256'=>(string)$subject_sha256));
+}
+
+/**
+ * Submit one opening inventory or cutover plan to the shared approval workflow, once. A record decided before the
+ * shared workflow took over keeps that decision; an open (pending, delegated or approved) draft is returned as it is;
+ * after a rejected or cancelled draft the record can be submitted again. Runs inside the caller's transaction.
+ *
+ * @param int $trans_type ST_HRM_COMPENSATION_OPENING_REVIEW or ST_HRM_COMPENSATION_GO_LIVE
+ * @param string $key Draft data key of the record: opening_inventory_id or cutover_plan_id
+ * @param int $record_id Opening inventory or cutover plan id
+ * @param string $subject_sha256 Digest of that record
+ * @param string $employee_id Employee the record belongs to, for the approval summary
+ * @param string|null $error Failure token
+ * @return array|false approval_draft_id and status (pending, approved or decided), or false
+ */
+function compensation_go_live_submit($trans_type,$key,$record_id,$subject_sha256,$employee_id,&$error=null)
 {
     $error=null;
+    $opening=(int)$trans_type===(int)ST_HRM_COMPENSATION_OPENING_REVIEW;
+    $decisions=$opening?'hrm_comp_opening_reviews':'hrm_comp_cutover_approvals';
+    $q=db_query('SELECT '.$key.' FROM '.TB_PREF.$decisions.' WHERE '.$key.'='.(int)$record_id.' LIMIT 1 FOR UPDATE');
+    if(!$q){
+      $error='go_live_decision_state_invalid';
+      return false;
+    }
+    if(db_num_rows($q)===1)
+      return array('approval_draft_id'=>0,'status'=>'decided');
+    $q=db_query('SELECT id,status,draft_data FROM '.TB_PREF.'approval_drafts WHERE trans_type='.(int)$trans_type.' AND status IN ('
+      .APPROVAL_STATUS_PENDING.','.APPROVAL_STATUS_APPROVED.','.APPROVAL_STATUS_DELEGATED.') ORDER BY id FOR UPDATE');
+    if(!$q){
+      $error='go_live_draft_state_invalid';
+      return false;
+    }
+    while($draft=db_fetch_assoc($q)){
+      // Draft data is stored HTML-encoded by db_escape(); decode it as the approval engine does.
+      $data=json_decode(html_entity_decode((string)$draft['draft_data'],ENT_QUOTES,'UTF-8'),true);
+      if(is_array($data)&&isset($data[$key])&&(int)$data[$key]===(int)$record_id)
+        return array('approval_draft_id'=>(int)$draft['id'],
+          'status'=>(int)$draft['status']===APPROVAL_STATUS_APPROVED?'approved':'pending');
+    }
+    $data=array($key=>(int)$record_id,($opening?'inventory_sha256':'plan_sha256')=>(string)$subject_sha256,
+      'employee_id'=>(string)$employee_id);
+    $summary=($opening?_('Compensation opening review: '):_('Compensation go-live: ')).$employee_id;
+    $result=get_approval_workflow_service()->submit($trans_type,$data,0,array('summary'=>$summary));
+    if(!is_array($result)||empty($result['draft_id'])||$result['status']!=='pending'){
+      $error=$opening?'opening_review_submission_failed':'go_live_submission_failed';
+      return false;
+    }
+    return array('approval_draft_id'=>(int)$result['draft_id'],'status'=>'pending');
+}
+
+/**
+ * Shared-workflow executor of a compensation opening review. On final approval it records the approved review of the
+ * opening inventory, with the final approver as reviewer; the maker of the inventory can never review it. Runs inside
+ * the approval transaction.
+ *
+ * @param array $draft_data Draft payload: opening_inventory_id and inventory_sha256
+ * @param int $reserved_trans_no Reserved approval number (not used)
+ * @param int $draft_id Shared approval draft id
+ * @return int|false Opening review id, or false to refuse the approval
+ */
+function execute_approved_compensation_opening_review($draft_data,$reserved_trans_no,$draft_id)
+{
     $actor=current_user_id_or_zero();
-    $decision=(string)$decision;
-    $evidence=hrm_cmp_001_sha256($evidence_sha256);
-    if($actor<=0||!current_user_has_access('SA_HRM_REVIEW_COMPENSATION')||!in_array($decision,array('approved','rejected'),
-      true)||$evidence===false){
-      $error='access_or_review_invalid';
+    if($actor<=0||!current_user_has_access('SA_HRM_REVIEW_COMPENSATION')||!is_array($draft_data)
+      ||empty($draft_data['opening_inventory_id'])||!isset($draft_data['inventory_sha256']))
       return false;
-    }
-    begin_transaction();
-    $q=db_query('SELECT * FROM '.TB_PREF.'hrm_comp_opening_inventory WHERE opening_inventory_id='.(int)$opening_inventory_id
-      .' LIMIT 2 FOR UPDATE');
+    $q=db_query('SELECT * FROM '.TB_PREF.'hrm_comp_opening_inventory WHERE opening_inventory_id='
+      .(int)$draft_data['opening_inventory_id'].' LIMIT 2 FOR UPDATE');
     $inv=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
-    if(!$inv||$actor===(int)$inv['inventoried_by']){
-      cancel_transaction();
-      $error='distinct_opening_reviewer_required';
+    if(!$inv||$actor===(int)$inv['inventoried_by']||!hash_equals((string)$inv['inventory_sha256'],
+      (string)$draft_data['inventory_sha256']))
       return false;
-    }
-    $sha=hrm_cmp_001_hash(array('opening_inventory_id'=>(int)$opening_inventory_id,'inventory_sha256'=>$inv['inventory_sha256'],
-      'decision_token'=>$decision,'evidence_sha256'=>$evidence,'reviewed_by'=>$actor));
+    $evidence=compensation_go_live_approval_evidence(ST_HRM_COMPENSATION_OPENING_REVIEW,$draft_id,$inv['inventory_sha256']);
+    $sha=hrm_cmp_001_hash(array('opening_inventory_id'=>(int)$inv['opening_inventory_id'],'inventory_sha256'=>$inv['inventory_sha256'],
+      'decision_token'=>'approved','evidence_sha256'=>$evidence,'reviewed_by'=>$actor));
     $sql='INSERT INTO '.TB_PREF.'hrm_comp_opening_reviews (opening_inventory_id,inventory_sha256,decision_token,evidence_sha256,review_sha256,reviewed_by) VALUES ('
-      .(int)$opening_inventory_id.','.db_escape($inv['inventory_sha256']).','.db_escape($decision).','.db_escape($evidence)
+      .(int)$inv['opening_inventory_id'].','.db_escape($inv['inventory_sha256']).",'approved',".db_escape($evidence)
       .','.db_escape($sha).','.$actor.')';
-    $id=hrm_cmp_001_insert_idempotent('hrm_comp_opening_reviews','opening_review_id','review_sha256',$sha,$sql,$error);
-    if($id===false){
-      cancel_transaction();
-      return false;
-    }
-    commit_transaction();
-    return array('opening_review_id'=>$id,'review_sha256'=>$sha);
+    $error=null;
+    return hrm_cmp_001_insert_idempotent('hrm_comp_opening_reviews','opening_review_id','review_sha256',$sha,$sql,$error);
 }
 function hrm_cmp_001_plan_cutover($opening_review_id,$request_key,&$error=null)
 {
@@ -359,6 +427,10 @@ function hrm_cmp_001_plan_cutover($opening_review_id,$request_key,&$error=null)
     $key=hrm_cmp_001_token($request_key,128);
     if($actor<=0||!current_user_has_access('SA_HRM_MIGRATE_COMPENSATION')||$key===false){
       $error='access_or_request_key_invalid';
+      return false;
+    }
+    if(!hrm_cmp_001_workflow_ready(ST_HRM_COMPENSATION_GO_LIVE)){
+      $error='go_live_workflow_missing';
       return false;
     }
     begin_transaction();
@@ -375,8 +447,14 @@ function hrm_cmp_001_plan_cutover($opening_review_id,$request_key,&$error=null)
         $error='cutover_request_key_replay_mismatch';
         return false;
       }
+      $approval=compensation_go_live_submit(ST_HRM_COMPENSATION_GO_LIVE,'cutover_plan_id',(int)$old['cutover_plan_id'],
+        $old['plan_sha256'],$old['employee_id'],$error);
+      if($approval===false){
+        cancel_transaction();
+        return false;
+      }
       commit_transaction();
-      return $old;
+      return array_merge($old,array('approval_draft_id'=>$approval['approval_draft_id'],'approval_status'=>$approval['status']));
     }
     $q=db_query('SELECT r.opening_review_id,r.review_sha256,r.reviewed_by,i.* FROM '.TB_PREF.'hrm_comp_opening_reviews r INNER JOIN '
       .TB_PREF.'hrm_comp_opening_inventory i ON i.opening_inventory_id=r.opening_inventory_id AND i.inventory_sha256=r.inventory_sha256 WHERE r.opening_review_id='
@@ -403,44 +481,45 @@ function hrm_cmp_001_plan_cutover($opening_review_id,$request_key,&$error=null)
       .','.db_escape($x['as_of_date']).','.db_escape($key).','.db_escape($x['review_sha256']).','.db_escape($sha).','.$actor
       .')';
     $id=hrm_cmp_001_insert_idempotent('hrm_comp_cutover_plans','cutover_plan_id','plan_sha256',$sha,$sql,$error);
-    if($id===false){
+    $approval=$id===false?false:compensation_go_live_submit(ST_HRM_COMPENSATION_GO_LIVE,'cutover_plan_id',$id,$sha,
+      $x['employee_id'],$error);
+    if($approval===false){
       cancel_transaction();
       return false;
     }
     commit_transaction();
-    return array('cutover_plan_id'=>$id,'plan_sha256'=>$sha);
+    return array('cutover_plan_id'=>$id,'plan_sha256'=>$sha,'approval_draft_id'=>$approval['approval_draft_id'],
+      'approval_status'=>$approval['status']);
 }
-function hrm_cmp_001_approve_cutover($cutover_plan_id,$decision,$evidence_sha256,&$error=null)
+/**
+ * Shared-workflow executor of a compensation go-live approval. On final approval it records the approval of the
+ * cutover plan, with the final approver as checker; the plan maker can never approve it. Runs inside the approval
+ * transaction. Executing the cutover stays a separate step for a third user.
+ *
+ * @param array $draft_data Draft payload: cutover_plan_id and plan_sha256
+ * @param int $reserved_trans_no Reserved approval number (not used)
+ * @param int $draft_id Shared approval draft id
+ * @return int|false Cutover approval id, or false to refuse the approval
+ */
+function execute_approved_compensation_go_live($draft_data,$reserved_trans_no,$draft_id)
 {
-    $error=null;
     $actor=current_user_id_or_zero();
-    $decision=(string)$decision;
-    $evidence=hrm_cmp_001_sha256($evidence_sha256);
-    if($actor<=0||!current_user_has_access('SA_HRM_REVIEW_COMPENSATION')||!in_array($decision,array('approved','rejected'),
-      true)||$evidence===false){
-      $error='access_or_approval_invalid';
+    if($actor<=0||!current_user_has_access('SA_HRM_REVIEW_COMPENSATION')||!is_array($draft_data)
+      ||empty($draft_data['cutover_plan_id'])||!isset($draft_data['plan_sha256']))
       return false;
-    }
-    begin_transaction();
-    $q=db_query('SELECT * FROM '.TB_PREF.'hrm_comp_cutover_plans WHERE cutover_plan_id='.(int)$cutover_plan_id.' LIMIT 2 FOR UPDATE');
+    $q=db_query('SELECT * FROM '.TB_PREF.'hrm_comp_cutover_plans WHERE cutover_plan_id='.(int)$draft_data['cutover_plan_id']
+      .' LIMIT 2 FOR UPDATE');
     $p=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
-    if(!$p||$actor===(int)$p['maker_id']){
-      cancel_transaction();
-      $error='distinct_cutover_checker_required';
+    if(!$p||$actor===(int)$p['maker_id']||!hash_equals((string)$p['plan_sha256'],(string)$draft_data['plan_sha256']))
       return false;
-    }
-    $sha=hrm_cmp_001_hash(array('cutover_plan_id'=>(int)$cutover_plan_id,'plan_sha256'=>$p['plan_sha256'],'decision_token'=>$decision,
+    $evidence=compensation_go_live_approval_evidence(ST_HRM_COMPENSATION_GO_LIVE,$draft_id,$p['plan_sha256']);
+    $sha=hrm_cmp_001_hash(array('cutover_plan_id'=>(int)$p['cutover_plan_id'],'plan_sha256'=>$p['plan_sha256'],'decision_token'=>'approved',
       'evidence_sha256'=>$evidence,'checker_id'=>$actor));
     $sql='INSERT INTO '.TB_PREF.'hrm_comp_cutover_approvals (cutover_plan_id,plan_sha256,decision_token,evidence_sha256,approval_sha256,checker_id) VALUES ('
-      .(int)$cutover_plan_id.','.db_escape($p['plan_sha256']).','.db_escape($decision).','.db_escape($evidence).','.db_escape($sha)
+      .(int)$p['cutover_plan_id'].','.db_escape($p['plan_sha256']).",'approved',".db_escape($evidence).','.db_escape($sha)
       .','.$actor.')';
-    $id=hrm_cmp_001_insert_idempotent('hrm_comp_cutover_approvals','cutover_approval_id','approval_sha256',$sha,$sql,$error);
-    if($id===false){
-      cancel_transaction();
-      return false;
-    }
-    commit_transaction();
-    return array('cutover_approval_id'=>$id,'approval_sha256'=>$sha);
+    $error=null;
+    return hrm_cmp_001_insert_idempotent('hrm_comp_cutover_approvals','cutover_approval_id','approval_sha256',$sha,$sql,$error);
 }
 
 /** Three-party activation: maker, checker and executor must all differ. */
@@ -639,11 +718,20 @@ function hrm_cmp_001_budget_spent(array $budget,&$error=null)
     return $spent;
 }
 
-function hrm_cmp_001_workflow_ready(){
-	if(!defined('ST_HRM_COMPENSATION_AWARD')||!class_exists('ApprovalWorkflow')||!ApprovalWorkflow::isRegistered(ST_HRM_COMPENSATION_AWARD))return false;
-	$w=get_approval_workflow_by_type(ST_HRM_COMPENSATION_AWARD);
-	if(!$w||empty($w['active'])||!empty($w['allow_self_approve'])||(int)$w['levels']<=0)return false;
+/**
+ * Whether a compensation approval type has a usable shared workflow: registered, active, no self-approval, and at
+ * least one active level without an automatic-approval threshold.
+ *
+ * @param int|null $trans_type Compensation approval type; the base award when omitted
+ * @return bool True when a submission waits for an independent approver
+ */
+function hrm_cmp_001_workflow_ready($trans_type=null){
+	if($trans_type===null)$trans_type=defined('ST_HRM_COMPENSATION_AWARD')?ST_HRM_COMPENSATION_AWARD:0;
+	if((int)$trans_type<=0||!class_exists('ApprovalWorkflow')||!ApprovalWorkflow::isRegistered($trans_type))return false;
+	$w=get_approval_workflow_by_type($trans_type);
+	if(!$w||empty($w['is_active'])||!empty($w['allow_self_approve']))return false;
 	$levels=get_approval_levels((int)$w['id'],true);
+	if(!$levels)return false;
 	$seen=0;
 	while($level=db_fetch_assoc($levels)){
 		$seen++;

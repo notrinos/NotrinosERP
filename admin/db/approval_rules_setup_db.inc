@@ -58,6 +58,10 @@ function get_approvable_transaction_types()
 		ST_PURCHMATCHEXCEPTION,
 		ST_VENDOR_EVALUATION,
 		ST_LOAN_REQUEST,
+		// Compensation awards and go-live decisions
+		ST_HRM_COMPENSATION_AWARD,
+		ST_HRM_COMPENSATION_OPENING_REVIEW,
+		ST_HRM_COMPENSATION_GO_LIVE,
 	);
 
 	$result = array();

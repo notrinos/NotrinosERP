@@ -171,18 +171,50 @@ function ensure_hrm_approval_transaction_registration()
 		));
 	}
 
+	// Compensation awards and go-live decisions reserve their approval numbers from their own source tables.
 	if (defined('ST_HRM_COMPENSATION_AWARD')) {
-	ApprovalWorkflow::registerTransactionType(ST_HRM_COMPENSATION_AWARD, array(
-		'label'          => _('Governed Base Compensation Award'),
-		'application'    => 'HRM',
-		'executor'       => 'execute_approved_hrm_cmp_001_award',
-		'rejector'       => 'reject_hrm_cmp_001_award_draft',
-		'canceler'       => 'cancel_hrm_cmp_001_award_draft',
-		'amount_getter'  => null,
-		'draft_renderer' => null,
-		'edit_url'       => '',
-	));
-}
+		register_systype_db_info(ST_HRM_COMPENSATION_AWARD, array(
+			TB_PREF . 'hrm_comp_award_commands', null, 'award_command_id', 'award_command_id', 'created_at'
+		));
+		ApprovalWorkflow::registerTransactionType(ST_HRM_COMPENSATION_AWARD, array(
+			'label'          => _('Governed Base Compensation Award'),
+			'application'    => 'HRM',
+			'executor'       => 'execute_approved_hrm_cmp_001_award',
+			'rejector'       => 'reject_hrm_cmp_001_award_draft',
+			'canceler'       => 'cancel_hrm_cmp_001_award_draft',
+			'amount_getter'  => null,
+			'draft_renderer' => null,
+			'edit_url'       => '',
+		));
+	}
+	if (defined('ST_HRM_COMPENSATION_OPENING_REVIEW')) {
+		register_systype_db_info(ST_HRM_COMPENSATION_OPENING_REVIEW, array(
+			TB_PREF . 'hrm_comp_opening_inventory', null, 'opening_inventory_id', 'opening_inventory_id', 'created_at'
+		));
+		ApprovalWorkflow::registerTransactionType(ST_HRM_COMPENSATION_OPENING_REVIEW, array(
+			'label'          => _('Compensation Opening Review'),
+			'application'    => 'HRM',
+			'executor'       => 'execute_approved_compensation_opening_review',
+			'amount_getter'  => null,
+			'draft_renderer' => null,
+			'edit_url'       => '',
+			'independent_approval' => true,
+		));
+	}
+	if (defined('ST_HRM_COMPENSATION_GO_LIVE')) {
+		register_systype_db_info(ST_HRM_COMPENSATION_GO_LIVE, array(
+			TB_PREF . 'hrm_comp_cutover_plans', null, 'cutover_plan_id', 'cutover_plan_id', 'created_at'
+		));
+		ApprovalWorkflow::registerTransactionType(ST_HRM_COMPENSATION_GO_LIVE, array(
+			'label'          => _('Compensation Go-Live Approval'),
+			'application'    => 'HRM',
+			'executor'       => 'execute_approved_compensation_go_live',
+			'amount_getter'  => null,
+			'draft_renderer' => null,
+			'edit_url'       => '',
+			'independent_approval' => true,
+		));
+	}
 
 if (defined('ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT')) {
 		register_systype_db_info(ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT, array(
