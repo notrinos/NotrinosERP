@@ -6,7 +6,7 @@ include($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_cmp_001_governance_db.inc');
-page(_('Execute Compensation Cutover'));
+page(_('Execute Compensation Go-Live'));
 if(isset($_POST['execute_cutover'])){
 	if(!check_csrf_token())display_error(_('Invalid CSRF token.'));
 	else{

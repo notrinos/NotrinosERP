@@ -26,7 +26,7 @@ include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_tracking_compatibility_diagnostics_db.inc');
 
 $help_context = 'HRM Dimension Compatibility';
-page(_('HRM Tracking Compatibility'));
+page(_('Department Tracking Check'));
 
 $report = hrm_dimension_compat_report();
 if (empty($report['authorized'])) {

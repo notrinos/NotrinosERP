@@ -61,20 +61,15 @@ class HrmApp extends application {
 		$this->add_module(_('Inquiries and Reports'));
 		$this->add_lapp_function(1, _('Attendance &Report'),        'hrm/inquiry/attendance_inquiry.php?',                 'SA_ATTINQUIRY',       MENU_INQUIRY);
 		$this->add_lapp_function(1, _('Leave &Balance'),            'hrm/inquiry/leave_balance_inquiry.php?',              'SA_LEAVEINQUIRY',     MENU_INQUIRY);
-		$this->add_lapp_function(1, _('Tracking &Compatibility'), 'hrm/inquiry/tracking_compatibility.php?',               'SA_DEPARTMENT',       MENU_INQUIRY);
+		$this->add_lapp_function(1, _('Department &Tracking Check'), 'hrm/inquiry/tracking_compatibility.php?',               'SA_DEPARTMENT',       MENU_INQUIRY);
 		$this->add_lapp_function(1, _('Pa&yslip History'),         'hrm/inquiry/payslip_inquiry.php?',                    'SA_PAYSLIPINQUIRY',   MENU_INQUIRY);
 		$this->add_lapp_function(1, _('Payroll &Summary'),          'hrm/inquiry/payroll_summary.php?',                    'SA_PAYROLLSUMMARY',   MENU_INQUIRY);
-		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.915', '>='))
-			$this->add_lapp_function(1, _('Governed &Headcount'),       'hrm/inquiry/governed_headcount.php?',                  'SA_HRMREPORTS',       MENU_INQUIRY);
-			$this->add_lapp_function(1, _('Payroll &Operations'),       'hrm/inquiry/payroll_operations.php?',                  'SA_HRMREPORTS',       MENU_INQUIRY);
-		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.919', '>='))
-			$this->add_lapp_function(1, _('Governed Headcount by &Department'),'hrm/inquiry/governed_department_headcount.php?',        'SA_HRMREPORTS',       MENU_INQUIRY);
-		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.923', '>='))
-			$this->add_lapp_function(1, _('Governed Headcount by Employment &Type'),'hrm/inquiry/governed_employment_type_headcount.php?', 'SA_HRMREPORTS',       MENU_INQUIRY);
-		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.927', '>='))
-			$this->add_lapp_function(1, _('Governed Headcount &Matrix'),'hrm/inquiry/governed_department_employment_type_headcount.php?', 'SA_HRMREPORTS',       MENU_INQUIRY);
-		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.936', '>='))
-			$this->add_lapp_function(1, _('Assistive Headcount &Review'), 'hrm/inquiry/pay_ai_assistant.php?', 'SA_HRMREPORTS', MENU_INQUIRY);
+		$this->add_lapp_function(1, _('Governed &Headcount'),       'hrm/inquiry/governed_headcount.php?',                  'SA_HRMREPORTS',       MENU_INQUIRY);
+		$this->add_lapp_function(1, _('Payroll &Operations'),       'hrm/inquiry/payroll_operations.php?',                  'SA_HRMREPORTS',       MENU_INQUIRY);
+		$this->add_lapp_function(1, _('Governed Headcount by &Department'),'hrm/inquiry/governed_department_headcount.php?',        'SA_HRMREPORTS',       MENU_INQUIRY);
+		$this->add_lapp_function(1, _('Governed Headcount by Employment &Type'),'hrm/inquiry/governed_employment_type_headcount.php?', 'SA_HRMREPORTS',       MENU_INQUIRY);
+		$this->add_lapp_function(1, _('Governed Headcount &Matrix'),'hrm/inquiry/governed_department_employment_type_headcount.php?', 'SA_HRMREPORTS',       MENU_INQUIRY);
+		$this->add_lapp_function(1, _('Assistive Headcount &Review'), 'hrm/inquiry/pay_ai_assistant.php?', 'SA_HRMREPORTS', MENU_INQUIRY);
 
 		$this->add_rapp_function(1, _('Employee &Directory'),       'hrm/inquiry/employee_directory.php?',                 'SA_EMPLOYEEREP',      MENU_INQUIRY);
 		$this->add_rapp_function(1, _('Employee &History'),         'hrm/inquiry/employee_history.php?',                   'SA_EMPHISTORY',       MENU_INQUIRY);
@@ -87,12 +82,9 @@ class HrmApp extends application {
 		// ═══════════════════════════════════════════════════════════
 		$this->add_module(_('Maintenance'));
 		$this->add_lapp_function(2, _('Manage &Employees'),         'hrm/manage/employees.php?',                           'SA_EMPLOYEE',         MENU_ENTRY);
-		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.946', '>='))
-			$this->add_lapp_function(2, _('Talent Skills & Certifications'), 'hrm/manage/talent_skills_certifications.php?', 'SA_HRSETTINGS', MENU_MAINTENANCE);
-		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.979', '>='))
-			$this->add_lapp_function(2, _('Confidential HR &Cases'), 'hrm/manage/talent_confidential_cases.php?', 'SA_HRSETTINGS', MENU_MAINTENANCE);
-		if (function_exists('get_company_pref') && version_compare((string)get_company_pref('version_id', true), '1.0.915', '>='))
-			$this->add_lapp_function(2, _('Headcount Analytics &Catalog'),'hrm/manage/analytics_headcount_catalog.php?',          'SA_HRMREPORTS',       MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Talent Skills & Certifications'), 'hrm/manage/talent_skills_certifications.php?', 'SA_HRSETTINGS', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Confidential HR &Cases'), 'hrm/manage/talent_confidential_cases.php?', 'SA_HRSETTINGS', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Headcount Analytics &Catalog'),'hrm/manage/analytics_headcount_catalog.php?',          'SA_HRMREPORTS',       MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('&Departments'),              'hrm/manage/departments.php?',                         'SA_DEPARTMENT',        MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Job &Classification'),       'hrm/manage/job_classes.php?',                         'SA_JOBCLASS',          MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Job &Positions'),            'hrm/manage/job_positions.php?',                       'SA_POSITION',          MENU_MAINTENANCE);
@@ -105,9 +97,9 @@ class HrmApp extends application {
 		$this->add_lapp_function(2, _('Lea&ve Types'),              'hrm/manage/leave_types.php?',                         'SA_LEAVETYPE',         MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Leave P&olicies'),           'hrm/manage/leave_policies.php?',                      'SA_HRM_MANAGE_LEAVE_POLICY',       MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Compensation &Governance'),'hrm/manage/compensation_governance.php?',             'SA_HRM_MANAGE_COMPENSATION', MENU_MAINTENANCE);
-		$this->add_lapp_function(2, _('Compensation C&utover Plan'),'hrm/manage/compensation_cutover.php?',                 'SA_HRM_MIGRATE_COMPENSATION', MENU_MAINTENANCE);
-		$this->add_lapp_function(2, _('Compensation Cutover &Review'),'hrm/manage/compensation_cutover_review.php?',        'SA_HRM_REVIEW_COMPENSATION', MENU_MAINTENANCE);
-		$this->add_lapp_function(2, _('Compensation Cutover E&xecute'),'hrm/manage/compensation_cutover_execute.php?',      'SA_HRM_EXECUTE_COMPENSATION', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Compensation Go-Live &Plan'),'hrm/manage/compensation_cutover.php?',                 'SA_HRM_MIGRATE_COMPENSATION', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Compensation Go-Live &Review'),'hrm/manage/compensation_cutover_review.php?',        'SA_HRM_REVIEW_COMPENSATION', MENU_MAINTENANCE);
+		$this->add_lapp_function(2, _('Compensation Go-Live E&xecute'),'hrm/manage/compensation_cutover_execute.php?',      'SA_HRM_EXECUTE_COMPENSATION', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Compensation Payroll &Mapping'),'hrm/manage/compensation_payroll_mapping.php?',      'SA_HRM_MAP_COMPENSATION_PAYROLL', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Compensation &Recovery'),'hrm/manage/compensation_recovery.php?',                    'SA_HRM_RECOVER_COMPENSATION', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Benefit &Governance'),       'hrm/manage/benefit_governance.php?',                   'SA_HRM_MANAGE_BENEFITS', MENU_MAINTENANCE);
@@ -121,7 +113,7 @@ class HrmApp extends application {
 		$this->add_lapp_function(2, _('R&ecruitment'),              'hrm/manage/recruitment.php?',                         'SA_HRSETTINGS',        MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('&Training'),                 'hrm/manage/training.php?',                            'SA_HRSETTINGS',        MENU_MAINTENANCE);
 
-		$this->add_rapp_function(2, _('Typed Attribute &Values'),     'hrm/manage/typed_attribute_values.php?',                 'SA_HRM_VIEW_TYPED_ATTRIBUTE_VALUE', MENU_MAINTENANCE);
+		$this->add_rapp_function(2, _('Employee Custom &Fields'),     'hrm/manage/typed_attribute_values.php?',                 'SA_HRM_VIEW_TYPED_ATTRIBUTE_VALUE', MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _('&Holiday Calendar'),         'hrm/manage/holidays.php?',                            'SA_HOLIDAY',           MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _('Wor&k Shifts'),              'hrm/manage/work_shifts.php?',                         'SA_WORKSHIFT',         MENU_MAINTENANCE);
 		$this->add_rapp_function(2, _('End of Ser&vice Tiers'),     'hrm/manage/eos_calculation.php?',                     'SA_EOSCALC',           MENU_MAINTENANCE);
@@ -132,11 +124,11 @@ class HrmApp extends application {
 		$this->add_rapp_function(2, _('L&oan Types'),               'hrm/manage/loan_types.php?',                          'SA_LOANTYPE',          MENU_SETTINGS);
 		$this->add_rapp_function(2, _('Import/Export &Employees'),  'hrm/manage/import_employees.php?',                    'SA_IMPORTEMP',         MENU_SETTINGS);
 		$this->add_rapp_function(2, _('Import/Export Atte&ndance'), 'hrm/manage/import_attendance.php?',                   'SA_IMPORTATT',         MENU_SETTINGS);
-		$this->add_rapp_function(2, _('Migration &Validation'),     'hrm/manage/migration_validation.php?',                'SA_HRSETTINGS',        MENU_SETTINGS);
+		$this->add_rapp_function(2, _('HR Data &Check'),     'hrm/manage/migration_validation.php?',                'SA_HRSETTINGS',        MENU_SETTINGS);
 		$this->add_rapp_function(2, _('Appraisa&ls'),               'hrm/manage/appraisals.php?',                          'SA_EMPLOYEE',          MENU_SETTINGS);
 		$this->add_rapp_function(2, _('Asset Allo&cation'),         'hrm/manage/asset_allocation.php?',                    'SA_EMPLOYEE',          MENU_SETTINGS);
 		$this->add_rapp_function(2, _('HR Settin&gs'),              'hrm/manage/hr_settings.php?',                         'SA_HRSETTINGS',        MENU_SETTINGS);
-		$this->add_rapp_function(2, _('Employee Compatibility'), 'hrm/manage/employee_compatibility.php?', 'SA_HRSETTINGS', MENU_SETTINGS);
+		$this->add_rapp_function(2, _('Employee Record &Sync'), 'hrm/manage/employee_compatibility.php?', 'SA_HRSETTINGS', MENU_SETTINGS);
 
 		$this->add_extensions();
 	}

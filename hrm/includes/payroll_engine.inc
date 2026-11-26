@@ -99,16 +99,22 @@ class payroll_formula_engine {
         foreach ($this->variables as $name => $value)
             $expr = preg_replace('/\b'.preg_quote($name, '/').'\b/', (string)((float)$value), $expr);
 
-        return $this->safe_eval($expr);
+        return $this->evaluate_arithmetic($expr);
     }
 
     /**
-     * Safely evaluate numeric expression.
+     * Evaluate a numeric expression without running it as PHP code.
+     *
+     * The expression is read exactly as PHP reads "return (<expression>);", which is how this engine evaluated
+     * formulas before: number literals (including octal), + - * / % ** and the "." operator with PHP 8 precedence,
+     * parentheses, whitespace and comments. Each operator runs as the native PHP operator on the same values, so
+     * results, warnings and errors are unchanged. Anything PHP would reject evaluates to 0.0, including a parser
+     * stack deeper than PHP's limit.
      *
      * @param string $expr
      * @return float
      */
-    private function safe_eval($expr) {
+    private function evaluate_arithmetic($expr) {
         $expr = trim((string)$expr);
         if ($expr === '')
             return 0.0;
@@ -119,7 +125,7 @@ class payroll_formula_engine {
         $result = 0.0;
         set_error_handler(function() { return true; });
         try {
-            $value = eval('return ('.$expr.');');
+            $value = $this->read_arithmetic_statement('('.$expr.');');
             $result = is_numeric($value) ? (float)$value : 0.0;
         } catch (Throwable $e) {
             $result = 0.0;
@@ -130,6 +136,198 @@ class payroll_formula_engine {
             return 0.0;
 
         return $result;
+    }
+
+    /**
+     * Operators by precedence, lowest first, as PHP 8 orders them. "u+" and "u-" are the unary signs.
+     *
+     * @var array operator => array(precedence, right associative)
+     */
+    private static $arithmetic_operators = array(
+        '.' => array(1, false),
+        '+' => array(2, false), '-' => array(2, false),
+        '*' => array(3, false), '/' => array(3, false), '%' => array(3, false),
+        'u+' => array(4, false), 'u-' => array(4, false),
+        '**' => array(5, true),
+    );
+
+    /**
+     * Read and evaluate one "(<expression>);" statement the way PHP's parser does, with explicit stacks.
+     *
+     * The value and operator stacks together hold what PHP's parser stack holds, so the statement fails where
+     * PHP's fails: PHP keeps 3 entries for the code around the expression and fails when it reaches 10,000 entries.
+     *
+     * @param string $statement
+     * @return mixed The value PHP would return
+     * @throws UnexpectedValueException When PHP would not compile or run the statement
+     */
+    private function read_arithmetic_statement($statement) {
+        $tokens = $this->split_arithmetic_tokens($statement);
+        $values = array();
+        $operators = array();
+        $expect_operand = true;
+        $last = count($tokens) - 1;
+        foreach ($tokens as $index => $token) {
+            list($type, $number) = $token;
+            if ($expect_operand) {
+                if ($type === 'number') {
+                    $values[] = $number;
+                    $expect_operand = false;
+                } elseif ($type === '(') {
+                    $operators[] = '(';
+                } elseif ($type === '+' || $type === '-') {
+                    $operators[] = 'u'.$type;
+                } else {
+                    throw new UnexpectedValueException('A number or "(" was expected.');
+                }
+            } elseif ($type === ')' || $type === ';') {
+                while ($operators && end($operators) !== '(')
+                    $this->reduce_arithmetic_operator($values, $operators);
+                if ($type === ';') {
+                    if ($operators || $index !== $last)
+                        throw new UnexpectedValueException('Unbalanced parentheses.');
+                    return $values[0];
+                }
+                if (!$operators)
+                    throw new UnexpectedValueException('Unbalanced parentheses.');
+                $this->check_arithmetic_stack($values, $operators, 1);
+                array_pop($operators);
+            } elseif (isset(self::$arithmetic_operators[$type])) {
+                list($precedence, $right) = self::$arithmetic_operators[$type];
+                while ($operators && end($operators) !== '(') {
+                    $top = self::$arithmetic_operators[end($operators)][0];
+                    if ($top < $precedence || ($top === $precedence && $right))
+                        break;
+                    $this->reduce_arithmetic_operator($values, $operators);
+                }
+                $operators[] = $type;
+                $expect_operand = true;
+            } else {
+                throw new UnexpectedValueException('An operator was expected.');
+            }
+            $this->check_arithmetic_stack($values, $operators, 0);
+        }
+
+        throw new UnexpectedValueException('The statement has no end.');
+    }
+
+    /**
+     * Fail as PHP does when its parser stack would reach 10,000 entries.
+     *
+     * @param array $values
+     * @param array $operators
+     * @param int $pending Entries about to be added
+     * @return void
+     * @throws UnexpectedValueException
+     */
+    private function check_arithmetic_stack(array $values, array $operators, $pending) {
+        if (3 + count($values) + count($operators) + $pending >= 10000)
+            throw new UnexpectedValueException('The formula nests too deeply.');
+    }
+
+    /**
+     * Apply the operator on top of the stack to its operands with the native PHP operator.
+     *
+     * @param array $values
+     * @param array $operators
+     * @return void
+     */
+    private function reduce_arithmetic_operator(array &$values, array &$operators) {
+        $operator = array_pop($operators);
+        $right = array_pop($values);
+        if ($operator === 'u+' || $operator === 'u-') {
+            $values[] = $operator === 'u+' ? +$right : -$right;
+            return;
+        }
+
+        $left = array_pop($values);
+        switch ($operator) {
+            case '.': $values[] = $left . $right; break;
+            case '+': $values[] = $left + $right; break;
+            case '-': $values[] = $left - $right; break;
+            case '*': $values[] = $left * $right; break;
+            case '/': $values[] = $left / $right; break;
+            case '%': $values[] = $left % $right; break;
+            default: $values[] = $left ** $right; break;
+        }
+    }
+
+    /**
+     * Split a statement into PHP tokens, skipping whitespace and comments.
+     *
+     * @param string $statement
+     * @return array array(type, number value or null)
+     * @throws UnexpectedValueException On a character or token PHP would reject in a formula
+     */
+    private function split_arithmetic_tokens($statement) {
+        $tokens = array();
+        $length = strlen($statement);
+        $offset = 0;
+        while ($offset < $length) {
+            $char = $statement[$offset];
+            $next = $offset + 1 < $length ? $statement[$offset + 1] : '';
+
+            if (strpos(" \t\r\n", $char) !== false) {
+                $offset++;
+            } elseif ($char === '/' && $next === '*') {
+                $end = strpos($statement, '*/', $offset + 2);
+                if ($end === false)
+                    throw new UnexpectedValueException('Unterminated comment.');
+                $offset = $end + 2;
+            } elseif ($char === '/' && $next === '/') {
+                $offset += strcspn($statement, "\r\n", $offset);
+            } elseif (ctype_digit($char) || ($char === '.' && ctype_digit($next))) {
+                preg_match('/\G\d*\.\d+|\G\d+\.\d*/', $statement, $decimal, 0, $offset);
+                preg_match('/\G\d+/', $statement, $integer, 0, $offset);
+                $decimal = isset($decimal[0]) ? $decimal[0] : '';
+                $integer = isset($integer[0]) ? $integer[0] : '';
+                if (strlen($decimal) > strlen($integer)) {
+                    $tokens[] = array('number', (float)$decimal);
+                    $offset += strlen($decimal);
+                } else {
+                    $tokens[] = array('number', $this->arithmetic_integer_literal($integer));
+                    $offset += strlen($integer);
+                }
+            } elseif (substr($statement, $offset, 3) === '...' || in_array($char.$next, array('++', '--'), true)) {
+                throw new UnexpectedValueException('Unexpected operator.');
+            } elseif ($char === '*' && $next === '*') {
+                $tokens[] = array('**', null);
+                $offset += 2;
+            } elseif (strpos('+-*/%.();', $char) !== false) {
+                $tokens[] = array($char, null);
+                $offset++;
+            } else {
+                throw new UnexpectedValueException('Unexpected character.');
+            }
+        }
+
+        return $tokens;
+    }
+
+    /**
+     * Return the value of an integer literal as PHP reads it: a leading zero means octal, and a value beyond the
+     * integer range becomes a float.
+     *
+     * @param string $digits
+     * @return int|float
+     * @throws UnexpectedValueException For an octal literal with the digit 8 or 9
+     */
+    private function arithmetic_integer_literal($digits) {
+        if (strlen($digits) > 1 && $digits[0] === '0') {
+            if (strpbrk($digits, '89') !== false)
+                throw new UnexpectedValueException('Invalid numeric literal.');
+            $octal = octdec($digits);
+            if (is_int($octal))
+                return $octal;
+            // Beyond the integer range PHP adds each digit as "value * 8 + c - '0'" in floating point.
+            $octal = 0.0;
+            foreach (str_split(substr($digits, 1)) as $digit)
+                $octal = $octal * 8 + ord($digit) - 48;
+            return $octal;
+        }
+
+        $integer = (int)$digits;
+        return (string)$integer === $digits ? $integer : (float)$digits;
     }
 }
 

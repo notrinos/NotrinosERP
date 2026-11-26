@@ -5,7 +5,7 @@ $path_to_root='../..';
 include($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/hrm_cmp_001_governance_db.inc');
-page(_('Compensation Cutover Review'));
+page(_('Compensation Go-Live Review'));
 $a=isset($_POST['cmp_action'])?(string)$_POST['cmp_action']:'';
 if($a!==''&&!check_csrf_token())display_error(_('Invalid CSRF token.'));
 elseif($a==='opening'){

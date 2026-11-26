@@ -34,7 +34,7 @@ if (get_post('download_profile')) {
 	exit;
 }
 
-page(_($help_context = 'HRM Migration Validation'));
+page(_($help_context = 'HR Data Check'));
 
 $status_counts = $profile['summary']['status_counts'];
 $finding_count = $status_counts['finding'];

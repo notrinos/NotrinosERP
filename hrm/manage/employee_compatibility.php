@@ -5,7 +5,7 @@ $path_to_root = '../..';
 include($path_to_root.'/includes/session.inc');
 include_once($path_to_root.'/includes/ui.inc');
 include_once($path_to_root.'/hrm/includes/db/employee_db.inc');
-page(_('Employee Compatibility'));
+page(_('Employee Record Sync'));
 if (!user_check_access('SA_EMPLOYEE')) {
     display_error(_('Employee maintenance access is also required.'));
     end_page(); exit;

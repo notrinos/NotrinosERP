@@ -56,7 +56,7 @@ if ($method === 'POST') {
     }
 }
 
-page(_($help_context = 'Governed Typed Attribute Values'));
+page(_($help_context = 'Employee Custom Fields'));
 
 if (!function_exists('user_check_access') || !user_check_access('SA_EMPLOYEE')) {
     display_error(_('Employee-management authority is also required for governed Typed Attribute values.'));
