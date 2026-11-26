@@ -30,7 +30,16 @@ start_form(); hidden('_token',ensure_csrf_token()); hidden('anl_action','run'); 
 if (is_array($result)) {
     $labels=array('permanent'=>_('Permanent'),'contract'=>_('Contract'),'probation'=>_('Probation'),'intern'=>_('Intern'),'part_time'=>_('Part-time'),'other'=>_('Other / legacy code'));
     start_table(TABLESTYLE,"width='75%'"); table_header(array(_('Employment Type'),_('Result'),_('Unit'),_('Suppression')));
-    foreach($result['rows'] as $row){start_row();$code=(string)$row['employment_type_code'];label_cell(htmlspecialchars(isset($labels[$code])?$labels[$code]:$code,ENT_QUOTES,'UTF-8'));if(!empty($row['suppressed']))label_cell(_('Suppressed'));else label_cell(htmlspecialchars((string)$row['value'],ENT_QUOTES,'UTF-8'));label_cell(htmlspecialchars((string)$row['unit_code'],ENT_QUOTES,'UTF-8'));label_cell(htmlspecialchars((string)$row['suppression_reason'],ENT_QUOTES,'UTF-8'));end_row();}
+    foreach($result['rows'] as $row){
+      start_row();
+      $code=(string)$row['employment_type_code'];
+      label_cell(htmlspecialchars(isset($labels[$code])?$labels[$code]:$code,ENT_QUOTES,'UTF-8'));
+      if(!empty($row['suppressed']))label_cell(_('Suppressed'));
+      else label_cell(htmlspecialchars((string)$row['value'],ENT_QUOTES,'UTF-8'));
+      label_cell(htmlspecialchars((string)$row['unit_code'],ENT_QUOTES,'UTF-8'));
+      label_cell(htmlspecialchars((string)$row['suppression_reason'],ENT_QUOTES,'UTF-8'));
+      end_row();
+    }
     end_table(1); display_note(_('Evidence recorded under snapshot ID ').(int)$result['snapshot_id']._(' and query audit ID ').(int)$result['query_audit_id']._('. No source-total hash, raw suppressed count, employee identifier, export file or drill-down token is exposed by this screen.'));
 }
 end_page();

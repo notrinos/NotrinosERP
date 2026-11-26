@@ -792,14 +792,20 @@ function pay_ctry_007_enqueue_notice_delivery($recipient_event_id,$channel='in_a
             $ok=true;$result=array('delivery_outbox_id'=>(int)$existing['delivery_outbox_id'],'outbox_sha256'=>(string)$existing['outbox_sha256'],'replayed'=>true);break;
         }
         $queued_at=pay_ctry_007_iso_now($now_epoch);$sql_at=pay_ctry_007_sql_now($now_epoch);
-        $outbox=array('outbox_key'=>$outbox_key,'recipient_event_sha256'=>(string)$recipient['recipient_event_sha256'],'update_notice_sha256'=>(string)$recipient['notice_sha256'],'applicability_sha256'=>(string)$recipient['applicability_sha256'],'recipient_user_id'=>(int)$recipient['recipient_user_id'],'channel'=>$channel,'payload_sha256'=>$payload_sha256,'queued_by'=>$actor_id,'queued_at'=>$queued_at,'outbox_sha256'=>'');
+        $outbox=array('outbox_key'=>$outbox_key,'recipient_event_sha256'=>(string)$recipient['recipient_event_sha256'],'update_notice_sha256'=>(string)$recipient['notice_sha256'],
+          'applicability_sha256'=>(string)$recipient['applicability_sha256'],'recipient_user_id'=>(int)$recipient['recipient_user_id'],
+          'channel'=>$channel,'payload_sha256'=>$payload_sha256,'queued_by'=>$actor_id,'queued_at'=>$queued_at,'outbox_sha256'=>'');
         $outbox['outbox_sha256']=pay_ctry_007_outbox_sha256($outbox);if(!pay_ctry_007_validate_delivery_outbox($outbox,$error))break;
         $sql='INSERT INTO '.TB_PREF.'pay_ctry_update_notice_delivery_outbox (recipient_event_id,update_notice_id,notice_applicability_id,recipient_user_id,outbox_key,channel,payload_sha256,outbox_sha256,queued_by,queued_at,created_at) VALUES ('
             .(int)$recipient_event_id.','.(int)$recipient['update_notice_id'].','.(int)$recipient['notice_applicability_id'].','.(int)$recipient['recipient_user_id'].','
             .db_escape($outbox_key).','.db_escape($channel).','.db_escape($payload_sha256).','.db_escape($outbox['outbox_sha256']).','.$actor_id.','.db_escape($sql_at).','.db_escape($sql_at).')';
         if(!db_query($sql,'could not append PAY-CTRY-007 delivery outbox')){$error='delivery_outbox_insert_failed';break;}
         $outbox_id=pay_ctry_007_insert_id();if($outbox_id<=0){$error='delivery_outbox_identity_missing';break;}
-        if(!pay_ctry_007_audit(array('company_id'=>(int)$recipient['company_id'],'legal_entity_id'=>$recipient['legal_entity_id']===null?0:(int)$recipient['legal_entity_id'],'entity_type'=>'pay_ctry_update_notice_delivery_outbox','entity_key'=>array('delivery_outbox_id'=>$outbox_id),'action'=>'pay.ctry.update.delivery.queued','reason_code'=>'governed_in_app_delivery','before'=>array(),'after'=>array('outbox_sha256'=>$outbox['outbox_sha256'],'channel'=>$channel),'restricted_diff'=>array('employee_fact_payload'=>false,'external_network_delivery'=>false,'automatic_pack_activation'=>false,'historical_payroll_accounting_rows_rewritten'=>0)),$error))break;
+        if(!pay_ctry_007_audit(array('company_id'=>(int)$recipient['company_id'],'legal_entity_id'=>$recipient['legal_entity_id']===null?0:(int)$recipient['legal_entity_id'],
+          'entity_type'=>'pay_ctry_update_notice_delivery_outbox','entity_key'=>array('delivery_outbox_id'=>$outbox_id),'action'=>'pay.ctry.update.delivery.queued',
+          'reason_code'=>'governed_in_app_delivery','before'=>array(),'after'=>array('outbox_sha256'=>$outbox['outbox_sha256'],
+          'channel'=>$channel),'restricted_diff'=>array('employee_fact_payload'=>false,'external_network_delivery'=>false,
+          'automatic_pack_activation'=>false,'historical_payroll_accounting_rows_rewritten'=>0)),$error))break;
         $ok=true;$result=array('delivery_outbox_id'=>$outbox_id,'outbox_sha256'=>$outbox['outbox_sha256'],'replayed'=>false);
     }while(false);
     if($ok)commit_transaction();else cancel_transaction();return $ok?$result:false;
@@ -820,7 +826,22 @@ function pay_ctry_007_append_delivery_attempt_locked(array $outbox,$status,$erro
 {
     $q=db_query('SELECT attempt_no,delivery_status,delivery_attempt_sha256 FROM '.TB_PREF.'pay_ctry_update_notice_delivery_attempts WHERE delivery_outbox_id='.(int)$outbox['delivery_outbox_id'].' ORDER BY attempt_no DESC LIMIT 1 FOR UPDATE');
     if(!$q){$error='delivery_attempt_lookup_failed';return false;}
-    $attempt_no=1;$last=false;if(db_num_rows($q)===1){$last=db_fetch_assoc($q);$attempt_no=(int)$last['attempt_no']+1;if((string)$last['delivery_status']==='delivered'){if($status==='delivered')return array('delivery_attempt_id'=>0,'attempt_no'=>(int)$last['attempt_no'],'delivery_status'=>'delivered','delivery_attempt_sha256'=>(string)$last['delivery_attempt_sha256'],'replayed'=>true);$error='delivery_already_delivered';return false;}if((string)$last['delivery_status']==='dead_lettered'){$error='delivery_dead_letter_terminal';return false;}}
+    $attempt_no=1;
+    $last=false;
+    if(db_num_rows($q)===1){
+      $last=db_fetch_assoc($q);
+      $attempt_no=(int)$last['attempt_no']+1;
+      if((string)$last['delivery_status']==='delivered'){
+        if($status==='delivered')return array('delivery_attempt_id'=>0,'attempt_no'=>(int)$last['attempt_no'],'delivery_status'=>'delivered',
+          'delivery_attempt_sha256'=>(string)$last['delivery_attempt_sha256'],'replayed'=>true);
+        $error='delivery_already_delivered';
+        return false;
+      }
+      if((string)$last['delivery_status']==='dead_lettered'){
+        $error='delivery_dead_letter_terminal';
+        return false;
+      }
+    }
     $provider_code='notrinos.notification_manager';$attempted_at=pay_ctry_007_iso_now($now_epoch);$result_sha256=pay_ctry_007_hash(array('outbox_sha256'=>(string)$outbox['outbox_sha256'],'provider_code'=>$provider_code,'attempt_no'=>$attempt_no,'status'=>$status,'error_code'=>$error_code,'external_network_delivery'=>false));
     $attempt=array('outbox_sha256'=>(string)$outbox['outbox_sha256'],'attempt_no'=>$attempt_no,'provider_code'=>$provider_code,'delivery_status'=>$status,'result_sha256'=>$result_sha256,'error_code'=>$error_code,'attempted_by'=>$actor_id,'attempted_at'=>$attempted_at,'delivery_attempt_sha256'=>'');
     $attempt['delivery_attempt_sha256']=pay_ctry_007_delivery_attempt_sha256($attempt);if(!pay_ctry_007_validate_delivery_attempt($attempt,$error))return false;
@@ -842,7 +863,12 @@ function pay_ctry_007_dispatch_notice_delivery($delivery_outbox_id,$now_epoch=nu
         $recipient=$outbox;if(!pay_ctry_007_delivery_recipient_is_current($recipient)){$error='delivery_recipient_not_current';break;}
         if((string)$outbox['channel']!=='in_app'){$error='delivery_channel_denied';break;}
         $result=pay_ctry_007_append_delivery_attempt_locked($outbox,'delivered',null,$now_epoch,$actor_id,$error);if($result===false)break;
-        if(!$result['replayed']&&!pay_ctry_007_audit(array('company_id'=>(int)$outbox['company_id'],'legal_entity_id'=>$outbox['legal_entity_id']===null?0:(int)$outbox['legal_entity_id'],'entity_type'=>'pay_ctry_update_notice_delivery_attempt','entity_key'=>array('delivery_outbox_id'=>(int)$delivery_outbox_id,'attempt_no'=>(int)$result['attempt_no']),'action'=>'pay.ctry.update.delivery.dispatched','reason_code'=>'in_app_notification_center','before'=>array(),'after'=>array('delivery_attempt_sha256'=>$result['delivery_attempt_sha256'],'delivery_status'=>'delivered'),'restricted_diff'=>array('provider_code'=>'notrinos.notification_manager','external_network_delivery'=>false,'employee_fact_payload'=>false,'automatic_pack_activation'=>false,'historical_payroll_accounting_rows_rewritten'=>0)),$error))break;
+        if(!$result['replayed']&&!pay_ctry_007_audit(array('company_id'=>(int)$outbox['company_id'],'legal_entity_id'=>$outbox['legal_entity_id']===null?0:(int)$outbox['legal_entity_id'],
+          'entity_type'=>'pay_ctry_update_notice_delivery_attempt','entity_key'=>array('delivery_outbox_id'=>(int)$delivery_outbox_id,
+          'attempt_no'=>(int)$result['attempt_no']),'action'=>'pay.ctry.update.delivery.dispatched','reason_code'=>'in_app_notification_center',
+          'before'=>array(),'after'=>array('delivery_attempt_sha256'=>$result['delivery_attempt_sha256'],'delivery_status'=>'delivered'),
+          'restricted_diff'=>array('provider_code'=>'notrinos.notification_manager','external_network_delivery'=>false,'employee_fact_payload'=>false,
+          'automatic_pack_activation'=>false,'historical_payroll_accounting_rows_rewritten'=>0)),$error))break;
         $ok=true;
     }while(false);if($ok)commit_transaction();else cancel_transaction();return $ok?$result:false;
 }
@@ -853,7 +879,33 @@ function pay_ctry_007_record_delivery_failure($delivery_outbox_id,$dead_letter,$
     $error=null;$actor_id=current_user_id_or_zero();$now_epoch=$now_epoch===null?time():(int)$now_epoch;
     if($actor_id<=0||!current_user_has_access(PAY_CTRY_007_DELIVER_PERMISSION)||!pay_ctry_007_reason($error_code)){$error='delivery_failure_unauthorized_or_invalid';return false;}
     if(!pay_ctry_007_delivery_tables_ready()){$error='delivery_schema_not_ready';return false;}if(!empty($GLOBALS['transaction_level'])){$error='delivery_failure_requires_owned_transaction';return false;}
-    begin_transaction();$ok=false;$result=false;do{$outbox=pay_ctry_007_delivery_outbox_for_update($delivery_outbox_id);if(!is_array($outbox)){$error='delivery_outbox_scope_denied';break;}if(!pay_ctry_007_delivery_recipient_is_current($outbox)){$error='delivery_recipient_not_current';break;}$status=$dead_letter?'dead_lettered':'retryable_failure';$result=pay_ctry_007_append_delivery_attempt_locked($outbox,$status,$error_code,$now_epoch,$actor_id,$error);if($result===false)break;if(!pay_ctry_007_audit(array('company_id'=>(int)$outbox['company_id'],'legal_entity_id'=>$outbox['legal_entity_id']===null?0:(int)$outbox['legal_entity_id'],'entity_type'=>'pay_ctry_update_notice_delivery_attempt','entity_key'=>array('delivery_outbox_id'=>(int)$delivery_outbox_id,'attempt_no'=>(int)$result['attempt_no']),'action'=>'pay.ctry.update.delivery.'.$status,'reason_code'=>$error_code,'before'=>array(),'after'=>array('delivery_attempt_sha256'=>$result['delivery_attempt_sha256'],'delivery_status'=>$status),'restricted_diff'=>array('external_network_delivery'=>false,'employee_fact_payload'=>false,'automatic_pack_activation'=>false)),$error))break;$ok=true;}while(false);if($ok)commit_transaction();else cancel_transaction();return $ok?$result:false;
+    begin_transaction();
+    $ok=false;
+    $result=false;
+    do{
+      $outbox=pay_ctry_007_delivery_outbox_for_update($delivery_outbox_id);
+      if(!is_array($outbox)){
+        $error='delivery_outbox_scope_denied';
+        break;
+      }
+      if(!pay_ctry_007_delivery_recipient_is_current($outbox)){
+        $error='delivery_recipient_not_current';
+        break;
+      }
+      $status=$dead_letter?'dead_lettered':'retryable_failure';
+      $result=pay_ctry_007_append_delivery_attempt_locked($outbox,$status,$error_code,$now_epoch,$actor_id,$error);
+      if($result===false)break;
+      if(!pay_ctry_007_audit(array('company_id'=>(int)$outbox['company_id'],'legal_entity_id'=>$outbox['legal_entity_id']===null?0:(int)$outbox['legal_entity_id'],
+        'entity_type'=>'pay_ctry_update_notice_delivery_attempt','entity_key'=>array('delivery_outbox_id'=>(int)$delivery_outbox_id,
+        'attempt_no'=>(int)$result['attempt_no']),'action'=>'pay.ctry.update.delivery.'.$status,'reason_code'=>$error_code,
+        'before'=>array(),'after'=>array('delivery_attempt_sha256'=>$result['delivery_attempt_sha256'],'delivery_status'=>$status),
+        'restricted_diff'=>array('external_network_delivery'=>false,'employee_fact_payload'=>false,'automatic_pack_activation'=>false)),
+        $error))break;
+      $ok=true;
+    }while(false);
+    if($ok)commit_transaction();
+    else cancel_transaction();
+    return $ok?$result:false;
 }
 
 /** Read only delivered, current, unacknowledged notices for the current user's own company scope. */

@@ -59,7 +59,10 @@ function hrm_pay_core_006_definition(array $d,&$error=null)
     $from=hrm_pay_core_006_date((string)($d['effective_from']??''));
     $to=array_key_exists('effective_to',$d)&&$d['effective_to']!==null?hrm_pay_core_006_date((string)$d['effective_to']):null;
     if(!$from||($to!==null&&!$to)||($to!==null&&$to<$from)||($expiry_date!==null&&$expiry_date<$from)){$error='effective_dates_invalid';return false;}
-    $out=array('balance_code'=>$code,'version_no'=>$version,'unit_code'=>$unit,'currency_code'=>$currency,'dimensions'=>$dims,'accumulators'=>$acc,'reset_policy'=>$reset,'reset_month'=>$reset_month,'reset_day'=>$reset_day,'expiry_policy'=>$expiry,'expiry_date'=>$expiry_date,'expiry_days'=>$expiry_days,'carry_forward_allowed'=>!empty($d['carry_forward_allowed']),'effective_from'=>$from,'effective_to'=>$to);
+    $out=array('balance_code'=>$code,'version_no'=>$version,'unit_code'=>$unit,'currency_code'=>$currency,'dimensions'=>$dims,
+      'accumulators'=>$acc,'reset_policy'=>$reset,'reset_month'=>$reset_month,'reset_day'=>$reset_day,'expiry_policy'=>$expiry,
+      'expiry_date'=>$expiry_date,'expiry_days'=>$expiry_days,'carry_forward_allowed'=>!empty($d['carry_forward_allowed']),
+      'effective_from'=>$from,'effective_to'=>$to);
     $out['definition_sha256']=hrm_pay_core_006_hash($out);return $out;
 }
 
@@ -102,7 +105,25 @@ function hrm_pay_core_006_replay(array $movements,$as_of,array $period,&$error=n
 {
     $error=null;$as=hrm_pay_core_006_date($as_of);$bounds=hrm_pay_core_006_period_boundaries($as,$period,$be);if(!$as||$bounds===false){$error=$be?:'as_of_invalid';return false;}
     $normalized=array();$seen=array();$events=array();
-    foreach($movements as $m){$n=hrm_pay_core_006_movement($m,$me);if($n===false){$error=$me;return false;}if(isset($seen[$n['movement_sha256']])){$error='duplicate_movement';return false;}$event_key=$n['definition_sha256'].'|'.$n['scope']['payroll_relationship_id'].'|'.$n['source_system'].'|'.$n['source_event_key'];if(isset($events[$event_key])&&!hash_equals($events[$event_key],$n['movement_sha256'])){$error='duplicate_source_event_conflict';return false;}$events[$event_key]=$n['movement_sha256'];$seen[$n['movement_sha256']]=true;$normalized[]=$n;}
+    foreach($movements as $m){
+      $n=hrm_pay_core_006_movement($m,$me);
+      if($n===false){
+        $error=$me;
+        return false;
+      }
+      if(isset($seen[$n['movement_sha256']])){
+        $error='duplicate_movement';
+        return false;
+      }
+      $event_key=$n['definition_sha256'].'|'.$n['scope']['payroll_relationship_id'].'|'.$n['source_system'].'|'.$n['source_event_key'];
+      if(isset($events[$event_key])&&!hash_equals($events[$event_key],$n['movement_sha256'])){
+        $error='duplicate_source_event_conflict';
+        return false;
+      }
+      $events[$event_key]=$n['movement_sha256'];
+      $seen[$n['movement_sha256']]=true;
+      $normalized[]=$n;
+    }
     usort($normalized,function($a,$b){foreach(array('effective_date','recognition_date','source_system','source_type','source_event_key','movement_sha256') as $k){$c=strcmp((string)$a[$k],(string)$b[$k]);if($c!==0)return $c;}return 0;});
     $tot=array('ptd'=>'0','mtd'=>'0','qtd'=>'0','ytd'=>'0','lifetime'=>'0');$included=array();
     foreach($normalized as $n){if($n['recognition_date']>$as)continue;$included[]=$n['movement_sha256'];$tot['lifetime']=hrm_pay_core_006_add($tot['lifetime'],$n['amount']);foreach(array('ptd','mtd','qtd','ytd') as $k)if($n['effective_date']>=$bounds[$k][0]&&$n['effective_date']<=$bounds[$k][1])$tot[$k]=hrm_pay_core_006_add($tot[$k],$n['amount']);}
@@ -123,7 +144,10 @@ function hrm_pay_core_006_opening_from_inventory(array $inventory,&$error=null)
     if(!is_sha256_hex($inventory['source_sha256']??'')){$error='opening_source_sha_invalid';return false;}
     $inventory_sha=$inventory['inventory_sha256']??null;if($inventory_sha!==null&&!is_sha256_hex($inventory_sha)){$error='opening_inventory_sha_invalid';return false;}
     $scope=$inventory['scope']??array();$as=(string)($inventory['as_of_date']??'');$identity=$inventory_sha?:hrm_pay_core_006_hash(array($inventory['source_type']??'aggregate',$inventory['source_sha256'],$scope,$as,$inventory['amount']??'0'));
-    $m=array('definition_sha256'=>$inventory['definition_sha256']??'','scope'=>$scope,'source_system'=>'legacy','source_type'=>(string)($inventory['source_type']??'aggregate'),'source_event_key'=>'opening:'.substr($identity,0,48),'source_event_sha256'=>$inventory['source_sha256'],'movement_kind'=>'opening','effective_date'=>$as,'recognition_date'=>$as,'currency_code'=>$inventory['currency_code']??null,'unit_code'=>$inventory['unit_code']??'units','amount'=>$inventory['amount']??'0','predecessor_movement_sha256'=>null);
+    $m=array('definition_sha256'=>$inventory['definition_sha256']??'','scope'=>$scope,'source_system'=>'legacy','source_type'=>(string)($inventory['source_type']??'aggregate'),
+      'source_event_key'=>'opening:'.substr($identity,0,48),'source_event_sha256'=>$inventory['source_sha256'],'movement_kind'=>'opening',
+      'effective_date'=>$as,'recognition_date'=>$as,'currency_code'=>$inventory['currency_code']??null,'unit_code'=>$inventory['unit_code']??'units',
+      'amount'=>$inventory['amount']??'0','predecessor_movement_sha256'=>null);
     return hrm_pay_core_006_movement($m,$error);
 }
 
@@ -152,6 +176,9 @@ function hrm_pay_core_006_boundary_movement(array $definition,array $scope,$kind
 {
     $error=null;$d=hrm_pay_core_006_definition($definition,$de);if($d===false){$error=$de;return false;}if(!hrm_pay_core_006_boundary_due($definition,$kind,$boundary_date,$context,$be)){$error=$be;return false;}
     try{$amount=hrm_pay_core_006_negate($current_balance);}catch(Throwable $e){$error='boundary_amount_invalid';return false;}
-    return hrm_pay_core_006_movement(array('definition_sha256'=>$d['definition_sha256'],'scope'=>$scope,'source_system'=>'pay_core_006','source_type'=>$kind.'_boundary','source_event_key'=>$source_event_key,'source_event_sha256'=>$source_event_sha256,'movement_kind'=>$kind,'effective_date'=>$boundary_date,'recognition_date'=>$boundary_date,'currency_code'=>$d['currency_code'],'unit_code'=>$d['unit_code'],'amount'=>$amount,'predecessor_movement_sha256'=>null),$error);
+    return hrm_pay_core_006_movement(array('definition_sha256'=>$d['definition_sha256'],'scope'=>$scope,'source_system'=>'pay_core_006',
+      'source_type'=>$kind.'_boundary','source_event_key'=>$source_event_key,'source_event_sha256'=>$source_event_sha256,
+      'movement_kind'=>$kind,'effective_date'=>$boundary_date,'recognition_date'=>$boundary_date,'currency_code'=>$d['currency_code'],
+      'unit_code'=>$d['unit_code'],'amount'=>$amount,'predecessor_movement_sha256'=>null),$error);
 }
 ?>

@@ -63,13 +63,44 @@ if($ess_review_raw_method==='POST'){
 }
 
 page(_($help_context='Review Profile Changes'));echo '<main class="center" style="max-width:900px;margin:0 auto;text-align:left" aria-labelledby="ess-review-title">';
-if(!$authorized){display_error(_('Independent checker authority is required.'));echo '</main>';end_page();exit;}if(!$ready){display_error(_('Software Upgrade must be completed before this checker route is available.'));echo '</main>';end_page();exit;}if(!$secure){display_error(_('This checker route requires HTTPS.'));echo '</main>';end_page();exit;}if(!hrm_ess_self_change_route_supported_auth_method()){display_error(_('This session must use local-password or approved federated OIDC authentication.'));echo '</main>';end_page();exit;}
+if(!$authorized){
+	display_error(_('Independent checker authority is required.'));
+	echo '</main>';
+	end_page();
+	exit;
+}
+if(!$ready){
+	display_error(_('Software Upgrade must be completed before this checker route is available.'));
+	echo '</main>';
+	end_page();
+	exit;
+}
+if(!$secure){
+	display_error(_('This checker route requires HTTPS.'));
+	echo '</main>';
+	end_page();
+	exit;
+}
+if(!hrm_ess_self_change_route_supported_auth_method()){
+	display_error(_('This session must use local-password or approved federated OIDC authentication.'));
+	echo '</main>';
+	end_page();
+	exit;
+}
 if($message!=='')display_error($message);if($ok_message!=='')display_notification($ok_message);if(($_GET['step_up']??'')==='failed')display_error(_('Independent reauthentication failed or was cancelled. No review action was applied.'));if(($_GET['step_up']??'')==='retry')display_warning(_('Independent reauthentication must be restarted. No review action was applied.'));
 echo '<h2 id="ess-review-title">'._('Review Profile Changes').'</h2><p>'._('This route is checker-only. It may inspect only the bounded encrypted contact/private request after server-side object authorization. Approval never changes profile state. Bank, tax, identifier, compensation, payroll and accounting authority are excluded.').'</p>';
 $assured=hrm_ess_self_change_route_assured(null,$now);$selected=is_array($assured)&&in_array($assured['operation'],array('approve','reject'),true)?(int)$assured['request_id']:ess_review_id($_GET['request_id']??'');
 $candidates=hrm_ess_self_change_review_candidates('checker',50);if($candidates===false)display_error(_('Review candidates could not be resolved safely.'));else{
     echo '<section aria-labelledby="ess-review-queue"><h3 id="ess-review-queue">'._('Pending review queue').'</h3>';
-    if(!$candidates)echo '<p>'._('No eligible bounded self-profile requests require checker review.').'</p>';else{echo '<ul>';foreach($candidates as $c)echo '<li><a href="?request_id='.(int)$c['request_id'].'">'.sprintf(_('Request #%d — %s'),(int)$c['request_id'],htmlspecialchars((string)$c['request_status'],ENT_QUOTES,'UTF-8')).'</a> — '.htmlspecialchars(implode(', ',$c['field_names']),ENT_QUOTES,'UTF-8').'</li>';echo '</ul>';}echo '</section>';
+    if(!$candidates)echo '<p>'._('No eligible bounded self-profile requests require checker review.').'</p>';
+    else{
+      echo '<ul>';
+      foreach($candidates as $c)echo '<li><a href="?request_id='.(int)$c['request_id'].'">'.sprintf(_('Request #%d — %s'),
+        (int)$c['request_id'],htmlspecialchars((string)$c['request_status'],ENT_QUOTES,'UTF-8')).'</a> — '.htmlspecialchars(implode(', ',
+        $c['field_names']),ENT_QUOTES,'UTF-8').'</li>';
+      echo '</ul>';
+    }
+    echo '</section>';
 }
 if($selected!==false&&$selected>0){$detail=hrm_ess_self_change_review_detail('checker',$selected);if(!is_array($detail))display_error(_('The selected request is not available to this checker.'));else{
     echo '<section aria-labelledby="ess-review-detail"><h3 id="ess-review-detail">'.sprintf(_('Review request #%d'),(int)$detail['request_id']).'</h3>';hrm_ess_self_change_review_render_values($detail);

@@ -36,7 +36,14 @@ function pay_ctry_001_trust_form_close($label){password_row(_('Current password 
 echo '<p>'._('Trust administration is independent from country-pack installation. Store public keys only; private signing keys must never be imported into ERP.').'</p>';
 pay_ctry_001_trust_form_open('publisher');text_row_ex(_('Publisher code:'),'publisher_code',40,64);text_row_ex(_('Display name:'),'display_name',60,160);text_row_ex(_('Valid from (UTC, ISO-8601):'),'valid_from',24,32);text_row_ex(_('Valid to (optional UTC):'),'valid_to',24,32);pay_ctry_001_trust_form_close(_('Create publisher'));
 pay_ctry_001_trust_form_open('signer');text_row_ex(_('Publisher ID:'),'publisher_id',12,20);text_row_ex(_('Signer code:'),'signer_code',40,64);text_row_ex(_('Display name:'),'display_name',60,160);pay_ctry_001_trust_form_close(_('Create signer'));
-pay_ctry_001_trust_form_open('key');text_row_ex(_('Signer ID:'),'signer_id',12,20);text_row_ex(_('Key ID:'),'key_id',60,96);textarea_row(_('RSA public key PEM:'),'public_key_pem',null,80,12);text_row_ex(_('Valid from (UTC, ISO-8601):'),'valid_from',24,32);text_row_ex(_('Valid to (optional UTC):'),'valid_to',24,32);text_row_ex(_('Predecessor trust-key ID (optional rotation):'),'predecessor_key_id',12,20);pay_ctry_001_trust_form_close(_('Import trusted public key'));
+pay_ctry_001_trust_form_open('key');
+text_row_ex(_('Signer ID:'),'signer_id',12,20);
+text_row_ex(_('Key ID:'),'key_id',60,96);
+textarea_row(_('RSA public key PEM:'),'public_key_pem',null,80,12);
+text_row_ex(_('Valid from (UTC, ISO-8601):'),'valid_from',24,32);
+text_row_ex(_('Valid to (optional UTC):'),'valid_to',24,32);
+text_row_ex(_('Predecessor trust-key ID (optional rotation):'),'predecessor_key_id',12,20);
+pay_ctry_001_trust_form_close(_('Import trusted public key'));
 pay_ctry_001_trust_form_open('revoke_key');text_row_ex(_('Trust-key ID:'),'trust_key_id',12,20);text_row_ex(_('Reason code:'),'reason_code',32,48);text_row_ex(_('Reason evidence:'),'reason_text',70,1024);check_row(_('Key compromised:'),'compromised',null);pay_ctry_001_trust_form_close(_('Revoke trust key'));
 pay_ctry_001_trust_form_open('revoke_publisher');text_row_ex(_('Publisher ID:'),'publisher_id',12,20);text_row_ex(_('Reason code:'),'reason_code',32,48);text_row_ex(_('Reason evidence:'),'reason_text',70,1024);pay_ctry_001_trust_form_close(_('Revoke publisher'));
 end_page();

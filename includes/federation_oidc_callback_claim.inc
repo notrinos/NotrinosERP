@@ -225,7 +225,11 @@ function federation_oidc_terminalize_callback_claim($company, $claim_token, $ter
     if(!db_query('BEGIN','could not start PAY-SEC-004 OIDC callback-claim terminal transaction'))return false;
     $committed=false;
     do {
-        $sql="SELECT cc.callback_claim_id,cc.verifier_transaction_id,cc.claim_token_hash,cc.claim_status,cc.claim_expires_at,cc.terminal_at,cc.terminal_reason,t.verifier_config_id,t.transaction_key_hash,t.nonce_hash,t.proof_ref_hash,c.provider_id,c.config_version,p.provider_row_version FROM ".TB_PREF."user_federation_oidc_callback_claims cc INNER JOIN ".TB_PREF."user_federation_verifier_transactions t ON t.verifier_transaction_id=cc.verifier_transaction_id INNER JOIN ".TB_PREF."user_federation_provider_verifier_configs c ON c.verifier_config_id=t.verifier_config_id INNER JOIN ".TB_PREF."user_federation_providers p ON p.provider_id=c.provider_id WHERE cc.claim_token_hash=".db_escape($claim_hash)." LIMIT 2 FOR UPDATE";
+        $sql="SELECT cc.callback_claim_id,cc.verifier_transaction_id,cc.claim_token_hash,cc.claim_status,cc.claim_expires_at,cc.terminal_at,cc.terminal_reason,t.verifier_config_id,t.transaction_key_hash,t.nonce_hash,t.proof_ref_hash,c.provider_id,c.config_version,p.provider_row_version FROM "
+          .TB_PREF."user_federation_oidc_callback_claims cc INNER JOIN ".TB_PREF."user_federation_verifier_transactions t ON t.verifier_transaction_id=cc.verifier_transaction_id INNER JOIN "
+          .TB_PREF."user_federation_provider_verifier_configs c ON c.verifier_config_id=t.verifier_config_id INNER JOIN "
+          .TB_PREF."user_federation_providers p ON p.provider_id=c.provider_id WHERE cc.claim_token_hash=".db_escape($claim_hash)
+          ." LIMIT 2 FOR UPDATE";
         $r=db_query($sql,'could not lock PAY-SEC-004 OIDC callback claim for terminalization');if(!$r)break;
         $row=db_fetch_assoc($r);if(!$row||db_fetch_assoc($r)!==false)break;
         $now=time();$claim_expires=strtotime((string)$row['claim_expires_at'].' UTC');

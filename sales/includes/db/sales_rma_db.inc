@@ -430,7 +430,7 @@ function get_rma_lines($rma_id)
 	$sql = "SELECT l.*, m.description AS item_name, m.units AS unit
 		FROM " . TB_PREF . "sales_rma_lines l
 		LEFT JOIN " . TB_PREF . "stock_master m
-			ON m.stock_id COLLATE utf8_general_ci = l.stock_id COLLATE utf8_general_ci
+			ON CONVERT(m.stock_id USING utf8mb4) COLLATE utf8mb4_general_ci = CONVERT(l.stock_id USING utf8mb4) COLLATE utf8mb4_general_ci
 		WHERE l.rma_id = " . (int)$rma_id . "
 		ORDER BY l.id";
 	return db_query($sql, 'Could not get RMA lines');
@@ -1072,7 +1072,7 @@ function get_invoice_items_for_rma($trans_no)
 		m.description AS item_name
 		FROM " . TB_PREF . "debtor_trans_details d
 		LEFT JOIN " . TB_PREF . "stock_master m
-			ON m.stock_id COLLATE utf8_general_ci = d.stock_id COLLATE utf8_general_ci
+			ON CONVERT(m.stock_id USING utf8mb4) COLLATE utf8mb4_general_ci = CONVERT(d.stock_id USING utf8mb4) COLLATE utf8mb4_general_ci
 		WHERE d.debtor_trans_type = " . ST_SALESINVOICE . "
 		AND d.debtor_trans_no = " . (int)$trans_no . "
 		AND d.quantity > 0
@@ -1092,7 +1092,7 @@ function get_delivery_items_for_rma($trans_no)
 		m.description AS item_name
 		FROM " . TB_PREF . "debtor_trans_details d
 		LEFT JOIN " . TB_PREF . "stock_master m
-			ON m.stock_id COLLATE utf8_general_ci = d.stock_id COLLATE utf8_general_ci
+			ON CONVERT(m.stock_id USING utf8mb4) COLLATE utf8mb4_general_ci = CONVERT(d.stock_id USING utf8mb4) COLLATE utf8mb4_general_ci
 		WHERE d.debtor_trans_type = " . ST_CUSTDELIVERY . "
 		AND d.debtor_trans_no = " . (int)$trans_no . "
 		AND d.quantity > 0

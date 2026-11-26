@@ -18,7 +18,10 @@ function hrm_pay_rule_005_applicability_state_hash($rows)
 
 function hrm_pay_rule_005_existing_resolution($employment_id,$assignment_id,$idem_hash,$request_hash)
 {
-    $r=db_query('SELECT r.resolution_id,r.request_sha256,d.outcome_token,d.selected_summary_sha256,d.resolution_sha256,d.explanation_token FROM '.TB_PREF.'hrm_pay_rule_resolution_requests r INNER JOIN '.TB_PREF.'hrm_pay_rule_resolution_decisions d ON d.resolution_id=r.resolution_id WHERE r.employment_id='.(int)$employment_id.' AND r.assignment_id='.(int)$assignment_id.' AND r.idempotency_key_hash='.db_escape($idem_hash).' LIMIT 2 FOR UPDATE','could not read PAY-RULE-005 exact replay');
+    $r=db_query('SELECT r.resolution_id,r.request_sha256,d.outcome_token,d.selected_summary_sha256,d.resolution_sha256,d.explanation_token FROM '
+      .TB_PREF.'hrm_pay_rule_resolution_requests r INNER JOIN '.TB_PREF.'hrm_pay_rule_resolution_decisions d ON d.resolution_id=r.resolution_id WHERE r.employment_id='
+      .(int)$employment_id.' AND r.assignment_id='.(int)$assignment_id.' AND r.idempotency_key_hash='.db_escape($idem_hash)
+      .' LIMIT 2 FOR UPDATE','could not read PAY-RULE-005 exact replay');
     if(!$r||db_num_rows($r)===0)return null;if(db_num_rows($r)!==1)return false;$x=db_fetch_assoc($r);if((string)$x['request_sha256']!==$request_hash)return false;
     return array('resolution_id'=>(int)$x['resolution_id'],'outcome'=>(string)$x['outcome_token'],'selected_summary_sha256'=>(string)$x['selected_summary_sha256'],'resolution_sha256'=>(string)$x['resolution_sha256'],'explanation_token'=>(string)$x['explanation_token'],'exact_replay'=>true);
 }
@@ -29,13 +32,27 @@ function hrm_pay_rule_005_record_resolution($scope,$fact_set,$request_hash,$idem
         .$scope['employment_id'].','.$scope['assignment_id'].','.$fact_set['fact_set_id'].','.db_escape($fact_set['as_of_date']).','.db_escape($idem_hash).','.db_escape($request_hash).','.db_escape($app_hash).','.$actor.')';
     if(!db_query($sql,'could not append PAY-RULE-005 resolution request'))return false;$resolution_id=(int)db_insert_id();if($resolution_id<=0)return false;
     $selected_ids=array();if(isset($result['selected'])&&is_array($result['selected']))foreach($result['selected'] as $g=>$row)$selected_ids[(int)$row['applicability_id']]=true;
-    foreach(($result['trace']??array()) as $t){$state=isset($selected_ids[(int)$t['applicability_id']])?'selected':(($result['ok']??false)?'applicable':'rejected');$payload=array('resolution_id'=>$resolution_id,'applicability_id'=>(int)$t['applicability_id'],'rule_version_id'=>(int)$t['rule_version_id'],'precedence_rank'=>(int)$t['rank'],'specificity_depth'=>(int)$t['specificity'],'applicability_mode'=>(string)$t['mode'],'candidate_state'=>$state);$hash=hrm_pay_rule_005_hash_payload($payload);
-        $sql='INSERT INTO '.TB_PREF.'hrm_pay_rule_resolution_candidates (resolution_id,applicability_id,rule_version_id,precedence_rank,specificity_depth,applicability_mode,candidate_state,candidate_sha256) VALUES ('.$resolution_id.','.$payload['applicability_id'].','.$payload['rule_version_id'].','.$payload['precedence_rank'].','.$payload['specificity_depth'].','.db_escape($payload['applicability_mode']).','.db_escape($state).','.db_escape($hash).')';if(!db_query($sql,'could not append PAY-RULE-005 resolution candidate trace'))return false;}
+    foreach(($result['trace']??array()) as $t){
+      $state=isset($selected_ids[(int)$t['applicability_id']])?'selected':(($result['ok']??false)?'applicable':'rejected');
+      $payload=array('resolution_id'=>$resolution_id,'applicability_id'=>(int)$t['applicability_id'],'rule_version_id'=>(int)$t['rule_version_id'],
+        'precedence_rank'=>(int)$t['rank'],'specificity_depth'=>(int)$t['specificity'],'applicability_mode'=>(string)$t['mode'],
+        'candidate_state'=>$state);
+      $hash=hrm_pay_rule_005_hash_payload($payload);
+        $sql='INSERT INTO '.TB_PREF.'hrm_pay_rule_resolution_candidates (resolution_id,applicability_id,rule_version_id,precedence_rank,specificity_depth,applicability_mode,candidate_state,candidate_sha256) VALUES ('
+          .$resolution_id.','.$payload['applicability_id'].','.$payload['rule_version_id'].','.$payload['precedence_rank']
+          .','.$payload['specificity_depth'].','.db_escape($payload['applicability_mode']).','.db_escape($state).','.db_escape($hash)
+          .')';
+        if(!db_query($sql,'could not append PAY-RULE-005 resolution candidate trace'))return false;
+        }
     $selected_summary=hrm_pay_rule_005_hash_payload($result['selected']??array());$outcome=hrm_pay_rule_005_ascii_token((string)($result['outcome']??'resolver_failure'),48);if($outcome===false)$outcome='resolver_failure';
     $explanation=isset($result['group'])?'group:'.$result['group']:'deterministic_resolution';$explanation=hrm_pay_rule_005_ascii_token($explanation,96);if($explanation===false)$explanation='deterministic_resolution';
     $resolution_hash=hrm_pay_rule_005_hash_payload(array('resolution_id'=>$resolution_id,'request_sha256'=>$request_hash,'applicability_state_sha256'=>$app_hash,'outcome'=>$outcome,'selected_summary_sha256'=>$selected_summary,'explanation_token'=>$explanation));
     if(!db_query('INSERT INTO '.TB_PREF.'hrm_pay_rule_resolution_decisions (resolution_id,outcome_token,selected_summary_sha256,resolution_sha256,explanation_token,decided_by) VALUES ('.$resolution_id.','.db_escape($outcome).','.db_escape($selected_summary).','.db_escape($resolution_hash).','.db_escape($explanation).','.$actor.')','could not append PAY-RULE-005 resolution decision'))return false;
-    if(hrm_pay_rule_005_audit('pay_rule_005_resolution',array('resolution_id'=>$resolution_id,'employment_id'=>$scope['employment_id'],'assignment_id'=>$scope['assignment_id']),'pay.rule_005.resolution.decided','pay_rule_005_resolution_execution',$scope['legal_entity_id'],array('outcome_token'=>$outcome,'request_sha256'=>$request_hash,'applicability_state_sha256'=>$app_hash,'resolution_sha256'=>$resolution_hash,'selected_summary_sha256'=>$selected_summary,'production_activation_allowed'=>false,'payroll_amounts_logged'=>false,'sensitive_identity_logged'=>false))===false)return false;
+    if(hrm_pay_rule_005_audit('pay_rule_005_resolution',array('resolution_id'=>$resolution_id,'employment_id'=>$scope['employment_id'],
+      'assignment_id'=>$scope['assignment_id']),'pay.rule_005.resolution.decided','pay_rule_005_resolution_execution',$scope['legal_entity_id'],
+      array('outcome_token'=>$outcome,'request_sha256'=>$request_hash,'applicability_state_sha256'=>$app_hash,'resolution_sha256'=>$resolution_hash,
+      'selected_summary_sha256'=>$selected_summary,'production_activation_allowed'=>false,'payroll_amounts_logged'=>false,
+      'sensitive_identity_logged'=>false))===false)return false;
     return array('resolution_id'=>$resolution_id,'outcome'=>$outcome,'selected'=>$result['selected']??array(),'selected_summary_sha256'=>$selected_summary,'resolution_sha256'=>$resolution_hash,'explanation_token'=>$explanation,'exact_replay'=>false);
 }
 

@@ -176,7 +176,7 @@ function domain_audit_export_open_connection($credential)
     $SysPrefs->show_sql = false;
     $SysPrefs->go_debug = 0;
     $encoding = isset($_SESSION['language']->encoding)
-        ? get_mysql_encoding_name($_SESSION['language']->encoding) : 'utf8';
+        ? get_mysql_encoding_name($_SESSION['language']->encoding) : 'utf8mb4';
     $mode_ok = false;
     $encoding_ok = false;
     if (function_exists('db_pdo_apply_sql_mode') && $db instanceof PDO) {

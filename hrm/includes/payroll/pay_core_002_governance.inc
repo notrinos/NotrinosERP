@@ -41,4 +41,16 @@ function hrm_pay_core_002_generate_periods($frequency,$start,$count,$offsets=arr
 }
 function hrm_pay_core_002_validate_custom_periods(array $periods){if(!$periods)return false;$prev=null;foreach($periods as $p){if(!is_array($p)||empty($p['period_key'])||hrm_pay_core_002_token($p['period_key'],80)===false||!hrm_pay_core_002_validate_period_contract($p))return false;if($prev!==null&&$p['period_start']<=$prev)return false;$prev=$p['period_end'];}return true;}
 
-function hrm_pay_core_002_validate_period_plan($frequency,$plan,$effective_from){if(!is_array($plan)||!hrm_pay_core_002_validate_iso_date($effective_from))return false;if($frequency==='custom'){if(!isset($plan['periods'])||!is_array($plan['periods'])||!hrm_pay_core_002_validate_custom_periods($plan['periods']))return false;if($plan['periods'][0]['period_start']<$effective_from)return false;return array_values($plan['periods']);}$count=isset($plan['count'])?(int)$plan['count']:0;if($count<1||$count>120)return false;$offsets=array('cutoff_days_before_pay'=>(int)($plan['cutoff_days_before_pay']??0),'post_days_before_pay'=>(int)($plan['post_days_before_pay']??0),'file_days_before_pay'=>(int)($plan['file_days_before_pay']??0));return hrm_pay_core_002_generate_periods($frequency,$effective_from,$count,$offsets);}
+function hrm_pay_core_002_validate_period_plan($frequency,$plan,$effective_from){
+	if(!is_array($plan)||!hrm_pay_core_002_validate_iso_date($effective_from))return false;
+	if($frequency==='custom'){
+		if(!isset($plan['periods'])||!is_array($plan['periods'])||!hrm_pay_core_002_validate_custom_periods($plan['periods']))return false;
+		if($plan['periods'][0]['period_start']<$effective_from)return false;
+		return array_values($plan['periods']);
+	}
+	$count=isset($plan['count'])?(int)$plan['count']:0;
+	if($count<1||$count>120)return false;
+	$offsets=array('cutoff_days_before_pay'=>(int)($plan['cutoff_days_before_pay']??0),'post_days_before_pay'=>(int)($plan['post_days_before_pay']??0),
+		'file_days_before_pay'=>(int)($plan['file_days_before_pay']??0));
+	return hrm_pay_core_002_generate_periods($frequency,$effective_from,$count,$offsets);
+}

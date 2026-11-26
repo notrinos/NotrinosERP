@@ -48,7 +48,9 @@ function hrm_typed_attribute_definition_lifecycle_request($input)
     if(!$lookup||db_num_rows($lookup)!==1)$ok=false;else{$z=db_fetch_assoc($lookup);$definition_id=(int)$z['definition_id'];}
     if($ok){$d=db_query('SELECT definition_id,attribute_code FROM '.TB_PREF.'hrm_attribute_definitions WHERE definition_id='.(int)$definition_id.' LIMIT 1 FOR UPDATE','could not lock Typed Attribute lifecycle definition');if(!$d||db_num_rows($d)!==1)$ok=false;}
     if($ok){
-        $r=db_query('SELECT definition_version_id,definition_id,version_no,predecessor_id,value_type,allowed_subject,sensitivity,owner_scope,validation_json,definition_status,effective_from,effective_to,created_by FROM '.TB_PREF.'hrm_attribute_definition_versions WHERE definition_id='.(int)$definition_id.' ORDER BY version_no,definition_version_id FOR UPDATE','could not lock Typed Attribute lifecycle chain');
+        $r=db_query('SELECT definition_version_id,definition_id,version_no,predecessor_id,value_type,allowed_subject,sensitivity,owner_scope,validation_json,definition_status,effective_from,effective_to,created_by FROM '
+          .TB_PREF.'hrm_attribute_definition_versions WHERE definition_id='.(int)$definition_id.' ORDER BY version_no,definition_version_id FOR UPDATE',
+          'could not lock Typed Attribute lifecycle chain');
         if(!$r)$ok=false;
         while($ok&&($row=db_fetch_assoc($r))){$id=(int)$row['definition_version_id'];$rows[$id]=$row;$max_version=max($max_version,(int)$row['version_no']);if($row['predecessor_id']!==null){$pred=(int)$row['predecessor_id'];if(isset($successor[$pred])){$ok=false;break;}$successor[$pred]=$id;}}
         foreach($rows as $id=>$row)if(!isset($successor[$id]))$leaf_ids[]=$id;
@@ -67,7 +69,10 @@ function hrm_typed_attribute_definition_lifecycle_request($input)
     if($ok&&$return_id===false){
         $target=$rows[$command['definition_version_id']];$version_no=$max_version+1;$pending=hrm_typed_attribute_definition_lifecycle_pending_status($command['action']);
         $sql='INSERT INTO '.TB_PREF.'hrm_attribute_definition_versions (definition_id,version_no,predecessor_id,value_type,allowed_subject,sensitivity,owner_scope,validation_json,definition_status,effective_from,effective_to,created_by) VALUES ('
-            .(int)$definition_id.','.(int)$version_no.','.(int)$command['definition_version_id'].','.db_escape($target['value_type']).','.db_escape($target['allowed_subject']).','.db_escape($target['sensitivity']).','.db_escape($target['owner_scope']).','.db_escape($target['validation_json']).','.db_escape($pending).','.db_escape($command['effective_from']).','.($target['effective_to']===null?'NULL':db_escape($target['effective_to'])).','.(int)$maker_id.')';
+            .(int)$definition_id.','.(int)$version_no.','.(int)$command['definition_version_id'].','.db_escape($target['value_type'])
+              .','.db_escape($target['allowed_subject']).','.db_escape($target['sensitivity']).','.db_escape($target['owner_scope'])
+              .','.db_escape($target['validation_json']).','.db_escape($pending).','.db_escape($command['effective_from'])
+              .','.($target['effective_to']===null?'NULL':db_escape($target['effective_to'])).','.(int)$maker_id.')';
         $ok=db_query($sql,'could not append Typed Attribute lifecycle request')!==false;
         if($ok){$return_id=(int)db_insert_id();$receipt=append_domain_audit_event(array(
             'company_id'=>function_exists('user_company')?(int)user_company():0,'legal_entity_id'=>0,'entity_type'=>'hrm_typed_attribute_definition',

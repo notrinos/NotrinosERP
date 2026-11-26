@@ -75,11 +75,22 @@ function pay_rec_001_validate_filing_completion_receipt(array $receipt,&$error=n
 function pay_rec_001_evaluate_development_close_readiness(array $sets,array $filing_completion,array $policy,&$error=null)
 {
     $error=null;$required=array('payroll','gl','payment','filing');
-    foreach($required as $name){if(!isset($sets[$name])||!is_array($sets[$name]))return pay_rec_001_fail($error,'reconciliation_evidence_set_missing');$set=$sets[$name];foreach(array('evidence_sha256','status','current') as $k)if(!array_key_exists($k,$set))return pay_rec_001_fail($error,'reconciliation_evidence_set_incomplete');if(!pay_rec_001_sha($set['evidence_sha256'])||$set['status']!=='matched'||$set['current']!==true)return pay_rec_001_fail($error,'reconciliation_evidence_not_close_ready');}
+    foreach($required as $name){
+      if(!isset($sets[$name])||!is_array($sets[$name]))return pay_rec_001_fail($error,'reconciliation_evidence_set_missing');
+      $set=$sets[$name];
+      foreach(array('evidence_sha256','status','current') as $k)if(!array_key_exists($k,$set))return pay_rec_001_fail($error,
+        'reconciliation_evidence_set_incomplete');
+      if(!pay_rec_001_sha($set['evidence_sha256'])||$set['status']!=='matched'||$set['current']!==true)return pay_rec_001_fail($error,
+        'reconciliation_evidence_not_close_ready');
+    }
     $completion_error=null;if(pay_rec_001_validate_filing_completion_receipt($filing_completion,$completion_error)===false)return pay_rec_001_fail($error,$completion_error);
     foreach(array('policy_version','tolerance_sha256','rounding_sha256') as $k)if(!array_key_exists($k,$policy))return pay_rec_001_fail($error,'reconciliation_policy_incomplete');
     if(pay_rec_001_token($policy['policy_version'],32)===false||!pay_rec_001_sha($policy['tolerance_sha256'])||!pay_rec_001_sha($policy['rounding_sha256']))return pay_rec_001_fail($error,'reconciliation_policy_invalid');
-    $receipt=array('contract_sha256'=>pay_rec_001_contract_sha256(),'mode'=>'LOCAL_DEVELOPMENT_RECONCILIATION','payroll_evidence_sha256'=>$sets['payroll']['evidence_sha256'],'gl_evidence_sha256'=>$sets['gl']['evidence_sha256'],'payment_evidence_sha256'=>$sets['payment']['evidence_sha256'],'filing_evidence_sha256'=>$sets['filing']['evidence_sha256'],'filing_completion_receipt_sha256'=>$filing_completion['completion_receipt_sha256'],'policy_version'=>$policy['policy_version'],'tolerance_sha256'=>$policy['tolerance_sha256'],'rounding_sha256'=>$policy['rounding_sha256'],'close_ready'=>true,'state_mutation_authorized'=>false,'production_close_authorized'=>false);
+    $receipt=array('contract_sha256'=>pay_rec_001_contract_sha256(),'mode'=>'LOCAL_DEVELOPMENT_RECONCILIATION','payroll_evidence_sha256'=>$sets['payroll']['evidence_sha256'],
+      'gl_evidence_sha256'=>$sets['gl']['evidence_sha256'],'payment_evidence_sha256'=>$sets['payment']['evidence_sha256'],
+      'filing_evidence_sha256'=>$sets['filing']['evidence_sha256'],'filing_completion_receipt_sha256'=>$filing_completion['completion_receipt_sha256'],
+      'policy_version'=>$policy['policy_version'],'tolerance_sha256'=>$policy['tolerance_sha256'],'rounding_sha256'=>$policy['rounding_sha256'],
+      'close_ready'=>true,'state_mutation_authorized'=>false,'production_close_authorized'=>false);
     $receipt['readiness_sha256']=pay_rec_001_hash($receipt);return $receipt;
 }
 ?>

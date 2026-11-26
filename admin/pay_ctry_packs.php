@@ -34,7 +34,11 @@ if (isset($_POST['verify_country_pack'])) {
 if (isset($_POST['reverify_country_pack'])) {
     $error=null;$ok=check_csrf_token()&&pay_ctry_001_consume_action_nonce('reverify_country_pack',isset($_POST['reverify_nonce'])?$_POST['reverify_nonce']:'');
     if (!$ok) display_error(_('The reverification request was stale or already used.'));
-    else {$idem='pctry-reverify:'.hash('sha256',(string)$_POST['reverify_nonce'].'\0'.(string)(int)$_POST['raw_blob_id']);$r=pay_ctry_001_reverify_raw_blob((int)$_POST['raw_blob_id'],$idem,$error,time());($r===false||!isset($r['status'])||$r['status']!=='accepted')?display_error(_('Reverification rejected: ').(isset($r['failure_code'])?(string)$r['failure_code']:(string)$error)):display_notification(_('Stored raw bytes were reverified without rewriting historical evidence.'));}
+    else {
+      $idem='pctry-reverify:'.hash('sha256',(string)$_POST['reverify_nonce'].'\0'.(string)(int)$_POST['raw_blob_id']);
+      $r=pay_ctry_001_reverify_raw_blob((int)$_POST['raw_blob_id'],$idem,$error,time());
+      ($r===false||!isset($r['status'])||$r['status']!=='accepted')?display_error(_('Reverification rejected: ').(isset($r['failure_code'])?(string)$r['failure_code']:(string)$error)):display_notification(_('Stored raw bytes were reverified without rewriting historical evidence.'));
+    }
 }
 
 echo '<p>'._('Country packs are constrained signed artifacts. Verification never executes PHP/SQL, invokes extension hooks, or activates a pack for any company, legal entity, payroll period, or payroll run.').'</p>';

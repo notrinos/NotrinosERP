@@ -111,7 +111,8 @@ table_section_title(_('How categories behave'));
 
 // DIM-NAM-002: the setup page carries the accountant line of the naming plan.
 display_note(dimension_term_also_known_as(), 0, 0, 'class="info"');
-display_note(_('A published policy is descriptive only. It never renumbers or remaps a stored tracking value, never rewrites GL, budget, draft, payroll or HRM rows, and never changes what HRM binds to category 1. Reducing the enabled categories is refused while an active source, a stored default, a pending draft, an HRM binding or a declared rule still depends on the category being disabled.'), 0, 0, 'class="info"');
+display_note(_('A published policy is descriptive only. It never renumbers or remaps a stored tracking value, never rewrites GL, budget, draft, payroll or HRM rows, and never changes what HRM binds to category 1. Reducing the enabled categories is refused while an active source, a stored default, a pending draft, an HRM binding or a declared rule still depends on the category being disabled.'),
+	0, 0, 'class="info"');
 display_note(_('Publishing requires both Company Setup and Tracking entry authority. History stays readable through every transition, including for closed categories and closed values.'), 0, 0, 'class="info"');
 
 end_outer_table(1);

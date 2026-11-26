@@ -136,10 +136,23 @@ function hrm_tal_001_finalize_performance_review($subject_id, $reason_reference_
     $cycle=hrm_tal_001_performance_cycle_by_id((int)$subject['performance_cycle_definition_id'],$error);if($cycle===false){cancel_transaction();return false;}
     if((string)$cycle['rating_scale_code']==='none'){cancel_transaction();return hrm_tal_001_catalog_fail($error,'performance_finalization_requires_numeric_scale');}
     $company=hrm_tal_001_runtime_company_id();
-    $q=db_query('SELECT performance_assessment_evidence_id,assessment_role_code,dimension_code,rating_value,evidence_sha256 FROM '.TB_PREF.'hrm_tal_001_performance_assessment_evidence WHERE company_id='.(int)$company.' AND performance_review_subject_id='.$subject_id." AND assessment_role_code IN ('manager','reviewer') AND rating_value IS NOT NULL ORDER BY performance_assessment_evidence_id ASC FOR UPDATE");
+    $q=db_query('SELECT performance_assessment_evidence_id,assessment_role_code,dimension_code,rating_value,evidence_sha256 FROM '
+      .TB_PREF.'hrm_tal_001_performance_assessment_evidence WHERE company_id='.(int)$company.' AND performance_review_subject_id='
+      .$subject_id." AND assessment_role_code IN ('manager','reviewer') AND rating_value IS NOT NULL ORDER BY performance_assessment_evidence_id ASC FOR UPDATE");
     if(!$q){cancel_transaction();return hrm_tal_001_catalog_fail($error,'performance_scoring_query_failed');}
     $sum=0;$count=0;$basis=array();$reviewer=false;
-    while($row=db_fetch_assoc($q)){$u=hrm_tal_001_rating_to_units($row['rating_value']);if($u===false){cancel_transaction();return hrm_tal_001_catalog_fail($error,'performance_rating_basis_invalid');}$sum+=$u;++$count;$reviewer=$reviewer||$row['assessment_role_code']==='reviewer';$basis[]=array('id'=>(int)$row['performance_assessment_evidence_id'],'role'=>(string)$row['assessment_role_code'],'dimension'=>(string)$row['dimension_code'],'rating'=>hrm_tal_001_units_to_rating($u),'evidence_sha256'=>(string)$row['evidence_sha256']);}
+    while($row=db_fetch_assoc($q)){
+      $u=hrm_tal_001_rating_to_units($row['rating_value']);
+      if($u===false){
+        cancel_transaction();
+        return hrm_tal_001_catalog_fail($error,'performance_rating_basis_invalid');
+      }
+      $sum+=$u;
+      ++$count;
+      $reviewer=$reviewer||$row['assessment_role_code']==='reviewer';
+      $basis[]=array('id'=>(int)$row['performance_assessment_evidence_id'],'role'=>(string)$row['assessment_role_code'],'dimension'=>(string)$row['dimension_code'],
+        'rating'=>hrm_tal_001_units_to_rating($u),'evidence_sha256'=>(string)$row['evidence_sha256']);
+    }
     if($count<1||!$reviewer){cancel_transaction();return hrm_tal_001_catalog_fail($error,'performance_reviewer_numeric_evidence_required');}
     $avg=intdiv($sum,$count);$remainder=$sum%$count;if($remainder*2>=$count)++$avg;
     $aggregate=hrm_tal_001_units_to_rating($avg);$basis_sha=hrm_tal_001_payload_sha256(array('subject_id'=>$subject_id,'cycle_definition_sha256'=>(string)$cycle['definition_sha256'],'rating_scale_code'=>(string)$cycle['rating_scale_code'],'evidence'=>$basis));

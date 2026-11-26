@@ -73,11 +73,20 @@ function hrm_pay_core_008_load_result_lineage($result_id,&$error=null)
 function hrm_pay_core_008_load_balance_movements($definition_sha256,$legal_entity_id,$payroll_relationship_id,&$error=null)
 {
     $error=null;if(!hrm_pay_core_008_is_sha256($definition_sha256)||(int)$legal_entity_id<=0||(int)$payroll_relationship_id<=0){$error='balance_scope_invalid';return false;}
-    $q=db_query('SELECT definition_sha256,legal_entity_id,payroll_relationship_id,person_id,worker_id,assignment_id,calendar_period_id,jurisdiction_id,leave_type_id,loan_id,source_system,source_type,source_event_key,source_event_sha256,movement_kind,effective_date,recognition_date,currency_code,unit_code,amount,predecessor_movement_sha256,movement_sha256 FROM '.TB_PREF.'hrm_pay_balance_movements WHERE definition_sha256='.db_escape($definition_sha256).' AND legal_entity_id='.(int)$legal_entity_id.' AND payroll_relationship_id='.(int)$payroll_relationship_id.' ORDER BY recognition_date,effective_date,movement_id');
+    $q=db_query('SELECT definition_sha256,legal_entity_id,payroll_relationship_id,person_id,worker_id,assignment_id,calendar_period_id,jurisdiction_id,leave_type_id,loan_id,source_system,source_type,source_event_key,source_event_sha256,movement_kind,effective_date,recognition_date,currency_code,unit_code,amount,predecessor_movement_sha256,movement_sha256 FROM '
+      .TB_PREF.'hrm_pay_balance_movements WHERE definition_sha256='.db_escape($definition_sha256).' AND legal_entity_id='
+      .(int)$legal_entity_id.' AND payroll_relationship_id='.(int)$payroll_relationship_id.' ORDER BY recognition_date,effective_date,movement_id');
     if(!$q){$error='balance_movement_read_failed';return false;}
     $o=array();while($x=db_fetch_assoc($q)){
-        $scope=array('legal_entity_id'=>(int)$x['legal_entity_id'],'payroll_relationship_id'=>(int)$x['payroll_relationship_id'],'person_id'=>$x['person_id']===null?null:(int)$x['person_id'],'worker_id'=>$x['worker_id']===null?null:(int)$x['worker_id'],'assignment_id'=>$x['assignment_id']===null?null:(int)$x['assignment_id'],'calendar_period_id'=>$x['calendar_period_id']===null?null:(int)$x['calendar_period_id'],'jurisdiction_id'=>$x['jurisdiction_id']===null?null:(int)$x['jurisdiction_id'],'leave_type_id'=>$x['leave_type_id']===null?null:(int)$x['leave_type_id'],'loan_id'=>$x['loan_id']===null?null:(int)$x['loan_id']);
-        $m=array('definition_sha256'=>$x['definition_sha256'],'scope'=>$scope,'source_system'=>$x['source_system'],'source_type'=>$x['source_type'],'source_event_key'=>$x['source_event_key'],'source_event_sha256'=>$x['source_event_sha256'],'movement_kind'=>$x['movement_kind'],'effective_date'=>$x['effective_date'],'recognition_date'=>$x['recognition_date'],'currency_code'=>$x['currency_code'],'unit_code'=>$x['unit_code'],'amount'=>$x['amount'],'predecessor_movement_sha256'=>$x['predecessor_movement_sha256']);
+        $scope=array('legal_entity_id'=>(int)$x['legal_entity_id'],'payroll_relationship_id'=>(int)$x['payroll_relationship_id'],
+          'person_id'=>$x['person_id']===null?null:(int)$x['person_id'],'worker_id'=>$x['worker_id']===null?null:(int)$x['worker_id'],
+          'assignment_id'=>$x['assignment_id']===null?null:(int)$x['assignment_id'],'calendar_period_id'=>$x['calendar_period_id']===null?null:(int)$x['calendar_period_id'],
+          'jurisdiction_id'=>$x['jurisdiction_id']===null?null:(int)$x['jurisdiction_id'],'leave_type_id'=>$x['leave_type_id']===null?null:(int)$x['leave_type_id'],
+          'loan_id'=>$x['loan_id']===null?null:(int)$x['loan_id']);
+        $m=array('definition_sha256'=>$x['definition_sha256'],'scope'=>$scope,'source_system'=>$x['source_system'],'source_type'=>$x['source_type'],
+          'source_event_key'=>$x['source_event_key'],'source_event_sha256'=>$x['source_event_sha256'],'movement_kind'=>$x['movement_kind'],
+          'effective_date'=>$x['effective_date'],'recognition_date'=>$x['recognition_date'],'currency_code'=>$x['currency_code'],
+          'unit_code'=>$x['unit_code'],'amount'=>$x['amount'],'predecessor_movement_sha256'=>$x['predecessor_movement_sha256']);
         $v=hrm_pay_core_006_movement($m,$me);if($v===false||!hash_equals((string)$x['movement_sha256'],$v['movement_sha256'])){$error='balance_movement_hash_drift';return false;}$o[]=$m;
     }
     return $o;

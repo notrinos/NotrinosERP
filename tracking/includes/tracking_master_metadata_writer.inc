@@ -3,7 +3,22 @@
 require_once __DIR__.'/tracking_financial_reference_writer.inc';
 
 /** Only these native key/metadata contracts are admitted here; no caller-selected schema. */
-function dimension_master_metadata_sources(){return array('areas'=>'area_code','tax_types'=>'id','chart_types'=>'id','chart_class'=>'cid','chart_master'=>'account_code','sales_pos'=>'id','sales_types'=>'id','salesman'=>'salesman_code','prices'=>'id','item_codes'=>'id','vendor_pricelists'=>'id','purch_orders'=>'order_no','purch_order_details'=>'po_detail_item','grn_batch'=>'id','grn_items'=>'id','vendor_evaluations'=>'id','vendor_performance_log'=>'id','purch_matching_config'=>'id','purch_matching_exceptions'=>'id','purch_bill_control_policy'=>'id','purch_order_templates'=>'id','purch_order_template_lines'=>'id','procurement_plan'=>'id','procurement_plan_lines'=>'id','sales_quotation_templates'=>'id','sales_quotation_template_lines'=>'id','sales_discount_programs'=>'id','sales_coupons'=>'id','sales_commission_plans'=>'id','sales_commission_entries'=>'id','sales_pricelists'=>'id','sales_pricelist_rules'=>'id','sales_rma'=>'id','sales_rma_lines'=>'id','wh_storage_categories'=>'id','wh_putaway_rules'=>'rule_id','wh_routes'=>'route_id','wh_route_rules'=>'rule_id','wh_replenishment_rules'=>'rule_id','wh_cycle_count_plans'=>'plan_id','wh_scrap'=>'scrap_id','wh_picking_waves'=>'wave_id','wh_packages'=>'package_id','wh_return_orders'=>'return_id','wh_return_order_lines'=>'line_id','wh_consignment_stock'=>'id','wh_cycle_counts'=>'count_id','workorders'=>'id','wo_issue_items'=>'id','udi_registrations'=>'id','fsma_tracking_events'=>'id','dscsa_transactions'=>'id','quality_inspections'=>'id','recall_campaigns'=>'id','warranty_claims'=>'id','serial_numbers'=>'id','stock_batches'=>'id','wh_operations'=>'op_id','wh_operation_lines'=>'line_id','wh_locations'=>'loc_id','wh_bin_stock'=>'id','locations'=>'loc_code');}
+function dimension_master_metadata_sources(){
+	return array('areas'=>'area_code','tax_types'=>'id','chart_types'=>'id','chart_class'=>'cid','chart_master'=>'account_code',
+		'sales_pos'=>'id','sales_types'=>'id','salesman'=>'salesman_code','prices'=>'id','item_codes'=>'id','vendor_pricelists'=>'id',
+		'purch_orders'=>'order_no','purch_order_details'=>'po_detail_item','grn_batch'=>'id','grn_items'=>'id','vendor_evaluations'=>'id',
+		'vendor_performance_log'=>'id','purch_matching_config'=>'id','purch_matching_exceptions'=>'id','purch_bill_control_policy'=>'id',
+		'purch_order_templates'=>'id','purch_order_template_lines'=>'id','procurement_plan'=>'id','procurement_plan_lines'=>'id',
+		'sales_quotation_templates'=>'id','sales_quotation_template_lines'=>'id','sales_discount_programs'=>'id','sales_coupons'=>'id',
+		'sales_commission_plans'=>'id','sales_commission_entries'=>'id','sales_pricelists'=>'id','sales_pricelist_rules'=>'id',
+		'sales_rma'=>'id','sales_rma_lines'=>'id','wh_storage_categories'=>'id','wh_putaway_rules'=>'rule_id','wh_routes'=>'route_id',
+		'wh_route_rules'=>'rule_id','wh_replenishment_rules'=>'rule_id','wh_cycle_count_plans'=>'plan_id','wh_scrap'=>'scrap_id',
+		'wh_picking_waves'=>'wave_id','wh_packages'=>'package_id','wh_return_orders'=>'return_id','wh_return_order_lines'=>'line_id',
+		'wh_consignment_stock'=>'id','wh_cycle_counts'=>'count_id','workorders'=>'id','wo_issue_items'=>'id','udi_registrations'=>'id',
+		'fsma_tracking_events'=>'id','dscsa_transactions'=>'id','quality_inspections'=>'id','recall_campaigns'=>'id','warranty_claims'=>'id',
+		'serial_numbers'=>'id','stock_batches'=>'id','wh_operations'=>'op_id','wh_operation_lines'=>'line_id','wh_locations'=>'loc_id',
+		'wh_bin_stock'=>'id','locations'=>'loc_code');
+}
 
 /** Read one exact current native key without case-folding or numeric truncation. */
 function dimension_master_metadata_row($owner,$id)

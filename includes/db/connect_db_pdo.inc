@@ -219,6 +219,40 @@ function db_pdo_run_statement($db_connection, $sql) {
 }
 
 /**
+ * Prepare and run one statement with bound values, also when the server refuses to prepare it again.
+ *
+ * Error 1615 comes before the server runs anything, from the prepare or the execute. The statement is then prepared
+ * once more with client-side binding (PDO quotes every value itself), and the connection goes back to server-side
+ * prepares afterwards.
+ *
+ * @param PDO $db_connection Active PDO connection.
+ * @param string $sql SQL statement with ? placeholders.
+ * @param array $params Values in placeholder order.
+ *
+ * @return PDOStatement Executed statement.
+ */
+function db_pdo_run_prepared($db_connection, $sql, $params) {
+	try {
+		$statement = $db_connection->prepare($sql);
+		$statement->execute(array_values($params));
+		return $statement;
+	} catch (PDOException $exception) {
+		$error_state = db_pdo_extract_error_state($exception);
+		if ((int)$error_state[1] !== 1615)
+			throw $exception;
+	}
+
+	$db_connection->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+	try {
+		$statement = $db_connection->prepare($sql);
+		$statement->execute(array_values($params));
+		return $statement;
+	} finally {
+		$db_connection->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+	}
+}
+
+/**
  * Execute transaction control statements using PDO native methods.
  *
  * @param PDO $db_connection Active PDO connection.
@@ -978,6 +1012,9 @@ function db_set_charset($dbase, $charset) {
 /**
  * Execute a prepared SQL statement with bound parameters.
  *
+ * Values never become part of the SQL text: the server binds them (or PDO quotes them when the server refuses to
+ * prepare the statement again, error 1615). Use ? placeholders; the values are taken in order.
+ *
  * @param string $sql SQL statement containing placeholders.
  * @param array $params Bound parameter values.
  * @param string|null $err_msg Optional error context.
@@ -1012,8 +1049,7 @@ function db_query_params($sql, $params = array(), $err_msg = null) {
 
 	do {
 		try {
-			$statement = $db->prepare($sql);
-			$statement->execute($params);
+			$statement = db_pdo_run_prepared($db, $sql, $params);
 			if ($statement->columnCount() > 0) {
 				$result = db_pdo_buffer_result($statement);
 				$db_last_affected_rows = 0;

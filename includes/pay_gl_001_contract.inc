@@ -38,16 +38,74 @@ function pay_gl_001_journal_basis_fields(array $j){return array(
 function pay_gl_001_journal_basis_sha256(array $j){return pay_gl_001_hash(pay_gl_001_journal_basis_fields($j));}
 function pay_gl_001_journal_fields(array $j){$f=pay_gl_001_journal_basis_fields($j);$f['line_set_sha256']=(string)$j['line_set_sha256'];$f['allocation_set_sha256']=(string)$j['allocation_set_sha256'];$f['debit_minor']=(int)$j['debit_minor'];$f['credit_minor']=(int)$j['credit_minor'];return $f;}
 function pay_gl_001_journal_sha256(array $j){return pay_gl_001_hash(pay_gl_001_journal_fields($j));}
-function pay_gl_001_validate_journal(array $j,&$e){$e=null;$r=array('company_id','legal_entity_id','payroll_group_id','payroll_period_id','result_set_sha256','approval_sha256','journal_date','currency_code','mapping_snapshot_sha256','line_set_sha256','allocation_set_sha256','debit_minor','credit_minor','prepared_by','prepared_at','journal_sha256');foreach($r as $k)if(!array_key_exists($k,$j))return pay_gl_001_fail($e,'journal_field_missing');if(pay_gl_001_uint($j['company_id'])===false||pay_gl_001_posint($j['legal_entity_id'])===false||pay_gl_001_posint($j['payroll_group_id'])===false||pay_gl_001_posint($j['payroll_period_id'])===false||pay_gl_001_posint($j['prepared_by'])===false)return pay_gl_001_fail($e,'journal_scope_invalid');foreach(array('result_set_sha256','approval_sha256','mapping_snapshot_sha256','line_set_sha256','allocation_set_sha256') as $k)if(!is_sha256_hex($j[$k]))return pay_gl_001_fail($e,'journal_hash_invalid');$d=pay_gl_001_posint($j['debit_minor']);$c=pay_gl_001_posint($j['credit_minor']);if($d===false||$c===false||$d!==$c)return pay_gl_001_fail($e,'journal_unbalanced');if(pay_gl_001_currency($j['currency_code'])===false||pay_gl_001_date($j['journal_date'])===false||pay_gl_001_time($j['prepared_at'])===false)return pay_gl_001_fail($e,'journal_format_invalid');$sha=pay_gl_001_journal_sha256($j);if(!is_sha256_hex($j['journal_sha256'])||!hash_equals($sha,$j['journal_sha256']))return pay_gl_001_fail($e,'journal_hash_mismatch');return true;}
-function pay_gl_001_line_fields(array $l){return array('journal_basis_sha256'=>(string)$l['journal_basis_sha256'],'source_result_sha256'=>(string)$l['source_result_sha256'],'source_line_key'=>(string)$l['source_line_key'],'line_no'=>(int)$l['line_no'],'account_code'=>(string)$l['account_code'],'entry_side'=>(string)$l['entry_side'],'amount_minor'=>(int)$l['amount_minor'],'memo_code'=>(string)$l['memo_code'],'exception_reason_code'=>$l['exception_reason_code']===null?null:(string)$l['exception_reason_code'],'exception_approved_by'=>$l['exception_approved_by']===null?null:(int)$l['exception_approved_by'],'mapping_rule_sha256'=>(string)$l['mapping_rule_sha256']);}
+function pay_gl_001_validate_journal(array $j,&$e){
+	$e=null;
+	$r=array('company_id','legal_entity_id','payroll_group_id','payroll_period_id','result_set_sha256','approval_sha256','journal_date',
+		'currency_code','mapping_snapshot_sha256','line_set_sha256','allocation_set_sha256','debit_minor','credit_minor','prepared_by',
+		'prepared_at','journal_sha256');
+	foreach($r as $k)if(!array_key_exists($k,$j))return pay_gl_001_fail($e,'journal_field_missing');
+	if(pay_gl_001_uint($j['company_id'])===false||pay_gl_001_posint($j['legal_entity_id'])===false||pay_gl_001_posint($j['payroll_group_id'])===false||pay_gl_001_posint($j['payroll_period_id'])===false||pay_gl_001_posint($j['prepared_by'])===false)return pay_gl_001_fail($e,
+		'journal_scope_invalid');
+	foreach(array('result_set_sha256','approval_sha256','mapping_snapshot_sha256','line_set_sha256','allocation_set_sha256') as $k)if(!is_sha256_hex($j[$k]))return pay_gl_001_fail($e,
+		'journal_hash_invalid');
+	$d=pay_gl_001_posint($j['debit_minor']);
+	$c=pay_gl_001_posint($j['credit_minor']);
+	if($d===false||$c===false||$d!==$c)return pay_gl_001_fail($e,'journal_unbalanced');
+	if(pay_gl_001_currency($j['currency_code'])===false||pay_gl_001_date($j['journal_date'])===false||pay_gl_001_time($j['prepared_at'])===false)return pay_gl_001_fail($e,
+		'journal_format_invalid');
+	$sha=pay_gl_001_journal_sha256($j);
+	if(!is_sha256_hex($j['journal_sha256'])||!hash_equals($sha,$j['journal_sha256']))return pay_gl_001_fail($e,'journal_hash_mismatch');
+	return true;
+}
+function pay_gl_001_line_fields(array $l){
+	return array('journal_basis_sha256'=>(string)$l['journal_basis_sha256'],'source_result_sha256'=>(string)$l['source_result_sha256'],
+		'source_line_key'=>(string)$l['source_line_key'],'line_no'=>(int)$l['line_no'],'account_code'=>(string)$l['account_code'],
+		'entry_side'=>(string)$l['entry_side'],'amount_minor'=>(int)$l['amount_minor'],'memo_code'=>(string)$l['memo_code'],'exception_reason_code'=>$l['exception_reason_code']===null?null:(string)$l['exception_reason_code'],
+		'exception_approved_by'=>$l['exception_approved_by']===null?null:(int)$l['exception_approved_by'],'mapping_rule_sha256'=>(string)$l['mapping_rule_sha256']);
+}
 function pay_gl_001_line_sha256(array $l){return pay_gl_001_hash(pay_gl_001_line_fields($l));}
-function pay_gl_001_validate_line(array $l,&$e){$e=null;foreach(array('journal_basis_sha256','source_result_sha256','source_line_key','line_no','account_code','entry_side','amount_minor','memo_code','exception_reason_code','exception_approved_by','mapping_rule_sha256','canonical_line_sha256') as $k)if(!array_key_exists($k,$l))return pay_gl_001_fail($e,'line_field_missing');if(!is_sha256_hex($l['journal_basis_sha256'])||!is_sha256_hex($l['source_result_sha256'])||!pay_gl_001_token($l['source_line_key'],96)||!is_sha256_hex($l['mapping_rule_sha256'])||pay_gl_001_posint($l['line_no'])===false||!pay_gl_001_token($l['account_code'],32)||!in_array($l['entry_side'],array('debit','credit'),true)||pay_gl_001_posint($l['amount_minor'])===false||!pay_gl_001_token($l['memo_code'],64)||($l['exception_reason_code']!==null&&!pay_gl_001_token($l['exception_reason_code'],64))||(($l['exception_reason_code']===null)!==($l['exception_approved_by']===null))||($l['exception_approved_by']!==null&&pay_gl_001_posint($l['exception_approved_by'])===false))return pay_gl_001_fail($e,'line_invalid');$sha=pay_gl_001_line_sha256($l);if(!is_sha256_hex($l['canonical_line_sha256'])||!hash_equals($sha,$l['canonical_line_sha256']))return pay_gl_001_fail($e,'line_hash_mismatch');return true;}
+function pay_gl_001_validate_line(array $l,&$e){
+	$e=null;
+	foreach(array('journal_basis_sha256','source_result_sha256','source_line_key','line_no','account_code','entry_side','amount_minor',
+		'memo_code','exception_reason_code','exception_approved_by','mapping_rule_sha256','canonical_line_sha256') as $k)if(!array_key_exists($k,
+		$l))return pay_gl_001_fail($e,'line_field_missing');
+	if(!is_sha256_hex($l['journal_basis_sha256'])||!is_sha256_hex($l['source_result_sha256'])||!pay_gl_001_token($l['source_line_key'],
+		96)||!is_sha256_hex($l['mapping_rule_sha256'])||pay_gl_001_posint($l['line_no'])===false||!pay_gl_001_token($l['account_code'],
+		32)||!in_array($l['entry_side'],array('debit','credit'),true)||pay_gl_001_posint($l['amount_minor'])===false||!pay_gl_001_token($l['memo_code'],
+		64)||($l['exception_reason_code']!==null&&!pay_gl_001_token($l['exception_reason_code'],64))||(($l['exception_reason_code']===null)!==($l['exception_approved_by']===null))||($l['exception_approved_by']!==null&&pay_gl_001_posint($l['exception_approved_by'])===false))return pay_gl_001_fail($e,
+		'line_invalid');
+	$sha=pay_gl_001_line_sha256($l);
+	if(!is_sha256_hex($l['canonical_line_sha256'])||!hash_equals($sha,$l['canonical_line_sha256']))return pay_gl_001_fail($e,
+		'line_hash_mismatch');
+	return true;
+}
 function pay_gl_001_allocation_fields(array $a){return array('canonical_line_sha256'=>(string)$a['canonical_line_sha256'],'allocation_no'=>(int)$a['allocation_no'],'allocated_amount_minor'=>(int)$a['allocated_amount_minor'],'allocation_weight_ppm'=>(int)$a['allocation_weight_ppm']);}
 function pay_gl_001_allocation_sha256(array $a){return pay_gl_001_hash(pay_gl_001_allocation_fields($a));}
-function pay_gl_001_validate_allocation(array $a,&$e){$e=null;foreach(array('canonical_line_sha256','allocation_no','allocated_amount_minor','allocation_weight_ppm','allocation_sha256') as $k)if(!array_key_exists($k,$a))return pay_gl_001_fail($e,'allocation_field_missing');$w=pay_gl_001_posint($a['allocation_weight_ppm']);if(!is_sha256_hex($a['canonical_line_sha256'])||pay_gl_001_posint($a['allocation_no'])===false||pay_gl_001_posint($a['allocated_amount_minor'])===false||$w===false||$w>1000000)return pay_gl_001_fail($e,'allocation_invalid');$sha=pay_gl_001_allocation_sha256($a);if(!is_sha256_hex($a['allocation_sha256'])||!hash_equals($sha,$a['allocation_sha256']))return pay_gl_001_fail($e,'allocation_hash_mismatch');return true;}
+function pay_gl_001_validate_allocation(array $a,&$e){
+	$e=null;
+	foreach(array('canonical_line_sha256','allocation_no','allocated_amount_minor','allocation_weight_ppm','allocation_sha256') as $k)if(!array_key_exists($k,
+		$a))return pay_gl_001_fail($e,'allocation_field_missing');
+	$w=pay_gl_001_posint($a['allocation_weight_ppm']);
+	if(!is_sha256_hex($a['canonical_line_sha256'])||pay_gl_001_posint($a['allocation_no'])===false||pay_gl_001_posint($a['allocated_amount_minor'])===false||$w===false||$w>1000000)return pay_gl_001_fail($e,
+		'allocation_invalid');
+	$sha=pay_gl_001_allocation_sha256($a);
+	if(!is_sha256_hex($a['allocation_sha256'])||!hash_equals($sha,$a['allocation_sha256']))return pay_gl_001_fail($e,'allocation_hash_mismatch');
+	return true;
+}
 function pay_gl_001_axis_fields(array $a){return array('allocation_sha256'=>(string)$a['allocation_sha256'],'axis_no'=>(int)$a['axis_no'],'axis_code'=>(string)$a['axis_code'],'axis_value_key'=>(string)$a['axis_value_key'],'axis_value_sha256'=>(string)$a['axis_value_sha256'],'core_slot_hint'=>$a['core_slot_hint']===null?null:(int)$a['core_slot_hint']);}
 function pay_gl_001_axis_sha256(array $a){return pay_gl_001_hash(pay_gl_001_axis_fields($a));}
-function pay_gl_001_validate_axis(array $a,&$e){$e=null;foreach(array('allocation_sha256','axis_no','axis_code','axis_value_key','axis_value_sha256','core_slot_hint','axis_sha256') as $k)if(!array_key_exists($k,$a))return pay_gl_001_fail($e,'axis_field_missing');$slot=$a['core_slot_hint'];if(!is_sha256_hex($a['allocation_sha256'])||pay_gl_001_posint($a['axis_no'])===false||!pay_gl_001_token($a['axis_code'],64)||!pay_gl_001_token($a['axis_value_key'],96)||!is_sha256_hex($a['axis_value_sha256'])||($slot!==null&&(pay_gl_001_posint($slot)===false||!in_array(pay_gl_001_posint($slot),array(1,2),true))))return pay_gl_001_fail($e,'axis_invalid');$sha=pay_gl_001_axis_sha256($a);if(!is_sha256_hex($a['axis_sha256'])||!hash_equals($sha,$a['axis_sha256']))return pay_gl_001_fail($e,'axis_hash_mismatch');return true;}
+function pay_gl_001_validate_axis(array $a,&$e){
+	$e=null;
+	foreach(array('allocation_sha256','axis_no','axis_code','axis_value_key','axis_value_sha256','core_slot_hint','axis_sha256') as $k)if(!array_key_exists($k,
+		$a))return pay_gl_001_fail($e,'axis_field_missing');
+	$slot=$a['core_slot_hint'];
+	if(!is_sha256_hex($a['allocation_sha256'])||pay_gl_001_posint($a['axis_no'])===false||!pay_gl_001_token($a['axis_code'],
+		64)||!pay_gl_001_token($a['axis_value_key'],96)||!is_sha256_hex($a['axis_value_sha256'])||($slot!==null&&(pay_gl_001_posint($slot)===false||!in_array(pay_gl_001_posint($slot),
+		array(1,2),true))))return pay_gl_001_fail($e,'axis_invalid');
+	$sha=pay_gl_001_axis_sha256($a);
+	if(!is_sha256_hex($a['axis_sha256'])||!hash_equals($sha,$a['axis_sha256']))return pay_gl_001_fail($e,'axis_hash_mismatch');
+	return true;
+}
 
 /* Governed effective-dated account/dimension mapping. */
 function pay_gl_001_mapping_rule_fields(array $r){return array(
@@ -58,17 +116,160 @@ function pay_gl_001_mapping_rule_fields(array $r){return array(
  'dimension2_axis_code'=>$r['dimension2_axis_code']===null?null:(string)$r['dimension2_axis_code'],
  'suspense_allowed'=>!empty($r['suspense_allowed'])?1:0,'maker_id'=>(int)$r['maker_id'],'checker_id'=>(int)$r['checker_id']);}
 function pay_gl_001_mapping_rule_sha256(array $r){return pay_gl_001_hash(pay_gl_001_mapping_rule_fields($r));}
-function pay_gl_001_validate_mapping_rule(array $r,&$e){$e=null;foreach(array('company_id','legal_entity_id','mapping_key','effective_from','effective_to','source_kind','source_key','entry_side','account_code','dimension1_axis_code','dimension2_axis_code','suspense_allowed','maker_id','checker_id') as $k)if(!array_key_exists($k,$r))return pay_gl_001_fail($e,'mapping_field_missing');if(pay_gl_001_uint($r['company_id'])===false||pay_gl_001_posint($r['legal_entity_id'])===false||!pay_gl_001_token($r['mapping_key'],96)||!pay_gl_001_date($r['effective_from'])||($r['effective_to']!==null&&!pay_gl_001_date($r['effective_to']))||($r['effective_to']!==null&&pay_gl_001_compare_date($r['effective_to'],$r['effective_from'])<0))return pay_gl_001_fail($e,'mapping_scope_invalid');if(!in_array($r['source_kind'],array('element','category','payable','suspense'),true)||!pay_gl_001_token($r['source_key'],96)||!in_array($r['entry_side'],array('debit','credit','either'),true)||!pay_gl_001_token($r['account_code'],32))return pay_gl_001_fail($e,'mapping_target_invalid');foreach(array('dimension1_axis_code','dimension2_axis_code') as $k)if($r[$k]!==null&&!pay_gl_001_token($r[$k],64))return pay_gl_001_fail($e,'mapping_axis_invalid');if($r['dimension1_axis_code']!==null&&$r['dimension1_axis_code']===$r['dimension2_axis_code'])return pay_gl_001_fail($e,'mapping_axis_duplicate');$maker=pay_gl_001_posint($r['maker_id']);$checker=pay_gl_001_posint($r['checker_id']);if($maker===false||$checker===false||$maker===$checker)return pay_gl_001_fail($e,'mapping_maker_checker_invalid');return true;}
-function pay_gl_001_mapping_snapshot(array $rules,&$e=null){$e=null;if(empty($rules))return pay_gl_001_fail($e,'mapping_snapshot_empty');$items=array();foreach($rules as $r){if(!is_array($r)||!pay_gl_001_validate_mapping_rule($r,$e))return false;$items[]=array('mapping_key'=>(string)$r['mapping_key'],'rule_sha256'=>pay_gl_001_mapping_rule_sha256($r));}usort($items,function($a,$b){$c=strcmp($a['mapping_key'],$b['mapping_key']);return $c!==0?$c:strcmp($a['rule_sha256'],$b['rule_sha256']);});return pay_gl_001_hash($items);}
-function pay_gl_001_resolve_mapping(array $rules,$company,$legal,$date,$source_kind,$source_key,$side,&$e=null){$e=null;$hits=array();foreach($rules as $r){if(!is_array($r)||!pay_gl_001_validate_mapping_rule($r,$e))return false;if((int)$r['company_id']!==(int)$company||(int)$r['legal_entity_id']!==(int)$legal||$r['source_kind']!==$source_kind||$r['source_key']!==$source_key)continue;if($r['entry_side']!=='either'&&$r['entry_side']!==$side)continue;if(pay_gl_001_compare_date($date,$r['effective_from'])<0)continue;if($r['effective_to']!==null&&pay_gl_001_compare_date($date,$r['effective_to'])>0)continue;$hits[]=$r;}if(count($hits)===0)return pay_gl_001_fail($e,'mapping_missing');if(count($hits)!==1)return pay_gl_001_fail($e,'mapping_ambiguous');return $hits[0];}
+function pay_gl_001_validate_mapping_rule(array $r,&$e){
+	$e=null;
+	foreach(array('company_id','legal_entity_id','mapping_key','effective_from','effective_to','source_kind','source_key','entry_side',
+		'account_code','dimension1_axis_code','dimension2_axis_code','suspense_allowed','maker_id','checker_id') as $k)if(!array_key_exists($k,
+		$r))return pay_gl_001_fail($e,'mapping_field_missing');
+	if(pay_gl_001_uint($r['company_id'])===false||pay_gl_001_posint($r['legal_entity_id'])===false||!pay_gl_001_token($r['mapping_key'],
+		96)||!pay_gl_001_date($r['effective_from'])||($r['effective_to']!==null&&!pay_gl_001_date($r['effective_to']))||($r['effective_to']!==null&&pay_gl_001_compare_date($r['effective_to'],
+		$r['effective_from'])<0))return pay_gl_001_fail($e,'mapping_scope_invalid');
+	if(!in_array($r['source_kind'],array('element','category','payable','suspense'),true)||!pay_gl_001_token($r['source_key'],
+		96)||!in_array($r['entry_side'],array('debit','credit','either'),true)||!pay_gl_001_token($r['account_code'],32))return pay_gl_001_fail($e,
+		'mapping_target_invalid');
+	foreach(array('dimension1_axis_code','dimension2_axis_code') as $k)if($r[$k]!==null&&!pay_gl_001_token($r[$k],64))return pay_gl_001_fail($e,
+		'mapping_axis_invalid');
+	if($r['dimension1_axis_code']!==null&&$r['dimension1_axis_code']===$r['dimension2_axis_code'])return pay_gl_001_fail($e,
+		'mapping_axis_duplicate');
+	$maker=pay_gl_001_posint($r['maker_id']);
+	$checker=pay_gl_001_posint($r['checker_id']);
+	if($maker===false||$checker===false||$maker===$checker)return pay_gl_001_fail($e,'mapping_maker_checker_invalid');
+	return true;
+}
+function pay_gl_001_mapping_snapshot(array $rules,&$e=null){
+	$e=null;
+	if(empty($rules))return pay_gl_001_fail($e,'mapping_snapshot_empty');
+	$items=array();
+	foreach($rules as $r){
+		if(!is_array($r)||!pay_gl_001_validate_mapping_rule($r,$e))return false;
+		$items[]=array('mapping_key'=>(string)$r['mapping_key'],'rule_sha256'=>pay_gl_001_mapping_rule_sha256($r));
+	}
+	usort($items,function($a,$b){$c=strcmp($a['mapping_key'],$b['mapping_key']);return $c!==0?$c:strcmp($a['rule_sha256'],$b['rule_sha256']);});
+	return pay_gl_001_hash($items);
+}
+function pay_gl_001_resolve_mapping(array $rules,$company,$legal,$date,$source_kind,$source_key,$side,&$e=null){
+	$e=null;
+	$hits=array();
+	foreach($rules as $r){
+		if(!is_array($r)||!pay_gl_001_validate_mapping_rule($r,$e))return false;
+		if((int)$r['company_id']!==(int)$company||(int)$r['legal_entity_id']!==(int)$legal||$r['source_kind']!==$source_kind||$r['source_key']!==$source_key)continue;
+		if($r['entry_side']!=='either'&&$r['entry_side']!==$side)continue;
+		if(pay_gl_001_compare_date($date,$r['effective_from'])<0)continue;
+		if($r['effective_to']!==null&&pay_gl_001_compare_date($date,$r['effective_to'])>0)continue;
+		$hits[]=$r;
+	}
+	if(count($hits)===0)return pay_gl_001_fail($e,'mapping_missing');
+	if(count($hits)!==1)return pay_gl_001_fail($e,'mapping_ambiguous');
+	return $hits[0];
+}
 
 /* Exact fixed-point split: weights must total 1,000,000 ppm; residual goes deterministically to the largest remainder then lowest index. */
-function pay_gl_001_split_minor($amount_minor,array $weights,&$e=null){$e=null;$amount=pay_gl_001_posint($amount_minor);if($amount===false||empty($weights))return pay_gl_001_fail($e,'split_invalid');$sum=0;foreach($weights as $w){$n=pay_gl_001_posint($w);if($n===false||$n>1000000)return pay_gl_001_fail($e,'split_weight_invalid');$sum+=$n;}if($sum!==1000000)return pay_gl_001_fail($e,'split_weight_total_invalid');$out=array();$rema=array();$used=0;foreach(array_values($weights) as $i=>$w){$amountQuotient=(int)(($amount-($amount%1000000))/1000000);$amountRemainder=$amount%1000000;$weightedRemainder=$amountRemainder*(int)$w;$q=$amountQuotient*(int)$w+(int)($weightedRemainder/1000000);$out[$i]=$q;$rema[$i]=$weightedRemainder%1000000;$used+=$q;}$left=$amount-$used;while($left>0){$best=0;foreach($rema as $i=>$r)if($r>$rema[$best]||($r===$rema[$best]&&$i<$best))$best=$i;$out[$best]++;$rema[$best]=-1;$left--;}return $out;}
-function pay_gl_001_set_sha256(array $rows,$hash_key,$order_key){$items=array();foreach($rows as $r){if(!is_array($r)||!isset($r[$hash_key],$r[$order_key])||!is_sha256_hex($r[$hash_key]))return false;$items[]=array($order_key=>(int)$r[$order_key],$hash_key=>$r[$hash_key]);}usort($items,function($a,$b)use($order_key){return $a[$order_key]===$b[$order_key]?0:($a[$order_key]<$b[$order_key]?-1:1);});return pay_gl_001_hash($items);}
+function pay_gl_001_split_minor($amount_minor,array $weights,&$e=null){
+	$e=null;
+	$amount=pay_gl_001_posint($amount_minor);
+	if($amount===false||empty($weights))return pay_gl_001_fail($e,'split_invalid');
+	$sum=0;
+	foreach($weights as $w){
+		$n=pay_gl_001_posint($w);
+		if($n===false||$n>1000000)return pay_gl_001_fail($e,'split_weight_invalid');
+		$sum+=$n;
+	}
+	if($sum!==1000000)return pay_gl_001_fail($e,'split_weight_total_invalid');
+	$out=array();
+	$rema=array();
+	$used=0;
+	foreach(array_values($weights) as $i=>$w){
+		$amountQuotient=(int)(($amount-($amount%1000000))/1000000);
+		$amountRemainder=$amount%1000000;
+		$weightedRemainder=$amountRemainder*(int)$w;
+		$q=$amountQuotient*(int)$w+(int)($weightedRemainder/1000000);
+		$out[$i]=$q;
+		$rema[$i]=$weightedRemainder%1000000;
+		$used+=$q;
+	}
+	$left=$amount-$used;
+	while($left>0){
+		$best=0;
+		foreach($rema as $i=>$r)if($r>$rema[$best]||($r===$rema[$best]&&$i<$best))$best=$i;
+		$out[$best]++;
+		$rema[$best]=-1;
+		$left--;
+	}
+	return $out;
+}
+function pay_gl_001_set_sha256(array $rows,$hash_key,$order_key){
+	$items=array();
+	foreach($rows as $r){
+		if(!is_array($r)||!isset($r[$hash_key],$r[$order_key])||!is_sha256_hex($r[$hash_key]))return false;
+		$items[]=array($order_key=>(int)$r[$order_key],$hash_key=>$r[$hash_key]);
+	}
+	usort($items,function($a,$b)use($order_key){return $a[$order_key]===$b[$order_key]?0:($a[$order_key]<$b[$order_key]?-1:1);});
+	return pay_gl_001_hash($items);
+}
 function pay_gl_001_line_set_sha256(array $lines){return pay_gl_001_set_sha256($lines,'canonical_line_sha256','line_no');}
 function pay_gl_001_allocation_set_sha256(array $allocs){return pay_gl_001_set_sha256($allocs,'allocation_sha256','allocation_no');}
-function pay_gl_001_project_native_dimensions(array $axes,array $rule,&$e=null){$e=null;$map=array();foreach($axes as $a){if(!is_array($a)||!pay_gl_001_validate_axis($a,$e))return false;$map[$a['axis_code']]=$a;}$result=array('dimension_id'=>0,'dimension2_id'=>0,'preserved_axis_sha256'=>array());foreach($axes as $a)$result['preserved_axis_sha256'][]=$a['axis_sha256'];foreach(array(1=>'dimension1_axis_code',2=>'dimension2_axis_code') as $slot=>$k){$code=isset($rule[$k])?$rule[$k]:null;if($code===null)continue;if(!isset($map[$code]))return pay_gl_001_fail($e,'native_dimension_axis_missing');$v=(string)$map[$code]['axis_value_key'];if(!preg_match('/^[1-9][0-9]*$/D',$v))return pay_gl_001_fail($e,'native_dimension_value_not_numeric');if($slot===1)$result['dimension_id']=(int)$v;else$result['dimension2_id']=(int)$v;}sort($result['preserved_axis_sha256'],SORT_STRING);$result['projection_sha256']=pay_gl_001_hash($result);return $result;}
-function pay_gl_001_reconcile(array $journal,array $lines,array $allocations,&$e=null){$e=null;$debit=0;$credit=0;$byline=array();foreach($lines as $l){if(!pay_gl_001_validate_line($l,$e))return false;if($l['entry_side']==='debit')$debit+=(int)$l['amount_minor'];else$credit+=(int)$l['amount_minor'];$byline[$l['canonical_line_sha256']]=array('amount'=>(int)$l['amount_minor'],'allocated'=>0,'weight'=>0);}foreach($allocations as $a){if(!pay_gl_001_validate_allocation($a,$e))return false;if(!isset($byline[$a['canonical_line_sha256']]))return pay_gl_001_fail($e,'allocation_line_missing');$byline[$a['canonical_line_sha256']]['allocated']+=(int)$a['allocated_amount_minor'];$byline[$a['canonical_line_sha256']]['weight']+=(int)$a['allocation_weight_ppm'];}foreach($byline as $x)if($x['allocated']!==$x['amount']||$x['weight']!==1000000)return pay_gl_001_fail($e,'allocation_reconciliation_failed');if($debit!==$credit||$debit!==(int)$journal['debit_minor']||$credit!==(int)$journal['credit_minor'])return pay_gl_001_fail($e,'journal_reconciliation_failed');$lineSet=pay_gl_001_line_set_sha256($lines);$allocSet=pay_gl_001_allocation_set_sha256($allocations);if($lineSet===false||$allocSet===false||!hash_equals($journal['line_set_sha256'],$lineSet)||!hash_equals($journal['allocation_set_sha256'],$allocSet))return pay_gl_001_fail($e,'custody_set_hash_mismatch');return array('debit_minor'=>$debit,'credit_minor'=>$credit,'line_set_sha256'=>$lineSet,'allocation_set_sha256'=>$allocSet,'reconciliation_sha256'=>pay_gl_001_hash(array('journal_sha256'=>$journal['journal_sha256'],'debit_minor'=>$debit,'credit_minor'=>$credit,'line_set_sha256'=>$lineSet,'allocation_set_sha256'=>$allocSet)));}
-function pay_gl_001_effect_key($kind,$journal_sha256,$predecessor_effect_sha256=null){if(!in_array($kind,array('post','reverse','repost'),true)||!is_sha256_hex($journal_sha256)||($predecessor_effect_sha256!==null&&!is_sha256_hex($predecessor_effect_sha256)))return false;return pay_gl_001_hash(array('kind'=>$kind,'journal_sha256'=>$journal_sha256,'predecessor_effect_sha256'=>$predecessor_effect_sha256));}
-function pay_gl_001_reversal_evidence(array $x,&$e=null){$e=null;foreach(array('company_id','journal_sha256','predecessor_effect_sha256','reason_code','actor_id','acted_at') as $k)if(!array_key_exists($k,$x))return pay_gl_001_fail($e,'reversal_field_missing');if(pay_gl_001_uint($x['company_id'])===false||!is_sha256_hex($x['journal_sha256'])||!is_sha256_hex($x['predecessor_effect_sha256'])||!pay_gl_001_token($x['reason_code'],64)||pay_gl_001_posint($x['actor_id'])===false||!pay_gl_001_time($x['acted_at']))return pay_gl_001_fail($e,'reversal_invalid');$x['effect_key']=pay_gl_001_effect_key('reverse',$x['journal_sha256'],$x['predecessor_effect_sha256']);$x['reversal_sha256']=pay_gl_001_hash($x);return $x;}
+function pay_gl_001_project_native_dimensions(array $axes,array $rule,&$e=null){
+	$e=null;
+	$map=array();
+	foreach($axes as $a){
+		if(!is_array($a)||!pay_gl_001_validate_axis($a,$e))return false;
+		$map[$a['axis_code']]=$a;
+	}
+	$result=array('dimension_id'=>0,'dimension2_id'=>0,'preserved_axis_sha256'=>array());
+	foreach($axes as $a)$result['preserved_axis_sha256'][]=$a['axis_sha256'];
+	foreach(array(1=>'dimension1_axis_code',2=>'dimension2_axis_code') as $slot=>$k){
+		$code=isset($rule[$k])?$rule[$k]:null;
+		if($code===null)continue;
+		if(!isset($map[$code]))return pay_gl_001_fail($e,'native_dimension_axis_missing');
+		$v=(string)$map[$code]['axis_value_key'];
+		if(!preg_match('/^[1-9][0-9]*$/D',$v))return pay_gl_001_fail($e,'native_dimension_value_not_numeric');
+		if($slot===1)$result['dimension_id']=(int)$v;
+		else$result['dimension2_id']=(int)$v;
+	}
+	sort($result['preserved_axis_sha256'],SORT_STRING);
+	$result['projection_sha256']=pay_gl_001_hash($result);
+	return $result;
+}
+function pay_gl_001_reconcile(array $journal,array $lines,array $allocations,&$e=null){
+	$e=null;
+	$debit=0;
+	$credit=0;
+	$byline=array();
+	foreach($lines as $l){
+		if(!pay_gl_001_validate_line($l,$e))return false;
+		if($l['entry_side']==='debit')$debit+=(int)$l['amount_minor'];
+		else$credit+=(int)$l['amount_minor'];
+		$byline[$l['canonical_line_sha256']]=array('amount'=>(int)$l['amount_minor'],'allocated'=>0,'weight'=>0);
+	}
+	foreach($allocations as $a){
+		if(!pay_gl_001_validate_allocation($a,$e))return false;
+		if(!isset($byline[$a['canonical_line_sha256']]))return pay_gl_001_fail($e,'allocation_line_missing');
+		$byline[$a['canonical_line_sha256']]['allocated']+=(int)$a['allocated_amount_minor'];
+		$byline[$a['canonical_line_sha256']]['weight']+=(int)$a['allocation_weight_ppm'];
+	}
+	foreach($byline as $x)if($x['allocated']!==$x['amount']||$x['weight']!==1000000)return pay_gl_001_fail($e,'allocation_reconciliation_failed');
+	if($debit!==$credit||$debit!==(int)$journal['debit_minor']||$credit!==(int)$journal['credit_minor'])return pay_gl_001_fail($e,
+		'journal_reconciliation_failed');
+	$lineSet=pay_gl_001_line_set_sha256($lines);
+	$allocSet=pay_gl_001_allocation_set_sha256($allocations);
+	if($lineSet===false||$allocSet===false||!hash_equals($journal['line_set_sha256'],$lineSet)||!hash_equals($journal['allocation_set_sha256'],
+		$allocSet))return pay_gl_001_fail($e,'custody_set_hash_mismatch');
+	return array('debit_minor'=>$debit,'credit_minor'=>$credit,'line_set_sha256'=>$lineSet,'allocation_set_sha256'=>$allocSet,
+		'reconciliation_sha256'=>pay_gl_001_hash(array('journal_sha256'=>$journal['journal_sha256'],'debit_minor'=>$debit,'credit_minor'=>$credit,
+		'line_set_sha256'=>$lineSet,'allocation_set_sha256'=>$allocSet)));
+}
+function pay_gl_001_effect_key($kind,$journal_sha256,$predecessor_effect_sha256=null){
+	if(!in_array($kind,array('post','reverse','repost'),true)||!is_sha256_hex($journal_sha256)||($predecessor_effect_sha256!==null&&!is_sha256_hex($predecessor_effect_sha256)))return false;
+	return pay_gl_001_hash(array('kind'=>$kind,'journal_sha256'=>$journal_sha256,'predecessor_effect_sha256'=>$predecessor_effect_sha256));
+}
+function pay_gl_001_reversal_evidence(array $x,&$e=null){
+	$e=null;
+	foreach(array('company_id','journal_sha256','predecessor_effect_sha256','reason_code','actor_id','acted_at') as $k)if(!array_key_exists($k,
+		$x))return pay_gl_001_fail($e,'reversal_field_missing');
+	if(pay_gl_001_uint($x['company_id'])===false||!is_sha256_hex($x['journal_sha256'])||!is_sha256_hex($x['predecessor_effect_sha256'])||!pay_gl_001_token($x['reason_code'],
+		64)||pay_gl_001_posint($x['actor_id'])===false||!pay_gl_001_time($x['acted_at']))return pay_gl_001_fail($e,'reversal_invalid');
+	$x['effect_key']=pay_gl_001_effect_key('reverse',$x['journal_sha256'],$x['predecessor_effect_sha256']);
+	$x['reversal_sha256']=pay_gl_001_hash($x);
+	return $x;
+}
 ?>

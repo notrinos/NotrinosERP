@@ -84,7 +84,23 @@ function hrm_pay_rule_006_validate_activation_envelope(array $v,&$error=null)
 function hrm_pay_rule_006_command_state(array $commands,&$error=null)
 {
     $error=null;$expected=1;$last=null;
-    foreach($commands as $row){if(!is_array($row)||(int)($row['sequence_no']??0)!==$expected){$error='command_sequence_gap';return false;}$type=(string)($row['command_type']??'');if(!in_array($type,array('activate','failback'),true)){$error='command_type_invalid';return false;}if($last!==null&&(int)($row['predecessor_command_id']??0)!==(int)$last['command_id']){$error='command_predecessor_mismatch';return false;}$last=$row;$expected++;}
+    foreach($commands as $row){
+      if(!is_array($row)||(int)($row['sequence_no']??0)!==$expected){
+        $error='command_sequence_gap';
+        return false;
+      }
+      $type=(string)($row['command_type']??'');
+      if(!in_array($type,array('activate','failback'),true)){
+        $error='command_type_invalid';
+        return false;
+      }
+      if($last!==null&&(int)($row['predecessor_command_id']??0)!==(int)$last['command_id']){
+        $error='command_predecessor_mismatch';
+        return false;
+      }
+      $last=$row;
+      $expected++;
+    }
     if($last===null)return 'legacy';return $last['command_type']==='activate'?'governed':'legacy';
 }
 

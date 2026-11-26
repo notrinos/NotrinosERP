@@ -54,7 +54,8 @@ function pay_rec_001_build_privacy_export_from_rows(array $profile,array $sets,a
     foreach($sets as $set){
         if(!is_array($set)||!pay_rec_001_export_exact_keys($set,$set_keys))return pay_rec_001_export_fail($error,'privacy_export_evidence_shape_invalid');
         if(!in_array($set['evidence_kind'],array('payroll','gl','payment','filing'),true)||isset($by_kind[$set['evidence_kind']]))return pay_rec_001_export_fail($error,'privacy_export_evidence_kind_invalid');
-        if(pay_rec_001_uint($set['reconciliation_evidence_set_id'])===false||(int)$set['reconciliation_evidence_set_id']<=0||pay_rec_001_uint($set['item_count'])===false||(int)$set['item_count']<0||!is_numeric($set['amount_minor'])||$set['status_token']!=='matched'||(int)$set['current_evidence']!==1||!pay_rec_001_export_valid_timestamp($set['recomputed_at']))return pay_rec_001_export_fail($error,'privacy_export_evidence_invalid');
+        if(pay_rec_001_uint($set['reconciliation_evidence_set_id'])===false||(int)$set['reconciliation_evidence_set_id']<=0||pay_rec_001_uint($set['item_count'])===false||(int)$set['item_count']<0||!is_numeric($set['amount_minor'])||$set['status_token']!=='matched'||(int)$set['current_evidence']!==1||!pay_rec_001_export_valid_timestamp($set['recomputed_at']))return pay_rec_001_export_fail($error,
+          'privacy_export_evidence_invalid');
         foreach(array('membership_sha256','evidence_sha256','source_contract_sha256') as $k)if(!pay_rec_001_sha($set[$k]))return pay_rec_001_export_fail($error,'privacy_export_evidence_hash_invalid');
         $by_kind[$set['evidence_kind']]=$set;
     }
@@ -71,7 +72,8 @@ function pay_rec_001_build_privacy_export_from_rows(array $profile,array $sets,a
     $approval_keys=array('reconciliation_approval_id','reconciliation_review_id','close_checklist_id','review_sha256','decision','assurance_evidence_sha256','approval_sha256','approved_at');
     if(!pay_rec_001_export_exact_keys($review,$review_keys)||!pay_rec_001_export_exact_keys($approval,$approval_keys))return pay_rec_001_export_fail($error,'privacy_export_review_shape_invalid');
     foreach(array($review['reconciliation_review_id'],$approval['reconciliation_approval_id']) as $id)if(pay_rec_001_uint($id)===false||(int)$id<=0)return pay_rec_001_export_fail($error,'privacy_export_review_identity_invalid');
-    if((string)$review['close_checklist_id']!==(string)$checklist['close_checklist_id']||(string)$approval['close_checklist_id']!==(string)$checklist['close_checklist_id']||(string)$approval['reconciliation_review_id']!==(string)$review['reconciliation_review_id']||$review['decision']!=='approved'||$approval['decision']!=='approved'||!pay_rec_001_export_valid_timestamp($review['reviewed_at'])||!pay_rec_001_export_valid_timestamp($approval['approved_at']))return pay_rec_001_export_fail($error,'privacy_export_review_approval_invalid');
+    if((string)$review['close_checklist_id']!==(string)$checklist['close_checklist_id']||(string)$approval['close_checklist_id']!==(string)$checklist['close_checklist_id']||(string)$approval['reconciliation_review_id']!==(string)$review['reconciliation_review_id']||$review['decision']!=='approved'||$approval['decision']!=='approved'||!pay_rec_001_export_valid_timestamp($review['reviewed_at'])||!pay_rec_001_export_valid_timestamp($approval['approved_at']))return pay_rec_001_export_fail($error,
+      'privacy_export_review_approval_invalid');
     foreach(array('checklist_sha256','readiness_sha256','review_evidence_sha256','review_sha256') as $k)if(!pay_rec_001_sha($review[$k]))return pay_rec_001_export_fail($error,'privacy_export_review_hash_invalid');
     foreach(array('review_sha256','assurance_evidence_sha256','approval_sha256') as $k)if(!pay_rec_001_sha($approval[$k]))return pay_rec_001_export_fail($error,'privacy_export_approval_hash_invalid');
     if(!hash_equals((string)$review['checklist_sha256'],(string)$checklist['checklist_sha256'])||!hash_equals((string)$review['readiness_sha256'],(string)$checklist['readiness_sha256'])||!hash_equals((string)$approval['review_sha256'],(string)$review['review_sha256']))return pay_rec_001_export_fail($error,'privacy_export_review_binding_mismatch');
@@ -81,7 +83,10 @@ function pay_rec_001_build_privacy_export_from_rows(array $profile,array $sets,a
     $prior=str_repeat('0',64);$prior_state=null;$seq=0;$safe_events=array();
     foreach($events as $event){
         if(!is_array($event)||!pay_rec_001_export_exact_keys($event,$event_keys))return pay_rec_001_export_fail($error,'privacy_export_state_event_shape_invalid');
-        $seq++;if((int)$event['event_sequence']!==$seq||!hash_equals($prior,(string)$event['prior_event_sha256'])||!pay_rec_001_close_state_transition_allowed($prior_state,$event['event_type'])||pay_rec_001_close_state_for_event($event['event_type'])!==$event['resulting_state']||!pay_rec_001_export_valid_timestamp($event['acted_at']))return pay_rec_001_export_fail($error,'privacy_export_state_chain_invalid');
+        $seq++;
+        if((int)$event['event_sequence']!==$seq||!hash_equals($prior,(string)$event['prior_event_sha256'])||!pay_rec_001_close_state_transition_allowed($prior_state,
+          $event['event_type'])||pay_rec_001_close_state_for_event($event['event_type'])!==$event['resulting_state']||!pay_rec_001_export_valid_timestamp($event['acted_at']))return pay_rec_001_export_fail($error,
+          'privacy_export_state_chain_invalid');
         $reason=pay_rec_001_token($event['reason_code'],48);if($reason===false||($event['event_type']==='development_close'?$reason!=='approved_reconciliation':!in_array($reason,pay_rec_001_close_state_contract()['recovery_reason_codes'],true)))return pay_rec_001_export_fail($error,'privacy_export_state_reason_invalid');
         foreach(array('prior_event_sha256','checklist_sha256','review_sha256','approval_sha256','transition_evidence_sha256','event_sha256') as $k)if(!pay_rec_001_sha($event[$k]))return pay_rec_001_export_fail($error,'privacy_export_state_hash_invalid');
         $prior=(string)$event['event_sha256'];$prior_state=$event['resulting_state'];$safe_events[]=$event;

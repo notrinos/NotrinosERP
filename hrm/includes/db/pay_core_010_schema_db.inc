@@ -5,7 +5,10 @@ include_once(dirname(__FILE__).'/migration_readiness_db.inc');
 function hrm_pay_core_010_columns(){return array(
 'hrm_pay_core_010_approval_intents'=>array('approval_intent_id','payroll_period_id','calendar_period_id','payroll_group_id','group_version_id','legal_entity_id','result_set_sha256','result_count','gross_amount','deduction_amount','net_amount','projection_contract_version','projection_set_sha256','cutover_transition_sha256','command_key','command_sha256','maker_id','intent_sha256','created_at'),
 'hrm_pay_core_010_approvals'=>array('approval_id','approval_intent_id','payroll_period_id','result_set_sha256','projection_set_sha256','intent_sha256','approval_draft_id','decision_token','approver_id','approval_sha256','created_at'),
-'hrm_pay_core_010_projections'=>array('projection_id','payroll_period_id','calendar_period_id','payroll_group_id','group_version_id','legal_entity_id','payroll_relationship_id','assignment_id','employee_id_sha256','result_id','result_sha256','projection_contract_version','legacy_payslip_id','header_sha256','detail_set_sha256','command_key','command_sha256','projection_sha256','projected_by','projected_at'),
+'hrm_pay_core_010_projections'=>array('projection_id','payroll_period_id','calendar_period_id','payroll_group_id','group_version_id',
+	'legal_entity_id','payroll_relationship_id','assignment_id','employee_id_sha256','result_id','result_sha256','projection_contract_version',
+	'legacy_payslip_id','header_sha256','detail_set_sha256','command_key','command_sha256','projection_sha256','projected_by',
+	'projected_at'),
 'hrm_pay_core_010_parity_evidence'=>array('parity_id','payroll_period_id','payroll_group_id','group_version_id','legal_entity_id','result_set_sha256','candidate_projection_set_sha256','legacy_projection_set_sha256','parity_status','mismatch_count','evidence_sha256','parity_sha256','reviewer_id','created_at'),
 'hrm_pay_core_010_cutover_transitions'=>array('transition_id','payroll_group_id','legal_entity_id','sequence_no','from_state','to_state','expected_sequence_no','result_contract_version','parity_id','command_key','command_sha256','predecessor_transition_sha256','transition_sha256','actor_id','created_at'),
 'hrm_pay_core_010_recovery_evidence'=>array('recovery_id','payroll_group_id','legal_entity_id','payroll_period_id','transition_id','recovery_action','evidence_sha256','recovery_sha256','reviewer_id','created_at'),
@@ -27,11 +30,57 @@ function hrm_pay_core_010_required_indexes(){return array(
 'hrm_pay_core_010_usage_events'=>array('PRIMARY','uq_pc10_usage_sha','ix_pc10_usage_scope'));
 }
 function hrm_pay_core_010_trigger_name($code,$op){$prefix=hrm_migration_active_table_prefix();if($prefix===false||!preg_match('/^[a-z0-9]{3}$/D',$code))return false;$name=$prefix.'pc10_'.$code.'_'.(strtoupper($op)==='UPDATE'?'u':'d');return strlen($name)<=64?$name:false;}
-function hrm_pay_core_010_trigger_exists($table,$code,$op){$physical=hrm_migration_physical_table_name($table);$name=hrm_pay_core_010_trigger_name($code,$op);if($physical===false||$name===false)return false;$q=db_query('SELECT EVENT_MANIPULATION,EVENT_OBJECT_TABLE,ACTION_TIMING,ACTION_STATEMENT FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME='.db_escape($name).' LIMIT 2');if(!$q||db_num_rows($q)!==1)return false;$r=db_fetch_assoc($q);$stmt=(string)($r['ACTION_STATEMENT']??'');return strtoupper((string)$r['EVENT_MANIPULATION'])===strtoupper($op)&&(string)$r['EVENT_OBJECT_TABLE']===$physical&&strtoupper((string)$r['ACTION_TIMING'])==='BEFORE'&&strpos($stmt,"SIGNAL SQLSTATE '45000'")!==false&&strpos($stmt,'PAY-CORE-010 immutable custody denies')!==false;}
+function hrm_pay_core_010_trigger_exists($table,$code,$op){
+	$physical=hrm_migration_physical_table_name($table);
+	$name=hrm_pay_core_010_trigger_name($code,$op);
+	if($physical===false||$name===false)return false;
+	$q=db_query('SELECT EVENT_MANIPULATION,EVENT_OBJECT_TABLE,ACTION_TIMING,ACTION_STATEMENT FROM INFORMATION_SCHEMA.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() AND TRIGGER_NAME='
+		.db_escape($name).' LIMIT 2');
+	if(!$q||db_num_rows($q)!==1)return false;
+	$r=db_fetch_assoc($q);
+	$stmt=(string)($r['ACTION_STATEMENT']??'');
+	return strtoupper((string)$r['EVENT_MANIPULATION'])===strtoupper($op)&&(string)$r['EVENT_OBJECT_TABLE']===$physical&&strtoupper((string)$r['ACTION_TIMING'])==='BEFORE'&&strpos($stmt,
+		"SIGNAL SQLSTATE '45000'")!==false&&strpos($stmt,'PAY-CORE-010 immutable custody denies')!==false;
+}
 function hrm_pay_core_010_table_columns($table){if(!hrm_migration_table_exists($table))return false;$q=db_query('SHOW COLUMNS FROM '.TB_PREF.$table);if(!$q)return false;$out=array();while($r=db_fetch_assoc($q))$out[]=(string)$r['Field'];return $out;}
 function hrm_pay_core_010_table_innodb($table){$p=hrm_migration_physical_table_name($table);if($p===false)return false;$q=db_query('SELECT ENGINE FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='.db_escape($p));$r=$q?db_fetch_assoc($q):false;return $r&&strcasecmp((string)$r['ENGINE'],'InnoDB')===0;}
-function hrm_pay_core_010_ensure_triggers($patch,array $tables){$codes=hrm_pay_core_010_trigger_codes();foreach($tables as $table){if(!isset($codes[$table]))return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-CORE-010 immutable trigger table is unknown.');foreach(array('UPDATE','DELETE') as $op){if(hrm_pay_core_010_trigger_exists($table,$codes[$table],$op))continue;$name=hrm_pay_core_010_trigger_name($codes[$table],$op);if($name===false)return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-CORE-010 immutable trigger name invalid.');$sql='CREATE TRIGGER `'.$name.'` BEFORE '.$op.' ON `'.TB_PREF.$table.'` FOR EACH ROW SIGNAL SQLSTATE \'45000\' SET MESSAGE_TEXT='.db_escape('PAY-CORE-010 immutable custody denies '.strtolower($op).' on '.$table);if(!db_query($sql,'could not create PAY-CORE-010 immutable trigger'))return false;}}return true;}
-function hrm_pay_core_010_require_group_schema($patch,$group,$ensure=false){$groups=hrm_pay_core_010_schema_groups();$all=hrm_pay_core_010_columns();$indexes=hrm_pay_core_010_required_indexes();if(!isset($groups[$group]))return false;$tables=$groups[$group];foreach($tables as $table){if(hrm_pay_core_010_table_columns($table)!==$all[$table]||!hrm_pay_core_010_table_innodb($table))return hrm_migration_fail($patch,HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-CORE-010 custody schema mismatch for '.$table.'.');$actual=hrm_migration_index_names($table);if(!is_array($actual))return hrm_migration_fail($patch,HRM_MIGRATION_INDEX_MISMATCH,'PAY-CORE-010 index metadata unavailable for '.$table.'.');foreach($indexes[$table] as $name)if(!isset($actual[$name]))return hrm_migration_fail($patch,HRM_MIGRATION_INDEX_MISMATCH,'PAY-CORE-010 required index '.$name.' missing on '.$table.'.');}if($ensure&&!hrm_pay_core_010_ensure_triggers($patch,$tables))return false;$codes=hrm_pay_core_010_trigger_codes();foreach($tables as $table)foreach(array('UPDATE','DELETE') as $op)if(!hrm_pay_core_010_trigger_exists($table,$codes[$table],$op))return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-CORE-010 immutable denial trigger missing for '.$table.' '.$op.'.');return true;}
+function hrm_pay_core_010_ensure_triggers($patch,array $tables){
+	$codes=hrm_pay_core_010_trigger_codes();
+	foreach($tables as $table){
+		if(!isset($codes[$table]))return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-CORE-010 immutable trigger table is unknown.');
+		foreach(array('UPDATE','DELETE') as $op){
+			if(hrm_pay_core_010_trigger_exists($table,$codes[$table],$op))continue;
+			$name=hrm_pay_core_010_trigger_name($codes[$table],$op);
+			if($name===false)return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-CORE-010 immutable trigger name invalid.');
+			$sql='CREATE TRIGGER `'.$name.'` BEFORE '.$op.' ON `'.TB_PREF.$table.'` FOR EACH ROW SIGNAL SQLSTATE \'45000\' SET MESSAGE_TEXT='
+				.db_escape('PAY-CORE-010 immutable custody denies '.strtolower($op).' on '.$table);
+			if(!db_query($sql,'could not create PAY-CORE-010 immutable trigger'))return false;
+		}
+	}
+	return true;
+}
+function hrm_pay_core_010_require_group_schema($patch,$group,$ensure=false){
+	$groups=hrm_pay_core_010_schema_groups();
+	$all=hrm_pay_core_010_columns();
+	$indexes=hrm_pay_core_010_required_indexes();
+	if(!isset($groups[$group]))return false;
+	$tables=$groups[$group];
+	foreach($tables as $table){
+		if(hrm_pay_core_010_table_columns($table)!==$all[$table]||!hrm_pay_core_010_table_innodb($table))return hrm_migration_fail($patch,
+			HRM_MIGRATION_PROJECTION_MISMATCH,'PAY-CORE-010 custody schema mismatch for '.$table.'.');
+		$actual=hrm_migration_index_names($table);
+		if(!is_array($actual))return hrm_migration_fail($patch,HRM_MIGRATION_INDEX_MISMATCH,'PAY-CORE-010 index metadata unavailable for '
+			.$table.'.');
+		foreach($indexes[$table] as $name)if(!isset($actual[$name]))return hrm_migration_fail($patch,HRM_MIGRATION_INDEX_MISMATCH,
+			'PAY-CORE-010 required index '.$name.' missing on '.$table.'.');
+	}
+	if($ensure&&!hrm_pay_core_010_ensure_triggers($patch,$tables))return false;
+	$codes=hrm_pay_core_010_trigger_codes();
+	foreach($tables as $table)foreach(array('UPDATE','DELETE') as $op)if(!hrm_pay_core_010_trigger_exists($table,$codes[$table],
+		$op))return hrm_migration_fail($patch,HRM_MIGRATION_TAMPER_SUSPECT,'PAY-CORE-010 immutable denial trigger missing for '
+		.$table.' '.$op.'.');
+	return true;
+}
 /** Reuse only an MDL-protected reader proof; other callers perform every original schema check. */
 function hrm_pay_core_010_require_full_schema($patch){if(function_exists('pay_glb_001_native_reader_schema_cached')&&pay_glb_001_native_reader_schema_cached('core010'))return true;foreach(array_keys(hrm_pay_core_010_schema_groups()) as $group)if(!hrm_pay_core_010_require_group_schema($patch,$group,false))return false;return true;}
 ?>

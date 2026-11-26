@@ -7,7 +7,9 @@ function pay_api_001_rate_limit_positive_int($value,$max){$n=pay_api_001_uint_va
 function pay_api_001_rate_limit_policy_valid($policy)
 {
     if(!is_array($policy))return false;foreach(array('api_rate_limit_policy_id','api_resource_id','reviewed_by','approved_by') as $k)if(!isset($policy[$k])||pay_api_001_rate_limit_positive_int($policy[$k],PHP_INT_MAX)===false)return false;
-    if(pay_api_001_positive_id($policy['reviewed_by'])===pay_api_001_positive_id($policy['approved_by'])||!isset($policy['action_code'])||(string)$policy['action_code']!=='read'||!isset($policy['window_seconds'])||pay_api_001_rate_limit_positive_int($policy['window_seconds'],86400)===false||!isset($policy['max_requests'])||pay_api_001_rate_limit_positive_int($policy['max_requests'],100000)===false||!isset($policy['policy_sha256'])||!is_sha256_hex($policy['policy_sha256']))return false;return true;
+    if(pay_api_001_positive_id($policy['reviewed_by'])===pay_api_001_positive_id($policy['approved_by'])||!isset($policy['action_code'])||(string)$policy['action_code']!=='read'||!isset($policy['window_seconds'])||pay_api_001_rate_limit_positive_int($policy['window_seconds'],
+      86400)===false||!isset($policy['max_requests'])||pay_api_001_rate_limit_positive_int($policy['max_requests'],100000)===false||!isset($policy['policy_sha256'])||!is_sha256_hex($policy['policy_sha256']))return false;
+    return true;
 }
 function pay_api_001_rate_limit_window_start($unix_time,$window_seconds)
 {
@@ -15,6 +17,12 @@ function pay_api_001_rate_limit_window_start($unix_time,$window_seconds)
 }
 function pay_api_001_rate_limit_gate($policy,$accepted_in_window,$unix_time)
 {
-    if(!pay_api_001_rate_limit_policy_valid($policy))return array('allowed'=>false,'code'=>'rate_policy_invalid');if(!is_int($accepted_in_window)||$accepted_in_window<0)return array('allowed'=>false,'code'=>'rate_state_invalid');$window=pay_api_001_rate_limit_window_start($unix_time,$policy['window_seconds']);if($window===false)return array('allowed'=>false,'code'=>'rate_clock_invalid');$max=(int)$policy['max_requests'];if($accepted_in_window>=$max)return array('allowed'=>false,'code'=>'rate_limit_exceeded','window_start'=>$window,'remaining'=>0);return array('allowed'=>true,'code'=>'rate_limit_allowed','window_start'=>$window,'remaining'=>$max-$accepted_in_window-1);
+    if(!pay_api_001_rate_limit_policy_valid($policy))return array('allowed'=>false,'code'=>'rate_policy_invalid');
+    if(!is_int($accepted_in_window)||$accepted_in_window<0)return array('allowed'=>false,'code'=>'rate_state_invalid');
+    $window=pay_api_001_rate_limit_window_start($unix_time,$policy['window_seconds']);
+    if($window===false)return array('allowed'=>false,'code'=>'rate_clock_invalid');
+    $max=(int)$policy['max_requests'];
+    if($accepted_in_window>=$max)return array('allowed'=>false,'code'=>'rate_limit_exceeded','window_start'=>$window,'remaining'=>0);
+    return array('allowed'=>true,'code'=>'rate_limit_allowed','window_start'=>$window,'remaining'=>$max-$accepted_in_window-1);
 }
 ?>

@@ -72,7 +72,9 @@ if(!is_array($candidates)||count($candidates)===0){
         start_form(false,$bank_account_verification_promotion_script_name);
         hidden('_token',ensure_csrf_token());hidden('route_action','promote_bank_account');hidden('employee_id',$employee_ref);hidden('promotion_intent',$intent);
         start_table(TABLESTYLE2);
-        label_row(_('Bank account:'),htmlspecialchars((string)$candidate['masked_account'],ENT_QUOTES,'UTF-8').' / '.htmlspecialchars((string)$candidate['masked_routing'],ENT_QUOTES,'UTF-8').' — '.htmlspecialchars((string)$candidate['payment_method'],ENT_QUOTES,'UTF-8').' — '.sprintf(_('#%d, evidence-bound row version %d; current row version %d'),(int)$candidate['person_bank_account_id'],(int)$candidate['bank_account_row_version'],(int)$candidate['bank_account_current_row_version']));
+        label_row(_('Bank account:'),htmlspecialchars((string)$candidate['masked_account'],ENT_QUOTES,'UTF-8').' / '.htmlspecialchars((string)$candidate['masked_routing'],
+          ENT_QUOTES,'UTF-8').' — '.htmlspecialchars((string)$candidate['payment_method'],ENT_QUOTES,'UTF-8').' — '.sprintf(_('#%d, evidence-bound row version %d; current row version %d'),
+          (int)$candidate['person_bank_account_id'],(int)$candidate['bank_account_row_version'],(int)$candidate['bank_account_current_row_version']));
         label_row(_('Evidence:'),sprintf(_('#%d, evidence version %d'),(int)$candidate['verification_evidence_id'],(int)$candidate['evidence_row_version']));
         label_row(_('Approved request:'),sprintf(_('#%d, request version %d, draft #%d'),(int)$candidate['verification_request_id'],(int)$candidate['request_row_version'],(int)$candidate['approval_draft_id']));
         label_row(_('Verification method:'),htmlspecialchars((string)$candidate['verification_method'],ENT_QUOTES,'UTF-8'));

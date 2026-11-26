@@ -80,7 +80,12 @@ function hrm_pay_core_007_historical_context(array $x,&$error=null)
     $norm=array();foreach($gaps as $g){$t=hrm_pay_core_007_token($g,64);if(!$t){$error='historical_context_gap_invalid';return false;}$norm[$t]=true;}$norm=array_keys($norm);sort($norm,SORT_STRING);
     if(($state==='complete'&&$norm)||($state==='gap'&&!$norm)){$error='historical_context_gap_state_invalid';return false;}
     $material=$x['recompute_snapshot_material']??null;if($state==='complete'){if(!is_array($material)||!hrm_pay_core_005_validate_snapshot_material($material,$me)){$error='historical_recompute_snapshot_invalid'.(isset($me)?':'.$me:'');return false;}}elseif($material!==null){$error='gap_context_cannot_claim_recompute_snapshot';return false;}
-    $out=array('affected_result_id'=>(int)$x['affected_result_id'],'original_result_id'=>(int)$x['original_result_id'],'original_result_sha256'=>(string)$x['original_result_sha256'],'original_snapshot_sha256'=>(string)$x['original_snapshot_sha256'],'approved_inputs_sha256'=>(string)$x['approved_inputs_sha256'],'element_versions_sha256'=>(string)$x['element_versions_sha256'],'eligibility_sha256'=>(string)$x['eligibility_sha256'],'rule_artifacts_sha256'=>(string)$x['rule_artifacts_sha256'],'jurisdiction_resolution_sha256'=>(string)$x['jurisdiction_resolution_sha256'],'source_events_sha256'=>(string)$x['source_events_sha256'],'configuration_sha256'=>(string)$x['configuration_sha256'],'provenance_state'=>$state,'gap_codes'=>$norm,'recompute_snapshot_material'=>$material);
+    $out=array('affected_result_id'=>(int)$x['affected_result_id'],'original_result_id'=>(int)$x['original_result_id'],'original_result_sha256'=>(string)$x['original_result_sha256'],
+      'original_snapshot_sha256'=>(string)$x['original_snapshot_sha256'],'approved_inputs_sha256'=>(string)$x['approved_inputs_sha256'],
+      'element_versions_sha256'=>(string)$x['element_versions_sha256'],'eligibility_sha256'=>(string)$x['eligibility_sha256'],
+      'rule_artifacts_sha256'=>(string)$x['rule_artifacts_sha256'],'jurisdiction_resolution_sha256'=>(string)$x['jurisdiction_resolution_sha256'],
+      'source_events_sha256'=>(string)$x['source_events_sha256'],'configuration_sha256'=>(string)$x['configuration_sha256'],
+      'provenance_state'=>$state,'gap_codes'=>$norm,'recompute_snapshot_material'=>$material);
     $out['context_sha256']=hrm_pay_core_007_hash($out);return $out;
 }
 
@@ -93,26 +98,101 @@ function hrm_pay_core_007_recalculate(array $context,array $plan,&$error=null)
 
 function hrm_pay_core_007_line_map(array $lines,&$error=null)
 {
-    $error=null;$m=array();foreach($lines as $line){foreach(array('element_version_id','line_kind','currency','amount') as $k)if(!array_key_exists($k,$line)){$error='delta_line_incomplete';return false;}$id=(int)$line['element_version_id'];$kind=hrm_pay_core_007_token($line['line_kind'],32);$cur=strtoupper((string)$line['currency']);if($id<=0||!$kind||!preg_match('/^[A-Z]{3}$/D',$cur)){$error='delta_line_identity_invalid';return false;}try{$amount=hrm_pay_core_007_decimal($line['amount']);}catch(Throwable $t){$error='delta_line_amount_invalid';return false;}$k=sprintf('%020d|%s|%s',$id,$kind,$cur);$m[$k]=isset($m[$k])?hrm_pay_core_007_add($m[$k],$amount):$amount;}ksort($m,SORT_STRING);return $m;
+    $error=null;
+    $m=array();
+    foreach($lines as $line){
+      foreach(array('element_version_id','line_kind','currency','amount') as $k)if(!array_key_exists($k,$line)){
+        $error='delta_line_incomplete';
+        return false;
+      }
+      $id=(int)$line['element_version_id'];
+      $kind=hrm_pay_core_007_token($line['line_kind'],32);
+      $cur=strtoupper((string)$line['currency']);
+      if($id<=0||!$kind||!preg_match('/^[A-Z]{3}$/D',$cur)){
+        $error='delta_line_identity_invalid';
+        return false;
+      }
+      try{
+        $amount=hrm_pay_core_007_decimal($line['amount']);
+      }catch(Throwable $t){
+        $error='delta_line_amount_invalid';
+        return false;
+      }
+      $k=sprintf('%020d|%s|%s',$id,$kind,$cur);
+      $m[$k]=isset($m[$k])?hrm_pay_core_007_add($m[$k],$amount):$amount;
+    }
+    ksort($m,SORT_STRING);
+    return $m;
 }
 
 /** Delta is recomputed minus accepted original; originals are never replaced. */
 function hrm_pay_core_007_compute_deltas(array $original_lines,array $recomputed_lines,&$error=null)
 {
     $error=null;$a=hrm_pay_core_007_line_map($original_lines,$error);if($a===false)return false;$b=hrm_pay_core_007_line_map($recomputed_lines,$error);if($b===false)return false;$keys=array_values(array_unique(array_merge(array_keys($a),array_keys($b))));sort($keys,SORT_STRING);$rows=array();$pos='0.000000';$neg='0.000000';
-    foreach($keys as $k){list($id,$kind,$cur)=explode('|',$k,3);$oa=$a[$k]??'0.000000';$ra=$b[$k]??'0.000000';$raw=hrm_pay_core_007_sub($ra,$oa);$d=$kind==='deduction'?hrm_pay_core_007_sub('0',$raw):$raw;if(hrm_pay_core_007_compare($d,'0')>0)$pos=hrm_pay_core_007_add($pos,$d);elseif(hrm_pay_core_007_compare($d,'0')<0)$neg=hrm_pay_core_007_add($neg,$d);$r=array('delta_key'=>$k,'element_version_id'=>(int)$id,'line_kind'=>$kind,'currency'=>$cur,'original_amount'=>$oa,'recomputed_amount'=>$ra,'delta_amount'=>$d);$r['delta_sha256']=hrm_pay_core_007_hash($r);$rows[]=$r;}
+    foreach($keys as $k){
+      list($id,$kind,$cur)=explode('|',$k,3);
+      $oa=$a[$k]??'0.000000';
+      $ra=$b[$k]??'0.000000';
+      $raw=hrm_pay_core_007_sub($ra,$oa);
+      $d=$kind==='deduction'?hrm_pay_core_007_sub('0',$raw):$raw;
+      if(hrm_pay_core_007_compare($d,'0')>0)$pos=hrm_pay_core_007_add($pos,$d);
+      elseif(hrm_pay_core_007_compare($d,'0')<0)$neg=hrm_pay_core_007_add($neg,$d);
+      $r=array('delta_key'=>$k,'element_version_id'=>(int)$id,'line_kind'=>$kind,'currency'=>$cur,'original_amount'=>$oa,
+        'recomputed_amount'=>$ra,'delta_amount'=>$d);
+      $r['delta_sha256']=hrm_pay_core_007_hash($r);
+      $rows[]=$r;
+    }
     $set=hrm_pay_core_007_hash(array_map(function($r){return $r['delta_sha256'];},$rows));return array('rows'=>$rows,'positive_total'=>$pos,'negative_total'=>$neg,'net_delta'=>hrm_pay_core_007_add($pos,$neg),'delta_set_sha256'=>$set);
 }
 
 function hrm_pay_core_007_arrears_obligation(array $x,&$error=null)
 {
     $error=null;foreach(array('legal_entity_id','payroll_relationship_id') as $k)if(empty($x[$k])||(int)$x[$k]<=0){$error='arrears_scope_invalid';return false;}$cur=strtoupper((string)($x['currency']??''));if(!preg_match('/^[A-Z]{3}$/D',$cur)||!is_sha256_hex($x['originating_delta_set_sha256']??'')||!is_sha256_hex($x['policy_evidence_sha256']??'')){$error='arrears_evidence_invalid';return false;}
-    try{$amt=hrm_pay_core_007_decimal($x['amount']??'');}catch(Throwable $t){$error='arrears_amount_invalid';return false;}if(hrm_pay_core_007_compare($amt,'0')===0){$error='arrears_zero_invalid';return false;}$direction=hrm_pay_core_007_compare($amt,'0')>0?'payable_to_worker':'recoverable_from_worker';$out=array('legal_entity_id'=>(int)$x['legal_entity_id'],'payroll_relationship_id'=>(int)$x['payroll_relationship_id'],'currency'=>$cur,'direction'=>$direction,'originating_delta_set_sha256'=>(string)$x['originating_delta_set_sha256'],'policy_evidence_sha256'=>(string)$x['policy_evidence_sha256'],'initial_amount'=>hrm_pay_core_007_abs($amt));$out['arrears_sha256']=hrm_pay_core_007_hash($out);return $out;
+    try{
+      $amt=hrm_pay_core_007_decimal($x['amount']??'');
+    }catch(Throwable $t){
+      $error='arrears_amount_invalid';
+      return false;
+    }
+    if(hrm_pay_core_007_compare($amt,'0')===0){
+      $error='arrears_zero_invalid';
+      return false;
+    }
+    $direction=hrm_pay_core_007_compare($amt,'0')>0?'payable_to_worker':'recoverable_from_worker';
+    $out=array('legal_entity_id'=>(int)$x['legal_entity_id'],'payroll_relationship_id'=>(int)$x['payroll_relationship_id'],
+      'currency'=>$cur,'direction'=>$direction,'originating_delta_set_sha256'=>(string)$x['originating_delta_set_sha256'],
+      'policy_evidence_sha256'=>(string)$x['policy_evidence_sha256'],'initial_amount'=>hrm_pay_core_007_abs($amt));
+    $out['arrears_sha256']=hrm_pay_core_007_hash($out);
+    return $out;
 }
 
 function hrm_pay_core_007_arrears_movement(array $arrears,$kind,$amount,$prior_remaining,$source_sha256,$policy_evidence_sha256,&$error=null)
 {
-    $error=null;if(!in_array($kind,array('bring_forward','recovery','payment','writeoff_authorized','correction'),true)||!is_sha256_hex($source_sha256)||!is_sha256_hex($policy_evidence_sha256)){$error='arrears_movement_evidence_invalid';return false;}try{$a=hrm_pay_core_007_decimal($amount);$prior=hrm_pay_core_007_decimal($prior_remaining);}catch(Throwable $t){$error='arrears_movement_amount_invalid';return false;}if(hrm_pay_core_007_compare($a,'0')<0||hrm_pay_core_007_compare($a,$prior)>0){$error='arrears_movement_out_of_bounds';return false;}$remaining=hrm_pay_core_007_sub($prior,$a);$out=array('arrears_sha256'=>(string)($arrears['arrears_sha256']??''),'movement_kind'=>$kind,'amount'=>$a,'remaining_amount'=>$remaining,'source_sha256'=>$source_sha256,'policy_evidence_sha256'=>$policy_evidence_sha256);if(!is_sha256_hex($out['arrears_sha256'])){$error='arrears_identity_invalid';return false;}$out['movement_sha256']=hrm_pay_core_007_hash($out);return $out;
+    $error=null;
+    if(!in_array($kind,array('bring_forward','recovery','payment','writeoff_authorized','correction'),true)||!is_sha256_hex($source_sha256)||!is_sha256_hex($policy_evidence_sha256)){
+      $error='arrears_movement_evidence_invalid';
+      return false;
+    }
+    try{
+      $a=hrm_pay_core_007_decimal($amount);
+      $prior=hrm_pay_core_007_decimal($prior_remaining);
+    }catch(Throwable $t){
+      $error='arrears_movement_amount_invalid';
+      return false;
+    }
+    if(hrm_pay_core_007_compare($a,'0')<0||hrm_pay_core_007_compare($a,$prior)>0){
+      $error='arrears_movement_out_of_bounds';
+      return false;
+    }
+    $remaining=hrm_pay_core_007_sub($prior,$a);
+    $out=array('arrears_sha256'=>(string)($arrears['arrears_sha256']??''),'movement_kind'=>$kind,'amount'=>$a,'remaining_amount'=>$remaining,
+      'source_sha256'=>$source_sha256,'policy_evidence_sha256'=>$policy_evidence_sha256);
+    if(!is_sha256_hex($out['arrears_sha256'])){
+      $error='arrears_identity_invalid';
+      return false;
+    }
+    $out['movement_sha256']=hrm_pay_core_007_hash($out);
+    return $out;
 }
 
 function hrm_pay_core_007_plan(array $x,&$error=null)
@@ -121,34 +201,102 @@ function hrm_pay_core_007_plan(array $x,&$error=null)
     if(empty($x['affected_result_id'])||empty($x['context_id'])||!in_array($type,hrm_pay_core_007_plan_types(),true)||!$idem||!$reason||$target===false||($bring!==null&&!$bring)){$error='retro_plan_identity_invalid';return false;}
     foreach(array('reason_evidence_sha256','historical_plan_sha256','delta_set_sha256') as $k)if(!is_sha256_hex($x[$k]??'')){$error='retro_plan_evidence_invalid';return false;}
     if($type==='reversal'&&(!isset($x['predecessor_result_sha256'])||!is_sha256_hex($x['predecessor_result_sha256']))){$error='reversal_predecessor_required';return false;}
-    $out=array('affected_result_id'=>(int)$x['affected_result_id'],'context_id'=>(int)$x['context_id'],'plan_type'=>$type,'idempotency_key'=>$idem,'reason_code'=>$reason,'reason_evidence_sha256'=>(string)$x['reason_evidence_sha256'],'historical_plan_sha256'=>(string)$x['historical_plan_sha256'],'delta_set_sha256'=>(string)$x['delta_set_sha256'],'bring_forward_date'=>$bring,'target_calendar_period_id'=>$target,'predecessor_result_sha256'=>$x['predecessor_result_sha256']??null);$out['plan_sha256']=hrm_pay_core_007_hash($out);return $out;
+    $out=array('affected_result_id'=>(int)$x['affected_result_id'],'context_id'=>(int)$x['context_id'],'plan_type'=>$type,
+      'idempotency_key'=>$idem,'reason_code'=>$reason,'reason_evidence_sha256'=>(string)$x['reason_evidence_sha256'],'historical_plan_sha256'=>(string)$x['historical_plan_sha256'],
+      'delta_set_sha256'=>(string)$x['delta_set_sha256'],'bring_forward_date'=>$bring,'target_calendar_period_id'=>$target,
+      'predecessor_result_sha256'=>$x['predecessor_result_sha256']??null);
+    $out['plan_sha256']=hrm_pay_core_007_hash($out);
+    return $out;
 }
 
 function hrm_pay_core_007_approval(array $plan,$maker_id,$checker_id,$approval_evidence_sha256,&$error=null)
 {
-    $error=null;$maker_id=(int)$maker_id;$checker_id=(int)$checker_id;if(empty($plan['plan_sha256'])||!is_sha256_hex($plan['plan_sha256'])||$maker_id<=0||$checker_id<=0||$maker_id===$checker_id||!is_sha256_hex($approval_evidence_sha256)){$error='approval_separation_or_evidence_invalid';return false;}$out=array('plan_sha256'=>$plan['plan_sha256'],'maker_id'=>$maker_id,'checker_id'=>$checker_id,'approval_evidence_sha256'=>$approval_evidence_sha256);$out['approval_sha256']=hrm_pay_core_007_hash($out);return $out;
+    $error=null;
+    $maker_id=(int)$maker_id;
+    $checker_id=(int)$checker_id;
+    if(empty($plan['plan_sha256'])||!is_sha256_hex($plan['plan_sha256'])||$maker_id<=0||$checker_id<=0||$maker_id===$checker_id||!is_sha256_hex($approval_evidence_sha256)){
+      $error='approval_separation_or_evidence_invalid';
+      return false;
+    }
+    $out=array('plan_sha256'=>$plan['plan_sha256'],'maker_id'=>$maker_id,'checker_id'=>$checker_id,'approval_evidence_sha256'=>$approval_evidence_sha256);
+    $out['approval_sha256']=hrm_pay_core_007_hash($out);
+    return $out;
 }
 
 function hrm_pay_core_007_execution_descriptor(array $plan,array $approval,$executor_id,$original_result_id,$successor_result_id,$successor_result_sha256,$balance_movement_set_sha256,&$error=null)
 {
     $error=null;$executor_id=(int)$executor_id;if($executor_id<=0||$executor_id===(int)($approval['maker_id']??0)||$executor_id===(int)($approval['checker_id']??0)||!isset($plan['plan_sha256'],$approval['plan_sha256'])||!hash_equals((string)$plan['plan_sha256'],(string)$approval['plan_sha256'])){$error='execution_separation_invalid';return false;}
     if((int)$original_result_id<=0||(int)$successor_result_id<=0||(int)$original_result_id===(int)$successor_result_id||!is_sha256_hex($successor_result_sha256)||($balance_movement_set_sha256!==null&&!is_sha256_hex($balance_movement_set_sha256))){$error='execution_lineage_invalid';return false;}
-    $out=array('plan_sha256'=>$plan['plan_sha256'],'approval_sha256'=>$approval['approval_sha256']??null,'execution_kind'=>$plan['plan_type'],'original_result_id'=>(int)$original_result_id,'successor_result_id'=>(int)$successor_result_id,'successor_result_sha256'=>$successor_result_sha256,'delta_set_sha256'=>$plan['delta_set_sha256'],'balance_movement_set_sha256'=>$balance_movement_set_sha256,'executor_id'=>$executor_id);if(!is_sha256_hex($out['approval_sha256'])){$error='execution_approval_invalid';return false;}$out['execution_sha256']=hrm_pay_core_007_hash($out);return $out;
+    $out=array('plan_sha256'=>$plan['plan_sha256'],'approval_sha256'=>$approval['approval_sha256']??null,'execution_kind'=>$plan['plan_type'],
+      'original_result_id'=>(int)$original_result_id,'successor_result_id'=>(int)$successor_result_id,'successor_result_sha256'=>$successor_result_sha256,
+      'delta_set_sha256'=>$plan['delta_set_sha256'],'balance_movement_set_sha256'=>$balance_movement_set_sha256,'executor_id'=>$executor_id);
+    if(!is_sha256_hex($out['approval_sha256'])){
+      $error='execution_approval_invalid';
+      return false;
+    }
+    $out['execution_sha256']=hrm_pay_core_007_hash($out);
+    return $out;
 }
 
 /** Explicit obligations preserve paid/posted/filed history; they never execute downstream actions. */
 function hrm_pay_core_007_downstream_obligations($execution_sha256,array $states,&$error=null)
 {
-    $error=null;if(!is_sha256_hex($execution_sha256)){$error='downstream_execution_invalid';return false;}$out=array();$map=array('payment'=>'paid','accounting'=>'posted','statutory'=>'filed');foreach($map as $domain=>$flag){$s=$states[$domain]??array();$done=!empty($s[$flag]);if(!$done)continue;$h=$s['evidence_sha256']??'';if(!is_sha256_hex($h)){$error='downstream_'.$domain.'_evidence_required';return false;}$r=array('execution_sha256'=>$execution_sha256,'domain'=>$domain,'obligation_kind'=>'correct_prior_'.$flag,'original_evidence_sha256'=>$h,'obligation_state'=>'open');$r['obligation_sha256']=hrm_pay_core_007_hash($r);$out[]=$r;}return $out;
+    $error=null;
+    if(!is_sha256_hex($execution_sha256)){
+      $error='downstream_execution_invalid';
+      return false;
+    }
+    $out=array();
+    $map=array('payment'=>'paid','accounting'=>'posted','statutory'=>'filed');
+    foreach($map as $domain=>$flag){
+      $s=$states[$domain]??array();
+      $done=!empty($s[$flag]);
+      if(!$done)continue;
+      $h=$s['evidence_sha256']??'';
+      if(!is_sha256_hex($h)){
+        $error='downstream_'.$domain.'_evidence_required';
+        return false;
+      }
+      $r=array('execution_sha256'=>$execution_sha256,'domain'=>$domain,'obligation_kind'=>'correct_prior_'.$flag,'original_evidence_sha256'=>$h,
+        'obligation_state'=>'open');
+      $r['obligation_sha256']=hrm_pay_core_007_hash($r);
+      $out[]=$r;
+    }
+    return $out;
 }
 
 function hrm_pay_core_007_reconciliation($execution_sha256,$source_sha256,$expected,$actual,$evidence_sha256,&$error=null)
 {
-    $error=null;if(!is_sha256_hex($execution_sha256)||!is_sha256_hex($source_sha256)||!is_sha256_hex($evidence_sha256)){$error='reconciliation_evidence_invalid';return false;}try{$e=hrm_pay_core_007_decimal($expected);$a=hrm_pay_core_007_decimal($actual);}catch(Throwable $t){$error='reconciliation_amount_invalid';return false;}$d=hrm_pay_core_007_sub($a,$e);$out=array('execution_sha256'=>$execution_sha256,'source_sha256'=>$source_sha256,'expected_delta_amount'=>$e,'actual_delta_amount'=>$a,'difference_amount'=>$d,'reconciliation_state'=>hrm_pay_core_007_compare($d,'0')===0?'matched':'mismatch','evidence_sha256'=>$evidence_sha256);$out['reconciliation_sha256']=hrm_pay_core_007_hash($out);return $out;
+    $error=null;
+    if(!is_sha256_hex($execution_sha256)||!is_sha256_hex($source_sha256)||!is_sha256_hex($evidence_sha256)){
+      $error='reconciliation_evidence_invalid';
+      return false;
+    }
+    try{
+      $e=hrm_pay_core_007_decimal($expected);
+      $a=hrm_pay_core_007_decimal($actual);
+    }catch(Throwable $t){
+      $error='reconciliation_amount_invalid';
+      return false;
+    }
+    $d=hrm_pay_core_007_sub($a,$e);
+    $out=array('execution_sha256'=>$execution_sha256,'source_sha256'=>$source_sha256,'expected_delta_amount'=>$e,'actual_delta_amount'=>$a,
+      'difference_amount'=>$d,'reconciliation_state'=>hrm_pay_core_007_compare($d,'0')===0?'matched':'mismatch','evidence_sha256'=>$evidence_sha256);
+    $out['reconciliation_sha256']=hrm_pay_core_007_hash($out);
+    return $out;
 }
 
 function hrm_pay_core_007_recovery($reconciliation_sha256,$action_token,$source_sha256,$evidence_sha256,&$error=null)
 {
-    $error=null;$action=hrm_pay_core_007_token($action_token,64);if(!is_sha256_hex($reconciliation_sha256)||!$action||!in_array($action,array('retry','forward_correction','reconcile_only','escalate_policy_gap'),true)||!is_sha256_hex($source_sha256)||!is_sha256_hex($evidence_sha256)){$error='recovery_evidence_invalid';return false;}$out=array('reconciliation_sha256'=>$reconciliation_sha256,'action_token'=>$action,'source_sha256'=>$source_sha256,'evidence_sha256'=>$evidence_sha256);$out['recovery_sha256']=hrm_pay_core_007_hash($out);return $out;
+    $error=null;
+    $action=hrm_pay_core_007_token($action_token,64);
+    if(!is_sha256_hex($reconciliation_sha256)||!$action||!in_array($action,array('retry','forward_correction','reconcile_only',
+      'escalate_policy_gap'),true)||!is_sha256_hex($source_sha256)||!is_sha256_hex($evidence_sha256)){
+      $error='recovery_evidence_invalid';
+      return false;
+    }
+    $out=array('reconciliation_sha256'=>$reconciliation_sha256,'action_token'=>$action,'source_sha256'=>$source_sha256,'evidence_sha256'=>$evidence_sha256);
+    $out['recovery_sha256']=hrm_pay_core_007_hash($out);
+    return $out;
 }
 ?>

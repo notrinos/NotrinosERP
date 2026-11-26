@@ -32,7 +32,15 @@ function hrm_pay_core_009_rehydrate_document($payload_json,$expected_sha256,&$er
     $payload=json_decode($payload_json,true);if(!is_array($payload)||($payload['contract_version']??null)!==HRM_PAY_CORE_009_CONTRACT_VERSION||!is_array($payload['document']??null)||!is_array($payload['employee']??null)||!is_array($payload['lines']??null)){$error='staged_result_invalid';return false;}
     if(!class_exists('payslip_doc')||!class_exists('payslip_line')){$error='legacy_document_class_unavailable';return false;}
     $doc=new payslip_doc();foreach(hrm_pay_core_009_doc_scalar_fields() as $f)if(array_key_exists($f,$payload['document']))$doc->$f=$payload['document'][$f];$doc->employee=(array)$payload['employee'];$doc->employee['employee_id']=$doc->employee_id;
-    foreach($payload['lines'] as $x){foreach(hrm_pay_core_009_line_fields() as $f)if(!array_key_exists($f,$x)){$error='staged_line_invalid';return false;}$doc->add_line((int)$x['element_id'],(string)$x['element_name'],(int)$x['element_category'],(bool)$x['is_deduction'],(int)$x['amount_type'],(float)$x['base_amount'],(float)$x['rate'],(float)$x['calculated_amount'],(float)$x['final_amount'],(string)$x['account_code'],$x['formula_used']===null?null:(string)$x['formula_used'],(bool)$x['is_taxable'],(int)$x['display_order']);}
+    foreach($payload['lines'] as $x){
+      foreach(hrm_pay_core_009_line_fields() as $f)if(!array_key_exists($f,$x)){
+        $error='staged_line_invalid';
+        return false;
+      }
+      $doc->add_line((int)$x['element_id'],(string)$x['element_name'],(int)$x['element_category'],(bool)$x['is_deduction'],
+        (int)$x['amount_type'],(float)$x['base_amount'],(float)$x['rate'],(float)$x['calculated_amount'],(float)$x['final_amount'],
+        (string)$x['account_code'],$x['formula_used']===null?null:(string)$x['formula_used'],(bool)$x['is_taxable'],(int)$x['display_order']);
+    }
     return $doc;
 }
 ?>

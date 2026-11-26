@@ -101,7 +101,8 @@ function pay_rec_001_review_descriptor($close_checklist_id,$checklist_sha256,$re
 function pay_rec_001_approval_descriptor($review_id,$close_checklist_id,$review_sha256,$maker_id,$reviewer_id,$approver_id,$decision,$assurance_evidence_sha256,&$error=null)
 {
     $error=null;$rid=pay_rec_001_uint($review_id);$cid=pay_rec_001_uint($close_checklist_id);$maker=pay_rec_001_uint($maker_id);$reviewer=pay_rec_001_uint($reviewer_id);$approver=pay_rec_001_uint($approver_id);
-    if($rid===false||$rid<=0||$cid===false||$cid<=0||$maker===false||$maker<=0||$reviewer===false||$reviewer<=0||$approver===false||$approver<=0||$maker===$reviewer||$maker===$approver||$reviewer===$approver||!pay_rec_001_sha($review_sha256)||!pay_rec_001_sha($assurance_evidence_sha256)||!in_array($decision,array('approved','rejected'),true))return pay_rec_001_fail($error,'reconciliation_approval_invalid');
+    if($rid===false||$rid<=0||$cid===false||$cid<=0||$maker===false||$maker<=0||$reviewer===false||$reviewer<=0||$approver===false||$approver<=0||$maker===$reviewer||$maker===$approver||$reviewer===$approver||!pay_rec_001_sha($review_sha256)||!pay_rec_001_sha($assurance_evidence_sha256)||!in_array($decision,
+      array('approved','rejected'),true))return pay_rec_001_fail($error,'reconciliation_approval_invalid');
     $body=array('reconciliation_review_id'=>$rid,'close_checklist_id'=>$cid,'review_sha256'=>(string)$review_sha256,'decision'=>$decision,'assurance_evidence_sha256'=>(string)$assurance_evidence_sha256,'approved_by'=>$approver);
     $body['approval_sha256']=pay_rec_001_hash($body);return $body;
 }

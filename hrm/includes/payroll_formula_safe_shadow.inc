@@ -81,7 +81,13 @@ function hrm_payroll_formula_safe_from_legacy_synthetic_context(array $values)
 /** Target callback for the accepted synthetic differential harness. */
 function hrm_payroll_formula_safe_differential_target($formula,array $values)
 {
-    $typed=hrm_payroll_formula_safe_from_legacy_synthetic_context($values);$receipt=null;$error=null;$result=hrm_payroll_formula_safe_evaluate($formula,$typed,$receipt,$error);if($result===false)throw new RuntimeException($error===null?'safe_differential_target_failed':$error);if($result->unit()!=='currency'&&$result->unit()!=='scalar'&&$result->unit()!=='day'&&$result->unit()!=='hour')throw new RuntimeException('safe_differential_result_unit_unsupported');return (float)$result->decimalString();
+    $typed=hrm_payroll_formula_safe_from_legacy_synthetic_context($values);
+    $receipt=null;
+    $error=null;
+    $result=hrm_payroll_formula_safe_evaluate($formula,$typed,$receipt,$error);
+    if($result===false)throw new RuntimeException($error===null?'safe_differential_target_failed':$error);
+    if($result->unit()!=='currency'&&$result->unit()!=='scalar'&&$result->unit()!=='day'&&$result->unit()!=='hour')throw new RuntimeException('safe_differential_result_unit_unsupported');
+    return (float)$result->decimalString();
 }
 
 /** Run PAY-RULE-001 legacy-vs-safe-profile differential on fixed synthetic contexts. */
@@ -95,7 +101,11 @@ function hrm_payroll_formula_safe_differential_classify($formula,array $contexts
 
 function hrm_payroll_formula_safe_shadow_log($outcome,$reason,$source_scope,$formula_hash,$executor)
 {
-    error_log(json_encode(array('contract'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_ID,'version'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_VERSION,'action'=>'payroll_formula_safe_shadow','outcome'=>$outcome==='allowed'?'allowed':'denied','reason'=>hrm_payroll_formula_safe_token_is_valid($reason,100)?$reason:'invalid_reason','source'=>isset(hrm_legacy_formula_source_catalog()[$source_scope])?$source_scope:'unknown','formula_sha256'=>hrm_payroll_formula_safe_hash_is_valid($formula_hash)?$formula_hash:hash('sha256',''),'executor_fingerprint'=>hash('sha256','pay-rule-002-shadow:'.(string)$executor))));
+    error_log(json_encode(array('contract'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_ID,'version'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_VERSION,
+      'action'=>'payroll_formula_safe_shadow','outcome'=>$outcome==='allowed'?'allowed':'denied','reason'=>hrm_payroll_formula_safe_token_is_valid($reason,
+      100)?$reason:'invalid_reason','source'=>isset(hrm_legacy_formula_source_catalog()[$source_scope])?$source_scope:'unknown',
+      'formula_sha256'=>hrm_payroll_formula_safe_hash_is_valid($formula_hash)?$formula_hash:hash('sha256',''),'executor_fingerprint'=>hash('sha256',
+      'pay-rule-002-shadow:'.(string)$executor))));
 }
 
 /**
@@ -111,8 +121,16 @@ function hrm_payroll_formula_safe_shadow_evaluate($source_formula,$source_scope,
     $bindings=hrm_payroll_formula_safe_publication_bindings();$index=hrm_payroll_formula_safe_validate_publication_registry($registry,$bindings,$error);if($index===false)return $deny($error);if(!isset($index[$source_hash][$source_scope]))return $deny('safe_shadow_publication_missing');$entry=$index[$source_hash][$source_scope];
     $as_of=$as_of===null?gmdate('Y-m-d'):$as_of;if(!hrm_payroll_formula_safe_iso_date($as_of)||$entry['approved_on']>$as_of||$entry['review_due_on']<$as_of)return $deny('safe_shadow_publication_inactive');if(!hash_equals($entry['shadow_executor_id'],$executor_id))return $deny('safe_shadow_executor_denied');
     $target_formula=$entry['classification']==='translated'?hrm_legacy_formula_translate_for_facade($source_formula):hrm_legacy_formula_normalize($source_formula);if($target_formula===false||!hash_equals($entry['target_formula_sha256'],hash('sha256',$target_formula)))return $deny('safe_shadow_target_hash_mismatch');
-    $validated=hrm_legacy_formula_validate_corpus($corpus,$error);if($validated===false)return $deny($error);$diff=hrm_payroll_formula_safe_differential_classify($source_formula,$validated['migration_contexts']);if($diff['classification']!==$entry['classification']||$diff['reason']!==$entry['differential_reason']||!hash_equals($entry['result_set_sha256'],$diff['result_set_hash']))return $deny('safe_shadow_differential_mismatch');
+    $validated=hrm_legacy_formula_validate_corpus($corpus,$error);
+    if($validated===false)return $deny($error);
+    $diff=hrm_payroll_formula_safe_differential_classify($source_formula,$validated['migration_contexts']);
+    if($diff['classification']!==$entry['classification']||$diff['reason']!==$entry['differential_reason']||!hash_equals($entry['result_set_sha256'],
+      $diff['result_set_hash']))return $deny('safe_shadow_differential_mismatch');
     $evalReceipt=null;$value=hrm_payroll_formula_safe_evaluate($target_formula,$typed_context,$evalReceipt,$error);if($value===false)return $deny($error===null?'safe_shadow_execution_failed':$error);
-    $receipt=array('contract'=>array('id'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_ID,'version'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_VERSION),'mode'=>'non-production-shadow','source_scope'=>$source_scope,'source_formula_sha256'=>$source_hash,'target_formula_sha256'=>$entry['target_formula_sha256'],'classification'=>$entry['classification'],'differential_reason'=>$entry['differential_reason'],'result_set_sha256'=>$entry['result_set_sha256'],'safe_profile_sha256'=>$bindings['safe_profile_sha256'],'evidence_id'=>$entry['evidence_id'],'executor_fingerprint'=>hash('sha256','pay-rule-002-shadow:'.$executor_id),'executed_on'=>$as_of,'result_type'=>$value->type(),'result_unit'=>$value->unit());
+    $receipt=array('contract'=>array('id'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_ID,'version'=>HRM_PAYROLL_FORMULA_SAFE_PUBLICATION_VERSION),
+      'mode'=>'non-production-shadow','source_scope'=>$source_scope,'source_formula_sha256'=>$source_hash,'target_formula_sha256'=>$entry['target_formula_sha256'],
+      'classification'=>$entry['classification'],'differential_reason'=>$entry['differential_reason'],'result_set_sha256'=>$entry['result_set_sha256'],
+      'safe_profile_sha256'=>$bindings['safe_profile_sha256'],'evidence_id'=>$entry['evidence_id'],'executor_fingerprint'=>hash('sha256',
+      'pay-rule-002-shadow:'.$executor_id),'executed_on'=>$as_of,'result_type'=>$value->type(),'result_unit'=>$value->unit());
     hrm_payroll_formula_safe_shadow_log('allowed','safe_shadow_approved',$source_scope,$source_hash,$executor_id);return $value;
 }

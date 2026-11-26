@@ -361,7 +361,14 @@ class HRM_Payroll_Formula_Safe_Evaluator implements Formula_Compiler_AST_NodeVis
 {
     private $context,$limits,$nodes=0,$functions=0,$started,$memory;
     function __construct(array $context,array $limits){$this->context=$context;$this->limits=$limits;$this->started=microtime(true);$this->memory=memory_get_usage(true);}
-    private function tick($function=false){$this->nodes++;if($function)$this->functions++;if($this->nodes>$this->limits['max_node_evaluations'])throw new RuntimeException('safe_resource_node_limit');if($this->functions>$this->limits['max_function_calls'])throw new RuntimeException('safe_resource_function_limit');if((microtime(true)-$this->started)*1000>$this->limits['max_execution_time_ms'])throw new RuntimeException('safe_resource_time_limit');if(memory_get_usage(true)-$this->memory>$this->limits['max_memory_bytes'])throw new RuntimeException('safe_resource_memory_limit');}
+    private function tick($function=false){
+      $this->nodes++;
+      if($function)$this->functions++;
+      if($this->nodes>$this->limits['max_node_evaluations'])throw new RuntimeException('safe_resource_node_limit');
+      if($this->functions>$this->limits['max_function_calls'])throw new RuntimeException('safe_resource_function_limit');
+      if((microtime(true)-$this->started)*1000>$this->limits['max_execution_time_ms'])throw new RuntimeException('safe_resource_time_limit');
+      if(memory_get_usage(true)-$this->memory>$this->limits['max_memory_bytes'])throw new RuntimeException('safe_resource_memory_limit');
+    }
     private function decimal(HRM_Payroll_Formula_Value $v){if($v->type()!=='decimal')throw new RuntimeException('safe_type_decimal_required');return $v;}
     private function sameUnit(HRM_Payroll_Formula_Value $a,HRM_Payroll_Formula_Value $b){if($a->unit()!==$b->unit())throw new RuntimeException('safe_unit_mismatch');}
     private function truth(HRM_Payroll_Formula_Value $v){if($v->type()!=='boolean')throw new RuntimeException('safe_type_boolean_required');return (bool)$v->raw();}
@@ -379,10 +386,39 @@ class HRM_Payroll_Formula_Safe_Evaluator implements Formula_Compiler_AST_NodeVis
         if($n->operator==='+'||$n->operator==='-'||$n->operator==='%')$this->sameUnit($a,$b);
         $unit=$a->unit();if($n->operator==='*')$unit=hrm_payroll_formula_safe_unit_combine($a->unit(),$b->unit(),1);if($n->operator==='/')$unit=hrm_payroll_formula_safe_unit_combine($a->unit(),$b->unit(),-1);
         $fn=$n->operator==='+'?'add':($n->operator==='-'?'sub':($n->operator==='*'?'mul':($n->operator==='/'?'div':'mod')));return HRM_Payroll_Formula_Value::decimal(call_user_func(array('HRM_Payroll_Formula_Decimal',$fn),$a->raw(),$b->raw()),$unit);}
-    function visitUnary(Formula_Compiler_AST_UnaryOperatorNode $n){$this->tick();if($n->operator==='NOT')return HRM_Payroll_Formula_Value::boolean(!$this->truth($n->operand->accept($this)));if($n->operator!=='+'&&$n->operator!=='-')throw new RuntimeException('safe_operator_denied');$v=$this->decimal($n->operand->accept($this));return $n->operator==='-'?HRM_Payroll_Formula_Value::decimal(HRM_Payroll_Formula_Decimal::negate($v->raw()),$v->unit()):$v;}
+    function visitUnary(Formula_Compiler_AST_UnaryOperatorNode $n){
+      $this->tick();
+      if($n->operator==='NOT')return HRM_Payroll_Formula_Value::boolean(!$this->truth($n->operand->accept($this)));
+      if($n->operator!=='+'&&$n->operator!=='-')throw new RuntimeException('safe_operator_denied');
+      $v=$this->decimal($n->operand->accept($this));
+      return $n->operator==='-'?HRM_Payroll_Formula_Value::decimal(HRM_Payroll_Formula_Decimal::negate($v->raw()),$v->unit()):$v;
+    }
     function visitConditional(Formula_Compiler_AST_ConditionalNode $n){$this->tick();return $this->truth($n->condition->accept($this))?$n->trueBranch->accept($this):$n->falseBranch->accept($this);}
-    function visitComparison(Formula_Compiler_AST_ComparisonNode $n){$this->tick();$a=$n->left->accept($this);$b=$n->right->accept($this);if($a->type()!==$b->type()||$a->unit()!==$b->unit())throw new RuntimeException('safe_comparison_type_mismatch');if($a->type()==='decimal')$c=HRM_Payroll_Formula_Decimal::compare($a->raw(),$b->raw());else if($a->type()==='date')$c=strcmp($a->raw(),$b->raw());else {$av=(int)$a->raw();$bv=(int)$b->raw();$c=$av===$bv?0:($av<$bv?-1:1);}$op=$n->operator;return HRM_Payroll_Formula_Value::boolean($op==='>'?$c>0:($op==='<'?$c<0:($op==='>='?$c>=0:($op==='<='?$c<=0:($op==='=='?$c===0:$c!==0)))));}
-    function visitLogical(Formula_Compiler_AST_LogicalNode $n){$this->tick();$left=$this->truth($n->left->accept($this));if($n->operator==='AND'&&!$left)return HRM_Payroll_Formula_Value::boolean(false);if($n->operator==='OR'&&$left)return HRM_Payroll_Formula_Value::boolean(true);$right=$this->truth($n->right->accept($this));if($n->operator==='AND')return HRM_Payroll_Formula_Value::boolean($left&&$right);if($n->operator==='OR')return HRM_Payroll_Formula_Value::boolean($left||$right);throw new RuntimeException('safe_operator_denied');}
+    function visitComparison(Formula_Compiler_AST_ComparisonNode $n){
+      $this->tick();
+      $a=$n->left->accept($this);
+      $b=$n->right->accept($this);
+      if($a->type()!==$b->type()||$a->unit()!==$b->unit())throw new RuntimeException('safe_comparison_type_mismatch');
+      if($a->type()==='decimal')$c=HRM_Payroll_Formula_Decimal::compare($a->raw(),$b->raw());
+      else if($a->type()==='date')$c=strcmp($a->raw(),$b->raw());
+      else {
+        $av=(int)$a->raw();
+        $bv=(int)$b->raw();
+        $c=$av===$bv?0:($av<$bv?-1:1);
+      }
+      $op=$n->operator;
+      return HRM_Payroll_Formula_Value::boolean($op==='>'?$c>0:($op==='<'?$c<0:($op==='>='?$c>=0:($op==='<='?$c<=0:($op==='=='?$c===0:$c!==0)))));
+    }
+    function visitLogical(Formula_Compiler_AST_LogicalNode $n){
+      $this->tick();
+      $left=$this->truth($n->left->accept($this));
+      if($n->operator==='AND'&&!$left)return HRM_Payroll_Formula_Value::boolean(false);
+      if($n->operator==='OR'&&$left)return HRM_Payroll_Formula_Value::boolean(true);
+      $right=$this->truth($n->right->accept($this));
+      if($n->operator==='AND')return HRM_Payroll_Formula_Value::boolean($left&&$right);
+      if($n->operator==='OR')return HRM_Payroll_Formula_Value::boolean($left||$right);
+      throw new RuntimeException('safe_operator_denied');
+    }
     function visitRange(Formula_Compiler_AST_RangeNode $n){$this->tick();throw new RuntimeException('safe_range_denied');}
     function visitNull(Formula_Compiler_AST_NullNode $n){$this->tick();throw new RuntimeException('safe_null_denied');}
 }
@@ -402,7 +438,17 @@ function hrm_payroll_formula_safe_compile($formula,&$error=null)
 function hrm_payroll_formula_safe_evaluate($formula,array $values,&$receipt=null,&$error=null)
 {
     $receipt=null;$error=null;$profile=hrm_payroll_formula_safe_load_profile($error);if($profile===false)return false;$context=hrm_payroll_formula_safe_context($values,$error);if($context===false)return false;$compiled=hrm_payroll_formula_safe_compile($formula,$error);if($compiled===false)return false;
-    try{$evaluator=new HRM_Payroll_Formula_Safe_Evaluator($context,hrm_payroll_formula_safe_resource_limits());$value=$evaluator->evaluate($compiled->ast);if($value->type()!=='decimal'){$error='safe_result_not_decimal';return false;}$receipt=array('profile_id'=>HRM_PAYROLL_FORMULA_SAFE_PROFILE_ID,'profile_version'=>HRM_PAYROLL_FORMULA_SAFE_PROFILE_VERSION,'runtime_version'=>HRM_PAYROLL_FORMULA_SAFE_RUNTIME_VERSION,'formula_sha256'=>hash('sha256',trim((string)$formula)),'result_type'=>'decimal','result_unit'=>$value->unit(),'profile_sha256'=>hash_file('sha256',dirname(__FILE__).'/../config/payroll_formula_safe_profile.json'));return $value;
+    try{
+      $evaluator=new HRM_Payroll_Formula_Safe_Evaluator($context,hrm_payroll_formula_safe_resource_limits());
+      $value=$evaluator->evaluate($compiled->ast);
+      if($value->type()!=='decimal'){
+        $error='safe_result_not_decimal';
+        return false;
+      }
+      $receipt=array('profile_id'=>HRM_PAYROLL_FORMULA_SAFE_PROFILE_ID,'profile_version'=>HRM_PAYROLL_FORMULA_SAFE_PROFILE_VERSION,
+        'runtime_version'=>HRM_PAYROLL_FORMULA_SAFE_RUNTIME_VERSION,'formula_sha256'=>hash('sha256',trim((string)$formula)),
+        'result_type'=>'decimal','result_unit'=>$value->unit(),'profile_sha256'=>hash_file('sha256',dirname(__FILE__).'/../config/payroll_formula_safe_profile.json'));
+      return $value;
     }catch(Exception $e){$error=$e->getMessage();return false;}
 }
 

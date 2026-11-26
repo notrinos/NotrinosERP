@@ -113,10 +113,58 @@ function hrm_tim_001_work_pattern_descriptor(array $x,&$error=null)
     $from=hrm_tim_001_date($x['effective_from']);$to=empty($x['effective_to'])?null:hrm_tim_001_date($x['effective_to']);if($from===false||($to!==null&&($to===false||$to<$from))){$error='work_pattern_interval_invalid';return false;}
     $tz=hrm_tim_001_timezone($x['timezone_name']);$code=hrm_tim_001_token($x['pattern_code'],64);$source=isset($x['source_kind'])?hrm_tim_001_token($x['source_kind'],32):'governed';$cycle=(int)$x['cycle_days'];if($tz===false||$code===false||$source!=='governed'||$cycle<1||$cycle>366||!is_array($x['segments'])||count($x['segments'])===0){$error='work_pattern_definition_invalid';return false;}
     $segments=array();$intervals=array();$seqs=array();
-    foreach($x['segments'] as $seg){foreach(array('cycle_day','segment_sequence','local_start_time','local_end_time','crosses_midnight','paid_minutes','break_minutes') as $k)if(!array_key_exists($k,$seg)){$error='work_pattern_segment_field_missing';return false;}$day=(int)$seg['cycle_day'];$seq=(int)$seg['segment_sequence'];$st=hrm_tim_001_minutes_of_day($seg['local_start_time']);$en=hrm_tim_001_minutes_of_day($seg['local_end_time']);$cross=(int)$seg['crosses_midnight']===1?1:0;$paid=(int)$seg['paid_minutes'];$break=(int)$seg['break_minutes'];$rest=array_key_exists('rest_minutes',$seg)?(int)$seg['rest_minutes']:0;if($day<1||$day>$cycle||$seq<1||$st===false||$en===false||$paid<0||$break<0||$rest<0){$error='work_pattern_segment_invalid';return false;}$key=$day.':'.$seq;if(isset($seqs[$key])){$error='work_pattern_segment_duplicate_sequence';return false;}$seqs[$key]=true;$start=(($day-1)*1440)+$st;$end=(($day-1)*1440)+$en+($cross?1440:0);if($end<=$start||$paid+$break+$rest>$end-$start){$error='work_pattern_segment_duration_invalid';return false;}$payload=array('cycle_day'=>$day,'segment_sequence'=>$seq,'local_start_time'=>$seg['local_start_time'],'local_end_time'=>$seg['local_end_time'],'crosses_midnight'=>$cross,'paid_minutes'=>$paid,'break_minutes'=>$break,'rest_minutes'=>$rest);$payload['segment_sha256']=hrm_tim_001_hash($payload);$segments[]=$payload;$intervals[]=array($start,$end,$payload['segment_sha256']);}
-    usort($intervals,function($a,$b){return $a[0]===$b[0]?strcmp($a[2],$b[2]):($a[0]<$b[0]?-1:1);});$cycle_minutes=$cycle*1440;$extended=$intervals;foreach($intervals as $iv)$extended[]=array($iv[0]+$cycle_minutes,$iv[1]+$cycle_minutes,$iv[2]);usort($extended,function($a,$b){return $a[0]===$b[0]?strcmp($a[2],$b[2]):($a[0]<$b[0]?-1:1);});for($i=1;$i<count($extended);$i++)if($extended[$i][0]<$extended[$i-1][1]&&$extended[$i][0]<$cycle_minutes*2&&$extended[$i-1][0]<$cycle_minutes){$error='work_pattern_segment_overlap';return false;}
+    foreach($x['segments'] as $seg){
+      foreach(array('cycle_day','segment_sequence','local_start_time','local_end_time','crosses_midnight','paid_minutes',
+        'break_minutes') as $k)if(!array_key_exists($k,$seg)){
+        $error='work_pattern_segment_field_missing';
+        return false;
+      }
+      $day=(int)$seg['cycle_day'];
+      $seq=(int)$seg['segment_sequence'];
+      $st=hrm_tim_001_minutes_of_day($seg['local_start_time']);
+      $en=hrm_tim_001_minutes_of_day($seg['local_end_time']);
+      $cross=(int)$seg['crosses_midnight']===1?1:0;
+      $paid=(int)$seg['paid_minutes'];
+      $break=(int)$seg['break_minutes'];
+      $rest=array_key_exists('rest_minutes',$seg)?(int)$seg['rest_minutes']:0;
+      if($day<1||$day>$cycle||$seq<1||$st===false||$en===false||$paid<0||$break<0||$rest<0){
+        $error='work_pattern_segment_invalid';
+        return false;
+      }
+      $key=$day.':'.$seq;
+      if(isset($seqs[$key])){
+        $error='work_pattern_segment_duplicate_sequence';
+        return false;
+      }
+      $seqs[$key]=true;
+      $start=(($day-1)*1440)+$st;
+      $end=(($day-1)*1440)+$en+($cross?1440:0);
+      if($end<=$start||$paid+$break+$rest>$end-$start){
+        $error='work_pattern_segment_duration_invalid';
+        return false;
+      }
+      $payload=array('cycle_day'=>$day,'segment_sequence'=>$seq,'local_start_time'=>$seg['local_start_time'],'local_end_time'=>$seg['local_end_time'],
+        'crosses_midnight'=>$cross,'paid_minutes'=>$paid,'break_minutes'=>$break,'rest_minutes'=>$rest);
+      $payload['segment_sha256']=hrm_tim_001_hash($payload);
+      $segments[]=$payload;
+      $intervals[]=array($start,$end,$payload['segment_sha256']);
+    }
+    usort($intervals,function($a,$b){return $a[0]===$b[0]?strcmp($a[2],$b[2]):($a[0]<$b[0]?-1:1);});
+    $cycle_minutes=$cycle*1440;
+    $extended=$intervals;
+    foreach($intervals as $iv)$extended[]=array($iv[0]+$cycle_minutes,$iv[1]+$cycle_minutes,$iv[2]);
+    usort($extended,function($a,$b){return $a[0]===$b[0]?strcmp($a[2],$b[2]):($a[0]<$b[0]?-1:1);});
+    for($i=1;$i<count($extended);$i++)if($extended[$i][0]<$extended[$i-1][1]&&$extended[$i][0]<$cycle_minutes*2&&$extended[$i-1][0]<$cycle_minutes){
+      $error='work_pattern_segment_overlap';
+      return false;
+    }
     usort($segments,function($a,$b){return $a['cycle_day']===$b['cycle_day']?($a['segment_sequence']<$b['segment_sequence']?-1:1):($a['cycle_day']<$b['cycle_day']?-1:1);});
-    $p=array('worker_id'=>(int)$x['worker_id'],'employment_id'=>(int)$x['employment_id'],'assignment_id'=>(int)$x['assignment_id'],'legal_entity_id'=>(int)$x['legal_entity_id'],'effective_from'=>$from,'effective_to'=>$to,'timezone_name'=>$tz,'cycle_days'=>$cycle,'pattern_code'=>$code,'source_kind'=>$source,'predecessor_pattern_id'=>empty($x['predecessor_pattern_id'])?null:(int)$x['predecessor_pattern_id'],'segments'=>$segments,'created_by'=>(int)$x['created_by']);$p['pattern_sha256']=hrm_tim_001_hash($p);return $p;
+    $p=array('worker_id'=>(int)$x['worker_id'],'employment_id'=>(int)$x['employment_id'],'assignment_id'=>(int)$x['assignment_id'],
+      'legal_entity_id'=>(int)$x['legal_entity_id'],'effective_from'=>$from,'effective_to'=>$to,'timezone_name'=>$tz,'cycle_days'=>$cycle,
+      'pattern_code'=>$code,'source_kind'=>$source,'predecessor_pattern_id'=>empty($x['predecessor_pattern_id'])?null:(int)$x['predecessor_pattern_id'],
+      'segments'=>$segments,'created_by'=>(int)$x['created_by']);
+    $p['pattern_sha256']=hrm_tim_001_hash($p);
+    return $p;
 }
 function hrm_tim_001_raw_event_descriptor(array $x,&$error=null)
 {
@@ -158,7 +206,13 @@ function hrm_tim_001_reviewed_entry_descriptor(array $x,&$error=null)
     $date=hrm_tim_001_date($x['work_date']);$s=hrm_tim_001_utc_datetime($x['period_start_utc']);$e=hrm_tim_001_utc_datetime($x['period_end_utc']);$cmd=hrm_tim_001_token($x['review_command_key'],128);
     if($date===false||$s===false||$e===false||$cmd===false||!is_sha256_hex($x['source_event_set_sha256'])||!is_sha256_hex($x['work_pattern_sha256'])||!is_sha256_hex($x['allocation_set_sha256'])){$error='review_identity_invalid';return false;}
     $seconds=strtotime($e.' UTC')-strtotime($s.' UTC');if($seconds<=0||$seconds%60!==0||$seconds>172800){$error='review_duration_invalid';return false;}
-    $p=array('worker_id'=>(int)$x['worker_id'],'employment_id'=>(int)$x['employment_id'],'assignment_id'=>(int)$x['assignment_id'],'legal_entity_id'=>(int)$x['legal_entity_id'],'work_date'=>$date,'period_start_utc'=>$s,'period_end_utc'=>$e,'duration_minutes'=>(int)($seconds/60),'source_event_set_sha256'=>$x['source_event_set_sha256'],'work_pattern_sha256'=>$x['work_pattern_sha256'],'allocation_set_sha256'=>$x['allocation_set_sha256'],'review_command_key'=>$cmd,'predecessor_entry_id'=>empty($x['predecessor_entry_id'])?null:(int)$x['predecessor_entry_id'],'reviewer_id'=>(int)$x['reviewer_id']);$p['review_sha256']=hrm_tim_001_hash($p);return $p;
+    $p=array('worker_id'=>(int)$x['worker_id'],'employment_id'=>(int)$x['employment_id'],'assignment_id'=>(int)$x['assignment_id'],
+      'legal_entity_id'=>(int)$x['legal_entity_id'],'work_date'=>$date,'period_start_utc'=>$s,'period_end_utc'=>$e,'duration_minutes'=>(int)($seconds/60),
+      'source_event_set_sha256'=>$x['source_event_set_sha256'],'work_pattern_sha256'=>$x['work_pattern_sha256'],'allocation_set_sha256'=>$x['allocation_set_sha256'],
+      'review_command_key'=>$cmd,'predecessor_entry_id'=>empty($x['predecessor_entry_id'])?null:(int)$x['predecessor_entry_id'],
+      'reviewer_id'=>(int)$x['reviewer_id']);
+    $p['review_sha256']=hrm_tim_001_hash($p);
+    return $p;
 }
 function hrm_tim_001_allocation_descriptor(array $x,&$error=null)
 {
@@ -169,7 +223,29 @@ function hrm_tim_001_allocation_descriptor(array $x,&$error=null)
 }
 function hrm_tim_001_allocation_set_descriptor(array $rows,&$error=null)
 {
-    $error=null;if(!$rows){$error='allocation_set_empty';return false;}$seen=array();$norm=array();$total=0;foreach($rows as $r){if(!isset($r['allocation_sha256'],$r['quantity_minutes'])||!is_sha256_hex($r['allocation_sha256'])||(int)$r['quantity_minutes']<=0){$error='allocation_set_invalid';return false;}if(isset($seen[$r['allocation_sha256']])){$error='allocation_set_duplicate';return false;}$seen[$r['allocation_sha256']]=true;$norm[]=$r['allocation_sha256'];$total+=(int)$r['quantity_minutes'];}sort($norm,SORT_STRING);return array('allocation_count'=>count($norm),'total_minutes'=>$total,'allocation_set_sha256'=>hrm_tim_001_hash($norm));
+    $error=null;
+    if(!$rows){
+      $error='allocation_set_empty';
+      return false;
+    }
+    $seen=array();
+    $norm=array();
+    $total=0;
+    foreach($rows as $r){
+      if(!isset($r['allocation_sha256'],$r['quantity_minutes'])||!is_sha256_hex($r['allocation_sha256'])||(int)$r['quantity_minutes']<=0){
+        $error='allocation_set_invalid';
+        return false;
+      }
+      if(isset($seen[$r['allocation_sha256']])){
+        $error='allocation_set_duplicate';
+        return false;
+      }
+      $seen[$r['allocation_sha256']]=true;
+      $norm[]=$r['allocation_sha256'];
+      $total+=(int)$r['quantity_minutes'];
+    }
+    sort($norm,SORT_STRING);
+    return array('allocation_count'=>count($norm),'total_minutes'=>$total,'allocation_set_sha256'=>hrm_tim_001_hash($norm));
 }
 function hrm_tim_001_allocation_set(array $rows,&$error=null){return hrm_tim_001_allocation_set_descriptor($rows,$error);}
 function hrm_tim_001_approval_descriptor(array $x,&$error=null)

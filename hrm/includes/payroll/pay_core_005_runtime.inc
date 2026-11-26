@@ -95,7 +95,13 @@ function hrm_pay_core_005_validate_plan(array $plan,&$error=null)
         elseif($op==='prorate') { if(count($args)!==3){$error='pc5_prorate_arity';return false;} }
         elseif($op==='formula') {
             foreach(array('formula_text','formula_sha256','artifact_sha256','profile_sha256','formula_context') as $k)if(!array_key_exists($k,$node)){$error='pc5_formula_node_incomplete';return false;}
-            if(!is_string($node['formula_text'])||!is_sha256_hex($node['formula_sha256'])||!hash_equals(hash('sha256',trim($node['formula_text'])),$node['formula_sha256'])||!is_sha256_hex($node['artifact_sha256'])||!in_array($node['artifact_sha256'],$plan['snapshot_material']['identity_sets']['rule_artifacts'],true)||!is_sha256_hex($node['profile_sha256'])||!in_array($node['profile_sha256'],$plan['snapshot_material']['identity_sets']['configuration'],true)||!is_array($node['formula_context'])){$error='pc5_formula_identity_invalid';return false;}
+            if(!is_string($node['formula_text'])||!is_sha256_hex($node['formula_sha256'])||!hash_equals(hash('sha256',trim($node['formula_text'])),
+              $node['formula_sha256'])||!is_sha256_hex($node['artifact_sha256'])||!in_array($node['artifact_sha256'],$plan['snapshot_material']['identity_sets']['rule_artifacts'],
+              true)||!is_sha256_hex($node['profile_sha256'])||!in_array($node['profile_sha256'],$plan['snapshot_material']['identity_sets']['configuration'],
+              true)||!is_array($node['formula_context'])){
+              $error='pc5_formula_identity_invalid';
+              return false;
+            }
             if(!hrm_pay_core_005_validate_formula_context($node['formula_context'],$by,$error))return false;
             foreach($node['formula_context'] as $binding)if(is_array($binding)&&!in_array($binding['node'],$node['dependencies'],true)){$error='pc5_formula_binding_not_dependency';return false;}
         }
@@ -103,7 +109,14 @@ function hrm_pay_core_005_validate_plan(array $plan,&$error=null)
         if($node['emit_line']){
             foreach(array('element_version_id','element_version_sha256','line_kind','source_set','source_sha256','quantity','rate','line_order') as $k)if(!array_key_exists($k,$node)){$error='pc5_line_node_incomplete';return false;}
             $allowed_source_sets=array('approved_inputs','eligibility','rule_artifacts','source_events','configuration');
-            if((int)$node['element_version_id']<=0||!is_sha256_hex($node['element_version_sha256'])||!in_array($node['element_version_sha256'],$plan['snapshot_material']['identity_sets']['element_versions'],true)||!in_array($node['line_kind'],array('earning','deduction','employer_contribution','information'),true)||!in_array($node['source_set'],$allowed_source_sets,true)||!is_sha256_hex($node['source_sha256'])||!in_array($node['source_sha256'],$plan['snapshot_material']['identity_sets'][$node['source_set']],true)||!is_int($node['line_order'])){$error='pc5_line_metadata_invalid';return false;}
+            if((int)$node['element_version_id']<=0||!is_sha256_hex($node['element_version_sha256'])||!in_array($node['element_version_sha256'],
+              $plan['snapshot_material']['identity_sets']['element_versions'],true)||!in_array($node['line_kind'],array('earning',
+              'deduction','employer_contribution','information'),true)||!in_array($node['source_set'],$allowed_source_sets,
+              true)||!is_sha256_hex($node['source_sha256'])||!in_array($node['source_sha256'],$plan['snapshot_material']['identity_sets'][$node['source_set']],
+              true)||!is_int($node['line_order'])){
+              $error='pc5_line_metadata_invalid';
+              return false;
+            }
             try{hrm_pay_core_005_decimal($node['quantity']);hrm_pay_core_005_decimal($node['rate']);}catch(Exception $e){$error='pc5_line_numeric_metadata_invalid';return false;}
         }
     }

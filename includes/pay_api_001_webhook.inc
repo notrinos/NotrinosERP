@@ -24,7 +24,10 @@ function pay_api_001_webhook_event_envelope($company_id,array $summary,$source_e
     $dedupe=pay_api_001_provisioning_hash(array('company_id'=>$company,'event_type'=>PAY_API_001_WEBHOOK_EVENT_TYPE,'contract_version'=>'v1','resource_key'=>PAY_API_001_PAYROLL_PERIOD_SUMMARY_RESOURCE,'object_scope_type'=>PAY_API_001_PAYROLL_PERIOD_SCOPE_TYPE,'object_scope_key'=>$scope_key,'payload_sha256'=>$payload_sha,'source_evidence_sha256'=>$source_evidence_sha256));
     if($dedupe===false)return false;
     $event_sha=pay_api_001_provisioning_hash(array('company_id'=>$company,'dedupe_key_sha256'=>$dedupe,'occurred_at'=>$occurred_at));
-    return array('company_id'=>$company,'event_type'=>PAY_API_001_WEBHOOK_EVENT_TYPE,'contract_version'=>'v1','resource_key'=>PAY_API_001_PAYROLL_PERIOD_SUMMARY_RESOURCE,'object_scope_type'=>PAY_API_001_PAYROLL_PERIOD_SCOPE_TYPE,'object_scope_key'=>$scope_key,'payload_json'=>$payload_json,'payload_sha256'=>$payload_sha,'source_evidence_sha256'=>$source_evidence_sha256,'dedupe_key_sha256'=>$dedupe,'event_sha256'=>$event_sha,'occurred_at'=>$occurred_at);
+    return array('company_id'=>$company,'event_type'=>PAY_API_001_WEBHOOK_EVENT_TYPE,'contract_version'=>'v1','resource_key'=>PAY_API_001_PAYROLL_PERIOD_SUMMARY_RESOURCE,
+      'object_scope_type'=>PAY_API_001_PAYROLL_PERIOD_SCOPE_TYPE,'object_scope_key'=>$scope_key,'payload_json'=>$payload_json,
+      'payload_sha256'=>$payload_sha,'source_evidence_sha256'=>$source_evidence_sha256,'dedupe_key_sha256'=>$dedupe,'event_sha256'=>$event_sha,
+      'occurred_at'=>$occurred_at);
 }
 
 /** Accept only an opaque SHA-256 claim-token digest. */

@@ -108,7 +108,9 @@ if (count($package_images)) {
 	display_heading2(_('Package pictures'));
 	echo "<div style='display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;'>";
 	foreach ($package_images as $image_url)
-		echo "<div style='border:1px solid #d7d7d7;padding:6px;background:#fff;'><a href='".html_specials_encode($image_url)."' target='_blank' rel='noopener noreferrer' title='"._('Open full size picture')."'><img src='".html_specials_encode($image_url)."' alt='"._('Package picture')."' style='display:block;max-width:260px;max-height:180px;cursor:zoom-in;' /></a><div style='margin-top:6px;text-align:center;'><a href='".html_specials_encode($image_url)."' target='_blank' rel='noopener noreferrer'>"._('Open full size')."</a></div></div>";
+		echo "<div style='border:1px solid #d7d7d7;padding:6px;background:#fff;'><a href='".html_specials_encode($image_url)."' target='_blank' rel='noopener noreferrer' title='"
+			._('Open full size picture')."'><img src='".html_specials_encode($image_url)."' alt='"._('Package picture')."' style='display:block;max-width:260px;max-height:180px;cursor:zoom-in;' /></a><div style='margin-top:6px;text-align:center;'><a href='"
+			.html_specials_encode($image_url)."' target='_blank' rel='noopener noreferrer'>"._('Open full size')."</a></div></div>";
 	echo "</div>";
 }
 

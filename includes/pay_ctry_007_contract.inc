@@ -21,7 +21,12 @@ function pay_ctry_007_closed_object($v,$required,$optional,&$error,$prefix){retu
 function pay_ctry_007_severities(){return array('advisory','important','urgent','critical');}
 function pay_ctry_007_actions(){return array('review','assess','schedule_update','suspend','revoke');}
 function pay_ctry_007_scope_types(){return array('company','legal_entity','payroll_scope');}
-function pay_ctry_007_authority_contract(){return array('automatic_pack_activation'=>false,'payroll_execution'=>false,'payroll_posting'=>false,'payment_authority'=>false,'general_ledger_authority'=>false,'statutory_filing_authority'=>false,'historical_payroll_rewrite'=>false,'permission_grant'=>false,'external_notification_delivery'=>false,'unscoped_recipient_acknowledgement_write'=>false,'unscoped_reminder_or_escalation_write'=>false,'certification_self_claim'=>false);}
+function pay_ctry_007_authority_contract(){
+	return array('automatic_pack_activation'=>false,'payroll_execution'=>false,'payroll_posting'=>false,'payment_authority'=>false,
+		'general_ledger_authority'=>false,'statutory_filing_authority'=>false,'historical_payroll_rewrite'=>false,'permission_grant'=>false,
+		'external_notification_delivery'=>false,'unscoped_recipient_acknowledgement_write'=>false,'unscoped_reminder_or_escalation_write'=>false,
+		'certification_self_claim'=>false);
+}
 function pay_ctry_007_recipient_authority_contract(){return array('scoped_audience_assignment'=>true,'scoped_recipient_assignment'=>true,'self_acknowledgement_only'=>true,'scoped_reminder_escalation'=>true,'scoped_resolution'=>true,'external_notification_delivery'=>false,'automatic_pack_activation'=>false,'employee_fact_payload'=>false);}
 function pay_ctry_007_delivery_authority_contract(){return array('append_only_delivery_outbox'=>true,'in_app_notification_provider'=>true,'scoped_delivery_dispatch'=>true,'retry_dead_letter_evidence'=>true,'external_network_delivery'=>false,'automatic_pack_activation'=>false,'employee_fact_payload'=>false,'cross_company_delivery'=>false);}
 if (!defined('PAY_CTRY_007_MANAGE_PERMISSION')) define('PAY_CTRY_007_MANAGE_PERMISSION','SA_HRM_MANAGE_PAY_CTRY_UPDATE');
@@ -56,7 +61,21 @@ function pay_ctry_007_validate_catalog_release(array $release,$predecessor,&$err
     if(!pay_ctry_007_sha($release['catalog_root_sha256'])||pay_ctry_007_time($release['released_at'])===false)return pay_ctry_007_fail($error,'catalog_root_or_time_invalid');
     if(!pay_ctry_007_token($release['publisher_code'],64)||!pay_ctry_007_token($release['signer_code'],64)||!pay_ctry_007_token($release['key_id'],96)||$release['signature_algorithm']!==PAY_CTRY_007_SIGNATURE_ALGORITHM)return pay_ctry_007_fail($error,'catalog_signing_identity_invalid');
     if($release['release_no']===1){if($release['predecessor_release_sha256']!==null&&$release['predecessor_release_sha256']!=='')return pay_ctry_007_fail($error,'catalog_genesis_predecessor_forbidden');if($predecessor!==null)return pay_ctry_007_fail($error,'catalog_genesis_replay');}
-    else {if(!is_array($predecessor)||!pay_ctry_007_sha($release['predecessor_release_sha256']))return pay_ctry_007_fail($error,'catalog_predecessor_missing');if(!isset($predecessor['catalog_code'],$predecessor['release_no'],$predecessor['release_sha256'],$predecessor['catalog_root_sha256'],$predecessor['released_at']))return pay_ctry_007_fail($error,'catalog_predecessor_incomplete');if((string)$predecessor['catalog_code']!==(string)$release['catalog_code']||(int)$predecessor['release_no']+1!==(int)$release['release_no'])return pay_ctry_007_fail($error,'catalog_release_sequence_invalid');if(!hash_equals((string)$predecessor['release_sha256'],(string)$release['predecessor_release_sha256']))return pay_ctry_007_fail($error,'catalog_predecessor_hash_mismatch');if(hash_equals((string)$predecessor['catalog_root_sha256'],(string)$release['catalog_root_sha256']))return pay_ctry_007_fail($error,'catalog_root_replay');$pt=pay_ctry_007_time((string)$predecessor['released_at']);$nt=pay_ctry_007_time((string)$release['released_at']);if($pt===false||$nt===false||$nt<=$pt)return pay_ctry_007_fail($error,'catalog_release_time_not_monotonic');}
+    else {
+      if(!is_array($predecessor)||!pay_ctry_007_sha($release['predecessor_release_sha256']))return pay_ctry_007_fail($error,
+        'catalog_predecessor_missing');
+      if(!isset($predecessor['catalog_code'],$predecessor['release_no'],$predecessor['release_sha256'],$predecessor['catalog_root_sha256'],
+        $predecessor['released_at']))return pay_ctry_007_fail($error,'catalog_predecessor_incomplete');
+      if((string)$predecessor['catalog_code']!==(string)$release['catalog_code']||(int)$predecessor['release_no']+1!==(int)$release['release_no'])return pay_ctry_007_fail($error,
+        'catalog_release_sequence_invalid');
+      if(!hash_equals((string)$predecessor['release_sha256'],(string)$release['predecessor_release_sha256']))return pay_ctry_007_fail($error,
+        'catalog_predecessor_hash_mismatch');
+      if(hash_equals((string)$predecessor['catalog_root_sha256'],(string)$release['catalog_root_sha256']))return pay_ctry_007_fail($error,
+        'catalog_root_replay');
+      $pt=pay_ctry_007_time((string)$predecessor['released_at']);
+      $nt=pay_ctry_007_time((string)$release['released_at']);
+      if($pt===false||$nt===false||$nt<=$pt)return pay_ctry_007_fail($error,'catalog_release_time_not_monotonic');
+    }
     $payload_sha=hash('sha256',pay_ctry_007_catalog_release_payload($release));if(!pay_ctry_007_sha($release['signature_payload_sha256'])||!hash_equals($payload_sha,$release['signature_payload_sha256']))return pay_ctry_007_fail($error,'catalog_signature_payload_hash_mismatch');
     $release_sha=pay_ctry_007_catalog_release_sha256($release);if(!pay_ctry_007_sha($release['release_sha256'])||!hash_equals($release_sha,$release['release_sha256']))return pay_ctry_007_fail($error,'catalog_release_hash_mismatch');
     $sig=base64_decode($release['signature_base64'],true);if(!is_string($sig)||strlen($sig)<128||strlen($sig)>1024)return pay_ctry_007_fail($error,'catalog_signature_encoding_invalid');return true;
@@ -70,54 +89,257 @@ function pay_ctry_007_verify_catalog_signature(array $release,array $context,$pr
     if((string)$publisher['publisher_code']!==$release['publisher_code']||(string)$signer['signer_code']!==$release['signer_code'])return pay_ctry_007_fail($error,'catalog_signing_identity_mismatch');
     if(isset($signer['publisher_id'],$publisher['publisher_id'])&&(int)$signer['publisher_id']!==(int)$publisher['publisher_id'])return pay_ctry_007_fail($error,'catalog_signer_publisher_mismatch');
     if((int)$key['signer_id']!==(int)$signer['signer_id']||(string)$key['key_id']!==$release['key_id']||(string)$key['algorithm']!==PAY_CTRY_007_SIGNATURE_ALGORITHM)return pay_ctry_007_fail($error,'catalog_trust_key_mismatch');
-    $released=pay_ctry_007_time($release['released_at']);$pub_from=pay_ctry_007_time((string)$publisher['valid_from']);$pub_to=!empty($publisher['valid_to'])?pay_ctry_007_time((string)$publisher['valid_to']):null;$key_from=pay_ctry_007_time((string)$key['valid_from']);$key_to=!empty($key['valid_to'])?pay_ctry_007_time((string)$key['valid_to']):null;$trusted_at=pay_ctry_007_time((string)$key['trusted_at']);
+    $released=pay_ctry_007_time($release['released_at']);
+    $pub_from=pay_ctry_007_time((string)$publisher['valid_from']);
+    $pub_to=!empty($publisher['valid_to'])?pay_ctry_007_time((string)$publisher['valid_to']):null;
+    $key_from=pay_ctry_007_time((string)$key['valid_from']);
+    $key_to=!empty($key['valid_to'])?pay_ctry_007_time((string)$key['valid_to']):null;
+    $trusted_at=pay_ctry_007_time((string)$key['trusted_at']);
     if($released===false||$pub_from===false||$key_from===false||$trusted_at===false)return pay_ctry_007_fail($error,'catalog_trusted_time_state_invalid');
     if($released>$now+PAY_CTRY_007_CLOCK_SKEW_SECONDS)return pay_ctry_007_fail($error,'catalog_signature_time_future');if($released<$now-PAY_CTRY_007_MAX_SIGNATURE_AGE_SECONDS)return pay_ctry_007_fail($error,'catalog_signature_stale');
     if($released<$pub_from||($pub_to!==null&&$released>$pub_to)||$released<$key_from||($key_to!==null&&$released>$key_to)||$released<$trusted_at-PAY_CTRY_007_CLOCK_SKEW_SECONDS)return pay_ctry_007_fail($error,'catalog_signing_authority_not_valid_at_release');
     if(($pub_to!==null&&$now>$pub_to)||($key_to!==null&&$now>$key_to))return pay_ctry_007_fail($error,'catalog_signing_authority_expired');if(!empty($context['publisher_revoked'])||!empty($context['key_revoked']))return pay_ctry_007_fail($error,'catalog_signing_authority_revoked');
-    if(isset($key['supersession'])&&$key['supersession']!==null){$sup=$key['supersession'];if(!is_array($sup)||!isset($sup['predecessor_key_id'],$sup['successor_key_id'],$sup['effective_at'],$sup['supersession_sha256']))return pay_ctry_007_fail($error,'catalog_key_supersession_state_invalid');$sa=pay_ctry_007_time((string)$sup['effective_at']);$sp=array('predecessor_key_id'=>(int)$sup['predecessor_key_id'],'successor_key_id'=>(int)$sup['successor_key_id'],'effective_at'=>(string)$sup['effective_at']);if($sa===false||(int)$sup['predecessor_key_id']!==(int)$key['trust_key_id']||(int)$sup['successor_key_id']<=0||!hash_equals((string)$sup['supersession_sha256'],pay_ctry_007_hash($sp)))return pay_ctry_007_fail($error,'catalog_key_supersession_state_invalid');if($now>=$sa)return pay_ctry_007_fail($error,'catalog_key_superseded');}
-    $pem=isset($key['public_key_pem'])?(string)$key['public_key_pem']:'';if($pem===''||strpos($pem,'PRIVATE KEY')!==false)return pay_ctry_007_fail($error,'catalog_public_key_material_invalid');$pk=@openssl_pkey_get_public($pem);if($pk===false)return pay_ctry_007_fail($error,'catalog_public_key_material_invalid');$d=@openssl_pkey_get_details($pk);if(!is_array($d)||!isset($d['type'],$d['bits'])||(int)$d['type']!==OPENSSL_KEYTYPE_RSA||(int)$d['bits']<2048)return pay_ctry_007_fail($error,'catalog_public_key_invalid_or_weak');$canonical_pem=str_replace("\r\n","\n",trim((string)$d['key']))."\n";if(!isset($key['public_key_sha256'],$key['key_sha256'])||!hash_equals((string)$key['public_key_sha256'],hash('sha256',$canonical_pem)))return pay_ctry_007_fail($error,'catalog_trust_key_public_hash_mismatch');$kp=array('signer_id'=>(int)$key['signer_id'],'key_id'=>(string)$key['key_id'],'algorithm'=>(string)$key['algorithm'],'public_key_sha256'=>(string)$key['public_key_sha256'],'valid_from'=>(string)$key['valid_from'],'valid_to'=>empty($key['valid_to'])?null:(string)$key['valid_to'],'trusted_at'=>(string)$key['trusted_at']);if(!hash_equals((string)$key['key_sha256'],pay_ctry_007_hash($kp)))return pay_ctry_007_fail($error,'catalog_trust_key_record_hash_mismatch');
+    if(isset($key['supersession'])&&$key['supersession']!==null){
+      $sup=$key['supersession'];
+      if(!is_array($sup)||!isset($sup['predecessor_key_id'],$sup['successor_key_id'],$sup['effective_at'],$sup['supersession_sha256']))return pay_ctry_007_fail($error,
+        'catalog_key_supersession_state_invalid');
+      $sa=pay_ctry_007_time((string)$sup['effective_at']);
+      $sp=array('predecessor_key_id'=>(int)$sup['predecessor_key_id'],'successor_key_id'=>(int)$sup['successor_key_id'],'effective_at'=>(string)$sup['effective_at']);
+      if($sa===false||(int)$sup['predecessor_key_id']!==(int)$key['trust_key_id']||(int)$sup['successor_key_id']<=0||!hash_equals((string)$sup['supersession_sha256'],
+        pay_ctry_007_hash($sp)))return pay_ctry_007_fail($error,'catalog_key_supersession_state_invalid');
+      if($now>=$sa)return pay_ctry_007_fail($error,'catalog_key_superseded');
+    }
+    $pem=isset($key['public_key_pem'])?(string)$key['public_key_pem']:'';
+    if($pem===''||strpos($pem,'PRIVATE KEY')!==false)return pay_ctry_007_fail($error,'catalog_public_key_material_invalid');
+    $pk=@openssl_pkey_get_public($pem);
+    if($pk===false)return pay_ctry_007_fail($error,'catalog_public_key_material_invalid');
+    $d=@openssl_pkey_get_details($pk);
+    if(!is_array($d)||!isset($d['type'],$d['bits'])||(int)$d['type']!==OPENSSL_KEYTYPE_RSA||(int)$d['bits']<2048)return pay_ctry_007_fail($error,
+      'catalog_public_key_invalid_or_weak');
+    $canonical_pem=str_replace("\r\n","\n",trim((string)$d['key']))."\n";
+    if(!isset($key['public_key_sha256'],$key['key_sha256'])||!hash_equals((string)$key['public_key_sha256'],hash('sha256',
+      $canonical_pem)))return pay_ctry_007_fail($error,'catalog_trust_key_public_hash_mismatch');
+    $kp=array('signer_id'=>(int)$key['signer_id'],'key_id'=>(string)$key['key_id'],'algorithm'=>(string)$key['algorithm'],
+      'public_key_sha256'=>(string)$key['public_key_sha256'],'valid_from'=>(string)$key['valid_from'],'valid_to'=>empty($key['valid_to'])?null:(string)$key['valid_to'],
+      'trusted_at'=>(string)$key['trusted_at']);
+    if(!hash_equals((string)$key['key_sha256'],pay_ctry_007_hash($kp)))return pay_ctry_007_fail($error,'catalog_trust_key_record_hash_mismatch');
     $sig=base64_decode($release['signature_base64'],true);if(@openssl_verify(pay_ctry_007_catalog_release_payload($release),$sig,$pk,OPENSSL_ALGO_SHA256)!==1)return pay_ctry_007_fail($error,'catalog_signature_invalid');return true;
 }
 
-function pay_ctry_007_catalog_admission_fields(array $a){return array('catalog_release_sha256'=>(string)$a['catalog_release_sha256'],'decision'=>(string)$a['decision'],'signature_verified'=>(int)$a['signature_verified'],'trust_snapshot_sha256'=>(string)$a['trust_snapshot_sha256'],'evidence_sha256'=>(string)$a['evidence_sha256'],'maker_id'=>(int)$a['maker_id'],'checker_id'=>(int)$a['checker_id'],'decided_at'=>(string)$a['decided_at']);}
+function pay_ctry_007_catalog_admission_fields(array $a){
+	return array('catalog_release_sha256'=>(string)$a['catalog_release_sha256'],'decision'=>(string)$a['decision'],'signature_verified'=>(int)$a['signature_verified'],
+		'trust_snapshot_sha256'=>(string)$a['trust_snapshot_sha256'],'evidence_sha256'=>(string)$a['evidence_sha256'],'maker_id'=>(int)$a['maker_id'],
+		'checker_id'=>(int)$a['checker_id'],'decided_at'=>(string)$a['decided_at']);
+}
 function pay_ctry_007_catalog_admission_sha256(array $a){return pay_ctry_007_hash(pay_ctry_007_catalog_admission_fields($a));}
-function pay_ctry_007_validate_catalog_admission(array $a,&$error){$error=null;$req=array('catalog_release_sha256','decision','signature_verified','trust_snapshot_sha256','evidence_sha256','maker_id','checker_id','decided_at','admission_sha256');if(!pay_ctry_007_closed_object($a,$req,array(),$error,'catalog_admission'))return false;if(!pay_ctry_007_sha($a['catalog_release_sha256'])||!pay_ctry_007_sha($a['trust_snapshot_sha256'])||!pay_ctry_007_sha($a['evidence_sha256'])||pay_ctry_007_time($a['decided_at'])===false)return pay_ctry_007_fail($error,'catalog_admission_digest_or_time_invalid');if(!in_array($a['decision'],array('accepted','rejected'),true)||!in_array($a['signature_verified'],array(0,1),true))return pay_ctry_007_fail($error,'catalog_admission_decision_invalid');if((int)$a['maker_id']<=0||(int)$a['checker_id']<=0||(int)$a['maker_id']===(int)$a['checker_id'])return pay_ctry_007_fail($error,'catalog_admission_maker_checker_invalid');if($a['decision']==='accepted'&&(int)$a['signature_verified']!==1)return pay_ctry_007_fail($error,'catalog_admission_unsigned_acceptance_denied');$sha=pay_ctry_007_catalog_admission_sha256($a);if(!pay_ctry_007_sha($a['admission_sha256'])||!hash_equals($sha,$a['admission_sha256']))return pay_ctry_007_fail($error,'catalog_admission_hash_mismatch');return true;}
+function pay_ctry_007_validate_catalog_admission(array $a,&$error){
+	$error=null;
+	$req=array('catalog_release_sha256','decision','signature_verified','trust_snapshot_sha256','evidence_sha256','maker_id',
+		'checker_id','decided_at','admission_sha256');
+	if(!pay_ctry_007_closed_object($a,$req,array(),$error,'catalog_admission'))return false;
+	if(!pay_ctry_007_sha($a['catalog_release_sha256'])||!pay_ctry_007_sha($a['trust_snapshot_sha256'])||!pay_ctry_007_sha($a['evidence_sha256'])||pay_ctry_007_time($a['decided_at'])===false)return pay_ctry_007_fail($error,
+		'catalog_admission_digest_or_time_invalid');
+	if(!in_array($a['decision'],array('accepted','rejected'),true)||!in_array($a['signature_verified'],array(0,1),true))return pay_ctry_007_fail($error,
+		'catalog_admission_decision_invalid');
+	if((int)$a['maker_id']<=0||(int)$a['checker_id']<=0||(int)$a['maker_id']===(int)$a['checker_id'])return pay_ctry_007_fail($error,
+		'catalog_admission_maker_checker_invalid');
+	if($a['decision']==='accepted'&&(int)$a['signature_verified']!==1)return pay_ctry_007_fail($error,'catalog_admission_unsigned_acceptance_denied');
+	$sha=pay_ctry_007_catalog_admission_sha256($a);
+	if(!pay_ctry_007_sha($a['admission_sha256'])||!hash_equals($sha,$a['admission_sha256']))return pay_ctry_007_fail($error,
+		'catalog_admission_hash_mismatch');
+	return true;
+}
 
-function pay_ctry_007_applicability_fields(array $a){return array('company_id'=>(int)$a['company_id'],'scope_type'=>(string)$a['scope_type'],'legal_entity_id'=>$a['legal_entity_id']===null?null:(int)$a['legal_entity_id'],'payroll_scope_key'=>$a['payroll_scope_key']===null?null:(string)$a['payroll_scope_key'],'current_binding_sha256'=>(string)$a['current_binding_sha256'],'run_snapshot_sha256'=>(string)$a['run_snapshot_sha256'],'affected_open_run_count'=>(int)$a['affected_open_run_count'],'affected_future_run_count'=>(int)$a['affected_future_run_count'],'impact_sha256'=>(string)$a['impact_sha256']);}
+function pay_ctry_007_applicability_fields(array $a){
+	return array('company_id'=>(int)$a['company_id'],'scope_type'=>(string)$a['scope_type'],'legal_entity_id'=>$a['legal_entity_id']===null?null:(int)$a['legal_entity_id'],
+		'payroll_scope_key'=>$a['payroll_scope_key']===null?null:(string)$a['payroll_scope_key'],'current_binding_sha256'=>(string)$a['current_binding_sha256'],
+		'run_snapshot_sha256'=>(string)$a['run_snapshot_sha256'],'affected_open_run_count'=>(int)$a['affected_open_run_count'],
+		'affected_future_run_count'=>(int)$a['affected_future_run_count'],'impact_sha256'=>(string)$a['impact_sha256']);
+}
 function pay_ctry_007_applicability_sha256(array $a){return pay_ctry_007_hash(pay_ctry_007_applicability_fields($a));}
-function pay_ctry_007_validate_applicability(array $a,&$error){$error=null;$req=array('company_id','scope_type','legal_entity_id','payroll_scope_key','current_binding_sha256','run_snapshot_sha256','affected_open_run_count','affected_future_run_count','impact_sha256','applicability_sha256');if(!pay_ctry_007_closed_object($a,$req,array(),$error,'notice_applicability'))return false;if((int)$a['company_id']<0||!in_array($a['scope_type'],pay_ctry_007_scope_types(),true)||!pay_ctry_007_sha($a['current_binding_sha256'])||!pay_ctry_007_sha($a['run_snapshot_sha256'])||!pay_ctry_007_sha($a['impact_sha256'])||(int)$a['affected_open_run_count']<0||(int)$a['affected_future_run_count']<0)return pay_ctry_007_fail($error,'notice_applicability_invalid');if($a['scope_type']==='company'&&($a['legal_entity_id']!==null||$a['payroll_scope_key']!==null))return pay_ctry_007_fail($error,'notice_company_scope_overqualified');if($a['scope_type']==='legal_entity'&&((int)$a['legal_entity_id']<=0||$a['payroll_scope_key']!==null))return pay_ctry_007_fail($error,'notice_legal_entity_scope_invalid');if($a['scope_type']==='payroll_scope'&&(!is_string($a['payroll_scope_key'])||$a['payroll_scope_key']===''||strlen($a['payroll_scope_key'])>96))return pay_ctry_007_fail($error,'notice_payroll_scope_invalid');$sha=pay_ctry_007_applicability_sha256($a);if(!pay_ctry_007_sha($a['applicability_sha256'])||!hash_equals($sha,$a['applicability_sha256']))return pay_ctry_007_fail($error,'notice_applicability_hash_mismatch');return true;}
+function pay_ctry_007_validate_applicability(array $a,&$error){
+	$error=null;
+	$req=array('company_id','scope_type','legal_entity_id','payroll_scope_key','current_binding_sha256','run_snapshot_sha256',
+		'affected_open_run_count','affected_future_run_count','impact_sha256','applicability_sha256');
+	if(!pay_ctry_007_closed_object($a,$req,array(),$error,'notice_applicability'))return false;
+	if((int)$a['company_id']<0||!in_array($a['scope_type'],pay_ctry_007_scope_types(),true)||!pay_ctry_007_sha($a['current_binding_sha256'])||!pay_ctry_007_sha($a['run_snapshot_sha256'])||!pay_ctry_007_sha($a['impact_sha256'])||(int)$a['affected_open_run_count']<0||(int)$a['affected_future_run_count']<0)return pay_ctry_007_fail($error,
+		'notice_applicability_invalid');
+	if($a['scope_type']==='company'&&($a['legal_entity_id']!==null||$a['payroll_scope_key']!==null))return pay_ctry_007_fail($error,
+		'notice_company_scope_overqualified');
+	if($a['scope_type']==='legal_entity'&&((int)$a['legal_entity_id']<=0||$a['payroll_scope_key']!==null))return pay_ctry_007_fail($error,
+		'notice_legal_entity_scope_invalid');
+	if($a['scope_type']==='payroll_scope'&&(!is_string($a['payroll_scope_key'])||$a['payroll_scope_key']===''||strlen($a['payroll_scope_key'])>96))return pay_ctry_007_fail($error,
+		'notice_payroll_scope_invalid');
+	$sha=pay_ctry_007_applicability_sha256($a);
+	if(!pay_ctry_007_sha($a['applicability_sha256'])||!hash_equals($sha,$a['applicability_sha256']))return pay_ctry_007_fail($error,
+		'notice_applicability_hash_mismatch');
+	return true;
+}
 
-function pay_ctry_007_notice_dedupe_fields(array $n){return array('catalog_release_sha256'=>(string)$n['catalog_release_sha256'],'pack_code'=>(string)$n['pack_code'],'current_pack_version'=>(string)$n['current_pack_version'],'current_semantic_root'=>(string)$n['current_semantic_root'],'current_evidence_root'=>(string)$n['current_evidence_root'],'successor_pack_version'=>(string)$n['successor_pack_version'],'successor_semantic_root'=>(string)$n['successor_semantic_root'],'successor_evidence_root'=>(string)$n['successor_evidence_root'],'severity'=>(string)$n['severity'],'deadline_at'=>(string)$n['deadline_at'],'required_action'=>(string)$n['required_action'],'applicability_sha256'=>(string)$n['applicability_sha256'],'impact_sha256'=>(string)$n['impact_sha256']);}
+function pay_ctry_007_notice_dedupe_fields(array $n){
+	return array('catalog_release_sha256'=>(string)$n['catalog_release_sha256'],'pack_code'=>(string)$n['pack_code'],'current_pack_version'=>(string)$n['current_pack_version'],
+		'current_semantic_root'=>(string)$n['current_semantic_root'],'current_evidence_root'=>(string)$n['current_evidence_root'],
+		'successor_pack_version'=>(string)$n['successor_pack_version'],'successor_semantic_root'=>(string)$n['successor_semantic_root'],
+		'successor_evidence_root'=>(string)$n['successor_evidence_root'],'severity'=>(string)$n['severity'],'deadline_at'=>(string)$n['deadline_at'],
+		'required_action'=>(string)$n['required_action'],'applicability_sha256'=>(string)$n['applicability_sha256'],'impact_sha256'=>(string)$n['impact_sha256']);
+}
 function pay_ctry_007_notice_dedupe_key(array $n){return pay_ctry_007_hash(pay_ctry_007_notice_dedupe_fields($n));}
 function pay_ctry_007_notice_fields(array $n){$f=pay_ctry_007_notice_dedupe_fields($n);$f['notice_key']=(string)$n['notice_key'];$f['dedupe_key']=(string)$n['dedupe_key'];$f['issued_at']=(string)$n['issued_at'];return $f;}
 function pay_ctry_007_notice_sha256(array $n){return pay_ctry_007_hash(pay_ctry_007_notice_fields($n));}
-function pay_ctry_007_validate_notice(array $n,&$error){$error=null;$req=array('notice_key','catalog_release_sha256','pack_code','current_pack_version','current_semantic_root','current_evidence_root','successor_pack_version','successor_semantic_root','successor_evidence_root','severity','deadline_at','required_action','applicability_sha256','impact_sha256','dedupe_key','issued_at','notice_sha256');if(!pay_ctry_007_closed_object($n,$req,array(),$error,'update_notice'))return false;if(!pay_ctry_007_token($n['notice_key'],96)||!pay_ctry_007_sha($n['catalog_release_sha256'])||!pay_ctry_007_token($n['pack_code'],96)||!pay_ctry_007_semver($n['current_pack_version'])||!pay_ctry_007_semver($n['successor_pack_version'])||version_compare($n['successor_pack_version'],$n['current_pack_version'],'<=')||!pay_ctry_007_sha($n['current_semantic_root'])||!pay_ctry_007_sha($n['current_evidence_root'])||!pay_ctry_007_sha($n['successor_semantic_root'])||!pay_ctry_007_sha($n['successor_evidence_root'])||!pay_ctry_007_sha($n['applicability_sha256'])||!pay_ctry_007_sha($n['impact_sha256']))return pay_ctry_007_fail($error,'update_notice_identity_or_roots_invalid');if(!in_array($n['severity'],pay_ctry_007_severities(),true)||!in_array($n['required_action'],pay_ctry_007_actions(),true))return pay_ctry_007_fail($error,'update_notice_policy_invalid');$issued=pay_ctry_007_time($n['issued_at']);$deadline=pay_ctry_007_time($n['deadline_at']);if($issued===false||$deadline===false||$deadline<$issued)return pay_ctry_007_fail($error,'update_notice_time_invalid');$dk=pay_ctry_007_notice_dedupe_key($n);if(!pay_ctry_007_sha($n['dedupe_key'])||!hash_equals($dk,$n['dedupe_key']))return pay_ctry_007_fail($error,'update_notice_dedupe_mismatch');$sha=pay_ctry_007_notice_sha256($n);if(!pay_ctry_007_sha($n['notice_sha256'])||!hash_equals($sha,$n['notice_sha256']))return pay_ctry_007_fail($error,'update_notice_hash_mismatch');return true;}
+function pay_ctry_007_validate_notice(array $n,&$error){
+	$error=null;
+	$req=array('notice_key','catalog_release_sha256','pack_code','current_pack_version','current_semantic_root','current_evidence_root',
+		'successor_pack_version','successor_semantic_root','successor_evidence_root','severity','deadline_at','required_action',
+		'applicability_sha256','impact_sha256','dedupe_key','issued_at','notice_sha256');
+	if(!pay_ctry_007_closed_object($n,$req,array(),$error,'update_notice'))return false;
+	if(!pay_ctry_007_token($n['notice_key'],96)||!pay_ctry_007_sha($n['catalog_release_sha256'])||!pay_ctry_007_token($n['pack_code'],
+		96)||!pay_ctry_007_semver($n['current_pack_version'])||!pay_ctry_007_semver($n['successor_pack_version'])||version_compare($n['successor_pack_version'],
+		$n['current_pack_version'],'<=')||!pay_ctry_007_sha($n['current_semantic_root'])||!pay_ctry_007_sha($n['current_evidence_root'])||!pay_ctry_007_sha($n['successor_semantic_root'])||!pay_ctry_007_sha($n['successor_evidence_root'])||!pay_ctry_007_sha($n['applicability_sha256'])||!pay_ctry_007_sha($n['impact_sha256']))return pay_ctry_007_fail($error,
+		'update_notice_identity_or_roots_invalid');
+	if(!in_array($n['severity'],pay_ctry_007_severities(),true)||!in_array($n['required_action'],pay_ctry_007_actions(),true))return pay_ctry_007_fail($error,
+		'update_notice_policy_invalid');
+	$issued=pay_ctry_007_time($n['issued_at']);
+	$deadline=pay_ctry_007_time($n['deadline_at']);
+	if($issued===false||$deadline===false||$deadline<$issued)return pay_ctry_007_fail($error,'update_notice_time_invalid');
+	$dk=pay_ctry_007_notice_dedupe_key($n);
+	if(!pay_ctry_007_sha($n['dedupe_key'])||!hash_equals($dk,$n['dedupe_key']))return pay_ctry_007_fail($error,'update_notice_dedupe_mismatch');
+	$sha=pay_ctry_007_notice_sha256($n);
+	if(!pay_ctry_007_sha($n['notice_sha256'])||!hash_equals($sha,$n['notice_sha256']))return pay_ctry_007_fail($error,'update_notice_hash_mismatch');
+	return true;
+}
 
 function pay_ctry_007_audience_types(){return array('country_pack_owner','payroll_operator','legal_entity_owner','explicit_users');}
 function pay_ctry_007_recipient_event_types(){return array('assigned','withdrawn');}
 function pay_ctry_007_lifecycle_event_types(){return array('reminder','escalated','resolved');}
 function pay_ctry_007_uint($v,$allow_zero=false){if(is_int($v))$n=$v;elseif(is_string($v)&&preg_match('/^[0-9]+$/D',$v))$n=(int)$v;else return false;return $allow_zero?$n>=0:$n>0;}
 function pay_ctry_007_reason($v){return is_string($v)&&preg_match('/^[a-z][a-z0-9_.:-]{1,63}$/D',$v)===1;}
-function pay_ctry_007_audience_fields(array $a){return array('audience_key'=>(string)$a['audience_key'],'update_notice_sha256'=>(string)$a['update_notice_sha256'],'applicability_sha256'=>(string)$a['applicability_sha256'],'audience_type'=>(string)$a['audience_type'],'audience_scope_sha256'=>(string)$a['audience_scope_sha256'],'recipient_set_sha256'=>(string)$a['recipient_set_sha256'],'selected_by'=>(int)$a['selected_by'],'selected_at'=>(string)$a['selected_at']);}
+function pay_ctry_007_audience_fields(array $a){
+	return array('audience_key'=>(string)$a['audience_key'],'update_notice_sha256'=>(string)$a['update_notice_sha256'],'applicability_sha256'=>(string)$a['applicability_sha256'],
+		'audience_type'=>(string)$a['audience_type'],'audience_scope_sha256'=>(string)$a['audience_scope_sha256'],'recipient_set_sha256'=>(string)$a['recipient_set_sha256'],
+		'selected_by'=>(int)$a['selected_by'],'selected_at'=>(string)$a['selected_at']);
+}
 function pay_ctry_007_audience_sha256(array $a){return pay_ctry_007_hash(pay_ctry_007_audience_fields($a));}
-function pay_ctry_007_validate_audience(array $a,&$error){$error=null;$req=array('audience_key','update_notice_sha256','applicability_sha256','audience_type','audience_scope_sha256','recipient_set_sha256','selected_by','selected_at','audience_sha256');if(!pay_ctry_007_closed_object($a,$req,array(),$error,'notice_audience'))return false;if(!pay_ctry_007_token($a['audience_key'],96)||!pay_ctry_007_sha($a['update_notice_sha256'])||!pay_ctry_007_sha($a['applicability_sha256'])||!in_array($a['audience_type'],pay_ctry_007_audience_types(),true)||!pay_ctry_007_sha($a['audience_scope_sha256'])||!pay_ctry_007_sha($a['recipient_set_sha256'])||pay_ctry_007_uint($a['selected_by'])===false||pay_ctry_007_time($a['selected_at'])===false)return pay_ctry_007_fail($error,'notice_audience_invalid');$sha=pay_ctry_007_audience_sha256($a);if(!pay_ctry_007_sha($a['audience_sha256'])||!hash_equals($sha,$a['audience_sha256']))return pay_ctry_007_fail($error,'notice_audience_hash_mismatch');return true;}
-function pay_ctry_007_recipient_event_fields(array $e){return array('recipient_event_key'=>(string)$e['recipient_event_key'],'audience_sha256'=>(string)$e['audience_sha256'],'update_notice_sha256'=>(string)$e['update_notice_sha256'],'applicability_sha256'=>(string)$e['applicability_sha256'],'recipient_user_id'=>(int)$e['recipient_user_id'],'event_no'=>(int)$e['event_no'],'predecessor_recipient_event_sha256'=>$e['predecessor_recipient_event_sha256']===null?null:(string)$e['predecessor_recipient_event_sha256'],'event_type'=>(string)$e['event_type'],'reason_code'=>(string)$e['reason_code'],'occurred_at'=>(string)$e['occurred_at'],'actor_id'=>(int)$e['actor_id']);}
+function pay_ctry_007_validate_audience(array $a,&$error){
+	$error=null;
+	$req=array('audience_key','update_notice_sha256','applicability_sha256','audience_type','audience_scope_sha256','recipient_set_sha256',
+		'selected_by','selected_at','audience_sha256');
+	if(!pay_ctry_007_closed_object($a,$req,array(),$error,'notice_audience'))return false;
+	if(!pay_ctry_007_token($a['audience_key'],96)||!pay_ctry_007_sha($a['update_notice_sha256'])||!pay_ctry_007_sha($a['applicability_sha256'])||!in_array($a['audience_type'],
+		pay_ctry_007_audience_types(),true)||!pay_ctry_007_sha($a['audience_scope_sha256'])||!pay_ctry_007_sha($a['recipient_set_sha256'])||pay_ctry_007_uint($a['selected_by'])===false||pay_ctry_007_time($a['selected_at'])===false)return pay_ctry_007_fail($error,
+		'notice_audience_invalid');
+	$sha=pay_ctry_007_audience_sha256($a);
+	if(!pay_ctry_007_sha($a['audience_sha256'])||!hash_equals($sha,$a['audience_sha256']))return pay_ctry_007_fail($error,'notice_audience_hash_mismatch');
+	return true;
+}
+function pay_ctry_007_recipient_event_fields(array $e){
+	return array('recipient_event_key'=>(string)$e['recipient_event_key'],'audience_sha256'=>(string)$e['audience_sha256'],'update_notice_sha256'=>(string)$e['update_notice_sha256'],
+		'applicability_sha256'=>(string)$e['applicability_sha256'],'recipient_user_id'=>(int)$e['recipient_user_id'],'event_no'=>(int)$e['event_no'],
+		'predecessor_recipient_event_sha256'=>$e['predecessor_recipient_event_sha256']===null?null:(string)$e['predecessor_recipient_event_sha256'],
+		'event_type'=>(string)$e['event_type'],'reason_code'=>(string)$e['reason_code'],'occurred_at'=>(string)$e['occurred_at'],
+		'actor_id'=>(int)$e['actor_id']);
+}
 function pay_ctry_007_recipient_event_sha256(array $e){return pay_ctry_007_hash(pay_ctry_007_recipient_event_fields($e));}
-function pay_ctry_007_validate_recipient_event(array $e,&$error){$error=null;$req=array('recipient_event_key','audience_sha256','update_notice_sha256','applicability_sha256','recipient_user_id','event_no','predecessor_recipient_event_sha256','event_type','reason_code','occurred_at','actor_id','recipient_event_sha256');if(!pay_ctry_007_closed_object($e,$req,array(),$error,'notice_recipient_event'))return false;if(!pay_ctry_007_token($e['recipient_event_key'],96)||!pay_ctry_007_sha($e['audience_sha256'])||!pay_ctry_007_sha($e['update_notice_sha256'])||!pay_ctry_007_sha($e['applicability_sha256'])||pay_ctry_007_uint($e['recipient_user_id'])===false||pay_ctry_007_uint($e['event_no'])===false||!in_array($e['event_type'],pay_ctry_007_recipient_event_types(),true)||!pay_ctry_007_reason($e['reason_code'])||pay_ctry_007_time($e['occurred_at'])===false||pay_ctry_007_uint($e['actor_id'])===false)return pay_ctry_007_fail($error,'notice_recipient_event_invalid');if((int)$e['event_no']===1){if($e['event_type']!=='assigned'||$e['predecessor_recipient_event_sha256']!==null)return pay_ctry_007_fail($error,'notice_recipient_genesis_invalid');}elseif(!pay_ctry_007_sha($e['predecessor_recipient_event_sha256']))return pay_ctry_007_fail($error,'notice_recipient_predecessor_missing');$sha=pay_ctry_007_recipient_event_sha256($e);if(!pay_ctry_007_sha($e['recipient_event_sha256'])||!hash_equals($sha,$e['recipient_event_sha256']))return pay_ctry_007_fail($error,'notice_recipient_event_hash_mismatch');return true;}
-function pay_ctry_007_ack_fields(array $a){return array('recipient_event_sha256'=>(string)$a['recipient_event_sha256'],'update_notice_sha256'=>(string)$a['update_notice_sha256'],'applicability_sha256'=>(string)$a['applicability_sha256'],'recipient_user_id'=>(int)$a['recipient_user_id'],'acknowledgement_type'=>(string)$a['acknowledgement_type'],'acknowledged_at'=>(string)$a['acknowledged_at'],'actor_id'=>(int)$a['actor_id']);}
+function pay_ctry_007_validate_recipient_event(array $e,&$error){
+	$error=null;
+	$req=array('recipient_event_key','audience_sha256','update_notice_sha256','applicability_sha256','recipient_user_id','event_no',
+		'predecessor_recipient_event_sha256','event_type','reason_code','occurred_at','actor_id','recipient_event_sha256');
+	if(!pay_ctry_007_closed_object($e,$req,array(),$error,'notice_recipient_event'))return false;
+	if(!pay_ctry_007_token($e['recipient_event_key'],96)||!pay_ctry_007_sha($e['audience_sha256'])||!pay_ctry_007_sha($e['update_notice_sha256'])||!pay_ctry_007_sha($e['applicability_sha256'])||pay_ctry_007_uint($e['recipient_user_id'])===false||pay_ctry_007_uint($e['event_no'])===false||!in_array($e['event_type'],
+		pay_ctry_007_recipient_event_types(),true)||!pay_ctry_007_reason($e['reason_code'])||pay_ctry_007_time($e['occurred_at'])===false||pay_ctry_007_uint($e['actor_id'])===false)return pay_ctry_007_fail($error,
+		'notice_recipient_event_invalid');
+	if((int)$e['event_no']===1){
+		if($e['event_type']!=='assigned'||$e['predecessor_recipient_event_sha256']!==null)return pay_ctry_007_fail($error,'notice_recipient_genesis_invalid');
+	}elseif(!pay_ctry_007_sha($e['predecessor_recipient_event_sha256']))return pay_ctry_007_fail($error,'notice_recipient_predecessor_missing');
+	$sha=pay_ctry_007_recipient_event_sha256($e);
+	if(!pay_ctry_007_sha($e['recipient_event_sha256'])||!hash_equals($sha,$e['recipient_event_sha256']))return pay_ctry_007_fail($error,
+		'notice_recipient_event_hash_mismatch');
+	return true;
+}
+function pay_ctry_007_ack_fields(array $a){
+	return array('recipient_event_sha256'=>(string)$a['recipient_event_sha256'],'update_notice_sha256'=>(string)$a['update_notice_sha256'],
+		'applicability_sha256'=>(string)$a['applicability_sha256'],'recipient_user_id'=>(int)$a['recipient_user_id'],'acknowledgement_type'=>(string)$a['acknowledgement_type'],
+		'acknowledged_at'=>(string)$a['acknowledged_at'],'actor_id'=>(int)$a['actor_id']);
+}
 function pay_ctry_007_ack_sha256(array $a){return pay_ctry_007_hash(pay_ctry_007_ack_fields($a));}
-function pay_ctry_007_validate_acknowledgement(array $a,&$error){$error=null;$req=array('recipient_event_sha256','update_notice_sha256','applicability_sha256','recipient_user_id','acknowledgement_type','acknowledged_at','actor_id','acknowledgement_sha256');if(!pay_ctry_007_closed_object($a,$req,array(),$error,'notice_acknowledgement'))return false;if(!pay_ctry_007_sha($a['recipient_event_sha256'])||!pay_ctry_007_sha($a['update_notice_sha256'])||!pay_ctry_007_sha($a['applicability_sha256'])||pay_ctry_007_uint($a['recipient_user_id'])===false||$a['acknowledgement_type']!=='acknowledged'||pay_ctry_007_time($a['acknowledged_at'])===false||pay_ctry_007_uint($a['actor_id'])===false||(int)$a['actor_id']!==(int)$a['recipient_user_id'])return pay_ctry_007_fail($error,'notice_acknowledgement_invalid');$sha=pay_ctry_007_ack_sha256($a);if(!pay_ctry_007_sha($a['acknowledgement_sha256'])||!hash_equals($sha,$a['acknowledgement_sha256']))return pay_ctry_007_fail($error,'notice_acknowledgement_hash_mismatch');return true;}
-function pay_ctry_007_lifecycle_fields(array $e){return array('lifecycle_event_key'=>(string)$e['lifecycle_event_key'],'update_notice_sha256'=>(string)$e['update_notice_sha256'],'applicability_sha256'=>(string)$e['applicability_sha256'],'recipient_event_sha256'=>$e['recipient_event_sha256']===null?null:(string)$e['recipient_event_sha256'],'event_type'=>(string)$e['event_type'],'due_at'=>$e['due_at']===null?null:(string)$e['due_at'],'reason_code'=>(string)$e['reason_code'],'evidence_sha256'=>(string)$e['evidence_sha256'],'actor_id'=>(int)$e['actor_id'],'occurred_at'=>(string)$e['occurred_at']);}
+function pay_ctry_007_validate_acknowledgement(array $a,&$error){
+	$error=null;
+	$req=array('recipient_event_sha256','update_notice_sha256','applicability_sha256','recipient_user_id','acknowledgement_type',
+		'acknowledged_at','actor_id','acknowledgement_sha256');
+	if(!pay_ctry_007_closed_object($a,$req,array(),$error,'notice_acknowledgement'))return false;
+	if(!pay_ctry_007_sha($a['recipient_event_sha256'])||!pay_ctry_007_sha($a['update_notice_sha256'])||!pay_ctry_007_sha($a['applicability_sha256'])||pay_ctry_007_uint($a['recipient_user_id'])===false||$a['acknowledgement_type']!=='acknowledged'||pay_ctry_007_time($a['acknowledged_at'])===false||pay_ctry_007_uint($a['actor_id'])===false||(int)$a['actor_id']!==(int)$a['recipient_user_id'])return pay_ctry_007_fail($error,
+		'notice_acknowledgement_invalid');
+	$sha=pay_ctry_007_ack_sha256($a);
+	if(!pay_ctry_007_sha($a['acknowledgement_sha256'])||!hash_equals($sha,$a['acknowledgement_sha256']))return pay_ctry_007_fail($error,
+		'notice_acknowledgement_hash_mismatch');
+	return true;
+}
+function pay_ctry_007_lifecycle_fields(array $e){
+	return array('lifecycle_event_key'=>(string)$e['lifecycle_event_key'],'update_notice_sha256'=>(string)$e['update_notice_sha256'],
+		'applicability_sha256'=>(string)$e['applicability_sha256'],'recipient_event_sha256'=>$e['recipient_event_sha256']===null?null:(string)$e['recipient_event_sha256'],
+		'event_type'=>(string)$e['event_type'],'due_at'=>$e['due_at']===null?null:(string)$e['due_at'],'reason_code'=>(string)$e['reason_code'],
+		'evidence_sha256'=>(string)$e['evidence_sha256'],'actor_id'=>(int)$e['actor_id'],'occurred_at'=>(string)$e['occurred_at']);
+}
 function pay_ctry_007_lifecycle_sha256(array $e){return pay_ctry_007_hash(pay_ctry_007_lifecycle_fields($e));}
-function pay_ctry_007_validate_lifecycle_event(array $e,&$error){$error=null;$req=array('lifecycle_event_key','update_notice_sha256','applicability_sha256','recipient_event_sha256','event_type','due_at','reason_code','evidence_sha256','actor_id','occurred_at','lifecycle_sha256');if(!pay_ctry_007_closed_object($e,$req,array(),$error,'notice_lifecycle_event'))return false;if(!pay_ctry_007_token($e['lifecycle_event_key'],96)||!pay_ctry_007_sha($e['update_notice_sha256'])||!pay_ctry_007_sha($e['applicability_sha256'])||!in_array($e['event_type'],pay_ctry_007_lifecycle_event_types(),true)||!pay_ctry_007_reason($e['reason_code'])||!pay_ctry_007_sha($e['evidence_sha256'])||pay_ctry_007_uint($e['actor_id'])===false||pay_ctry_007_time($e['occurred_at'])===false)return pay_ctry_007_fail($error,'notice_lifecycle_event_invalid');if($e['event_type']==='resolved'){if($e['recipient_event_sha256']!==null||$e['due_at']!==null)return pay_ctry_007_fail($error,'notice_resolution_scope_invalid');}else{if(!pay_ctry_007_sha($e['recipient_event_sha256'])||$e['due_at']===null||pay_ctry_007_time($e['due_at'])===false)return pay_ctry_007_fail($error,'notice_reminder_escalation_scope_invalid');}$sha=pay_ctry_007_lifecycle_sha256($e);if(!pay_ctry_007_sha($e['lifecycle_sha256'])||!hash_equals($sha,$e['lifecycle_sha256']))return pay_ctry_007_fail($error,'notice_lifecycle_hash_mismatch');return true;}
+function pay_ctry_007_validate_lifecycle_event(array $e,&$error){
+	$error=null;
+	$req=array('lifecycle_event_key','update_notice_sha256','applicability_sha256','recipient_event_sha256','event_type','due_at',
+		'reason_code','evidence_sha256','actor_id','occurred_at','lifecycle_sha256');
+	if(!pay_ctry_007_closed_object($e,$req,array(),$error,'notice_lifecycle_event'))return false;
+	if(!pay_ctry_007_token($e['lifecycle_event_key'],96)||!pay_ctry_007_sha($e['update_notice_sha256'])||!pay_ctry_007_sha($e['applicability_sha256'])||!in_array($e['event_type'],
+		pay_ctry_007_lifecycle_event_types(),true)||!pay_ctry_007_reason($e['reason_code'])||!pay_ctry_007_sha($e['evidence_sha256'])||pay_ctry_007_uint($e['actor_id'])===false||pay_ctry_007_time($e['occurred_at'])===false)return pay_ctry_007_fail($error,
+		'notice_lifecycle_event_invalid');
+	if($e['event_type']==='resolved'){
+		if($e['recipient_event_sha256']!==null||$e['due_at']!==null)return pay_ctry_007_fail($error,'notice_resolution_scope_invalid');
+	}else{
+		if(!pay_ctry_007_sha($e['recipient_event_sha256'])||$e['due_at']===null||pay_ctry_007_time($e['due_at'])===false)return pay_ctry_007_fail($error,
+			'notice_reminder_escalation_scope_invalid');
+	}
+	$sha=pay_ctry_007_lifecycle_sha256($e);
+	if(!pay_ctry_007_sha($e['lifecycle_sha256'])||!hash_equals($sha,$e['lifecycle_sha256']))return pay_ctry_007_fail($error,
+		'notice_lifecycle_hash_mismatch');
+	return true;
+}
 
 function pay_ctry_007_delivery_channels(){return array('in_app');}
 function pay_ctry_007_delivery_statuses(){return array('delivered','retryable_failure','dead_lettered');}
-function pay_ctry_007_outbox_fields(array $o){return array('outbox_key'=>(string)$o['outbox_key'],'recipient_event_sha256'=>(string)$o['recipient_event_sha256'],'update_notice_sha256'=>(string)$o['update_notice_sha256'],'applicability_sha256'=>(string)$o['applicability_sha256'],'recipient_user_id'=>(int)$o['recipient_user_id'],'channel'=>(string)$o['channel'],'payload_sha256'=>(string)$o['payload_sha256'],'queued_by'=>(int)$o['queued_by'],'queued_at'=>(string)$o['queued_at']);}
+function pay_ctry_007_outbox_fields(array $o){
+	return array('outbox_key'=>(string)$o['outbox_key'],'recipient_event_sha256'=>(string)$o['recipient_event_sha256'],'update_notice_sha256'=>(string)$o['update_notice_sha256'],
+		'applicability_sha256'=>(string)$o['applicability_sha256'],'recipient_user_id'=>(int)$o['recipient_user_id'],'channel'=>(string)$o['channel'],
+		'payload_sha256'=>(string)$o['payload_sha256'],'queued_by'=>(int)$o['queued_by'],'queued_at'=>(string)$o['queued_at']);
+}
 function pay_ctry_007_outbox_sha256(array $o){return pay_ctry_007_hash(pay_ctry_007_outbox_fields($o));}
-function pay_ctry_007_validate_delivery_outbox(array $o,&$error){$error=null;$req=array('outbox_key','recipient_event_sha256','update_notice_sha256','applicability_sha256','recipient_user_id','channel','payload_sha256','queued_by','queued_at','outbox_sha256');if(!pay_ctry_007_closed_object($o,$req,array(),$error,'notice_delivery_outbox'))return false;if(!pay_ctry_007_token($o['outbox_key'],96)||!pay_ctry_007_sha($o['recipient_event_sha256'])||!pay_ctry_007_sha($o['update_notice_sha256'])||!pay_ctry_007_sha($o['applicability_sha256'])||pay_ctry_007_uint($o['recipient_user_id'])===false||!in_array($o['channel'],pay_ctry_007_delivery_channels(),true)||!pay_ctry_007_sha($o['payload_sha256'])||pay_ctry_007_uint($o['queued_by'])===false||pay_ctry_007_time($o['queued_at'])===false)return pay_ctry_007_fail($error,'notice_delivery_outbox_invalid');$sha=pay_ctry_007_outbox_sha256($o);if(!pay_ctry_007_sha($o['outbox_sha256'])||!hash_equals($sha,$o['outbox_sha256']))return pay_ctry_007_fail($error,'notice_delivery_outbox_hash_mismatch');return true;}
-function pay_ctry_007_delivery_attempt_fields(array $a){return array('outbox_sha256'=>(string)$a['outbox_sha256'],'attempt_no'=>(int)$a['attempt_no'],'provider_code'=>(string)$a['provider_code'],'delivery_status'=>(string)$a['delivery_status'],'result_sha256'=>(string)$a['result_sha256'],'error_code'=>$a['error_code']===null?null:(string)$a['error_code'],'attempted_by'=>(int)$a['attempted_by'],'attempted_at'=>(string)$a['attempted_at']);}
+function pay_ctry_007_validate_delivery_outbox(array $o,&$error){
+	$error=null;
+	$req=array('outbox_key','recipient_event_sha256','update_notice_sha256','applicability_sha256','recipient_user_id','channel',
+		'payload_sha256','queued_by','queued_at','outbox_sha256');
+	if(!pay_ctry_007_closed_object($o,$req,array(),$error,'notice_delivery_outbox'))return false;
+	if(!pay_ctry_007_token($o['outbox_key'],96)||!pay_ctry_007_sha($o['recipient_event_sha256'])||!pay_ctry_007_sha($o['update_notice_sha256'])||!pay_ctry_007_sha($o['applicability_sha256'])||pay_ctry_007_uint($o['recipient_user_id'])===false||!in_array($o['channel'],
+		pay_ctry_007_delivery_channels(),true)||!pay_ctry_007_sha($o['payload_sha256'])||pay_ctry_007_uint($o['queued_by'])===false||pay_ctry_007_time($o['queued_at'])===false)return pay_ctry_007_fail($error,
+		'notice_delivery_outbox_invalid');
+	$sha=pay_ctry_007_outbox_sha256($o);
+	if(!pay_ctry_007_sha($o['outbox_sha256'])||!hash_equals($sha,$o['outbox_sha256']))return pay_ctry_007_fail($error,'notice_delivery_outbox_hash_mismatch');
+	return true;
+}
+function pay_ctry_007_delivery_attempt_fields(array $a){
+	return array('outbox_sha256'=>(string)$a['outbox_sha256'],'attempt_no'=>(int)$a['attempt_no'],'provider_code'=>(string)$a['provider_code'],
+		'delivery_status'=>(string)$a['delivery_status'],'result_sha256'=>(string)$a['result_sha256'],'error_code'=>$a['error_code']===null?null:(string)$a['error_code'],
+		'attempted_by'=>(int)$a['attempted_by'],'attempted_at'=>(string)$a['attempted_at']);
+}
 function pay_ctry_007_delivery_attempt_sha256(array $a){return pay_ctry_007_hash(pay_ctry_007_delivery_attempt_fields($a));}
-function pay_ctry_007_validate_delivery_attempt(array $a,&$error){$error=null;$req=array('outbox_sha256','attempt_no','provider_code','delivery_status','result_sha256','error_code','attempted_by','attempted_at','delivery_attempt_sha256');if(!pay_ctry_007_closed_object($a,$req,array(),$error,'notice_delivery_attempt'))return false;if(!pay_ctry_007_sha($a['outbox_sha256'])||pay_ctry_007_uint($a['attempt_no'])===false||!pay_ctry_007_token($a['provider_code'],64)||!in_array($a['delivery_status'],pay_ctry_007_delivery_statuses(),true)||!pay_ctry_007_sha($a['result_sha256'])||pay_ctry_007_uint($a['attempted_by'])===false||pay_ctry_007_time($a['attempted_at'])===false)return pay_ctry_007_fail($error,'notice_delivery_attempt_invalid');if($a['delivery_status']==='delivered'){if($a['error_code']!==null)return pay_ctry_007_fail($error,'notice_delivery_success_error_forbidden');}elseif(!pay_ctry_007_token($a['error_code'],64))return pay_ctry_007_fail($error,'notice_delivery_failure_error_missing');$sha=pay_ctry_007_delivery_attempt_sha256($a);if(!pay_ctry_007_sha($a['delivery_attempt_sha256'])||!hash_equals($sha,$a['delivery_attempt_sha256']))return pay_ctry_007_fail($error,'notice_delivery_attempt_hash_mismatch');return true;}
+function pay_ctry_007_validate_delivery_attempt(array $a,&$error){
+	$error=null;
+	$req=array('outbox_sha256','attempt_no','provider_code','delivery_status','result_sha256','error_code','attempted_by','attempted_at',
+		'delivery_attempt_sha256');
+	if(!pay_ctry_007_closed_object($a,$req,array(),$error,'notice_delivery_attempt'))return false;
+	if(!pay_ctry_007_sha($a['outbox_sha256'])||pay_ctry_007_uint($a['attempt_no'])===false||!pay_ctry_007_token($a['provider_code'],
+		64)||!in_array($a['delivery_status'],pay_ctry_007_delivery_statuses(),true)||!pay_ctry_007_sha($a['result_sha256'])||pay_ctry_007_uint($a['attempted_by'])===false||pay_ctry_007_time($a['attempted_at'])===false)return pay_ctry_007_fail($error,
+		'notice_delivery_attempt_invalid');
+	if($a['delivery_status']==='delivered'){
+		if($a['error_code']!==null)return pay_ctry_007_fail($error,'notice_delivery_success_error_forbidden');
+	}elseif(!pay_ctry_007_token($a['error_code'],64))return pay_ctry_007_fail($error,'notice_delivery_failure_error_missing');
+	$sha=pay_ctry_007_delivery_attempt_sha256($a);
+	if(!pay_ctry_007_sha($a['delivery_attempt_sha256'])||!hash_equals($sha,$a['delivery_attempt_sha256']))return pay_ctry_007_fail($error,
+		'notice_delivery_attempt_hash_mismatch');
+	return true;
+}
 ?>

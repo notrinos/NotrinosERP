@@ -420,7 +420,10 @@ function add_purch_requisition($requester_id, $department_id, $required_date, $p
 	$classification_intents = null)
 {
 	require_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_header_db.inc';
-	return write_purch_requisition_header('add', null, array('requester_id'=>$requester_id,'department_id'=>$department_id,'required_date'=>$required_date,'purpose'=>$purpose,'location'=>$location,'priority'=>$priority,'notes'=>$notes,'dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id,'reference'=>$reference,'request_date'=>$request_date,'material_request_id'=>$material_request_id,'custom_data'=>$custom_data,'classification_intents'=>$classification_intents));
+	return write_purch_requisition_header('add', null, array('requester_id'=>$requester_id,'department_id'=>$department_id,'required_date'=>$required_date,
+		'purpose'=>$purpose,'location'=>$location,'priority'=>$priority,'notes'=>$notes,'dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id,
+		'reference'=>$reference,'request_date'=>$request_date,'material_request_id'=>$material_request_id,'custom_data'=>$custom_data,
+		'classification_intents'=>$classification_intents));
 }
 
 /**
@@ -471,7 +474,9 @@ function update_purch_requisition($requisition_id, $department_id, $required_dat
 	$reference = '', $request_date = null, $custom_data = null, $classification_intents = null)
 {
 	require_once $GLOBALS['path_to_root'].'/purchasing/includes/db/purch_requisition_header_db.inc';
-	return write_purch_requisition_header('update', $requisition_id, array('department_id'=>$department_id,'required_date'=>$required_date,'purpose'=>$purpose,'location'=>$location,'priority'=>$priority,'notes'=>$notes,'dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id,'reference'=>$reference,'request_date'=>$request_date,'custom_data'=>$custom_data,'classification_intents'=>$classification_intents));
+	return write_purch_requisition_header('update', $requisition_id, array('department_id'=>$department_id,'required_date'=>$required_date,
+		'purpose'=>$purpose,'location'=>$location,'priority'=>$priority,'notes'=>$notes,'dimension_id'=>$dimension_id,'dimension2_id'=>$dimension2_id,
+		'reference'=>$reference,'request_date'=>$request_date,'custom_data'=>$custom_data,'classification_intents'=>$classification_intents));
 }
 
 /**

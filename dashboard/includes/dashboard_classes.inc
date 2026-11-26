@@ -792,7 +792,9 @@ function dashboard_get_database_size_text() {
 function customer_top($today, $limit=10) {
 	$begin = date2sql(begin_fiscalyear());
 	$today = date2sql($today);
-	$sql = "SELECT SUM((ov_amount + ov_discount) * rate * IF(trans.type = ".ST_CUSTCREDIT.", -1, 1)) AS total,d.debtor_no, d.name FROM ".TB_PREF."debtor_trans AS trans, ".TB_PREF."debtors_master AS d WHERE trans.debtor_no=d.debtor_no AND (trans.type = ".ST_SALESINVOICE." OR trans.type = ".ST_CUSTCREDIT.") AND tran_date >= '$begin' AND tran_date <= '$today' GROUP by d.debtor_no ORDER BY total DESC, d.debtor_no LIMIT $limit";
+	$sql = "SELECT SUM((ov_amount + ov_discount) * rate * IF(trans.type = ".ST_CUSTCREDIT.", -1, 1)) AS total,d.debtor_no, d.name FROM "
+		.TB_PREF."debtor_trans AS trans, ".TB_PREF."debtors_master AS d WHERE trans.debtor_no=d.debtor_no AND (trans.type = ".ST_SALESINVOICE
+		." OR trans.type = ".ST_CUSTCREDIT.") AND tran_date >= '$begin' AND tran_date <= '$today' GROUP by d.debtor_no ORDER BY total DESC, d.debtor_no LIMIT $limit";
 
 	$result = db_query($sql, 'could not get customer data');
 
@@ -815,7 +817,9 @@ function stock_top($today, $limit=10, $type=0) {
 	$begin = date2sql(begin_fiscalyear());
 	$today = date2sql($today);
 	if ($type == 0) {
-		$sql = "SELECT SUM((trans.unit_price * trans.quantity) * d.rate) AS total, s.stock_id, s.description, SUM(trans.quantity) AS qty, SUM((s.material_cost + s.overhead_cost + s.labour_cost) * trans.quantity) AS costs FROM ".TB_PREF."debtor_trans_details AS trans, ".TB_PREF."stock_master AS s, ".TB_PREF."debtor_trans AS d WHERE trans.stock_id=s.stock_id AND trans.debtor_trans_type=d.type AND trans.debtor_trans_no=d.trans_no AND (d.type = ".ST_SALESINVOICE." OR d.type = ".ST_CUSTCREDIT.") ";
+		$sql = "SELECT SUM((trans.unit_price * trans.quantity) * d.rate) AS total, s.stock_id, s.description, SUM(trans.quantity) AS qty, SUM((s.material_cost + s.overhead_cost + s.labour_cost) * trans.quantity) AS costs FROM "
+			.TB_PREF."debtor_trans_details AS trans, ".TB_PREF."stock_master AS s, ".TB_PREF."debtor_trans AS d WHERE trans.stock_id=s.stock_id AND trans.debtor_trans_type=d.type AND trans.debtor_trans_no=d.trans_no AND (d.type = "
+			.ST_SALESINVOICE." OR d.type = ".ST_CUSTCREDIT.") ";
 	}
 	else {
 		$sql = "SELECT SUM(m.qty * (s.material_cost + s.labour_cost + s.overhead_cost)) AS total, s.stock_id, s.description, SUM(qty) AS qty FROM ".TB_PREF."stock_master AS s, ".TB_PREF."stock_moves AS m WHERE s.stock_id=m.stock_id ";
@@ -1031,7 +1035,8 @@ function gl_performance($today, $weeks=5) {
 	$begin = date2sql(begin_fiscalyear());
 	$today = date2sql($today);
 	$sep = $SysPrefs->dateseps[user_date_sep()];
-	$sql = "SELECT week_name, sales, costs FROM(SELECT DATE_FORMAT(tran_date, '%Y{$sep}%u') AS week_name, SUM(IF(c.ctype = 4, amount * -1, 0)) AS sales, SUM(IF(c.ctype = 6, amount, 0)) AS costs FROM ".TB_PREF."gl_trans, ".TB_PREF."chart_master AS a, ".TB_PREF."chart_types AS t, ".TB_PREF."chart_class AS c WHERE(c.ctype = 4 OR c.ctype = 6) AND account = a.account_code AND a.account_type = t.id AND t.class_id = c.cid AND tran_date >= '$begin' AND tran_date <= '$today' GROUP BY week_name ORDER BY week_name DESC LIMIT 0, $weeks) b GROUP BY week_name ORDER BY week_name ASC";
+	$sql = "SELECT week_name, sales, costs FROM(SELECT DATE_FORMAT(tran_date, '%Y{$sep}%u') AS week_name, SUM(IF(c.ctype = 4, amount * -1, 0)) AS sales, SUM(IF(c.ctype = 6, amount, 0)) AS costs FROM "
+		.TB_PREF."gl_trans, ".TB_PREF."chart_master AS a, ".TB_PREF."chart_types AS t, ".TB_PREF."chart_class AS c WHERE(c.ctype = 4 OR c.ctype = 6) AND account = a.account_code AND a.account_type = t.id AND t.class_id = c.cid AND tran_date >= '$begin' AND tran_date <= '$today' GROUP BY week_name ORDER BY week_name DESC LIMIT 0, $weeks) b GROUP BY week_name ORDER BY week_name ASC";
 
 	$result = db_query($sql, 'Transactions could not be calculated');
 
@@ -1059,7 +1064,10 @@ function source_graphic($title, $x_axis, $pg, $graphic1, $graphic2='', $type=2, 
 function customer_trans($today) {
 	$today = date2sql($today);
 
-	$sql = "SELECT trans.trans_no, trans.reference,	trans.tran_date, trans.due_date, debtor.debtor_no, debtor.name, branch.br_name, debtor.curr_code, (trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount) AS total, (trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount - trans.alloc) AS remainder, DATEDIFF('$today', trans.due_date) AS days FROM ".TB_PREF."debtor_trans as trans, ".TB_PREF."debtors_master as debtor, ".TB_PREF."cust_branch as branch WHERE debtor.debtor_no = trans.debtor_no AND trans.branch_code = branch.branch_code AND trans.type = ".ST_SALESINVOICE." AND (trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount - trans.alloc) > ".FLOAT_COMP_DELTA." AND DATEDIFF('$today', trans.due_date) > 0 ORDER BY days DESC";
+	$sql = "SELECT trans.trans_no, trans.reference,	trans.tran_date, trans.due_date, debtor.debtor_no, debtor.name, branch.br_name, debtor.curr_code, (trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount) AS total, (trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount - trans.alloc) AS remainder, DATEDIFF('$today', trans.due_date) AS days FROM "
+		.TB_PREF."debtor_trans as trans, ".TB_PREF."debtors_master as debtor, ".TB_PREF."cust_branch as branch WHERE debtor.debtor_no = trans.debtor_no AND trans.branch_code = branch.branch_code AND trans.type = "
+		.ST_SALESINVOICE." AND (trans.ov_amount + trans.ov_gst + trans.ov_freight + trans.ov_freight_tax + trans.ov_discount - trans.alloc) > "
+		.FLOAT_COMP_DELTA." AND DATEDIFF('$today', trans.due_date) > 0 ORDER BY days DESC";
 
 	$result = db_query($sql, 'could not get customer transactions');
 
@@ -1078,7 +1086,9 @@ function calculate_next_invoice($myrow) {
 
 function supplier_trans($today) {
 	$today = date2sql($today);
-	$sql = "SELECT trans.trans_no, trans.reference, trans.tran_date, trans.due_date, s.supplier_id, s.supp_name, s.curr_code, (trans.ov_amount + trans.ov_gst + trans.ov_discount) AS total, (trans.ov_amount + trans.ov_gst + trans.ov_discount - trans.alloc) AS remainder, DATEDIFF('$today', trans.due_date) AS days FROM ".TB_PREF."supp_trans as trans, ".TB_PREF."suppliers as s WHERE s.supplier_id = trans.supplier_id AND trans.type = ".ST_SUPPINVOICE." AND (ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc) > ".FLOAT_COMP_DELTA." AND DATEDIFF('$today', trans.due_date) > 0 ORDER BY days DESC";
+	$sql = "SELECT trans.trans_no, trans.reference, trans.tran_date, trans.due_date, s.supplier_id, s.supp_name, s.curr_code, (trans.ov_amount + trans.ov_gst + trans.ov_discount) AS total, (trans.ov_amount + trans.ov_gst + trans.ov_discount - trans.alloc) AS remainder, DATEDIFF('$today', trans.due_date) AS days FROM "
+		.TB_PREF."supp_trans as trans, ".TB_PREF."suppliers as s WHERE s.supplier_id = trans.supplier_id AND trans.type = ".ST_SUPPINVOICE
+		." AND (ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc) > ".FLOAT_COMP_DELTA." AND DATEDIFF('$today', trans.due_date) > 0 ORDER BY days DESC";
 
 	$result = db_query($sql, 'could not get supplier transactions');
 	
@@ -1087,7 +1097,9 @@ function supplier_trans($today) {
 
 function supplier_unpaid_invoices($today) {
 	$today = date2sql($today);
-	$sql = "SELECT trans.trans_no, trans.reference, trans.tran_date, trans.due_date, s.supplier_id, s.supp_name, s.curr_code, (trans.ov_amount + trans.ov_gst + trans.ov_discount) AS total, (trans.ov_amount + trans.ov_gst + trans.ov_discount - trans.alloc) AS remainder, DATEDIFF(trans.due_date, '$today') AS days FROM ".TB_PREF."supp_trans as trans, ".TB_PREF."suppliers as s WHERE s.supplier_id = trans.supplier_id AND trans.type = ".ST_SUPPINVOICE." AND (ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc) > ".FLOAT_COMP_DELTA." AND DATEDIFF('$today', trans.due_date) <= 0 ORDER BY days ASC";
+	$sql = "SELECT trans.trans_no, trans.reference, trans.tran_date, trans.due_date, s.supplier_id, s.supp_name, s.curr_code, (trans.ov_amount + trans.ov_gst + trans.ov_discount) AS total, (trans.ov_amount + trans.ov_gst + trans.ov_discount - trans.alloc) AS remainder, DATEDIFF(trans.due_date, '$today') AS days FROM "
+		.TB_PREF."supp_trans as trans, ".TB_PREF."suppliers as s WHERE s.supplier_id = trans.supplier_id AND trans.type = ".ST_SUPPINVOICE
+		." AND (ABS(trans.ov_amount + trans.ov_gst + trans.ov_discount) - trans.alloc) > ".FLOAT_COMP_DELTA." AND DATEDIFF('$today', trans.due_date) <= 0 ORDER BY days ASC";
 
 	return db_query($sql, 'could not get supplier transactions');
 }

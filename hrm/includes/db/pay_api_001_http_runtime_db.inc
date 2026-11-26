@@ -32,7 +32,10 @@ function pay_api_001_record_read_request_audit(array $event,&$error=null)
         return array('api_read_request_id'=>(int)$old['api_read_request_id'],'request_sha256'=>$old['request_sha256'],'outcome_code'=>$old['outcome_code'],'replayed'=>true);
     }
     $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_read_requests (company_id,api_authn_decision_id,api_principal_id,api_resource_id,api_rate_limit_decision_id,method,resource_key_sha256,request_target_sha256,outcome_code,correlation_sha256,request_sha256,occurred_at,created_at) VALUES ('.
-        $company.','.($authn===null?'NULL':$authn).','.($principal===null?'NULL':$principal).','.($resource===null?'NULL':$resource).','.($rate===null?'NULL':$rate).','.db_escape($method).','.db_escape($event['resource_key_sha256']).','.db_escape($event['request_target_sha256']).','.db_escape($outcome).','.db_escape($event['correlation_sha256']).','.db_escape($fingerprint).','.db_escape($now).','.db_escape($now).')';
+        $company.','.($authn===null?'NULL':$authn).','.($principal===null?'NULL':$principal).','.($resource===null?'NULL':$resource)
+          .','.($rate===null?'NULL':$rate).','.db_escape($method).','.db_escape($event['resource_key_sha256']).','.db_escape($event['request_target_sha256'])
+          .','.db_escape($outcome).','.db_escape($event['correlation_sha256']).','.db_escape($fingerprint).','.db_escape($now)
+          .','.db_escape($now).')';
     if(!db_query($sql)){
         $retry=db_query('SELECT api_read_request_id,request_sha256,outcome_code FROM '.TB_PREF.'hrm_pay_api_001_read_requests WHERE company_id='.$company.' AND correlation_sha256='.db_escape($event['correlation_sha256']).' LIMIT 2 FOR UPDATE');
         if($retry&&db_num_rows($retry)===1){
@@ -58,14 +61,22 @@ function pay_api_001_preroute_read_request($method,$transport_secure,$headers,$q
     $env['presented_secret']=null;unset($env['presented_secret']);
     if($auth===false){$error=$auth_error?:'authentication_runtime_failed';return false;}
     if(empty($auth['authenticated'])){
-        $audit_error=null;$audit=pay_api_001_record_read_request_audit(array('company_id'=>$env['company_id'],'api_authn_decision_id'=>$auth['api_authn_decision_id'],'api_principal_id'=>null,'api_resource_id'=>null,'api_rate_limit_decision_id'=>null,'method'=>'GET','resource_key_sha256'=>$env['resource_key_sha256'],'request_target_sha256'=>$env['request_target_sha256'],'outcome_code'=>'authentication_failed','correlation_sha256'=>$env['correlation_sha256'],'occurred_at'=>$occurred),$audit_error);
+        $audit_error=null;
+        $audit=pay_api_001_record_read_request_audit(array('company_id'=>$env['company_id'],'api_authn_decision_id'=>$auth['api_authn_decision_id'],
+          'api_principal_id'=>null,'api_resource_id'=>null,'api_rate_limit_decision_id'=>null,'method'=>'GET','resource_key_sha256'=>$env['resource_key_sha256'],
+          'request_target_sha256'=>$env['request_target_sha256'],'outcome_code'=>'authentication_failed','correlation_sha256'=>$env['correlation_sha256'],
+          'occurred_at'=>$occurred),$audit_error);
         if($audit===false){$error=$audit_error;return false;}
         return array('allowed'=>false,'code'=>'authentication_required','api_read_request_id'=>$audit['api_read_request_id']);
     }
     $authority_error=null;
     $authority=pay_api_001_resolve_machine_read_authority($env['company_id'],$auth['api_principal_id'],$env['resource_key'],$env['contract_version'],$env['object_scope_type'],$env['object_scope_key'],$authority_error);
     if($authority===false){
-        $audit_error=null;$audit=pay_api_001_record_read_request_audit(array('company_id'=>$env['company_id'],'api_authn_decision_id'=>$auth['api_authn_decision_id'],'api_principal_id'=>$auth['api_principal_id'],'api_resource_id'=>null,'api_rate_limit_decision_id'=>null,'method'=>'GET','resource_key_sha256'=>$env['resource_key_sha256'],'request_target_sha256'=>$env['request_target_sha256'],'outcome_code'=>'authorization_failed','correlation_sha256'=>$env['correlation_sha256'],'occurred_at'=>$occurred),$audit_error);
+        $audit_error=null;
+        $audit=pay_api_001_record_read_request_audit(array('company_id'=>$env['company_id'],'api_authn_decision_id'=>$auth['api_authn_decision_id'],
+          'api_principal_id'=>$auth['api_principal_id'],'api_resource_id'=>null,'api_rate_limit_decision_id'=>null,'method'=>'GET',
+          'resource_key_sha256'=>$env['resource_key_sha256'],'request_target_sha256'=>$env['request_target_sha256'],'outcome_code'=>'authorization_failed',
+          'correlation_sha256'=>$env['correlation_sha256'],'occurred_at'=>$occurred),$audit_error);
         if($audit===false){$error=$audit_error;return false;}
         return array('allowed'=>false,'code'=>'authorization_required','api_read_request_id'=>$audit['api_read_request_id']);
     }
@@ -80,6 +91,9 @@ function pay_api_001_preroute_read_request($method,$transport_secure,$headers,$q
         'outcome_code'=>$outcome,'correlation_sha256'=>$env['correlation_sha256'],'occurred_at'=>$occurred),$audit_error);
     if($audit===false){$error=$audit_error;return false;}
     if(empty($adapter['allowed']))return array('allowed'=>false,'code'=>$rate['code']==='rate_limit_exceeded'?'rate_limit_exceeded':$adapter['code'],'api_read_request_id'=>$audit['api_read_request_id']);
-    return array('allowed'=>true,'code'=>'readonly_preroute_allowed','company_id'=>$env['company_id'],'api_principal_id'=>$auth['api_principal_id'],'api_resource_id'=>$authority['resource']['api_resource_id'],'api_principal_scope_id'=>$authority['scope']['api_principal_scope_id'],'api_rate_limit_policy_id'=>$authority['rate_policy']['api_rate_limit_policy_id'],'api_rate_limit_decision_id'=>$rate['api_rate_limit_decision_id'],'api_read_request_id'=>$audit['api_read_request_id'],'page'=>$adapter['page']);
+    return array('allowed'=>true,'code'=>'readonly_preroute_allowed','company_id'=>$env['company_id'],'api_principal_id'=>$auth['api_principal_id'],
+      'api_resource_id'=>$authority['resource']['api_resource_id'],'api_principal_scope_id'=>$authority['scope']['api_principal_scope_id'],
+      'api_rate_limit_policy_id'=>$authority['rate_policy']['api_rate_limit_policy_id'],'api_rate_limit_decision_id'=>$rate['api_rate_limit_decision_id'],
+      'api_read_request_id'=>$audit['api_read_request_id'],'page'=>$adapter['page']);
 }
 ?>

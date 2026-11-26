@@ -86,9 +86,14 @@ function prepare_requisition_purchase_order($id, $supplier_id, $line_ids = array
  $header = read_requisition_purchase_rows($queries['header']); $header = $header[0];
  $queries['all_lines'] = 'SELECT * FROM '.TB_PREF.'purch_requisition_lines WHERE requisition_id='.(int)$id.' ORDER BY id FOR UPDATE';
  $all_lines = read_requisition_purchase_rows($queries['all_lines']);
- $queries['lines'] = 'SELECT line.*, item.description AS stock_description, item.units AS stock_units, item.editable AS stock_editable, item.tax_type_id AS stock_tax, tax.name AS stock_tax_name, purchase.supplier_description, purchase.price AS supplier_price, purchase.conversion_factor AS supplier_conversion FROM '.TB_PREF.'purch_requisition_lines line LEFT JOIN '.TB_PREF.'stock_master item ON item.stock_id=line.stock_id LEFT JOIN '.TB_PREF.'item_tax_types tax ON tax.id=item.tax_type_id LEFT JOIN '.TB_PREF.'purch_data purchase ON purchase.stock_id=line.stock_id AND purchase.supplier_id='.(int)$supplier_id.' WHERE line.requisition_id='.(int)$id.' AND line.id IN ('.implode(',', $used).') ORDER BY line.id FOR UPDATE';
+ $queries['lines'] = 'SELECT line.*, item.description AS stock_description, item.units AS stock_units, item.editable AS stock_editable, item.tax_type_id AS stock_tax, tax.name AS stock_tax_name, purchase.supplier_description, purchase.price AS supplier_price, purchase.conversion_factor AS supplier_conversion FROM '
+   .TB_PREF.'purch_requisition_lines line LEFT JOIN '.TB_PREF.'stock_master item ON item.stock_id=line.stock_id LEFT JOIN '
+   .TB_PREF.'item_tax_types tax ON tax.id=item.tax_type_id LEFT JOIN '.TB_PREF.'purch_data purchase ON purchase.stock_id=line.stock_id AND purchase.supplier_id='
+   .(int)$supplier_id.' WHERE line.requisition_id='.(int)$id.' AND line.id IN ('.implode(',', $used).') ORDER BY line.id FOR UPDATE';
  $lines = read_requisition_purchase_rows($queries['lines']);
- $queries['effects'] = 'SELECT po.*, detail.po_detail_item, detail.item_code, detail.description AS line_description, detail.quantity_ordered, detail.quantity_received, detail.qty_invoiced, detail.unit_price, detail.delivery_date FROM '.TB_PREF.'purch_orders po LEFT JOIN '.TB_PREF.'purch_order_details detail ON detail.order_no=po.order_no WHERE po.requisition_id='.(int)$id.' AND po.supplier_id='.(int)$supplier_id.' ORDER BY po.order_no,detail.po_detail_item FOR UPDATE';
+ $queries['effects'] = 'SELECT po.*, detail.po_detail_item, detail.item_code, detail.description AS line_description, detail.quantity_ordered, detail.quantity_received, detail.qty_invoiced, detail.unit_price, detail.delivery_date FROM '
+   .TB_PREF.'purch_orders po LEFT JOIN '.TB_PREF.'purch_order_details detail ON detail.order_no=po.order_no WHERE po.requisition_id='
+   .(int)$id.' AND po.supplier_id='.(int)$supplier_id.' ORDER BY po.order_no,detail.po_detail_item FOR UPDATE';
  $effects = read_requisition_purchase_rows($queries['effects']);
  $queries['all_effects'] = str_replace(' AND po.supplier_id='.(int)$supplier_id, '', $queries['effects']);
  $all_effects = read_requisition_purchase_rows($queries['all_effects']);

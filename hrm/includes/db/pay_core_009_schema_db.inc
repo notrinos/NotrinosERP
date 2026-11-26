@@ -3,7 +3,10 @@
 include_once(dirname(__FILE__).'/migration_readiness_db.inc');
 function hrm_pay_core_009_state_columns(){return array(
 'hrm_pay_core_009_runs'=>array('run_id','run_key','run_type','payroll_period_id','legal_entity_id','calendar_period_id','period_name','from_date','to_date','chunk_size','request_sha256','state','state_version','state_sha256','checkpoint_no','lease_worker_sha256','lease_token_sha256','lease_expires_at','heartbeat_at','created_by','created_at','updated_at'),
-'hrm_pay_core_009_items'=>array('run_item_id','run_id','ordinal_no','employee_id','employee_id_sha256','legal_entity_id','payroll_relationship_id','worker_id','person_id','assignment_id','calendar_period_id','object_scope_sha256','input_sha256','item_state','state_version','item_state_sha256','attempt_no','result_sha256','result_payload_json','lease_token_sha256','last_error_code','created_at','updated_at'));
+'hrm_pay_core_009_items'=>array('run_item_id','run_id','ordinal_no','employee_id','employee_id_sha256','legal_entity_id',
+	'payroll_relationship_id','worker_id','person_id','assignment_id','calendar_period_id','object_scope_sha256','input_sha256',
+	'item_state','state_version','item_state_sha256','attempt_no','result_sha256','result_payload_json','lease_token_sha256',
+	'last_error_code','created_at','updated_at'));
 }
 function hrm_pay_core_009_event_columns(){return array(
 'hrm_pay_core_009_lease_events'=>array('lease_event_id','run_id','event_kind','worker_sha256','lease_token_sha256','acquired_at','expires_at','lease_event_sha256','created_by','created_at'),

@@ -1,5 +1,5 @@
 
-SET NAMES utf8;
+SET NAMES utf8mb4;
 
 -- Structure of table `0_areas` --
 
@@ -12,7 +12,7 @@ CREATE TABLE `0_areas` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`area_code`),
 	UNIQUE KEY `description` (`description`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_areas` --
 
@@ -36,7 +36,7 @@ CREATE TABLE `0_attachments` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	KEY `type_no` (`type_no`,`trans_no`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_attachments` --
 
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS `0_attendance` (
 	UNIQUE KEY `emp_date` (`employee_id`,`date`),
 	KEY `date` (`date`),
 	KEY `status` (`status`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_attendance` --
 
@@ -89,7 +89,7 @@ CREATE TABLE `0_audit_trail` (
 	PRIMARY KEY (`id`),
 	KEY `Seq` (`fiscal_year`,`gl_date`,`gl_seq`),
 	KEY `Type_and_Number` (`type`,`trans_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=37 ;
+) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_audit_trail` --
 
@@ -104,7 +104,7 @@ CREATE TABLE `0_domain_audit_chain_state` (
   `last_event_hash` char(64) NOT NULL,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`chain_scope`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `0_domain_audit_events`;
 CREATE TABLE `0_domain_audit_events` (
@@ -136,7 +136,7 @@ CREATE TABLE `0_domain_audit_events` (
   KEY `domain_audit_actor_time_idx` (`actor_user_id`,`occurred_at`),
   KEY `domain_audit_entity_time_idx` (`entity_type`,`entity_key_hash`,`occurred_at`),
   KEY `domain_audit_correlation_idx` (`correlation_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `0_domain_audit_outbox`;
 CREATE TABLE `0_domain_audit_outbox` (
@@ -151,7 +151,7 @@ CREATE TABLE `0_domain_audit_outbox` (
   UNIQUE KEY `domain_audit_outbox_event_uq` (`event_id`),
   UNIQUE KEY `domain_audit_outbox_chain_uq` (`chain_scope`,`chain_sequence`),
   KEY `domain_audit_outbox_created_idx` (`created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `0_domain_audit_checkpoints`;
 CREATE TABLE `0_domain_audit_checkpoints` (
@@ -166,7 +166,7 @@ CREATE TABLE `0_domain_audit_checkpoints` (
   PRIMARY KEY (`checkpoint_id`),
   UNIQUE KEY `domain_audit_checkpoint_chain_uq` (`chain_scope`,`chain_sequence`),
   KEY `domain_audit_checkpoint_created_idx` (`created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `0_domain_audit_export_receipts`;
 CREATE TABLE `0_domain_audit_export_receipts` (
@@ -194,7 +194,7 @@ CREATE TABLE `0_domain_audit_export_receipts` (
   UNIQUE KEY `domain_audit_receipt_hash_uq` (`receipt_hash`),
   UNIQUE KEY `domain_audit_receipt_object_uq` (`custody_provider`,`custody_object_token`),
   KEY `domain_audit_receipt_recorded_idx` (`recorded_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TRIGGER IF EXISTS `0_domain_audit_events_no_update`;
 CREATE TRIGGER `0_domain_audit_events_no_update` BEFORE UPDATE ON `0_domain_audit_events`
@@ -436,7 +436,7 @@ CREATE TABLE `0_bank_accounts` (
 	KEY `bank_account_name` (`bank_account_name`),
 	KEY `bank_account_number` (`bank_account_number`),
 	KEY `account_code` (`account_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_bank_accounts` --
 
@@ -467,7 +467,7 @@ CREATE TABLE `0_bank_trans` (
 	KEY `type` (`type`,`trans_no`),
 	KEY `bank_act_2` (`bank_act`,`reconciled`),
 	KEY `bank_act_3` (`bank_act`,`trans_date`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 ;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_bank_trans` --
 
@@ -496,7 +496,7 @@ CREATE TABLE `0_bom` (
 	KEY `loc_code` (`loc_code`),
 	KEY `parent` (`parent`,`loc_code`),
 	KEY `workcentre_added` (`workcentre_added`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 ;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_bom` --
 
@@ -521,7 +521,7 @@ CREATE TABLE `0_budget_trans` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	KEY `Account` (`account`,`tran_date`,`dimension_id`,`dimension2_id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_budget_trans` --
 
@@ -536,7 +536,7 @@ CREATE TABLE `0_chart_class` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`cid`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_chart_class` --
 
@@ -560,7 +560,7 @@ CREATE TABLE `0_chart_master` (
 	PRIMARY KEY (`account_code`),
 	KEY `account_name` (`account_name`),
 	KEY `accounts_by_type` (`account_type`,`account_code`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_chart_master` --
 
@@ -659,7 +659,7 @@ CREATE TABLE `0_chart_types` (
 	PRIMARY KEY (`id`),
 	KEY `name` (`name`),
 	KEY `class_id` (`class_id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_chart_types` --
 
@@ -688,7 +688,7 @@ CREATE TABLE `0_comments` (
 	`memo_` tinytext,
 	UNIQUE KEY `type_id_date` (`type`,`id`,`date_`),
 	KEY `type_and_id` (`type`,`id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_comments` --
 
@@ -712,7 +712,7 @@ CREATE TABLE `0_credit_status` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `reason_description` (`reason_description`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 ;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_credit_status` --
 
@@ -736,7 +736,7 @@ CREATE TABLE `0_crm_categories` (
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `type` (`type`,`action`),
 	UNIQUE KEY `type_2` (`type`,`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 ;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_crm_categories` --
 
@@ -766,7 +766,7 @@ CREATE TABLE `0_crm_contacts` (
 	`entity_id` varchar(11) DEFAULT NULL COMMENT 'entity id in related class table',
 	PRIMARY KEY (`id`),
 	KEY `type` (`type`,`action`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 ;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_crm_contacts` --
 
@@ -797,7 +797,7 @@ CREATE TABLE `0_crm_persons` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`),
 	KEY `ref` (`ref`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 ;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_crm_persons` --
 
@@ -820,7 +820,7 @@ CREATE TABLE `0_currencies` (
 	`auto_update` tinyint(1) NOT NULL DEFAULT '1',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`curr_abrev`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_currencies` --
 
@@ -847,7 +847,7 @@ CREATE TABLE `0_cust_allocations` (
 	UNIQUE KEY `trans_type_from` (`person_id`,`trans_type_from`,`trans_no_from`,`trans_type_to`,`trans_no_to`),
 	KEY `From` (`trans_type_from`,`trans_no_from`),
 	KEY `To` (`trans_type_to`,`trans_no_to`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 ;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_cust_allocations` --
 
@@ -884,7 +884,7 @@ CREATE TABLE `0_cust_branch` (
 	PRIMARY KEY (`branch_code`,`debtor_no`),
 	KEY `branch_ref` (`branch_ref`),
 	KEY `group_no` (`group_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_cust_branch` --
 
@@ -926,7 +926,7 @@ CREATE TABLE `0_debtor_trans` (
 	KEY `debtor_no` (`debtor_no`,`branch_code`),
 	KEY `tran_date` (`tran_date`),
 	KEY `order_` (`order_`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_debtor_trans` --
 
@@ -954,7 +954,7 @@ CREATE TABLE `0_debtor_trans_details` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`debtor_trans_no` int(11) DEFAULT NULL,
 	`debtor_trans_type` int(11) DEFAULT NULL,
-	`stock_id` varchar(20) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+	`stock_id` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
 	`description` tinytext,
 	`unit_price` double NOT NULL DEFAULT '0',
 	`unit_tax` double NOT NULL DEFAULT '0',
@@ -967,7 +967,7 @@ CREATE TABLE `0_debtor_trans_details` (
 	PRIMARY KEY (`id`),
 	KEY `Transaction` (`debtor_trans_type`,`debtor_trans_no`),
 	KEY `src_id` (`src_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_debtor_trans_details` --
 
@@ -1011,16 +1011,16 @@ CREATE TABLE `0_debtors_master` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	`credit_insurance_limit` double DEFAULT 0,
 	`credit_review_date` date DEFAULT NULL,
-	`credit_risk_score` enum('low','medium','high','critical') COLLATE utf8_unicode_ci DEFAULT 'medium',
+	`credit_risk_score` enum('low','medium','high','critical') COLLATE utf8mb4_general_ci DEFAULT 'medium',
 	`payment_behavior_score` double DEFAULT 0,
-	`customer_tier` enum('standard','silver','gold','platinum','vip') COLLATE utf8_unicode_ci DEFAULT 'standard',
-	`preferred_communication` enum('email','phone','whatsapp','portal') COLLATE utf8_unicode_ci DEFAULT 'email',
-	`industry` varchar(50) COLLATE utf8_unicode_ci DEFAULT '',
-	`company_size` enum('small','medium','large','enterprise') COLLATE utf8_unicode_ci DEFAULT 'medium',
+	`customer_tier` enum('standard','silver','gold','platinum','vip') COLLATE utf8mb4_general_ci DEFAULT 'standard',
+	`preferred_communication` enum('email','phone','whatsapp','portal') COLLATE utf8mb4_general_ci DEFAULT 'email',
+	`industry` varchar(50) COLLATE utf8mb4_general_ci DEFAULT '',
+	`company_size` enum('small','medium','large','enterprise') COLLATE utf8mb4_general_ci DEFAULT 'medium',
 	PRIMARY KEY (`debtor_no`),
 	UNIQUE KEY `debtor_ref` (`debtor_ref`),
 	KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_debtors_master` --
 
@@ -1044,7 +1044,7 @@ CREATE TABLE IF NOT EXISTS `0_departments` (
 	`inactive`                   tinyint(1)   NOT NULL DEFAULT '0',
 	PRIMARY KEY (`department_id`),
 	KEY `parent_department_id` (`parent_department_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_departments` --
 
@@ -1066,7 +1066,7 @@ CREATE TABLE `0_dimensions` (
 	KEY `date_` (`date_`),
 	KEY `due_date` (`due_date`),
 	KEY `type_` (`type_`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimensions` --
 
@@ -1086,7 +1086,7 @@ CREATE TABLE `0_dimension_category_policies` (
 	`digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `version_axis` (`version`,`axis`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_category_policies` --
 
@@ -1104,7 +1104,7 @@ CREATE TABLE `0_dimension_category_policy_rules` (
 	`note` varchar(255) NOT NULL DEFAULT '',
 	PRIMARY KEY (`id`),
 	KEY `version` (`version`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_category_policy_rules` --
 
@@ -1152,7 +1152,7 @@ CREATE TABLE `0_dimension_source_revisions` (
 	KEY `dimension_source_axis2` (`dimension2_id`),
 	KEY `dimension_source_document` (`source_family`,`trans_type`,`document_key`),
 	CONSTRAINT `0_dimension_source_revision_parent` FOREIGN KEY (`predecessor_revision_id`) REFERENCES `0_dimension_source_revisions` (`source_revision_id`) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_source_revisions` --
 
@@ -1184,7 +1184,7 @@ CREATE TABLE `0_dimension_posting_links` (
 	KEY `dimension_link_predecessor` (`predecessor_link_id`),
 	CONSTRAINT `0_dimension_posting_link_revision` FOREIGN KEY (`source_revision_id`) REFERENCES `0_dimension_source_revisions` (`source_revision_id`) ON DELETE RESTRICT,
 	CONSTRAINT `0_dimension_posting_link_predecessor` FOREIGN KEY (`predecessor_link_id`) REFERENCES `0_dimension_posting_links` (`posting_link_id`) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_posting_links` --
 
@@ -1220,7 +1220,7 @@ CREATE TABLE `0_dimension_allocation_runs` (
 	KEY `dimension_allocation_journal` (`journal_trans_no`),
 	KEY `dimension_allocation_inverse_of` (`inverse_of_run_id`),
 	CONSTRAINT `0_dimension_allocation_inverse_parent` FOREIGN KEY (`inverse_of_run_id`) REFERENCES `0_dimension_allocation_runs` (`run_id`) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_allocation_runs` --
 
@@ -1240,7 +1240,7 @@ CREATE TABLE `0_dimension_allocation_sources` (
 	UNIQUE KEY `dimension_allocation_active_source` (`active_counter`),
 	KEY `dimension_allocation_source_row` (`gl_counter`),
 	CONSTRAINT `0_dimension_allocation_source_run` FOREIGN KEY (`run_id`) REFERENCES `0_dimension_allocation_runs` (`run_id`) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_allocation_sources` --
 
@@ -1272,7 +1272,7 @@ CREATE TABLE `0_dimension_allocation_drivers` (
 	UNIQUE KEY `dimension_allocation_driver_version` (`driver_key`,`version_no`),
 	KEY `dimension_allocation_driver_status` (`driver_key`,`status`),
 	KEY `dimension_allocation_driver_content` (`content_sha256`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_allocation_drivers` --
 
@@ -1289,7 +1289,7 @@ CREATE TABLE `0_dimension_allocation_driver_values` (
 	PRIMARY KEY (`value_id`),
 	UNIQUE KEY `dimension_allocation_driver_dimension` (`driver_id`,`target_id`),
 	CONSTRAINT `0_dimension_allocation_value_driver` FOREIGN KEY (`driver_id`) REFERENCES `0_dimension_allocation_drivers` (`driver_id`) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_allocation_driver_values` --
 
@@ -1311,7 +1311,7 @@ CREATE TABLE `0_dimension_allocation_driver_runs` (
 	KEY `dimension_allocation_driver_run_driver` (`driver_id`),
 	CONSTRAINT `0_dimension_allocation_driver_run_run` FOREIGN KEY (`run_id`) REFERENCES `0_dimension_allocation_runs` (`run_id`) ON DELETE RESTRICT,
 	CONSTRAINT `0_dimension_allocation_driver_run_driver` FOREIGN KEY (`driver_id`) REFERENCES `0_dimension_allocation_drivers` (`driver_id`) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_allocation_driver_runs` --
 
@@ -1343,7 +1343,7 @@ CREATE TABLE `0_dimension_budget_versions` (
 	KEY `dimension_budget_version_status` (`fiscal_year`,`status`),
 	KEY `dimension_budget_version_content` (`content_sha256`),
 	CONSTRAINT `0_dimension_budget_version_basis` FOREIGN KEY (`basis_version_id`) REFERENCES `0_dimension_budget_versions` (`version_id`) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_budget_versions` --
 
@@ -1364,7 +1364,7 @@ CREATE TABLE `0_dimension_budget_version_lines` (
 	UNIQUE KEY `dimension_budget_version_line` (`version_id`,`account_code`,`coordinate_1`,`coordinate_2`,`period_start`),
 	KEY `dimension_budget_version_line_scope` (`version_id`,`account_code`,`period_start`),
 	CONSTRAINT `0_dimension_budget_line_version` FOREIGN KEY (`version_id`) REFERENCES `0_dimension_budget_versions` (`version_id`) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_budget_version_lines` --
 
@@ -1382,7 +1382,7 @@ CREATE TABLE `0_dimension_budget_activations` (
 	PRIMARY KEY (`activation_id`),
 	KEY `dimension_budget_activation_year` (`fiscal_year`,`activation_id`),
 	CONSTRAINT `0_dimension_budget_activation_version` FOREIGN KEY (`version_id`) REFERENCES `0_dimension_budget_versions` (`version_id`) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_budget_activations` --
 
@@ -1411,7 +1411,7 @@ CREATE TABLE `0_dimension_commitment_lines` (
 	UNIQUE KEY `dimension_commitment_line_source` (`po_detail_item`),
 	KEY `dimension_commitment_line_order` (`order_no`),
 	KEY `dimension_commitment_line_scope` (`account_code`,`commit_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_commitment_lines` --
 
@@ -1436,7 +1436,7 @@ CREATE TABLE `0_dimension_commitment_events` (
 	PRIMARY KEY (`event_id`),
 	UNIQUE KEY `dimension_commitment_event_key` (`commitment_id`,`event_key`),
 	CONSTRAINT `0_dimension_commitment_event_line` FOREIGN KEY (`commitment_id`) REFERENCES `0_dimension_commitment_lines` (`commitment_id`) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_commitment_events` --
 
@@ -1464,7 +1464,7 @@ CREATE TABLE `0_dimension_commitment_reservations` (
 	PRIMARY KEY (`reservation_id`),
 	UNIQUE KEY `dimension_commitment_reservation_reference` (`reference`),
 	KEY `dimension_commitment_reservation_scope` (`account_code`,`state`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_commitment_reservations` --
 
@@ -1479,7 +1479,7 @@ CREATE TABLE `0_dimension_commitment_activations` (
 	`actor_id` int(10) unsigned NOT NULL,
 	`created_at` datetime NOT NULL,
 	PRIMARY KEY (`activation_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_commitment_activations` --
 
@@ -1509,7 +1509,7 @@ CREATE TABLE `0_dimension_forecast_versions` (
 	UNIQUE KEY `dimension_forecast_version_no` (`fiscal_year`,`version_no`),
 	KEY `dimension_forecast_version_status` (`fiscal_year`,`status`),
 	CONSTRAINT `0_dimension_forecast_version_basis` FOREIGN KEY (`basis_version_id`) REFERENCES `0_dimension_forecast_versions` (`version_id`) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_forecast_versions` --
 
@@ -1527,7 +1527,7 @@ CREATE TABLE `0_dimension_forecast_lines` (
 	PRIMARY KEY (`line_id`),
 	UNIQUE KEY `dimension_forecast_line_scope` (`version_id`,`account_code`,`coordinate_1`,`coordinate_2`),
 	CONSTRAINT `0_dimension_forecast_line_version` FOREIGN KEY (`version_id`) REFERENCES `0_dimension_forecast_versions` (`version_id`) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_forecast_lines` --
 
@@ -1557,7 +1557,7 @@ CREATE TABLE `0_dimension_hierarchy_versions` (
 	UNIQUE KEY `dimension_hierarchy_version_no` (`axis`,`version_no`),
 	KEY `dimension_hierarchy_version_status` (`axis`,`status`,`effective_from`),
 	CONSTRAINT `0_dimension_hierarchy_version_basis` FOREIGN KEY (`basis_version_id`) REFERENCES `0_dimension_hierarchy_versions` (`version_id`) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_hierarchy_versions` --
 
@@ -1574,7 +1574,7 @@ CREATE TABLE `0_dimension_hierarchy_members` (
 	UNIQUE KEY `dimension_hierarchy_member_version` (`version_id`,`member_id`),
 	KEY `dimension_hierarchy_member_parent` (`version_id`,`parent_member_id`),
 	CONSTRAINT `0_dimension_hierarchy_member_version` FOREIGN KEY (`version_id`) REFERENCES `0_dimension_hierarchy_versions` (`version_id`) ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dimension_hierarchy_members` --
 
@@ -1637,7 +1637,7 @@ CREATE TABLE IF NOT EXISTS `0_employees` (
 	KEY `position_id` (`position_id`),
 	KEY `grade_id` (`grade_id`),
 	KEY `reporting_to` (`reporting_to`)
-) ENGINE=InnoDB ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 -- Data of table `0_employees` --
 
@@ -1678,7 +1678,7 @@ CREATE TABLE `0_hrm_persons` (
 	`created_by` smallint(6) unsigned NOT NULL DEFAULT '0',
 	PRIMARY KEY (`person_id`),
 	KEY `hrm_person_status_idx` (`person_status`,`person_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_names` (
 	`name_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -1695,7 +1695,7 @@ CREATE TABLE `0_hrm_person_names` (
 	PRIMARY KEY (`name_id`),
 	KEY `hrm_person_name_asof_idx` (`person_id`,`effective_from`,`effective_to`,`name_id`),
 	CONSTRAINT `0_hrm_person_names_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_contacts` (
 	`contact_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -1716,7 +1716,7 @@ CREATE TABLE `0_hrm_person_contacts` (
 	KEY `hrm_person_contact_asof_idx` (`person_id`,`contact_type`,`effective_from`,`effective_to`,`contact_id`),
 	KEY `hrm_person_contact_token_idx` (`contact_type`,`lookup_token`,`contact_id`),
 	CONSTRAINT `0_hrm_person_contacts_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_identifiers` (
 	`identifier_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -1744,7 +1744,7 @@ CREATE TABLE `0_hrm_person_identifiers` (
 	UNIQUE KEY `hrm_person_identifier_supersedes_uq` (`supersedes_identifier_id`),
 	CONSTRAINT `0_hrm_person_identifiers_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_person_identifiers_supersedes_fk` FOREIGN KEY (`supersedes_identifier_id`) REFERENCES `0_hrm_person_identifiers` (`identifier_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 CREATE TABLE `0_hrm_person_identifier_verification_requests` (
@@ -1760,7 +1760,7 @@ CREATE TABLE `0_hrm_person_identifier_verification_requests` (
 	KEY `hrm_person_identifier_verification_identifier_idx` (`identifier_id`,`identifier_row_version`,`verification_request_id`),
 	KEY `hrm_person_identifier_verification_status_idx` (`request_status`,`verification_request_id`),
 	CONSTRAINT `0_hrm_person_identifier_verification_identifier_fk` FOREIGN KEY (`identifier_id`) REFERENCES `0_hrm_person_identifiers` (`identifier_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_identifier_verification_evidence` (
 	`verification_evidence_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -1785,7 +1785,7 @@ CREATE TABLE `0_hrm_person_identifier_verification_evidence` (
 	KEY `hrm_person_identifier_verification_evidence_approval_idx` (`approval_draft_id`,`verification_evidence_id`),
 	KEY `hrm_person_identifier_verification_evidence_assurance_idx` (`checker_assurance_event_id`,`verification_evidence_id`),
 	CONSTRAINT `0_hrm_person_identifier_verification_evidence_request_fk` FOREIGN KEY (`verification_request_id`) REFERENCES `0_hrm_person_identifier_verification_requests` (`verification_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_bank_accounts` (
 	`person_bank_account_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -1812,7 +1812,7 @@ CREATE TABLE `0_hrm_person_bank_accounts` (
 	UNIQUE KEY `hrm_person_bank_supersedes_uq` (`supersedes_person_bank_account_id`),
 	CONSTRAINT `0_hrm_person_bank_accounts_supersedes_fk` FOREIGN KEY (`supersedes_person_bank_account_id`) REFERENCES `0_hrm_person_bank_accounts` (`person_bank_account_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_person_bank_accounts_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 CREATE TABLE `0_hrm_person_bank_account_verification_requests` (
@@ -1828,7 +1828,7 @@ CREATE TABLE `0_hrm_person_bank_account_verification_requests` (
 	KEY `hrm_person_bank_verification_account_idx` (`person_bank_account_id`,`bank_account_row_version`,`verification_request_id`),
 	KEY `hrm_person_bank_verification_status_idx` (`request_status`,`verification_request_id`),
 	CONSTRAINT `0_hrm_person_bank_verification_account_fk` FOREIGN KEY (`person_bank_account_id`) REFERENCES `0_hrm_person_bank_accounts` (`person_bank_account_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TABLE `0_hrm_person_bank_account_verification_evidence` (
 	`verification_evidence_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 	`verification_request_id` bigint(20) unsigned NOT NULL,
@@ -1852,7 +1852,7 @@ CREATE TABLE `0_hrm_person_bank_account_verification_evidence` (
 	KEY `hrm_person_bank_verification_evidence_approval_idx` (`approval_draft_id`,`verification_evidence_id`),
 	KEY `hrm_person_bank_verification_evidence_assurance_idx` (`checker_assurance_event_id`,`verification_evidence_id`),
 	CONSTRAINT `0_hrm_person_bank_verification_evidence_request_fk` FOREIGN KEY (`verification_request_id`) REFERENCES `0_hrm_person_bank_account_verification_requests` (`verification_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_bank_payment_elections` (
 	`payment_election_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -1875,7 +1875,7 @@ CREATE TABLE `0_hrm_person_bank_payment_elections` (
 	UNIQUE KEY `hrm_bank_payment_election_supersedes_uq` (`supersedes_payment_election_id`),
 	CONSTRAINT `0_hrm_bank_payment_election_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_bank_payment_election_supersedes_fk` FOREIGN KEY (`supersedes_payment_election_id`) REFERENCES `0_hrm_person_bank_payment_elections` (`payment_election_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_bank_payment_allocations` (
 	`payment_allocation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -1893,7 +1893,7 @@ CREATE TABLE `0_hrm_person_bank_payment_allocations` (
 	KEY `hrm_bank_payment_allocation_bank_idx` (`person_bank_account_id`,`bank_account_row_version`,`payment_allocation_id`),
 	CONSTRAINT `0_hrm_bank_payment_allocation_election_fk` FOREIGN KEY (`payment_election_id`) REFERENCES `0_hrm_person_bank_payment_elections` (`payment_election_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_bank_payment_allocation_bank_fk` FOREIGN KEY (`person_bank_account_id`) REFERENCES `0_hrm_person_bank_accounts` (`person_bank_account_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 
@@ -1918,7 +1918,7 @@ CREATE TABLE `0_hrm_person_addresses` (
 	KEY `hrm_person_address_asof_idx` (`person_id`,`address_type`,`effective_from`,`effective_to`,`address_id`),
 	KEY `hrm_person_address_jurisdiction_idx` (`country`,`region`,`person_id`,`address_id`),
 	CONSTRAINT `0_hrm_person_addresses_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_emergency_contacts` (
 	`emergency_contact_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -1937,7 +1937,7 @@ CREATE TABLE `0_hrm_person_emergency_contacts` (
 	PRIMARY KEY (`emergency_contact_id`),
 	KEY `hrm_person_emergency_asof_idx` (`person_id`,`is_primary`,`effective_from`,`effective_to`,`emergency_contact_id`),
 	CONSTRAINT `0_hrm_person_emergency_contacts_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_duplicate_reviews` (
 	`review_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -1959,7 +1959,7 @@ CREATE TABLE `0_hrm_person_duplicate_reviews` (
 	CONSTRAINT `0_hrm_person_dup_review_low_fk` FOREIGN KEY (`person_id_low`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_person_dup_review_high_fk` FOREIGN KEY (`person_id_high`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_person_dup_review_predecessor_fk` FOREIGN KEY (`predecessor_review_id`) REFERENCES `0_hrm_person_duplicate_reviews` (`review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 CREATE TABLE `0_hrm_person_link_proposals` (
@@ -1980,7 +1980,7 @@ CREATE TABLE `0_hrm_person_link_proposals` (
 	CONSTRAINT `0_hrm_person_link_prop_review_fk` FOREIGN KEY (`review_id`) REFERENCES `0_hrm_person_duplicate_reviews` (`review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_person_link_prop_low_fk` FOREIGN KEY (`person_id_low`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_person_link_prop_high_fk` FOREIGN KEY (`person_id_high`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_workers` (
 	`worker_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -1995,7 +1995,7 @@ CREATE TABLE `0_hrm_workers` (
 	UNIQUE KEY `hrm_worker_number_uq` (`worker_number`),
 	KEY `hrm_worker_person_asof_idx` (`person_id`,`active_from`,`active_to`),
 	CONSTRAINT `0_hrm_workers_person_fk` FOREIGN KEY (`person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_employee_worker_map` (
 	`mapping_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -2012,7 +2012,7 @@ CREATE TABLE `0_hrm_employee_worker_map` (
 	UNIQUE KEY `hrm_employee_worker_worker_uq` (`worker_id`),
 	KEY `hrm_employee_worker_retired_idx` (`retired_at`,`mapping_id`),
 	CONSTRAINT `0_hrm_employee_worker_map_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 CREATE TABLE `0_hrm_legal_entities` (
@@ -2034,7 +2034,7 @@ CREATE TABLE `0_hrm_legal_entities` (
 	UNIQUE KEY `hrm_legal_entity_code_uq` (`entity_code`),
 	UNIQUE KEY `hrm_legal_entity_legacy_default_uq` (`legacy_default`),
 	KEY `hrm_legal_entity_status_idx` (`entity_status`,`legal_entity_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TABLE `0_hrm_grades` (
 	`grade_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 	`legal_entity_id` bigint(20) unsigned NOT NULL,
@@ -2055,7 +2055,7 @@ CREATE TABLE `0_hrm_grades` (
 	UNIQUE KEY `hrm_grade_entity_code_uq` (`legal_entity_id`,`grade_code`),
 	KEY `hrm_grade_status_level_idx` (`legal_entity_id`,`grade_status`,`grade_level`,`grade_id`),
 	CONSTRAINT `0_hrm_grades_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_jobs` (
 	`job_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -2073,7 +2073,7 @@ CREATE TABLE `0_hrm_jobs` (
 	UNIQUE KEY `hrm_job_entity_code_uq` (`legal_entity_id`,`job_code`),
 	KEY `hrm_job_status_idx` (`legal_entity_id`,`job_status`,`job_id`),
 	CONSTRAINT `0_hrm_jobs_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_establishments` (
 	`establishment_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -2091,7 +2091,7 @@ CREATE TABLE `0_hrm_establishments` (
 	UNIQUE KEY `hrm_establishment_entity_code_uq` (`legal_entity_id`,`establishment_code`),
 	KEY `hrm_establishment_status_idx` (`legal_entity_id`,`establishment_status`,`establishment_id`),
 	CONSTRAINT `0_hrm_establishments_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TABLE `0_hrm_work_locations` (
 	`work_location_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 	`legal_entity_id` bigint(20) unsigned NOT NULL,
@@ -2111,7 +2111,7 @@ CREATE TABLE `0_hrm_work_locations` (
 	KEY `hrm_work_location_establishment_idx` (`establishment_id`,`work_location_status`,`work_location_id`),
 	CONSTRAINT `0_hrm_work_locations_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_work_locations_establishment_fk` FOREIGN KEY (`establishment_id`) REFERENCES `0_hrm_establishments` (`establishment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 CREATE TABLE `0_hrm_positions` (
@@ -2136,7 +2136,7 @@ CREATE TABLE `0_hrm_positions` (
 	KEY `hrm_position_job_idx` (`job_id`,`position_status`,`position_id`),
 	CONSTRAINT `0_hrm_positions_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_positions_job_fk` FOREIGN KEY (`job_id`) REFERENCES `0_hrm_jobs` (`job_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_position_hierarchy` (
 	`hierarchy_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -2159,7 +2159,7 @@ CREATE TABLE `0_hrm_position_hierarchy` (
 	CONSTRAINT `0_hrm_position_hierarchy_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_position_hierarchy_position_fk` FOREIGN KEY (`position_id`) REFERENCES `0_hrm_positions` (`position_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_position_hierarchy_reports_to_fk` FOREIGN KEY (`reports_to_position_id`) REFERENCES `0_hrm_positions` (`position_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 CREATE TABLE `0_hrm_position_headcount_budgets` (
@@ -2181,7 +2181,7 @@ CREATE TABLE `0_hrm_position_headcount_budgets` (
 	KEY `hrm_position_headcount_entity_asof_idx` (`legal_entity_id`,`effective_from`,`effective_to`,`budget_id`),
 	CONSTRAINT `0_hrm_position_headcount_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_position_headcount_position_fk` FOREIGN KEY (`position_id`) REFERENCES `0_hrm_positions` (`position_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_organization_units` (
 	`organization_unit_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -2207,7 +2207,7 @@ CREATE TABLE `0_hrm_organization_units` (
 	KEY `hrm_org_unit_status_idx` (`legal_entity_id`,`unit_status`,`organization_unit_id`),
 	CONSTRAINT `0_hrm_org_units_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_org_units_parent_fk` FOREIGN KEY (`parent_organization_unit_id`) REFERENCES `0_hrm_organization_units` (`organization_unit_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 CREATE TABLE `0_hrm_employments` (
@@ -2235,7 +2235,7 @@ CREATE TABLE `0_hrm_employments` (
 	KEY `hrm_employment_legal_entity_idx` (`legal_entity_id`,`employment_id`),
 	CONSTRAINT `0_hrm_employments_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_employments_legal_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_contracts` (
 	`contract_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -2260,7 +2260,7 @@ CREATE TABLE `0_hrm_contracts` (
 	KEY `hrm_contract_employment_asof_idx` (`employment_id`,`effective_from`,`effective_to`,`contract_id`),
 	KEY `hrm_contract_type_idx` (`contract_type_code`,`effective_to`,`contract_id`),
 	CONSTRAINT `0_hrm_contracts_employment_fk` FOREIGN KEY (`employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_assignments` (
 	`assignment_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -2310,7 +2310,7 @@ CREATE TABLE `0_hrm_assignments` (
 	CONSTRAINT `0_hrm_assignments_job_fk` FOREIGN KEY (`job_id`) REFERENCES `0_hrm_jobs` (`job_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_assignments_work_location_fk` FOREIGN KEY (`work_location_id`) REFERENCES `0_hrm_work_locations` (`work_location_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_assignments_manager_assignment_fk` FOREIGN KEY (`manager_assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_lifecycle_commands` (
 	`lifecycle_command_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -2337,7 +2337,7 @@ CREATE TABLE `0_hrm_lifecycle_commands` (
 	CONSTRAINT `0_hrm_lifecycle_command_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_lifecycle_command_employment_fk` FOREIGN KEY (`employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_lifecycle_command_assignment_fk` FOREIGN KEY (`assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 CREATE TABLE `0_hrm_lifecycle_hire_commands` (
@@ -2356,7 +2356,7 @@ CREATE TABLE `0_hrm_lifecycle_hire_commands` (
 	UNIQUE KEY `hrm_lifecycle_hire_command_idempotency_uq` (`idempotency_key_hash`),
 	KEY `hrm_lifecycle_hire_command_status_idx` (`command_status`,`effective_at`,`hire_command_id`),
 	KEY `hrm_lifecycle_hire_command_approval_idx` (`approval_draft_id`,`hire_command_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_lifecycle_hire_payloads` (
 	`hire_command_id` bigint(20) unsigned NOT NULL,
@@ -2376,7 +2376,7 @@ CREATE TABLE `0_hrm_lifecycle_hire_payloads` (
 	KEY `hrm_lifecycle_hire_payload_purge_idx` (`payload_state`,`purge_after`,`hire_command_id`),
 	KEY `hrm_lifecycle_hire_payload_key_idx` (`key_generation`,`key_id`,`hire_command_id`),
 	CONSTRAINT `0_hrm_lifecycle_hire_payloads_command_fk` FOREIGN KEY (`hire_command_id`) REFERENCES `0_hrm_lifecycle_hire_commands` (`hire_command_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 CREATE TABLE `0_hrm_lifecycle_tasks` (
@@ -2396,7 +2396,7 @@ CREATE TABLE `0_hrm_lifecycle_tasks` (
 	KEY `hrm_lifecycle_task_status_idx` (`task_status`,`lifecycle_command_id`,`lifecycle_task_id`),
 	KEY `hrm_lifecycle_task_confidentiality_idx` (`confidentiality_class`,`task_status`,`lifecycle_task_id`),
 	CONSTRAINT `0_hrm_lifecycle_task_command_fk` FOREIGN KEY (`lifecycle_command_id`) REFERENCES `0_hrm_lifecycle_commands` (`lifecycle_command_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 CREATE TABLE `0_hrm_person_canonical_links` (
@@ -2417,7 +2417,7 @@ CREATE TABLE `0_hrm_person_canonical_links` (
 	CONSTRAINT `0_hrm_person_canonical_link_proposal_fk` FOREIGN KEY (`proposal_id`) REFERENCES `0_hrm_person_link_proposals` (`proposal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_person_canonical_link_canonical_fk` FOREIGN KEY (`canonical_person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_person_canonical_link_alias_fk` FOREIGN KEY (`alias_person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_person_canonical_link_workers` (
 	`link_worker_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -2436,7 +2436,7 @@ CREATE TABLE `0_hrm_person_canonical_link_workers` (
 	CONSTRAINT `0_hrm_person_canonical_link_worker_map_fk` FOREIGN KEY (`mapping_id`) REFERENCES `0_hrm_employee_worker_map` (`mapping_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_person_canonical_link_worker_previous_fk` FOREIGN KEY (`previous_person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_person_canonical_link_worker_canonical_fk` FOREIGN KEY (`canonical_person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 -- Structure of table `0_hrm_employment_rehires` --
 
@@ -2469,7 +2469,7 @@ CREATE TABLE `0_hrm_employment_rehires` (
 	CONSTRAINT `0_hrm_employment_rehire_successor_fk` FOREIGN KEY (`successor_employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_employment_rehire_canonical_fk` FOREIGN KEY (`canonical_person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_employment_rehire_alias_fk` FOREIGN KEY (`alias_person_id`) REFERENCES `0_hrm_persons` (`person_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 -- Structure of table `0_exchange_rates` --
 
@@ -2483,7 +2483,7 @@ CREATE TABLE `0_exchange_rates` (
 	`date_` date NOT NULL DEFAULT '0000-00-00',
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `curr_code` (`curr_code`,`date_`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_exchange_rates` --
 
@@ -2502,7 +2502,7 @@ CREATE TABLE `0_fiscal_year` (
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `begin` (`begin`),
 	UNIQUE KEY `end` (`end`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_fiscal_year` --
 
@@ -2533,7 +2533,7 @@ CREATE TABLE `0_gl_trans` (
 	KEY `dimension2_id` (`dimension2_id`),
 	KEY `tran_date` (`tran_date`),
 	KEY `account_and_tran_date` (`account`,`tran_date`)
-) ENGINE=InnoDB AUTO_INCREMENT=55 ;
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_gl_trans` --
 
@@ -2609,7 +2609,7 @@ CREATE TABLE `0_grn_batch` (
 	PRIMARY KEY (`id`),
 	KEY `delivery_date` (`delivery_date`),
 	KEY `purch_order_no` (`purch_order_no`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 ;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_grn_batch` --
 
@@ -2635,10 +2635,10 @@ CREATE TABLE `0_grn_items` (
 	`serial_numbers_json` text DEFAULT NULL COMMENT 'JSON array of serial numbers received for this line',
 	`expiry_date` date DEFAULT NULL COMMENT 'Expiry date of received goods',
 	`manufacturing_date` date DEFAULT NULL COMMENT 'Manufacturing date of received goods',
-	`inspection_status` varchar(20) COLLATE utf8_unicode_ci DEFAULT 'none' COMMENT 'none|pending|pass|fail',
+	`inspection_status` varchar(20) COLLATE utf8mb4_general_ci DEFAULT 'none' COMMENT 'none|pending|pass|fail',
 	PRIMARY KEY (`id`),
 	KEY `grn_batch_id` (`grn_batch_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 ;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_grn_items` --
 
@@ -2659,7 +2659,7 @@ CREATE TABLE `0_groups` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `description` (`description`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 ;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_groups` --
 
@@ -2685,7 +2685,7 @@ CREATE TABLE `0_item_codes` (
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `stock_id` (`stock_id`,`item_code`),
 	KEY `item_code` (`item_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 ;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_item_codes` --
 
@@ -2707,7 +2707,7 @@ CREATE TABLE `0_item_tax_type_exemptions` (
 	`item_tax_type_id` int(11) NOT NULL DEFAULT '0',
 	`tax_type_id` int(11) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`item_tax_type_id`,`tax_type_id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_item_tax_type_exemptions` --
 
@@ -2722,7 +2722,7 @@ CREATE TABLE `0_item_tax_types` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_item_tax_types` --
 
@@ -2740,7 +2740,7 @@ CREATE TABLE `0_item_units` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`abbr`),
 	UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_item_units` --
 
@@ -2759,7 +2759,7 @@ CREATE TABLE IF NOT EXISTS `0_job_classes` (
 	`description`    text,
 	`inactive`       tinyint(1)   NOT NULL DEFAULT '0',
 	PRIMARY KEY (`job_class_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_job_classes` --
 
@@ -2780,7 +2780,7 @@ CREATE TABLE `0_journal` (
 	`rate` double NOT NULL DEFAULT '1',
 	PRIMARY KEY (`type`,`trans_no`),
 	KEY `tran_date` (`tran_date`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_journal` --
 
@@ -2803,7 +2803,7 @@ CREATE TABLE IF NOT EXISTS `0_leave_details` (
 	`reason`            text,
 	PRIMARY KEY (`id`),
 	KEY `leave_employee_history_idx` (`employee_id`,`id`,`from_date`,`to_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_leave_details` --
 
@@ -2828,7 +2828,7 @@ CREATE TABLE IF NOT EXISTS `0_leave_types` (
 	`inactive`              tinyint(1)   NOT NULL DEFAULT '0',
 	PRIMARY KEY (`leave_id`),
 	UNIQUE KEY `leave_code` (`leave_code`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_leave_types` --
 
@@ -2842,7 +2842,7 @@ CREATE TABLE `0_loc_stock` (
 	`reorder_level` double NOT NULL DEFAULT '0',
 	PRIMARY KEY (`loc_code`,`stock_id`),
 	KEY `stock_id` (`stock_id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_loc_stock` --
 
@@ -2882,7 +2882,7 @@ CREATE TABLE `0_locations` (
 	`use_cycle_counts` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Enable cycle counting',
 	`cross_dock_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Enable cross-docking at this warehouse',
 	PRIMARY KEY (`loc_code`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_locations` --
 
@@ -2905,7 +2905,7 @@ CREATE TABLE IF NOT EXISTS `0_overtime` (
 	`requires_approval`  tinyint(1)   NOT NULL DEFAULT '1',
 	`inactive`           tinyint(1)   NOT NULL DEFAULT '0',
 	PRIMARY KEY (`overtime_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_overtime` --
 
@@ -2933,7 +2933,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_elements` (
 	`inactive`          tinyint(1)   NOT NULL DEFAULT '0',
 	PRIMARY KEY (`element_id`),
 	UNIQUE KEY `element_code` (`element_code`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_pay_elements` --
 
@@ -2951,7 +2951,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_grades` (
 	`description`    text,
 	`inactive`       tinyint(1)   NOT NULL DEFAULT '0',
 	PRIMARY KEY (`grade_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_pay_grades` --
 
@@ -2967,7 +2967,7 @@ CREATE TABLE `0_payment_terms` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`terms_indicator`),
 	UNIQUE KEY `terms` (`terms`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 ;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_payment_terms` --
 
@@ -2998,7 +2998,7 @@ CREATE TABLE IF NOT EXISTS `0_positions` (
 	PRIMARY KEY (`position_id`),
 	KEY `job_class_id` (`job_class_id`),
 	KEY `department_id` (`department_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_positions` --
 
@@ -3042,7 +3042,7 @@ CREATE TABLE IF NOT EXISTS `0_payslips` (
 	UNIQUE KEY `period_employee` (`payroll_period_id`, `employee_id`),
 	KEY `employee_id` (`employee_id`),
 	KEY `tran_date` (`tran_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 -- Data of table `0_payslips` --
 
 -- Structure of table `0_prices` --
@@ -3058,7 +3058,7 @@ CREATE TABLE `0_prices` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `price` (`stock_id`,`sales_type_id`,`curr_abrev`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 ;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_prices` --
 
@@ -3078,7 +3078,7 @@ CREATE TABLE `0_print_profiles` (
 	`printer` tinyint(3) unsigned DEFAULT NULL,
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `profile` (`profile`,`report`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 ;
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_print_profiles` --
 
@@ -3107,7 +3107,7 @@ CREATE TABLE `0_printers` (
 	`timeout` tinyint(3) unsigned NOT NULL,
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 ;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_printers` --
 
@@ -3129,7 +3129,7 @@ CREATE TABLE `0_purch_data` (
 	`supplier_description` char(50) NOT NULL DEFAULT '',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`supplier_id`,`stock_id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_purch_data` --
 
@@ -3160,7 +3160,7 @@ CREATE TABLE `0_purch_order_details` (
 	PRIMARY KEY (`po_detail_item`),
 	KEY `order` (`order_no`,`po_detail_item`),
 	KEY `itemcode` (`item_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 ;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_purch_order_details` --
 
@@ -3196,7 +3196,7 @@ CREATE TABLE `0_purch_orders` (
 	`rfq_id` INT NOT NULL DEFAULT 0 COMMENT 'FK to purch_rfq.id (response to this RFQ)',
 	PRIMARY KEY (`order_no`),
 	KEY `ord_date` (`ord_date`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 ;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_purch_orders` --
 
@@ -3219,7 +3219,7 @@ CREATE TABLE `0_quick_entries` (
 	`bal_type` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`),
 	KEY `description` (`description`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 ;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_quick_entries` --
 
@@ -3243,7 +3243,7 @@ CREATE TABLE `0_quick_entry_lines` (
 	`dimension2_id` smallint(6) unsigned DEFAULT NULL,
 	PRIMARY KEY (`id`),
 	KEY `qid` (`qid`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 ;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_quick_entry_lines` --
 
@@ -3272,7 +3272,7 @@ CREATE TABLE `0_recurrent_invoices` (
 	`last_sent` date NOT NULL DEFAULT '0000-00-00',
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `description` (`description`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_recurrent_invoices` --
 
@@ -3294,7 +3294,7 @@ CREATE TABLE `0_reflines` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `prefix` (`trans_type`,`prefix`)
-) ENGINE=InnoDB AUTO_INCREMENT=24 ;
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_reflines` --
 
@@ -3333,7 +3333,7 @@ CREATE TABLE `0_refs` (
 	`reference` varchar(100) NOT NULL DEFAULT '',
 	PRIMARY KEY (`id`,`type`),
 	KEY `Type_and_Reference` (`type`,`reference`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_refs` --
 
@@ -3376,7 +3376,7 @@ CREATE TABLE IF NOT EXISTS `0_salary_structure` (
 	PRIMARY KEY (`structure_id`),
 	UNIQUE KEY `unique_structure` (`position_id`, `grade_id`, `element_id`, `effective_from`),
 	KEY `element_id` (`element_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_salary_structure` --
 
@@ -3402,7 +3402,7 @@ CREATE TABLE `0_sales_order_details` (
 	PRIMARY KEY (`id`),
 	KEY `sorder` (`trans_type`,`order_no`),
 	KEY `stkcode` (`stk_code`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 ;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_order_details` --
 
@@ -3457,7 +3457,7 @@ CREATE TABLE `0_sales_orders` (
 	`agreement_id` int(11) NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`trans_type`,`order_no`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_orders` --
 
@@ -3490,7 +3490,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_pricelists` (
 	KEY `idx_dates` (`date_start`, `date_end`),
 	KEY `idx_applicable` (`applicable_to`, `applicable_id`),
 	KEY `idx_priority` (`priority`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_pricelists` --
 
@@ -3518,7 +3518,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_pricelist_rules` (
 	KEY `idx_category` (`stock_category_id`),
 	KEY `idx_priority` (`priority`),
 	KEY `idx_dates` (`date_start`, `date_end`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_pricelist_rules` --
 
@@ -3539,7 +3539,7 @@ CREATE TABLE `0_sales_quotation_templates` (
 	`inactive` tinyint(1) DEFAULT 0,
 	`custom_data` longtext,
 	PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_quotation_templates` --
 
@@ -3560,7 +3560,7 @@ CREATE TABLE `0_sales_quotation_template_lines` (
 	`custom_data` longtext,
 	PRIMARY KEY (`id`),
 	KEY `idx_template` (`template_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_quotation_template_lines` --
 
@@ -3570,7 +3570,7 @@ DROP TABLE IF EXISTS `0_sales_agreements`;
 
 CREATE TABLE `0_sales_agreements` (
 	`id` int(11) NOT NULL AUTO_INCREMENT,
-	`reference` varchar(60) COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+	`reference` varchar(60) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
 	`agreement_type` enum('blanket_order','framework_agreement','contract') NOT NULL DEFAULT 'blanket_order',
 	`debtor_no` int(11) NOT NULL,
 	`branch_code` int(11) NOT NULL DEFAULT '0',
@@ -3587,18 +3587,18 @@ CREATE TABLE `0_sales_agreements` (
 	`auto_renew` tinyint(1) NOT NULL DEFAULT '0',
 	`renewal_period_months` int(11) NOT NULL DEFAULT '12',
 	`terms_and_conditions` text DEFAULT NULL,
-	`notes` text COLLATE utf8_unicode_ci DEFAULT NULL,
+	`notes` text COLLATE utf8mb4_general_ci DEFAULT NULL,
 	`dimension_id` int(11) NOT NULL DEFAULT '0',
 	`dimension2_id` int(11) NOT NULL DEFAULT '0',
 	`created_by` int(11) NOT NULL DEFAULT '0',
 	`created_date` datetime NULL DEFAULT CURRENT_TIMESTAMP,
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
-	`custom_data` longtext COLLATE utf8_unicode_ci DEFAULT NULL,
+	`custom_data` longtext COLLATE utf8mb4_general_ci DEFAULT NULL,
 	PRIMARY KEY (`id`),
 	KEY `idx_debtor` (`debtor_no`),
 	KEY `idx_status` (`status`),
 	KEY `idx_dates` (`date_start`,`date_end`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_agreements` --
 
@@ -3610,7 +3610,7 @@ DROP TABLE IF EXISTS `0_sales_agreement_lines`;
 CREATE TABLE `0_sales_agreement_lines` (	`min_qty_per_order` double NOT NULL DEFAULT 0,
 	`id` int(11) NOT NULL AUTO_INCREMENT,
 	`agreement_id` int(11) NOT NULL,
-	`stock_id` varchar(20) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+	`stock_id` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
 	`description` tinytext DEFAULT NULL,
 	`committed_qty` double NOT NULL DEFAULT '0',
 	`ordered_qty` double NOT NULL DEFAULT '0',
@@ -3619,11 +3619,11 @@ CREATE TABLE `0_sales_agreement_lines` (	`min_qty_per_order` double NOT NULL DEF
 	`unit_price` double NOT NULL DEFAULT '0',
 	`discount_percent` double NOT NULL DEFAULT '0',
 	`price_valid_until` date DEFAULT NULL,
-	`custom_data` longtext COLLATE utf8_unicode_ci DEFAULT NULL,
+	`custom_data` longtext COLLATE utf8mb4_general_ci DEFAULT NULL,
 	PRIMARY KEY (`id`),
 	KEY `idx_agreement_id` (`agreement_id`),
 	KEY `idx_stock` (`stock_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_agreement_lines` --
 
@@ -3656,7 +3656,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_discount_programs` (
 	PRIMARY KEY (`id`),
 	KEY `idx_status` (`status`),
 	KEY `idx_type` (`program_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_discount_programs` --
 
@@ -3676,7 +3676,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_coupons` (
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `idx_code` (`code`),
 	KEY `idx_program` (`program_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_coupons` --
 
@@ -3695,7 +3695,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_discount_usage` (
 	KEY `idx_program` (`program_id`),
 	KEY `idx_customer` (`debtor_no`),
 	KEY `idx_trans` (`trans_type`,`trans_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_discount_usage` --
 
@@ -3713,7 +3713,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_kpi_cache` (
   `updated_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_kpi` (`kpi_type`,`period_key`,`dimension_key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_kpi_cache` --
 
@@ -3726,7 +3726,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_rma_reasons` (
   `default_disposition` VARCHAR(20) NOT NULL DEFAULT 'restock',
   `inactive` TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_rma_reasons` --
 
@@ -3775,7 +3775,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_rma` (
   KEY `idx_status` (`status`),
   KEY `idx_source` (`source_type`, `source_no`),
   KEY `idx_wh_return` (`wh_return_order_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_rma` --
 
@@ -3796,7 +3796,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_rma_lines` (
   `custom_data` TEXT DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_rma` (`rma_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_rma_lines` --
 
@@ -3814,7 +3814,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_commission_plans` (
 	`custom_data` LONGTEXT DEFAULT NULL COMMENT 'JSON',
 	INDEX `idx_status` (`status`),
 	INDEX `idx_inactive` (`inactive`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_commission_plans` --
 
@@ -3828,7 +3828,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_commission_tiers` (
 	`fixed_bonus` DOUBLE DEFAULT 0,
 	`sort_order` INT DEFAULT 0,
 	KEY `idx_plan` (`plan_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_commission_tiers` --
 
@@ -3842,7 +3842,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_commission_assignments` (
 	`target_amount` DOUBLE DEFAULT 0,
 	KEY `idx_salesman` (`salesman_id`),
 	KEY `idx_plan` (`plan_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_commission_assignments` --
 
@@ -3866,7 +3866,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_commission_entries` (
 	KEY `idx_date` (`trans_date`),
 	KEY `idx_status` (`status`),
 	UNIQUE KEY `idx_trans` (`trans_type`, `trans_no`, `salesman_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_commission_entries` --
 
@@ -3885,7 +3885,7 @@ CREATE TABLE `0_sales_pos` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `pos_name` (`pos_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_pos` --
 
@@ -3905,7 +3905,7 @@ CREATE TABLE `0_sales_types` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `sales_type` (`sales_type`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sales_types` --
 
@@ -3930,7 +3930,7 @@ CREATE TABLE `0_salesman` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`salesman_code`),
 	UNIQUE KEY `salesman_name` (`salesman_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_salesman` --
 
@@ -3950,7 +3950,7 @@ CREATE TABLE `0_security_roles` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `role` (`role`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 ;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_security_roles` --
 
@@ -3980,7 +3980,7 @@ CREATE TABLE `0_shippers` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`shipper_id`),
 	UNIQUE KEY `name` (`shipper_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_shippers` --
 
@@ -3997,7 +3997,7 @@ CREATE TABLE `0_sql_trail` (
 	`result` tinyint(1) NOT NULL,
 	`msg` varchar(255) NOT NULL,
 	PRIMARY KEY (`id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sql_trail` --
 
@@ -4024,7 +4024,7 @@ CREATE TABLE `0_stock_category` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`category_id`),
 	UNIQUE KEY `description` (`description`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 ;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_stock_category` --
 
@@ -4046,7 +4046,7 @@ CREATE TABLE `0_stock_fa_class` (
 	`depreciation_rate` double NOT NULL DEFAULT '0',
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`fa_class_id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_stock_fa_class` --
 
@@ -4055,7 +4055,7 @@ CREATE TABLE `0_stock_fa_class` (
 DROP TABLE IF EXISTS `0_stock_master`;
 
 CREATE TABLE `0_stock_master` (
-	`stock_id` varchar(20) CHARACTER SET utf8 COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+	`stock_id` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
 	`category_id` int(11) NOT NULL DEFAULT '0',
 	`tax_type_id` int(11) NOT NULL DEFAULT '0',
 	`description` varchar(200) NOT NULL DEFAULT '',
@@ -4105,7 +4105,7 @@ CREATE TABLE `0_stock_master` (
 	`drop_ship_eligible` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Item can be drop-shipped from supplier to customer',
 	`cross_dock_eligible` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Item eligible for cross-docking',
 	PRIMARY KEY (`stock_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_stock_master` --
 
@@ -4123,12 +4123,12 @@ DROP TABLE IF EXISTS `0_stock_material`;
 
 CREATE TABLE `0_stock_material` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(60) COLLATE utf8_unicode_ci NOT NULL,
-  `description` text COLLATE utf8_unicode_ci NOT NULL DEFAULT '',
+  `name` varchar(60) COLLATE utf8mb4_general_ci NOT NULL,
+  `description` text COLLATE utf8mb4_general_ci NOT NULL DEFAULT '',
   `inactive` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci ;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_stock_material` --
 
@@ -4164,7 +4164,7 @@ CREATE TABLE `0_stock_moves` (
 	KEY `idx_sm_batch_id` (`batch_id`),
 	KEY `idx_sm_from_bin_id` (`from_bin_id`),
 	KEY `idx_sm_to_bin_id` (`to_bin_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=18 ;
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_stock_moves` --
 
@@ -4205,7 +4205,7 @@ CREATE TABLE `0_wh_location_types` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `type_code` (`type_code`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_location_types` --
 
@@ -4245,7 +4245,7 @@ CREATE TABLE `0_wh_storage_categories` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	`custom_data` text DEFAULT NULL,
 	PRIMARY KEY (`id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_storage_categories` --
 
@@ -4290,7 +4290,7 @@ CREATE TABLE `0_wh_locations` (
 	KEY `storage_category_id` (`storage_category_id`),
 	KEY `barcode` (`barcode`),
 	KEY `location_path` (`location_path`(191))
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_locations` --
 
@@ -4337,7 +4337,7 @@ CREATE TABLE `0_serial_numbers` (
 	KEY `idx_supplier_id` (`supplier_id`),
 	KEY `idx_warranty_end` (`warranty_end`),
 	KEY `idx_expiry_date` (`expiry_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_serial_numbers` --
 
@@ -4376,7 +4376,7 @@ CREATE TABLE `0_stock_batches` (
 	KEY `idx_expiry_date` (`expiry_date`),
 	KEY `idx_manufacturing_date` (`manufacturing_date`),
 	KEY `idx_supplier_id` (`supplier_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_stock_batches` --
 
@@ -4404,7 +4404,7 @@ CREATE TABLE `0_serial_movements` (
 	KEY `idx_trans` (`trans_type`, `trans_no`),
 	KEY `idx_stock_move` (`stock_move_id`),
 	KEY `idx_tran_date` (`tran_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_serial_movements` --
 
@@ -4431,7 +4431,7 @@ CREATE TABLE `0_batch_movements` (
 	KEY `idx_trans` (`trans_type`, `trans_no`),
 	KEY `idx_stock_move` (`stock_move_id`),
 	KEY `idx_tran_date` (`tran_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_batch_movements` --
 
@@ -4456,7 +4456,7 @@ CREATE TABLE `0_quality_parameters` (
 	PRIMARY KEY (`id`),
 	KEY `idx_stock_id` (`stock_id`),
 	KEY `idx_category_id` (`category_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_quality_parameters` --
 
@@ -4492,7 +4492,7 @@ CREATE TABLE `0_quality_inspections` (
 	KEY `idx_batch_id` (`batch_id`),
 	KEY `idx_serial_id` (`serial_id`),
 	KEY `idx_result` (`result`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_quality_inspections` --
 
@@ -4511,7 +4511,7 @@ CREATE TABLE `0_quality_inspection_readings` (
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `uk_insp_param` (`inspection_id`, `parameter_id`),
 	KEY `idx_parameter_id` (`parameter_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_quality_inspection_readings` --
 
@@ -4549,7 +4549,7 @@ CREATE TABLE `0_warranty_claims` (
 	KEY `idx_stock_id` (`stock_id`),
 	KEY `idx_status` (`status`),
 	KEY `idx_claim_date` (`claim_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_warranty_claims` --
 
@@ -4568,7 +4568,7 @@ CREATE TABLE `0_warranty_claim_parts` (
 	PRIMARY KEY (`id`),
 	KEY `idx_claim_id` (`claim_id`),
 	KEY `idx_stock_id` (`stock_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_warranty_claim_parts` --
 
@@ -4605,7 +4605,7 @@ CREATE TABLE `0_recall_campaigns` (
 	UNIQUE KEY `uk_reference` (`reference`),
 	KEY `idx_stock_id` (`stock_id`),
 	KEY `idx_status` (`status`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_recall_campaigns` --
 
@@ -4630,7 +4630,7 @@ CREATE TABLE `0_recall_items` (
 	KEY `idx_serial_id` (`serial_id`),
 	KEY `idx_batch_id` (`batch_id`),
 	KEY `idx_customer_id` (`customer_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_recall_items` --
 
@@ -4654,7 +4654,7 @@ CREATE TABLE `0_production_traceability` (
 	KEY `idx_finished_batch` (`finished_batch_id`),
 	KEY `idx_component_serial` (`component_serial_id`),
 	KEY `idx_component_batch` (`component_batch_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_production_traceability` --
 
@@ -4691,7 +4691,7 @@ CREATE TABLE `0_wh_operations` (
 	KEY `wave_id` (`wave_id`),
 	KEY `assigned_to` (`assigned_to`),
 	KEY `scheduled_date` (`scheduled_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_operations` --
 
@@ -4718,7 +4718,7 @@ CREATE TABLE `0_wh_operation_lines` (
 	KEY `stock_id` (`stock_id`),
 	KEY `batch_id` (`batch_id`),
 	KEY `serial_id` (`serial_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_operation_lines` --
 
@@ -4738,7 +4738,7 @@ CREATE TABLE `0_wh_routes` (
 	`custom_data` text DEFAULT NULL,
 	PRIMARY KEY (`route_id`),
 	KEY `route_type` (`route_type`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_routes` --
 
@@ -4761,7 +4761,7 @@ CREATE TABLE `0_wh_route_rules` (
 	`custom_data` text DEFAULT NULL,
 	PRIMARY KEY (`rule_id`),
 	KEY `route_id` (`route_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_route_rules` --
 
@@ -4785,7 +4785,7 @@ CREATE TABLE `0_wh_putaway_rules` (
 	PRIMARY KEY (`rule_id`),
 	KEY `sequence` (`sequence`),
 	KEY `warehouse_loc_code` (`warehouse_loc_code`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_putaway_rules` --
 
@@ -4803,7 +4803,7 @@ CREATE TABLE `0_wh_removal_strategies` (
 	`active` tinyint(1) NOT NULL DEFAULT '1',
 	PRIMARY KEY (`id`),
 	KEY `sequence` (`sequence`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_removal_strategies` --
 
@@ -4840,7 +4840,7 @@ CREATE TABLE `0_wh_transfer_orders` (
 	KEY `from_loc_code` (`from_loc_code`),
 	KEY `to_loc_code` (`to_loc_code`),
 	KEY `request_date` (`request_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_transfer_orders` --
 
@@ -4867,7 +4867,7 @@ CREATE TABLE `0_wh_transfer_order_lines` (
 	KEY `transfer_id` (`transfer_id`),
 	KEY `batch_id` (`batch_id`),
 	KEY `serial_id` (`serial_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_transfer_order_lines` --
 
@@ -4896,7 +4896,7 @@ CREATE TABLE `0_wh_material_requests` (
 	UNIQUE KEY `request_no` (`request_no`),
 	KEY `status` (`status`),
 	KEY `request_type` (`request_type`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_material_requests` --
 
@@ -4916,7 +4916,7 @@ CREATE TABLE `0_wh_material_request_lines` (
 	`custom_data` text DEFAULT NULL,
 	PRIMARY KEY (`line_id`),
 	KEY `request_id` (`request_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_material_request_lines` --
 
@@ -4942,7 +4942,7 @@ CREATE TABLE `0_wh_picking_waves` (
 	PRIMARY KEY (`wave_id`),
 	KEY `status` (`status`),
 	KEY `warehouse_loc_code` (`warehouse_loc_code`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_picking_waves` --
 
@@ -4969,7 +4969,7 @@ CREATE TABLE `0_wh_packages` (
 	UNIQUE KEY `package_code` (`package_code`),
 	KEY `current_loc_id` (`current_loc_id`),
 	KEY `status` (`status`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_packages` --
 
@@ -4989,7 +4989,7 @@ CREATE TABLE `0_wh_package_contents` (
 	KEY `package_id` (`package_id`),
 	KEY `batch_id` (`batch_id`),
 	KEY `serial_id` (`serial_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_package_contents` --
 
@@ -5009,7 +5009,7 @@ CREATE TABLE `0_wh_cycle_count_plans` (
 	`active` tinyint(1) NOT NULL DEFAULT '1',
 	`custom_data` text DEFAULT NULL,
 	PRIMARY KEY (`plan_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_cycle_count_plans` --
 
@@ -5032,7 +5032,7 @@ CREATE TABLE `0_wh_cycle_counts` (
 	PRIMARY KEY (`count_id`),
 	KEY `plan_id` (`plan_id`),
 	KEY `status` (`status`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_cycle_counts` --
 
@@ -5057,7 +5057,7 @@ CREATE TABLE `0_wh_cycle_count_lines` (
 	KEY `count_id` (`count_id`),
 	KEY `batch_id` (`batch_id`),
 	KEY `serial_id` (`serial_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_cycle_count_lines` --
 
@@ -5088,7 +5088,7 @@ CREATE TABLE `0_wh_scrap` (
 	KEY `reason_code` (`reason_code`),
 	KEY `serial_id` (`serial_id`),
 	KEY `batch_id` (`batch_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_scrap` --
 
@@ -5117,7 +5117,7 @@ CREATE TABLE `0_wh_return_orders` (
 	PRIMARY KEY (`return_id`),
 	UNIQUE KEY `return_no` (`return_no`),
 	KEY `status` (`status`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_return_orders` --
 
@@ -5146,7 +5146,7 @@ CREATE TABLE `0_wh_return_order_lines` (
 	KEY `return_id` (`return_id`),
 	KEY `batch_id` (`batch_id`),
 	KEY `serial_id` (`serial_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_return_order_lines` --
 
@@ -5172,7 +5172,7 @@ CREATE TABLE `0_wh_consignment_stock` (
 	KEY `stock_id` (`stock_id`),
 	KEY `supplier_id` (`supplier_id`),
 	KEY `batch_id` (`batch_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_consignment_stock` --
 
@@ -5197,7 +5197,7 @@ CREATE TABLE `0_wh_consignment_movements` (
 	KEY `consignment_id` (`consignment_id`),
 	KEY `movement_type` (`movement_type`),
 	KEY `invoiced` (`invoiced`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_consignment_movements` --
 
@@ -5218,7 +5218,7 @@ CREATE TABLE `0_wh_vmi_levels` (
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `uk_item_supplier` (`stock_id`, `supplier_id`),
 	KEY `supplier_id` (`supplier_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_vmi_levels` --
 
@@ -5250,7 +5250,7 @@ CREATE TABLE `0_wh_replenishment_rules` (
 	`auto_create_po` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1=auto-create PO from approved suppliers',
 	PRIMARY KEY (`rule_id`),
 	KEY `rule_type` (`rule_type`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_replenishment_rules` --
 
@@ -5283,7 +5283,7 @@ CREATE TABLE `0_wh_bin_stock` (
 	KEY `serial_id` (`serial_id`),
 	KEY `stock_status` (`stock_status`),
 	KEY `expiry_date` (`expiry_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wh_bin_stock` --
 
@@ -5315,7 +5315,7 @@ CREATE TABLE `0_warranty_provision_log` (
 	KEY `idx_wp_customer` (`customer_id`),
 	KEY `idx_wp_type` (`provision_type`),
 	KEY `idx_wp_dim` (`dimension_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_warranty_provision_log` --
 
@@ -5339,7 +5339,7 @@ CREATE TABLE `0_regulatory_profiles` (
 	KEY `idx_reg_category` (`category_id`),
 	KEY `idx_reg_framework` (`framework`),
 	UNIQUE KEY `uk_reg_profile` (`stock_id`, `category_id`, `framework`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_regulatory_profiles` --
 
@@ -5386,7 +5386,7 @@ CREATE TABLE `0_dscsa_transactions` (
 	KEY `idx_dscsa_type` (`transaction_type`),
 	KEY `idx_dscsa_status` (`verification_status`),
 	KEY `idx_dscsa_date` (`transaction_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_dscsa_transactions` --
 
@@ -5427,7 +5427,7 @@ CREATE TABLE `0_fsma_tracking_events` (
 	KEY `idx_fsma_date` (`event_date`),
 	KEY `idx_fsma_lot` (`lot_code`),
 	KEY `idx_fsma_ref` (`reference_type`, `reference_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_fsma_tracking_events` --
 
@@ -5472,7 +5472,7 @@ CREATE TABLE `0_udi_registrations` (
 	KEY `idx_udi_batch` (`batch_id`),
 	KEY `idx_udi_gtin` (`gtin`),
 	KEY `idx_udi_agency` (`issuing_agency`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_udi_registrations` --
 
@@ -5497,7 +5497,7 @@ CREATE TABLE `0_supp_allocations` (
 	UNIQUE KEY `trans_type_from` (`person_id`,`trans_type_from`,`trans_no_from`,`trans_type_to`,`trans_no_to`),
 	KEY `From` (`trans_type_from`,`trans_no_from`),
 	KEY `To` (`trans_type_to`,`trans_no_to`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_supp_allocations` --
 
@@ -5523,7 +5523,7 @@ CREATE TABLE `0_supp_invoice_items` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	KEY `Transaction` (`supp_trans_type`,`supp_trans_no`,`stock_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_supp_invoice_items` --
 
@@ -5553,7 +5553,7 @@ CREATE TABLE `0_supp_trans` (
 	PRIMARY KEY (`type`,`trans_no`,`supplier_id`),
 	KEY `supplier_id` (`supplier_id`),
 	KEY `tran_date` (`tran_date`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_supp_trans` --
 
@@ -5607,7 +5607,7 @@ CREATE TABLE `0_suppliers` (
 	`payment_reliability_score` DOUBLE NOT NULL DEFAULT 0 COMMENT 'Payment behavior and reliability score',
 	PRIMARY KEY (`supplier_id`),
 	UNIQUE KEY `supp_ref` (`supp_ref`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_suppliers` --
 
@@ -5627,7 +5627,7 @@ CREATE TABLE `0_sys_prefs` (
 	`value` text NOT NULL,
 	PRIMARY KEY (`name`),
 	KEY `category` (`category`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_sys_prefs` --
 
@@ -5864,7 +5864,7 @@ CREATE TABLE `0_tag_associations` (
 	`record_id` varchar(30) NOT NULL,
 	`tag_id` int(11) NOT NULL,
 	PRIMARY KEY (`record_id`,`tag_id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_tag_associations` --
 
@@ -5882,7 +5882,7 @@ CREATE TABLE `0_tags` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `type` (`type`,`name`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_tags` --
 
@@ -5905,7 +5905,7 @@ CREATE TABLE `0_tax_group_items` (
 	`tax_type_id` int(11) NOT NULL DEFAULT '0',
 	`tax_shipping` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`tax_group_id`,`tax_type_id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_tax_group_items` --
 
@@ -5922,7 +5922,7 @@ CREATE TABLE `0_tax_groups` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_tax_groups` --
 
@@ -5943,7 +5943,7 @@ CREATE TABLE `0_tax_types` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_tax_types` --
 
@@ -5970,7 +5970,7 @@ CREATE TABLE `0_trans_tax_details` (
 	PRIMARY KEY (`id`),
 	KEY `Type_and_Number` (`trans_type`,`trans_no`),
 	KEY `tran_date` (`tran_date`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 ;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_trans_tax_details` --
 
@@ -5998,7 +5998,7 @@ CREATE TABLE `0_useronline` (
 	PRIMARY KEY (`id`),
 	KEY `timestamp` (`timestamp`),
 	KEY `ip` (`ip`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_useronline` --
 
@@ -6029,7 +6029,7 @@ CREATE TABLE `0_user_sessions` (
 	UNIQUE KEY `session_key_hash` (`session_key_hash`),
 	KEY `user_active` (`user_id`,`revoked_at`),
 	KEY `session_expiry` (`idle_expires_at`,`absolute_expires_at`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_sessions` --
 
@@ -6046,7 +6046,7 @@ CREATE TABLE `0_session_draft_seals` (
 	`fingerprint` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
 	`updated_at` datetime NOT NULL,
 	PRIMARY KEY (`session_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_session_draft_seals` --
 
@@ -6064,7 +6064,7 @@ CREATE TABLE `0_session_draft_references` (
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `session_reference` (`session_id`,`draft_key`,`slot`,`dimension_id`),
 	KEY `dimension_session` (`dimension_id`,`session_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_session_draft_references` --
 
@@ -6089,7 +6089,7 @@ CREATE TABLE `0_user_session_assurance_events` (
 	KEY `assurance_session_active` (`session_id`,`consumed_at`,`expires_at`),
 	KEY `assurance_action_scope` (`action_class`,`action_hash`,`expires_at`),
 	CONSTRAINT `0_user_session_assurance_event_session_fk` FOREIGN KEY (`session_id`) REFERENCES `0_user_sessions` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_session_assurance_events` --
 
@@ -6118,7 +6118,7 @@ CREATE TABLE `0_user_recovery_materials` (
 	UNIQUE KEY `recovery_material_generation_slot` (`user_id`,`material_type`,`generation`,`material_slot`),
 	KEY `recovery_material_user_active` (`user_id`,`material_type`,`consumed_at`,`revoked_at`,`expires_at`),
 	KEY `recovery_material_expiry` (`expires_at`,`recovery_material_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_recovery_materials` --
 
@@ -6144,7 +6144,7 @@ CREATE TABLE `0_user_recovery_redemption_requests` (
 	UNIQUE KEY `recovery_redemption_request_key` (`request_key_hash`),
 	KEY `recovery_redemption_account_material` (`user_id`,`recovery_material_id`,`request_status`,`expires_at`,`recovery_request_id`),
 	KEY `recovery_redemption_source` (`source_bucket_hash`,`request_status`,`expires_at`,`recovery_request_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_recovery_redemption_requests` --
 
@@ -6167,7 +6167,7 @@ CREATE TABLE `0_user_recovery_redemption_controls` (
 	UNIQUE KEY `recovery_redemption_control_key` (`control_scope`,`control_key_hash`),
 	KEY `recovery_redemption_control_lock` (`control_scope`,`locked_until`,`recovery_control_id`),
 	KEY `recovery_redemption_control_window` (`control_scope`,`window_started_at`,`recovery_control_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_recovery_redemption_controls` --
 
@@ -6196,7 +6196,7 @@ CREATE TABLE `0_user_break_glass_activation_leases` (
 	KEY `break_glass_lease_user_active` (`user_id`,`scope_code`,`active_slot`,`expires_at`),
 	KEY `break_glass_lease_expiry` (`expires_at`,`active_slot`,`break_glass_activation_lease_id`),
 	KEY `break_glass_lease_session` (`session_id`,`terminalized_at`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_break_glass_activation_leases` --
 
@@ -6220,7 +6220,7 @@ CREATE TABLE `0_user_break_glass_designations` (
 	PRIMARY KEY (`break_glass_designation_id`),
 	UNIQUE KEY `break_glass_user_scope` (`user_id`,`scope_code`),
 	KEY `break_glass_active_scope` (`scope_code`,`revoked_at`,`user_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_break_glass_designations` --
 
@@ -6244,7 +6244,7 @@ CREATE TABLE `0_user_federation_providers` (
 	UNIQUE KEY `federation_provider_key` (`provider_key`),
 	UNIQUE KEY `federation_provider_issuer` (`protocol`,`issuer_hash`),
 	KEY `federation_provider_status` (`provider_status`,`provider_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_federation_providers` --
 
@@ -6270,7 +6270,7 @@ CREATE TABLE `0_user_federation_provider_verifier_configs` (
 	UNIQUE KEY `federation_verifier_provider_version` (`provider_id`,`config_version`),
 	KEY `federation_verifier_status` (`config_status`,`provider_id`,`config_version`),
 	CONSTRAINT `0_user_federation_provider_verifier_provider_fk` FOREIGN KEY (`provider_id`) REFERENCES `0_user_federation_providers` (`provider_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_federation_provider_verifier_configs` --
 
@@ -6293,7 +6293,7 @@ CREATE TABLE `0_user_federation_verifier_transactions` (
 	UNIQUE KEY `federation_verifier_transaction_correlation` (`verifier_config_id`,`correlation_hash`),
 	KEY `federation_verifier_transaction_active` (`verifier_config_id`,`consumed_at`,`expires_at`),
 	CONSTRAINT `0_user_federation_verifier_transaction_config_fk` FOREIGN KEY (`verifier_config_id`) REFERENCES `0_user_federation_provider_verifier_configs` (`verifier_config_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_federation_verifier_transactions` --
 
@@ -6316,7 +6316,7 @@ CREATE TABLE `0_user_federation_oidc_callback_claims` (
 	UNIQUE KEY `federation_oidc_callback_claim_token` (`claim_token_hash`),
 	KEY `federation_oidc_callback_claim_expiry` (`claim_status`,`claim_expires_at`,`callback_claim_id`),
 	CONSTRAINT `0_user_federation_oidc_callback_claim_transaction_fk` FOREIGN KEY (`verifier_transaction_id`) REFERENCES `0_user_federation_verifier_transactions` (`verifier_transaction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_federation_oidc_callback_claims` --
 
@@ -6336,7 +6336,7 @@ CREATE TABLE `0_user_federation_verifier_replay_markers` (
 	UNIQUE KEY `federation_verifier_replay_value` (`verifier_config_id`,`replay_kind`,`replay_hash`),
 	KEY `federation_verifier_replay_expiry` (`expires_at`,`replay_marker_id`),
 	CONSTRAINT `0_user_federation_verifier_replay_config_fk` FOREIGN KEY (`verifier_config_id`) REFERENCES `0_user_federation_provider_verifier_configs` (`verifier_config_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_federation_verifier_replay_markers` --
 
@@ -6383,7 +6383,7 @@ CREATE TABLE `0_users` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `login_id` (`login_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
 -- Structure of HRM-ESS-001 explicit account/Worker identity-link custody --
@@ -6403,7 +6403,7 @@ CREATE TABLE `0_hrm_ess_identity_link_requests` (
   KEY `hrm_ess_identity_request_worker_idx` (`worker_id`,`request_id`),
   CONSTRAINT `0_hrm_ess_identity_request_user_fk` FOREIGN KEY (`user_id`) REFERENCES `0_users` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_ess_identity_request_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_ess_identity_links` (
   `link_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -6422,7 +6422,7 @@ CREATE TABLE `0_hrm_ess_identity_links` (
   CONSTRAINT `0_hrm_ess_identity_link_request_fk` FOREIGN KEY (`request_id`) REFERENCES `0_hrm_ess_identity_link_requests` (`request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_ess_identity_link_user_fk` FOREIGN KEY (`user_id`) REFERENCES `0_users` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_ess_identity_link_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 -- Structure of HRM-ESS-001 dated manager delegation custody --
@@ -6446,7 +6446,7 @@ CREATE TABLE `0_hrm_ess_manager_delegations` (
   KEY `hrm_ess_manager_delegate_asof_idx` (`delegate_worker_id`,`effective_from`,`effective_to`,`delegation_id`),
   CONSTRAINT `0_hrm_ess_manager_delegator_worker_fk` FOREIGN KEY (`delegator_worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_ess_manager_delegate_worker_fk` FOREIGN KEY (`delegate_worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 -- Structure of HRM-ESS-001 pending manager delegation request custody --
@@ -6480,7 +6480,7 @@ CREATE TABLE `0_hrm_ess_manager_delegation_requests` (
   CONSTRAINT `0_hrm_ess_manager_delegation_request_delegator_fk` FOREIGN KEY (`delegator_worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_ess_manager_delegation_request_delegate_fk` FOREIGN KEY (`delegate_worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_ess_manager_delegation_request_final_fk` FOREIGN KEY (`final_delegation_id`) REFERENCES `0_hrm_ess_manager_delegations` (`delegation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 -- Structure of HRM-ESS-001 bounded self-profile change request custody --
@@ -6511,7 +6511,7 @@ CREATE TABLE `0_hrm_ess_self_change_requests` (
   KEY `hrm_ess_self_change_request_user_idx` (`user_id`,`request_status`,`request_id`),
   CONSTRAINT `0_hrm_ess_self_change_request_user_fk` FOREIGN KEY (`user_id`) REFERENCES `0_users` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_ess_self_change_request_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 -- Structure of table `0_user_federation_external_subject_links` --
@@ -6526,7 +6526,7 @@ CREATE TABLE `0_hrm_ess_self_change_execution_receipts` (
   `execution_nonce_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `execution_digest` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   `executor_id` smallint(6) NOT NULL,
-  `field_names_json` varchar(512) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
+  `field_names_json` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
   `executed_at` datetime NOT NULL,
   PRIMARY KEY (`receipt_id`),
   UNIQUE KEY `hrm_ess_self_change_execution_request_uq` (`request_id`),
@@ -6534,7 +6534,7 @@ CREATE TABLE `0_hrm_ess_self_change_execution_receipts` (
   UNIQUE KEY `hrm_ess_self_change_execution_digest_uq` (`execution_digest`),
   CONSTRAINT `0_hrm_ess_self_change_execution_request_fk` FOREIGN KEY (`request_id`) REFERENCES `0_hrm_ess_self_change_requests` (`request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_ess_self_change_execution_executor_fk` FOREIGN KEY (`executor_id`) REFERENCES `0_users` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_user_federation_external_subject_links` (
 	`external_subject_link_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -6555,7 +6555,7 @@ CREATE TABLE `0_user_federation_external_subject_links` (
 	CONSTRAINT `0_user_federation_subject_link_provider_fk` FOREIGN KEY (`provider_id`) REFERENCES `0_user_federation_providers` (`provider_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_user_federation_subject_link_transaction_fk` FOREIGN KEY (`verifier_transaction_id`) REFERENCES `0_user_federation_verifier_transactions` (`verifier_transaction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_user_federation_subject_link_user_fk` FOREIGN KEY (`user_id`) REFERENCES `0_users` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_federation_external_subject_links` --
 
@@ -6579,7 +6579,7 @@ CREATE TABLE `0_user_federation_verifier_decisions` (
 	KEY `federation_verifier_decision_subject` (`external_subject_hash`,`valid_until`,`verifier_decision_id`),
 	CONSTRAINT `0_user_federation_verifier_decision_transaction_fk` FOREIGN KEY (`verifier_transaction_id`) REFERENCES `0_user_federation_verifier_transactions` (`verifier_transaction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_user_federation_verifier_decision_replay_fk` FOREIGN KEY (`replay_marker_id`) REFERENCES `0_user_federation_verifier_replay_markers` (`replay_marker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_federation_verifier_decisions` --
 
@@ -6601,7 +6601,7 @@ CREATE TABLE `0_user_federation_session_bindings` (
 	CONSTRAINT `0_user_federation_session_binding_session_fk` FOREIGN KEY (`session_id`) REFERENCES `0_user_sessions` (`id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_user_federation_session_binding_decision_fk` FOREIGN KEY (`verifier_decision_id`) REFERENCES `0_user_federation_verifier_decisions` (`verifier_decision_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_user_federation_session_binding_link_fk` FOREIGN KEY (`external_subject_link_id`) REFERENCES `0_user_federation_external_subject_links` (`external_subject_link_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_user_federation_session_bindings` --
 
@@ -6621,7 +6621,7 @@ CREATE TABLE `0_voided` (
 	`date_` date NOT NULL DEFAULT '0000-00-00',
 	`memo_` tinytext NOT NULL,
 	UNIQUE KEY `id` (`type`,`id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_voided` --
 
@@ -6638,7 +6638,7 @@ CREATE TABLE `0_wo_costing` (
 	`trans_no` int(11) NOT NULL DEFAULT '0',
 	`factor` double NOT NULL DEFAULT '1',
 	PRIMARY KEY (`id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wo_costing` --
 
@@ -6654,7 +6654,7 @@ CREATE TABLE `0_wo_issue_items` (
 	`unit_cost` double NOT NULL DEFAULT '0',
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wo_issue_items` --
 
@@ -6672,7 +6672,7 @@ CREATE TABLE `0_wo_issues` (
 	`workcentre_id` int(11) DEFAULT NULL,
 	PRIMARY KEY (`issue_no`),
 	KEY `workorder_id` (`workorder_id`)
-) ENGINE=InnoDB ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wo_issues` --
 
@@ -6688,7 +6688,7 @@ CREATE TABLE `0_wo_manufacture` (
 	`date_` date NOT NULL DEFAULT '0000-00-00',
 	PRIMARY KEY (`id`),
 	KEY `workorder_id` (`workorder_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wo_manufacture` --
 
@@ -6710,7 +6710,7 @@ CREATE TABLE `0_wo_requirements` (
 	`units_issued` double NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`),
 	KEY `workorder_id` (`workorder_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 ;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_wo_requirements` --
 
@@ -6735,7 +6735,7 @@ CREATE TABLE `0_workcentres` (
 	`inactive` tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 ;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_workcentres` --
 
@@ -6763,7 +6763,7 @@ CREATE TABLE `0_workorders` (
 	`custom_data` JSON NOT NULL DEFAULT ('{}'),
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `wo_ref` (`wo_ref`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 ;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_workorders` --
 
@@ -6790,7 +6790,7 @@ CREATE TABLE IF NOT EXISTS `0_attendance_deduction_rules` (
 	`work_hours`     double DEFAULT '8',
 	`inactive`       tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`rule_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_attendance_deduction_rules` --
 
@@ -6808,7 +6808,7 @@ CREATE TABLE IF NOT EXISTS `0_deduction_codes` (
 	`account_code`   varchar(15) DEFAULT NULL,
 	`inactive`       tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`deduction_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_deduction_codes` --
 
@@ -6828,7 +6828,7 @@ CREATE TABLE IF NOT EXISTS `0_document_types` (
 	`is_required`   tinyint(1) DEFAULT '0',
 	`inactive`      tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`doc_type_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_document_types` --
 
@@ -6859,7 +6859,7 @@ CREATE TABLE IF NOT EXISTS `0_employee_dependents` (
 	`is_beneficiary` tinyint(1) DEFAULT '0',
 	PRIMARY KEY (`dependent_id`),
 	KEY `employee_id` (`employee_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_employee_dependents` --
 
@@ -6895,7 +6895,7 @@ CREATE TABLE IF NOT EXISTS `0_employee_documents` (
 	KEY `content_state` (`content_state`),
 	UNIQUE KEY `employee_document_access_key_uq` (`access_key`),
 	UNIQUE KEY `employee_document_attachment_uq` (`attachment_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_lifecycle_task_document_versions` (
 	`task_document_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -6917,7 +6917,7 @@ CREATE TABLE `0_hrm_lifecycle_task_document_versions` (
 	CONSTRAINT `0_hrm_lifecycle_task_document_task_fk` FOREIGN KEY (`lifecycle_task_id`) REFERENCES `0_hrm_lifecycle_tasks` (`lifecycle_task_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_lifecycle_task_document_document_fk` FOREIGN KEY (`employee_document_id`) REFERENCES `0_employee_documents` (`doc_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
 	CONSTRAINT `0_hrm_lifecycle_task_document_mapping_fk` FOREIGN KEY (`employee_worker_mapping_id`) REFERENCES `0_hrm_employee_worker_map` (`mapping_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 -- Structure of table `0_employee_document_migration_journal` --
 
@@ -6943,7 +6943,7 @@ CREATE TABLE `0_employee_document_migration_journal` (
 	KEY `employee_document_migration_source` (`doc_id`,`source_path_hash`,`journal_id`),
 	KEY `employee_document_migration_target` (`target_attachment_id`),
 	KEY `employee_document_migration_status` (`status`,`journal_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_employee_documents` --
 
@@ -6975,7 +6975,7 @@ CREATE TABLE IF NOT EXISTS `0_employee_history` (
 	PRIMARY KEY (`history_id`),
 	KEY `employee_id` (`employee_id`),
 	KEY `effective_date` (`effective_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_employee_history` --
 
@@ -7006,7 +7006,7 @@ CREATE TABLE IF NOT EXISTS `0_employee_loans` (
 	PRIMARY KEY (`loan_id`),
 	KEY `employee_id` (`employee_id`),
 	KEY `status` (`status`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_employee_loans` --
 
@@ -7031,7 +7031,7 @@ CREATE TABLE IF NOT EXISTS `0_employee_salary` (
 	PRIMARY KEY (`salary_id`),
 	UNIQUE KEY `unique_emp_element` (`employee_id`, `element_id`, `effective_from`),
 	KEY `employee_id` (`employee_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_employee_salary` --
 
@@ -7051,7 +7051,7 @@ CREATE TABLE IF NOT EXISTS `0_eos_calculation` (
 	`resignation_rate` double NOT NULL DEFAULT '0',
 	`description`      text,
 	PRIMARY KEY (`eos_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_eos_calculation` --
 
@@ -7073,7 +7073,7 @@ CREATE TABLE IF NOT EXISTS `0_holidays` (
 	`description`  text,
 	PRIMARY KEY (`holiday_id`),
 	KEY `holiday_date` (`holiday_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_holidays` --
 
@@ -7092,7 +7092,7 @@ CREATE TABLE IF NOT EXISTS `0_hr_settings` (
 	`description`   varchar(200) DEFAULT NULL,
 	PRIMARY KEY (`setting_id`),
 	UNIQUE KEY `setting_key` (`setting_key`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_hr_settings` --
 
@@ -7133,7 +7133,7 @@ CREATE TABLE IF NOT EXISTS `0_leave_balances` (
 	`adjusted`        double NOT NULL DEFAULT '0' COMMENT 'manual adjustment',
 	PRIMARY KEY (`balance_id`),
 	UNIQUE KEY `emp_leave_year` (`employee_id`, `leave_id`, `fiscal_year`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_leave_balances` --
 
@@ -7160,7 +7160,7 @@ CREATE TABLE IF NOT EXISTS `0_leave_policies` (
 	`inactive`             tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`policy_id`),
 	KEY `leave_id` (`leave_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_leave_policies` --
 
@@ -7191,7 +7191,7 @@ CREATE TABLE IF NOT EXISTS `0_leave_requests` (
 	KEY `employee_id` (`employee_id`),
 	KEY `status` (`status`),
 	KEY `from_date` (`from_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_leave_requests` --
 
@@ -7218,7 +7218,7 @@ CREATE TABLE IF NOT EXISTS `0_loan_repayments` (
 	PRIMARY KEY (`repayment_id`),
 	KEY `loan_id` (`loan_id`),
 	KEY `due_date` (`due_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_loan_repayments` --
 
@@ -7243,7 +7243,7 @@ CREATE TABLE IF NOT EXISTS `0_loan_types` (
 	`inactive`         tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`loan_type_id`),
 	UNIQUE KEY `loan_type_code` (`loan_type_code`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_loan_types` --
 
@@ -7263,7 +7263,7 @@ CREATE TABLE IF NOT EXISTS `0_overtime_budget` (
 	`budget_amount` double NOT NULL DEFAULT '0',
 	PRIMARY KEY (`budget_id`),
 	UNIQUE KEY `year_month` (`fiscal_year`, `month`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_overtime_budget` --
 
@@ -7289,7 +7289,7 @@ CREATE TABLE IF NOT EXISTS `0_overtime_requests` (
 	PRIMARY KEY (`request_id`),
 	KEY `employee_id` (`employee_id`),
 	KEY `date` (`date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_overtime_requests` --
 
@@ -7322,7 +7322,7 @@ CREATE TABLE IF NOT EXISTS `0_payroll_periods` (
 	PRIMARY KEY (`period_id`),
 	KEY `from_date` (`from_date`),
 	KEY `status` (`status`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_payroll_periods` --
 
@@ -7353,7 +7353,7 @@ CREATE TABLE IF NOT EXISTS `0_payroll_reversal_evidence` (
 	UNIQUE KEY `payroll_reversal_linked_trans` (`linked_trans_no`),
 	KEY `payroll_reversal_period_type` (`payroll_period_id`,`evidence_type`),
 	KEY `payroll_reversal_original_trans` (`original_trans_no`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TRIGGER `0_payroll_reversal_evidence_no_update`
 BEFORE UPDATE ON `0_payroll_reversal_evidence`
@@ -7394,7 +7394,7 @@ CREATE TABLE IF NOT EXISTS `0_payslip_details` (
 	PRIMARY KEY (`detail_id`),
 	KEY `payslip_id` (`payslip_id`),
 	KEY `element_id` (`element_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_payslip_details` --
 
@@ -7424,7 +7424,7 @@ CREATE TABLE IF NOT EXISTS `0_statutory_deductions` (
 	`inactive`         tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`statutory_id`),
 	UNIQUE KEY `statutory_code` (`statutory_code`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_statutory_deductions` --
 
@@ -7447,7 +7447,7 @@ CREATE TABLE IF NOT EXISTS `0_tax_brackets` (
 	`effective_to`   date DEFAULT NULL,
 	PRIMARY KEY (`bracket_id`),
 	KEY `effective_from` (`effective_from`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_tax_brackets` --
 
@@ -7469,7 +7469,7 @@ CREATE TABLE IF NOT EXISTS `0_work_shifts` (
 	`is_night_shift`  tinyint(1) NOT NULL DEFAULT '0',
 	`inactive`        tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`shift_id`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_work_shifts` --
 
@@ -7491,7 +7491,7 @@ CREATE TABLE IF NOT EXISTS `0_working_days` (
 	`work_hours`  double NOT NULL DEFAULT '8',
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `day_of_week` (`day_of_week`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_working_days` -- (Mon-Fri working, Sat-Sun off)
 
@@ -7527,7 +7527,7 @@ CREATE TABLE IF NOT EXISTS `0_recruitment_openings` (
 	PRIMARY KEY (`opening_id`),
 	KEY `department_id` (`department_id`),
 	KEY `status` (`status`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_recruitment_openings` --
 
@@ -7553,7 +7553,7 @@ CREATE TABLE IF NOT EXISTS `0_recruitment_applicants` (
 	PRIMARY KEY (`applicant_id`),
 	KEY `opening_id` (`opening_id`),
 	KEY `status` (`status`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_recruitment_applicants` --
 
@@ -7575,7 +7575,7 @@ CREATE TABLE IF NOT EXISTS `0_training_courses` (
 	`inactive`         tinyint(1) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`course_id`),
 	KEY `course_code` (`course_code`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_training_courses` --
 
@@ -7601,7 +7601,7 @@ CREATE TABLE IF NOT EXISTS `0_employee_training` (
 	KEY `employee_id` (`employee_id`),
 	KEY `course_id` (`course_id`),
 	KEY `training_date` (`training_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_employee_training` --
 
@@ -7629,7 +7629,7 @@ CREATE TABLE IF NOT EXISTS `0_employee_appraisals` (
 	PRIMARY KEY (`appraisal_id`),
 	KEY `employee_id` (`employee_id`),
 	KEY `appraisal_date` (`appraisal_date`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_employee_appraisals` --
 
@@ -7655,7 +7655,7 @@ CREATE TABLE IF NOT EXISTS `0_employee_asset_allocation` (
 	PRIMARY KEY (`allocation_id`),
 	KEY `employee_id` (`employee_id`),
 	KEY `status` (`status`)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Data of table `0_employee_asset_allocation` --
 
@@ -7686,7 +7686,7 @@ CREATE TABLE IF NOT EXISTS `0_approval_workflows` (
 	`version`         INT(11)      NOT NULL DEFAULT 1,
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `trans_type` (`trans_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- =====================================================
 -- Table: approval_levels
@@ -7711,7 +7711,7 @@ CREATE TABLE IF NOT EXISTS `0_approval_levels` (
 	UNIQUE KEY `workflow_role_level` (`workflow_id`, `level`, `role_id`),
 	KEY `workflow_level` (`workflow_id`, `level`),
 	KEY `role_id` (`role_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- =====================================================
 -- Table: approval_drafts
@@ -7745,7 +7745,7 @@ CREATE TABLE IF NOT EXISTS `0_approval_drafts` (
 	KEY `idx_submitted_by` (`submitted_by`),
 	KEY `idx_reserved_no` (`trans_type`, `reserved_trans_no`),
 	KEY `idx_workflow` (`workflow_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- =====================================================
 -- Table: approval_actions
@@ -7767,7 +7767,7 @@ CREATE TABLE IF NOT EXISTS `0_approval_actions` (
 	KEY `idx_draft` (`draft_id`),
 	KEY `idx_user` (`user_id`),
 	KEY `idx_date` (`action_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- =====================================================
 -- Table: approval_delegations
@@ -7789,7 +7789,7 @@ CREATE TABLE IF NOT EXISTS `0_approval_delegations` (
 	KEY `idx_active` (`is_active`, `from_date`, `to_date`),
 	KEY `idx_from_user` (`from_user_id`),
 	KEY `idx_to_user` (`to_user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- =====================================================
 -- Table: approval_notifications
@@ -7825,7 +7825,7 @@ CREATE TABLE IF NOT EXISTS `0_approval_notifications` (
 	KEY `approval_notification_delivery_ready` (`is_sent`, `dead_lettered_at`, `next_attempt_at`, `lease_expires_at`, `created_date`, `id`),
 	KEY `approval_notification_dead_letter` (`dead_lettered_at`, `id`),
 	KEY `idx_draft` (`draft_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ================================================================
 -- NotrinosERP CRM Module -- Database Schema
@@ -7845,7 +7845,7 @@ CREATE TABLE `0_crm_lead_sources` (
   `active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `0_crm_lead_sources` (`name`, `description`, `active`) VALUES
 ('Website', 'Company website contact form', 1),
@@ -7870,7 +7870,7 @@ CREATE TABLE `0_crm_sales_stages` (
   `active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `0_crm_sales_stages` (`name`, `sequence`, `probability`, `description`, `active`) VALUES
 ('New', 1, 10, 'Newly identified opportunity', 1),
@@ -7890,7 +7890,7 @@ CREATE TABLE `0_crm_lost_reasons` (
   `description` varchar(255) NOT NULL,
   `active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `0_crm_lost_reasons` (`description`, `active`) VALUES
 ('Too expensive', 1),
@@ -7917,7 +7917,7 @@ CREATE TABLE `0_crm_activity_types` (
   `schedule_type` varchar(20) DEFAULT 'completion' COMMENT 'completion, deadline',
   `active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `0_crm_activity_types` (`name`, `category`, `icon`, `chaining_type`, `active`) VALUES
 ('Email', 'email', 'fa-envelope', 'none', 1),
@@ -7945,7 +7945,7 @@ CREATE TABLE `0_crm_appointment_types` (
   `video_link` varchar(255) DEFAULT NULL,
   `active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `0_crm_appointment_types` (`name`, `default_duration`, `active`) VALUES
 ('General Meeting', 60, 1),
@@ -7972,7 +7972,7 @@ CREATE TABLE `0_crm_sales_teams` (
   `active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `0_crm_sales_team_members`;
 CREATE TABLE `0_crm_sales_team_members` (
@@ -7986,7 +7986,7 @@ CREATE TABLE `0_crm_sales_team_members` (
   UNIQUE KEY `team_member` (`team_id`, `user_id`),
   KEY `team_id` (`team_id`),
   KEY `user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ================================================================
 -- CORE ENTITY TABLES
@@ -8042,7 +8042,7 @@ CREATE TABLE `0_crm_leads` (
   KEY `expected_close_date` (`expected_close_date`),
   KEY `linked_customer_id` (`linked_customer_id`),
   KEY `date_created` (`date_created`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- CRM entity-tag associations use the shared 0_tag_associations table.
 -- record_id format: "entity_type:entity_id" (e.g. "lead:42").
@@ -8074,7 +8074,7 @@ CREATE TABLE `0_crm_activities` (	`priority` tinyint(1) NOT NULL DEFAULT 0,
   KEY `status` (`status`),
   KEY `date_scheduled` (`date_scheduled`),
   KEY `activity_type_id` (`activity_type_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Activity Plans (pre-configured sequences)
 DROP TABLE IF EXISTS `0_crm_activity_plans`;
@@ -8084,7 +8084,7 @@ CREATE TABLE `0_crm_activity_plans` (
   `description` varchar(255) DEFAULT NULL,
   `active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 DROP TABLE IF EXISTS `0_crm_activity_plan_lines`;
 CREATE TABLE `0_crm_activity_plan_lines` (
@@ -8100,7 +8100,7 @@ CREATE TABLE `0_crm_activity_plan_lines` (
   `sequence` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `plan_id` (`plan_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ================================================================
 -- COMMUNICATION LOG
@@ -8124,7 +8124,7 @@ CREATE TABLE `0_crm_communication_log` (
   KEY `entity` (`entity_type`, `entity_id`),
   KEY `date_time` (`date_time`),
   KEY `comm_type` (`comm_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ================================================================
 -- CAMPAIGN TABLES
@@ -8147,7 +8147,7 @@ CREATE TABLE `0_crm_campaigns` (
   PRIMARY KEY (`id`),
   KEY `status` (`status`),
   KEY `start_date` (`start_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Email Templates
 DROP TABLE IF EXISTS `0_crm_email_templates`;
@@ -8160,7 +8160,7 @@ CREATE TABLE `0_crm_email_templates` (
   `variables_json` text DEFAULT NULL COMMENT 'JSON list of available variables',
   `active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Campaign Email Schedule
 DROP TABLE IF EXISTS `0_crm_campaign_emails`;
@@ -8174,7 +8174,7 @@ CREATE TABLE `0_crm_campaign_emails` (
   `sequence` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `campaign_id` (`campaign_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Campaign-Lead tracking (which leads are enrolled in which campaigns)
 DROP TABLE IF EXISTS `0_crm_campaign_leads`;
@@ -8188,7 +8188,7 @@ CREATE TABLE `0_crm_campaign_leads` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `campaign_lead` (`campaign_id`, `lead_id`),
   KEY `lead_id` (`lead_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ================================================================
 -- CONTRACT TABLE
@@ -8216,7 +8216,7 @@ CREATE TABLE `0_crm_contracts` (
   KEY `customer_id` (`customer_id`),
   KEY `status` (`status`),
   KEY `end_date` (`end_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ================================================================
 -- APPOINTMENT TABLE
@@ -8245,7 +8245,7 @@ CREATE TABLE `0_crm_appointments` (
   KEY `customer_id` (`customer_id`),
   KEY `date_time` (`date_time`),
   KEY `status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ================================================================
 -- LEAD SCORING CONFIG
@@ -8259,7 +8259,7 @@ CREATE TABLE `0_crm_scoring_config` (
   `active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
   UNIQUE KEY `variable_name` (`variable_name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `0_crm_scoring_config` (`variable_name`, `weight`, `active`) VALUES
 ('source', 1.00, 1),
@@ -8278,7 +8278,7 @@ CREATE TABLE `0_crm_module_settings` (
   `setting_value` text DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`setting_key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `0_crm_module_settings` (`setting_key`, `setting_value`, `description`) VALUES
 ('auto_create_contact', '1', 'Automatically create contact record for each new lead'),
@@ -8336,7 +8336,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_requisitions` (
   KEY `idx_date` (`request_date`),
   KEY `idx_material_request` (`material_request_id`),
   KEY `idx_department` (`department_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- FK `fk_purch_req_line_header` (`requisition_id` -> `0_purch_requisitions`.`id`) moved to `sql/install_constraints.php`
 -- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
@@ -8360,7 +8360,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_requisition_lines` (
   KEY `idx_material_request_line` (`material_request_line_id`),
   KEY `idx_supplier` (`preferred_supplier_id`),
 	KEY `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 UPDATE `0_security_roles`
 SET `areas` = CASE
@@ -8397,7 +8397,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_rfq` (
   KEY `idx_status` (`status`),
   KEY `idx_date` (`created_date`),
   KEY `idx_requisition` (`requisition_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- FK `fk_purch_rfq_item_header` (`rfq_id` -> `0_purch_rfq`.`id`) moved to `sql/install_constraints.php`
 -- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
@@ -8415,7 +8415,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_rfq_items` (
   PRIMARY KEY (`id`),
   KEY `idx_rfq` (`rfq_id`),
 	KEY `idx_stock` (`stock_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- FK `fk_purch_rfq_vendor_header` (`rfq_id` -> `0_purch_rfq`.`id`) moved to `sql/install_constraints.php`
 -- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
@@ -8438,7 +8438,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_rfq_vendors` (
   KEY `idx_rfq` (`rfq_id`),
   KEY `idx_supplier` (`supplier_id`),
 	UNIQUE KEY `idx_rfq_supplier` (`rfq_id`, `supplier_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- FKs `fk_purch_rfq_vendor_line_vendor` (`rfq_vendor_id` -> `0_purch_rfq_vendors`.`id`) and
 -- `fk_purch_rfq_vendor_line_item` (`rfq_item_id` -> `0_purch_rfq_items`.`id`) moved to `sql/install_constraints.php`
@@ -8456,7 +8456,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_rfq_vendor_lines` (
   KEY `idx_vendor` (`rfq_vendor_id`),
   KEY `idx_item` (`rfq_item_id`),
 	UNIQUE KEY `idx_vendor_item` (`rfq_vendor_id`, `rfq_item_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 UPDATE `0_security_roles`
 SET `areas` = CASE
@@ -8501,7 +8501,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_agreements` (
   KEY `idx_supplier` (`supplier_id`),
   KEY `idx_status` (`status`),
   KEY `idx_dates` (`date_start`, `date_end`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- FK `fk_purch_agreement_lines_header` (`agreement_id` -> `0_purch_agreements`.`id`) moved to `sql/install_constraints.php`
 -- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
@@ -8522,7 +8522,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_agreement_lines` (
   PRIMARY KEY (`id`),
   KEY `idx_agreement` (`agreement_id`),
 	KEY `idx_stock` (`stock_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 UPDATE `0_security_roles`
 SET `areas` = CASE
@@ -8550,7 +8550,7 @@ CREATE TABLE IF NOT EXISTS `0_vendor_evaluation_criteria` (
   UNIQUE KEY `idx_name_category` (`name`, `category`),
   KEY `idx_category` (`category`),
   KEY `idx_inactive` (`inactive`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE IF NOT EXISTS `0_vendor_evaluations` (
   `id` INT NOT NULL AUTO_INCREMENT,
@@ -8573,7 +8573,7 @@ CREATE TABLE IF NOT EXISTS `0_vendor_evaluations` (
   KEY `idx_supplier` (`supplier_id`),
   KEY `idx_date` (`evaluation_date`),
   KEY `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- FKs `fk_vendor_eval_scores_eval` (`evaluation_id` -> `0_vendor_evaluations`.`id`) and
 -- `fk_vendor_eval_scores_criteria` (`criteria_id` -> `0_vendor_evaluation_criteria`.`id`) moved to `sql/install_constraints.php`
@@ -8589,7 +8589,7 @@ CREATE TABLE IF NOT EXISTS `0_vendor_evaluation_scores` (
   UNIQUE KEY `idx_evaluation_criteria` (`evaluation_id`, `criteria_id`),
   KEY `idx_evaluation` (`evaluation_id`),
 	KEY `idx_criteria` (`criteria_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE IF NOT EXISTS `0_vendor_performance_log` (
   `id` INT NOT NULL AUTO_INCREMENT,
@@ -8606,7 +8606,7 @@ CREATE TABLE IF NOT EXISTS `0_vendor_performance_log` (
   KEY `idx_supplier` (`supplier_id`),
   KEY `idx_date` (`event_date`),
   KEY `idx_type` (`event_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT IGNORE INTO `0_vendor_evaluation_criteria` (`name`, `category`, `weight`, `description`, `scoring_method`, `calculation_formula`, `inactive`)
 VALUES
@@ -8663,7 +8663,7 @@ CREATE TABLE IF NOT EXISTS `0_vendor_pricelists` (
   KEY `idx_stock` (`stock_id`),
   KEY `idx_preferred` (`stock_id`, `is_preferred`),
   UNIQUE KEY `idx_supplier_stock` (`supplier_id`, `stock_id`, `currency`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE IF NOT EXISTS `0_purch_order_templates` (
   `id` INT NOT NULL AUTO_INCREMENT,
@@ -8678,7 +8678,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_order_templates` (
   PRIMARY KEY (`id`),
   KEY `idx_supplier` (`supplier_id`),
   KEY `idx_inactive` (`inactive`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- FK `fk_purch_template_lines_header` (`template_id` -> `0_purch_order_templates`.`id`) moved to `sql/install_constraints.php`
 -- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
@@ -8693,7 +8693,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_order_template_lines` (
   PRIMARY KEY (`id`),
   KEY `idx_template` (`template_id`),
 	KEY `idx_stock` (`stock_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT IGNORE INTO `0_vendor_pricelists`
   (`supplier_id`, `stock_id`, `vendor_product_code`, `vendor_product_name`, `vendor_uom`,
@@ -8764,7 +8764,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_matching_config` (
   KEY `idx_match_type` (`match_type`),
   KEY `idx_supplier_match` (`supplier_id`, `match_type`),
   KEY `idx_inactive` (`inactive`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE IF NOT EXISTS `0_purch_matching_exceptions` (
   `id` INT NOT NULL AUTO_INCREMENT,
@@ -8789,7 +8789,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_matching_exceptions` (
   KEY `idx_status` (`status`),
   KEY `idx_supplier` (`supplier_id`),
   KEY `idx_trans` (`trans_type`, `trans_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE IF NOT EXISTS `0_purch_bill_control_policy` (
   `id` INT NOT NULL AUTO_INCREMENT,
@@ -8805,7 +8805,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_bill_control_policy` (
   PRIMARY KEY (`id`),
   KEY `idx_default` (`is_default`),
   KEY `idx_inactive` (`inactive`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT IGNORE INTO `0_purch_matching_config`
   (`match_type`, `supplier_id`, `tolerance_type`, `tolerance_value`, `action_on_exceed`, `custom_data`, `inactive`)
@@ -8857,7 +8857,7 @@ CREATE TABLE IF NOT EXISTS `0_procurement_plan` (
   PRIMARY KEY (`id`),
   KEY `idx_date` (`plan_date`),
   KEY `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- FK `fk_procurement_plan_lines_header` (`plan_id` -> `0_procurement_plan`.`id`) moved to `sql/install_constraints.php`
 -- and applied by `admin/db/maintenance_db.inc` during db_import(). Keep PHP and SQL comments in sync.
@@ -8882,7 +8882,7 @@ CREATE TABLE IF NOT EXISTS `0_procurement_plan_lines` (
   KEY `idx_stock` (`stock_id`),
   KEY `idx_supplier` (`supplier_id`),
 	KEY `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 UPDATE `0_security_roles`
 SET `areas` = CASE
@@ -8918,7 +8918,7 @@ CREATE TABLE IF NOT EXISTS `0_purch_kpi_cache` (
   `updated_at` DATETIME DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_kpi` (`kpi_type`, `period_key`, `dimension_key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 UPDATE `0_security_roles`
 SET `areas` = CASE
@@ -8955,7 +8955,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_credit_reviews` (
   PRIMARY KEY (`id`),
   KEY `idx_debtor` (`debtor_no`),
   KEY `idx_date`   (`review_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Credit holds
 CREATE TABLE IF NOT EXISTS `0_sales_credit_holds` (
@@ -8973,7 +8973,7 @@ CREATE TABLE IF NOT EXISTS `0_sales_credit_holds` (
   PRIMARY KEY (`id`),
   KEY `idx_debtor` (`debtor_no`),
   KEY `idx_active` (`debtor_no`, `release_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 UPDATE `0_security_roles`
 SET `areas` = CASE
@@ -9018,7 +9018,7 @@ CREATE TABLE `0_hrm_lifecycle_rehire_executions` (
   CONSTRAINT `0_hrm_rehire_new_contract_fk` FOREIGN KEY (`successor_contract_id`) REFERENCES `0_hrm_contracts` (`contract_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_rehire_new_assignment_fk` FOREIGN KEY (`successor_assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_rehire_history_fk` FOREIGN KEY (`history_id`) REFERENCES `0_employee_history` (`history_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_worker_profile_versions` (
   `profile_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9035,7 +9035,7 @@ CREATE TABLE `0_hrm_worker_profile_versions` (
   UNIQUE KEY `hrm_worker_profile_predecessor_uq` (`predecessor_id`),
   CONSTRAINT `0_hrm_worker_profile_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `0_hrm_worker_profile_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_worker_profile_versions` (`profile_version_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_employee_projection_policy` (
   `policy_id` tinyint(3) unsigned NOT NULL,
@@ -9043,7 +9043,7 @@ CREATE TABLE `0_hrm_employee_projection_policy` (
   `mode` varchar(16) NOT NULL DEFAULT 'shadow',
   `revision` int(10) unsigned NOT NULL DEFAULT '1',
   PRIMARY KEY (`policy_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 -- HRM-FND-007 foundation: work authorization and typed custom attributes --
 
@@ -9075,7 +9075,7 @@ CREATE TABLE `0_hrm_work_authorizations` (
   CONSTRAINT `0_hrm_work_authorization_worker_fk` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_work_authorization_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_work_authorizations` (`authorization_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_work_authorization_document_fk` FOREIGN KEY (`employee_document_id`) REFERENCES `0_employee_documents` (`doc_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_work_authorization_policy_versions` (
   `policy_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9098,7 +9098,7 @@ CREATE TABLE `0_hrm_work_authorization_policy_versions` (
   UNIQUE KEY `hrm_work_authorization_policy_predecessor_uq` (`predecessor_id`),
   KEY `hrm_work_authorization_policy_effective_idx` (`issuing_jurisdiction`,`policy_status`,`effective_from`,`effective_to`),
   CONSTRAINT `0_hrm_work_authorization_policy_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_work_authorization_policy_versions` (`policy_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 
 CREATE TABLE `0_hrm_work_authorization_retention_policy_versions` (
@@ -9122,7 +9122,7 @@ CREATE TABLE `0_hrm_work_authorization_retention_policy_versions` (
   UNIQUE KEY `hrm_work_authorization_retention_policy_predecessor_uq` (`predecessor_id`),
   KEY `hrm_work_authorization_retention_policy_effective_idx` (`issuing_jurisdiction`,`policy_status`,`effective_from`,`effective_to`),
   CONSTRAINT `0_hrm_work_authorization_retention_policy_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_work_authorization_retention_policy_versions` (`retention_policy_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_work_authorization_delivery_policy_versions` (
   `delivery_policy_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9147,7 +9147,7 @@ CREATE TABLE `0_hrm_work_authorization_delivery_policy_versions` (
   UNIQUE KEY `hrm_work_authorization_delivery_policy_predecessor_uq` (`predecessor_id`),
   KEY `hrm_work_authorization_delivery_policy_effective_idx` (`issuing_jurisdiction`,`policy_status`,`effective_from`,`effective_to`),
   CONSTRAINT `0_hrm_work_authorization_delivery_policy_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_work_authorization_delivery_policy_versions` (`delivery_policy_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_assignment_work_authorization_jurisdictions` (
   `assignment_id` bigint(20) unsigned NOT NULL,
@@ -9159,7 +9159,7 @@ CREATE TABLE `0_hrm_assignment_work_authorization_jurisdictions` (
   PRIMARY KEY (`assignment_id`),
   KEY `hrm_assignment_wa_jurisdiction_idx` (`issuing_jurisdiction`,`assignment_id`),
   CONSTRAINT `0_hrm_assignment_wa_jurisdiction_assignment_fk` FOREIGN KEY (`assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_attribute_definitions` (
   `definition_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9168,7 +9168,7 @@ CREATE TABLE `0_hrm_attribute_definitions` (
   `created_by` smallint(6) unsigned NOT NULL,
   PRIMARY KEY (`definition_id`),
   UNIQUE KEY `hrm_attribute_definition_code_uq` (`attribute_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_attribute_definition_versions` (
   `definition_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9191,7 +9191,7 @@ CREATE TABLE `0_hrm_attribute_definition_versions` (
   KEY `hrm_attribute_definition_effective_idx` (`definition_id`,`effective_from`,`effective_to`),
   CONSTRAINT `0_hrm_attribute_definition_version_definition_fk` FOREIGN KEY (`definition_id`) REFERENCES `0_hrm_attribute_definitions` (`definition_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_definition_version_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_attribute_definition_versions` (`definition_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_attribute_values` (
   `attribute_value_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9214,7 +9214,7 @@ CREATE TABLE `0_hrm_attribute_values` (
   KEY `hrm_attribute_value_subject_idx` (`subject_type`,`subject_id`,`definition_version_id`,`effective_from`,`effective_to`),
   CONSTRAINT `0_hrm_attribute_value_definition_version_fk` FOREIGN KEY (`definition_version_id`) REFERENCES `0_hrm_attribute_definition_versions` (`definition_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_value_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_attribute_values` (`attribute_value_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_attribute_legacy_mapping_versions` (
   `mapping_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9238,7 +9238,7 @@ CREATE TABLE `0_hrm_attribute_legacy_mapping_versions` (
   KEY `hrm_attribute_legacy_mapping_attribute_idx` (`attribute_code`,`mapping_status`,`effective_from`,`effective_to`),
   CONSTRAINT `0_hrm_attribute_legacy_mapping_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_attribute_legacy_mapping_versions` (`mapping_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_legacy_mapping_attribute_fk` FOREIGN KEY (`attribute_code`) REFERENCES `0_hrm_attribute_definitions` (`attribute_code`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_attribute_legacy_conversion_receipts` (
   `conversion_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9263,7 +9263,7 @@ CREATE TABLE `0_hrm_attribute_legacy_conversion_receipts` (
   CONSTRAINT `0_hrm_attribute_legacy_conversion_profile_fk` FOREIGN KEY (`profile_version_id`) REFERENCES `0_hrm_worker_profile_versions` (`profile_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_legacy_conversion_definition_fk` FOREIGN KEY (`definition_version_id`) REFERENCES `0_hrm_attribute_definition_versions` (`definition_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_legacy_conversion_value_fk` FOREIGN KEY (`attribute_value_id`) REFERENCES `0_hrm_attribute_values` (`attribute_value_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_attribute_legacy_conversion_batches` (
   `batch_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9284,7 +9284,7 @@ CREATE TABLE `0_hrm_attribute_legacy_conversion_batches` (
   UNIQUE KEY `hrm_attribute_legacy_batch_candidate_set_uq` (`mapping_version_id`,`candidate_set_digest`),
   KEY `hrm_attribute_legacy_batch_status_idx` (`batch_status`,`expires_at`,`batch_id`),
   CONSTRAINT `0_hrm_attribute_legacy_batch_mapping_fk` FOREIGN KEY (`mapping_version_id`) REFERENCES `0_hrm_attribute_legacy_mapping_versions` (`mapping_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_attribute_legacy_conversion_batch_items` (
   `batch_item_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9310,7 +9310,7 @@ CREATE TABLE `0_hrm_attribute_legacy_conversion_batch_items` (
   CONSTRAINT `0_hrm_attribute_legacy_batch_item_profile_fk` FOREIGN KEY (`profile_version_id`) REFERENCES `0_hrm_worker_profile_versions` (`profile_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_legacy_batch_item_definition_fk` FOREIGN KEY (`definition_version_id`) REFERENCES `0_hrm_attribute_definition_versions` (`definition_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_legacy_batch_item_conversion_fk` FOREIGN KEY (`conversion_id`) REFERENCES `0_hrm_attribute_legacy_conversion_receipts` (`conversion_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_attribute_legacy_cleanup_requests` (
   `cleanup_request_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9331,7 +9331,7 @@ CREATE TABLE `0_hrm_attribute_legacy_cleanup_requests` (
   UNIQUE KEY `hrm_attribute_legacy_cleanup_nonce_uq` (`request_nonce_hash`),
   KEY `hrm_attribute_legacy_cleanup_status_idx` (`request_status`,`expires_at`,`cleanup_request_id`),
   CONSTRAINT `0_hrm_attribute_legacy_cleanup_batch_fk` FOREIGN KEY (`batch_id`) REFERENCES `0_hrm_attribute_legacy_conversion_batches` (`batch_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_attribute_legacy_cleanup_receipts` (
   `cleanup_receipt_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9362,7 +9362,7 @@ CREATE TABLE `0_hrm_attribute_legacy_cleanup_receipts` (
   CONSTRAINT `0_hrm_attribute_legacy_cleanup_receipt_conversion_fk` FOREIGN KEY (`conversion_id`) REFERENCES `0_hrm_attribute_legacy_conversion_receipts` (`conversion_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_legacy_cleanup_receipt_pre_profile_fk` FOREIGN KEY (`pre_cleanup_profile_version_id`) REFERENCES `0_hrm_worker_profile_versions` (`profile_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_attribute_legacy_cleanup_receipt_post_profile_fk` FOREIGN KEY (`post_cleanup_profile_version_id`) REFERENCES `0_hrm_worker_profile_versions` (`profile_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 -- PAY-RULE-003 simulation-only immutable artifact/import custody (1.0.478-1.0.485).
 CREATE TABLE `0_hrm_pay_rule_artifacts` (
@@ -9373,7 +9373,7 @@ CREATE TABLE `0_hrm_pay_rule_artifacts` (
   `created_by` smallint(6) unsigned NOT NULL,
   PRIMARY KEY (`artifact_id`),
   UNIQUE KEY `hrm_pay_rule_artifact_key_uq` (`artifact_key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_pay_rule_artifact_versions` (
   `artifact_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9398,7 +9398,7 @@ CREATE TABLE `0_hrm_pay_rule_artifact_versions` (
   KEY `hrm_pay_rule_artifact_status_idx` (`artifact_id`,`custody_status`,`version_no`),
   CONSTRAINT `0_hrm_pay_rule_artifact_version_artifact_fk` FOREIGN KEY (`artifact_id`) REFERENCES `0_hrm_pay_rule_artifacts` (`artifact_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_pay_rule_artifact_version_predecessor_fk` FOREIGN KEY (`predecessor_id`) REFERENCES `0_hrm_pay_rule_artifact_versions` (`artifact_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_pay_rule_import_candidates` (
   `candidate_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9413,7 +9413,7 @@ CREATE TABLE `0_hrm_pay_rule_import_candidates` (
   PRIMARY KEY (`candidate_id`),
   UNIQUE KEY `hrm_pay_rule_import_source_snapshot_uq` (`source_kind`,`source_row_id`,`source_snapshot_sha256`),
   KEY `hrm_pay_rule_import_candidate_status_idx` (`candidate_status`,`source_kind`,`candidate_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_pay_rule_import_reviews` (
   `review_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9432,7 +9432,7 @@ CREATE TABLE `0_hrm_pay_rule_import_reviews` (
   PRIMARY KEY (`review_id`),
   UNIQUE KEY `hrm_pay_rule_import_review_hash_uq` (`review_sha256`),
   KEY `hrm_pay_rule_import_review_status_idx` (`review_status`,`review_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_pay_rule_import_receipts` (
   `receipt_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9452,7 +9452,7 @@ CREATE TABLE `0_hrm_pay_rule_import_receipts` (
   UNIQUE KEY `hrm_pay_rule_import_receipt_hash_uq` (`receipt_sha256`),
   CONSTRAINT `0_hrm_pay_rule_import_receipt_review_fk` FOREIGN KEY (`review_id`) REFERENCES `0_hrm_pay_rule_import_reviews` (`review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_pay_rule_import_receipt_artifact_fk` FOREIGN KEY (`artifact_version_id`) REFERENCES `0_hrm_pay_rule_artifact_versions` (`artifact_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TRIGGER `0_hrm_pay_rule_artifacts_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_artifacts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies update on hrm_pay_rule_artifacts';
 CREATE TRIGGER `0_hrm_pay_rule_artifacts_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_artifacts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-003 immutable custody denies delete on hrm_pay_rule_artifacts';
@@ -9473,7 +9473,7 @@ CREATE TABLE `0_hrm_pay_rule_rules` (
   `created_by` smallint(6) unsigned NOT NULL,
   PRIMARY KEY (`rule_id`),
   UNIQUE KEY `hrm_pay_rule_rule_key_uq` (`rule_key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_pay_rule_rule_versions` (
   `rule_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9496,7 +9496,7 @@ CREATE TABLE `0_hrm_pay_rule_rule_versions` (
   CONSTRAINT `0_hrm_pay_rule_rule_version_rule_fk` FOREIGN KEY (`rule_id`) REFERENCES `0_hrm_pay_rule_rules` (`rule_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_pay_rule_rule_version_predecessor_fk` FOREIGN KEY (`predecessor_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_pay_rule_rule_version_artifact_fk` FOREIGN KEY (`artifact_version_id`) REFERENCES `0_hrm_pay_rule_artifact_versions` (`artifact_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_pay_rule_regulatory_evidence` (
   `regulatory_evidence_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9515,7 +9515,7 @@ CREATE TABLE `0_hrm_pay_rule_regulatory_evidence` (
   UNIQUE KEY `hrm_pay_rule_regulatory_hash_uq` (`evidence_sha256`),
   KEY `hrm_pay_rule_regulatory_jurisdiction_idx` (`jurisdiction_token`,`effective_from`,`effective_to`),
   CONSTRAINT `0_hrm_pay_rule_regulatory_version_fk` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_pay_rule_lifecycle_reviews` (
   `lifecycle_review_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9529,7 +9529,7 @@ CREATE TABLE `0_hrm_pay_rule_lifecycle_reviews` (
   UNIQUE KEY `hrm_pay_rule_lifecycle_review_hash_uq` (`review_sha256`),
   KEY `hrm_pay_rule_lifecycle_review_version_idx` (`rule_version_id`,`review_decision`,`lifecycle_review_id`),
   CONSTRAINT `0_hrm_pay_rule_lifecycle_review_version_fk` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_pay_rule_lifecycle_publications` (
   `publication_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9546,7 +9546,7 @@ CREATE TABLE `0_hrm_pay_rule_lifecycle_publications` (
   UNIQUE KEY `hrm_pay_rule_lifecycle_publication_hash_uq` (`publication_sha256`),
   CONSTRAINT `0_hrm_pay_rule_lifecycle_publication_version_fk` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_pay_rule_lifecycle_publication_review_fk` FOREIGN KEY (`lifecycle_review_id`) REFERENCES `0_hrm_pay_rule_lifecycle_reviews` (`lifecycle_review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TRIGGER `0_hrm_pay_rule_rules_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_rules` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies update on hrm_pay_rule_rules';
 CREATE TRIGGER `0_hrm_pay_rule_rules_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_rules` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies delete on hrm_pay_rule_rules';
@@ -9576,7 +9576,7 @@ CREATE TABLE `0_hrm_pay_rule_lifecycle_events` (
   CONSTRAINT `0_hrm_pay_rule_lifecycle_event_version_fk` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_pay_rule_lifecycle_event_publication_fk` FOREIGN KEY (`publication_id`) REFERENCES `0_hrm_pay_rule_lifecycle_publications` (`publication_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_hrm_pay_rule_lifecycle_event_successor_fk` FOREIGN KEY (`successor_rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TRIGGER `0_hrm_pay_rule_lifecycle_events_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_lifecycle_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies update on hrm_pay_rule_lifecycle_events';
 CREATE TRIGGER `0_hrm_pay_rule_lifecycle_events_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_lifecycle_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies delete on hrm_pay_rule_lifecycle_events';
@@ -9593,7 +9593,7 @@ CREATE TABLE `0_hrm_pay_rule_emergency_changes` (
   UNIQUE KEY `hrm_pay_rule_emergency_version_uq` (`rule_version_id`),
   UNIQUE KEY `hrm_pay_rule_emergency_hash_uq` (`emergency_sha256`),
   CONSTRAINT `0_hrm_pay_rule_emergency_version_fk` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TRIGGER `0_hrm_pay_rule_emergency_changes_immutable_update` BEFORE UPDATE ON `0_hrm_pay_rule_emergency_changes` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies update on hrm_pay_rule_emergency_changes';
 CREATE TRIGGER `0_hrm_pay_rule_emergency_changes_immutable_delete` BEFORE DELETE ON `0_hrm_pay_rule_emergency_changes` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-004 immutable custody denies delete on hrm_pay_rule_emergency_changes';
@@ -9606,7 +9606,7 @@ CREATE TABLE `0_hrm_pay_rule_jurisdictions` (
   `created_by` smallint(6) unsigned NOT NULL,
   PRIMARY KEY (`jurisdiction_id`),
   UNIQUE KEY `hrm_pay_rule_jurisdiction_key_uq` (`jurisdiction_key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_pay_rule_jurisdiction_versions` (
   `jurisdiction_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9632,7 +9632,7 @@ CREATE TABLE `0_hrm_pay_rule_jurisdiction_versions` (
   CONSTRAINT `0_pr5_jv_jurisdiction_fk` FOREIGN KEY (`jurisdiction_id`) REFERENCES `0_hrm_pay_rule_jurisdictions` (`jurisdiction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_pr5_jv_predecessor_fk` FOREIGN KEY (`predecessor_version_id`) REFERENCES `0_hrm_pay_rule_jurisdiction_versions` (`jurisdiction_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_pr5_jv_parent_fk` FOREIGN KEY (`parent_jurisdiction_id`) REFERENCES `0_hrm_pay_rule_jurisdictions` (`jurisdiction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TABLE `0_hrm_pay_rule_subject_jurisdiction_bindings` (
   `binding_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `subject_type` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
@@ -9655,7 +9655,7 @@ CREATE TABLE `0_hrm_pay_rule_subject_jurisdiction_bindings` (
   KEY `hrm_pay_rule_subject_binding_entity_idx` (`subject_legal_entity_id`,`effective_from`,`effective_to`,`binding_id`),
   CONSTRAINT `0_pr5_sjb_entity_fk` FOREIGN KEY (`subject_legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_pr5_sjb_jurisdiction_fk` FOREIGN KEY (`jurisdiction_id`) REFERENCES `0_hrm_pay_rule_jurisdictions` (`jurisdiction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TABLE `0_hrm_pay_rule_jurisdiction_fact_sets` (
   `fact_set_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `employment_id` bigint(20) unsigned NOT NULL,
@@ -9674,7 +9674,7 @@ CREATE TABLE `0_hrm_pay_rule_jurisdiction_fact_sets` (
   CONSTRAINT `0_pr5_fs_assignment_fk` FOREIGN KEY (`assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_pr5_fs_entity_fk` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_pr5_fs_location_fk` FOREIGN KEY (`work_location_id`) REFERENCES `0_hrm_work_locations` (`work_location_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_pay_rule_jurisdiction_fact_items` (
   `fact_item_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9694,7 +9694,7 @@ CREATE TABLE `0_hrm_pay_rule_jurisdiction_fact_items` (
   CONSTRAINT `0_pr5_fi_binding_fk` FOREIGN KEY (`binding_id`) REFERENCES `0_hrm_pay_rule_subject_jurisdiction_bindings` (`binding_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_pr5_fi_version_fk` FOREIGN KEY (`jurisdiction_version_id`) REFERENCES `0_hrm_pay_rule_jurisdiction_versions` (`jurisdiction_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_pr5_fi_jurisdiction_fk` FOREIGN KEY (`jurisdiction_id`) REFERENCES `0_hrm_pay_rule_jurisdictions` (`jurisdiction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TABLE `0_hrm_pay_rule_version_applicability` (
   `applicability_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `rule_version_id` bigint(20) unsigned NOT NULL,
@@ -9717,7 +9717,7 @@ CREATE TABLE `0_hrm_pay_rule_version_applicability` (
   CONSTRAINT `0_pr5_ra_version_fk` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_pr5_ra_publication_fk` FOREIGN KEY (`publication_id`) REFERENCES `0_hrm_pay_rule_lifecycle_publications` (`publication_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_pr5_ra_jurisdiction_fk` FOREIGN KEY (`jurisdiction_id`) REFERENCES `0_hrm_pay_rule_jurisdictions` (`jurisdiction_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TABLE `0_hrm_pay_rule_resolution_requests` (
   `resolution_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `employment_id` bigint(20) unsigned NOT NULL,
@@ -9736,7 +9736,7 @@ CREATE TABLE `0_hrm_pay_rule_resolution_requests` (
   CONSTRAINT `0_pr5_rr_employment_fk` FOREIGN KEY (`employment_id`) REFERENCES `0_hrm_employments` (`employment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_pr5_rr_assignment_fk` FOREIGN KEY (`assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_pr5_rr_fact_set_fk` FOREIGN KEY (`fact_set_id`) REFERENCES `0_hrm_pay_rule_jurisdiction_fact_sets` (`fact_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_pay_rule_resolution_candidates` (
   `candidate_trace_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -9754,7 +9754,7 @@ CREATE TABLE `0_hrm_pay_rule_resolution_candidates` (
   CONSTRAINT `0_pr5_rc_request_fk` FOREIGN KEY (`resolution_id`) REFERENCES `0_hrm_pay_rule_resolution_requests` (`resolution_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_pr5_rc_applicability_fk` FOREIGN KEY (`applicability_id`) REFERENCES `0_hrm_pay_rule_version_applicability` (`applicability_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `0_pr5_rc_version_fk` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE `0_hrm_pay_rule_resolution_decisions` (
   `resolution_id` bigint(20) unsigned NOT NULL,
@@ -9768,7 +9768,7 @@ CREATE TABLE `0_hrm_pay_rule_resolution_decisions` (
   UNIQUE KEY `hrm_pay_rule_resolution_decision_hash_uq` (`resolution_sha256`),
   KEY `hrm_pay_rule_resolution_outcome_idx` (`outcome_token`,`resolution_id`),
   CONSTRAINT `0_pr5_rd_request_fk` FOREIGN KEY (`resolution_id`) REFERENCES `0_hrm_pay_rule_resolution_requests` (`resolution_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TRIGGER `0_pr5_j_u` BEFORE UPDATE ON `0_hrm_pay_rule_jurisdictions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies update on hrm_pay_rule_jurisdictions';
 CREATE TRIGGER `0_pr5_j_d` BEFORE DELETE ON `0_hrm_pay_rule_jurisdictions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-005 immutable custody denies delete on hrm_pay_rule_jurisdictions';
@@ -9805,7 +9805,7 @@ CREATE TABLE `0_hrm_pay_rule_migration_candidates` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`candidate_id`), UNIQUE KEY `uq_pr6_candidate_sha` (`candidate_sha256`),
   KEY `idx_pr6_source_payload` (`source_payload_sha256`), KEY `idx_pr6_class` (`classification_token`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_rule_migration_exceptions` (
   `exception_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -9818,7 +9818,7 @@ CREATE TABLE `0_hrm_pay_rule_migration_exceptions` (
   `reviewed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`exception_id`), UNIQUE KEY `uq_pr6_exception_candidate` (`candidate_id`), UNIQUE KEY `uq_pr6_exception_sha` (`exception_sha256`),
   CONSTRAINT `fk_pr6_exc_candidate` FOREIGN KEY (`candidate_id`) REFERENCES `0_hrm_pay_rule_migration_candidates` (`candidate_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_rule_translation_bindings` (
   `binding_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -9835,7 +9835,7 @@ CREATE TABLE `0_hrm_pay_rule_translation_bindings` (
   CONSTRAINT `fk_pr6_bind_candidate` FOREIGN KEY (`candidate_id`) REFERENCES `0_hrm_pay_rule_migration_candidates` (`candidate_id`),
   CONSTRAINT `fk_pr6_bind_rule_version` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`),
   CONSTRAINT `fk_pr6_bind_artifact_version` FOREIGN KEY (`artifact_version_id`) REFERENCES `0_hrm_pay_rule_artifact_versions` (`artifact_version_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_rule_tolerance_policies` (
   `tolerance_policy_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -9852,7 +9852,7 @@ CREATE TABLE `0_hrm_pay_rule_tolerance_policies` (
   PRIMARY KEY (`tolerance_policy_id`), UNIQUE KEY `uq_pr6_tolerance_sha` (`policy_sha256`),
   KEY `idx_pr6_tolerance_rule` (`rule_version_id`),
   CONSTRAINT `fk_pr6_tol_rule_version` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_rule_shadow_runs` (
   `run_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -9868,7 +9868,7 @@ CREATE TABLE `0_hrm_pay_rule_shadow_runs` (
   `executed_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`run_id`), UNIQUE KEY `uq_pr6_shadow_idem` (`idempotency_sha256`), UNIQUE KEY `uq_pr6_shadow_sha` (`run_sha256`),
   KEY `idx_pr6_shadow_scope` (`company_id`,`department_id`,`payroll_period_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_rule_shadow_comparisons` (
   `comparison_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -9888,7 +9888,7 @@ CREATE TABLE `0_hrm_pay_rule_shadow_comparisons` (
   CONSTRAINT `fk_pr6_cmp_candidate` FOREIGN KEY (`candidate_id`) REFERENCES `0_hrm_pay_rule_migration_candidates` (`candidate_id`),
   CONSTRAINT `fk_pr6_cmp_rule_version` FOREIGN KEY (`rule_version_id`) REFERENCES `0_hrm_pay_rule_rule_versions` (`rule_version_id`),
   CONSTRAINT `fk_pr6_cmp_tolerance` FOREIGN KEY (`tolerance_policy_id`) REFERENCES `0_hrm_pay_rule_tolerance_policies` (`tolerance_policy_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_rule_activation_eligibility` (
   `eligibility_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -9914,7 +9914,7 @@ CREATE TABLE `0_hrm_pay_rule_activation_eligibility` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`eligibility_id`), UNIQUE KEY `uq_pr6_eligibility_sha` (`eligibility_sha256`),
   KEY `idx_pr6_eligibility_scope` (`company_id`,`department_id`,`effective_from`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_rule_activation_commands` (
   `command_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -9934,7 +9934,7 @@ CREATE TABLE `0_hrm_pay_rule_activation_commands` (
   KEY `idx_pr6_command_pred` (`predecessor_command_id`), KEY `idx_pr6_command_eligibility` (`eligibility_id`),
   CONSTRAINT `fk_pr6_cmd_pred` FOREIGN KEY (`predecessor_command_id`) REFERENCES `0_hrm_pay_rule_activation_commands` (`command_id`),
   CONSTRAINT `fk_pr6_cmd_eligibility` FOREIGN KEY (`eligibility_id`) REFERENCES `0_hrm_pay_rule_activation_eligibility` (`eligibility_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TRIGGER `0_pr6_cand_u` BEFORE UPDATE ON `0_hrm_pay_rule_migration_candidates` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies update on hrm_pay_rule_migration_candidates';
 CREATE TRIGGER `0_pr6_cand_d` BEFORE DELETE ON `0_hrm_pay_rule_migration_candidates` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-RULE-006 immutable custody denies delete on hrm_pay_rule_migration_candidates';
@@ -9962,7 +9962,7 @@ CREATE TABLE `0_hrm_payroll_calendars` (
   `created_by` int unsigned NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`calendar_id`), UNIQUE KEY `uq_pc2_calendar_code` (`calendar_code`), UNIQUE KEY `uq_pc2_calendar_sha` (`calendar_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_payroll_calendar_versions` (
   `calendar_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -9977,7 +9977,7 @@ CREATE TABLE `0_hrm_payroll_calendar_versions` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`calendar_version_id`), UNIQUE KEY `uq_pc2_calendar_version` (`calendar_id`,`version_no`), UNIQUE KEY `uq_pc2_calver_sha` (`version_sha256`),
   CONSTRAINT `fk_pc2_calver_calendar` FOREIGN KEY (`calendar_id`) REFERENCES `0_hrm_payroll_calendars` (`calendar_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_payroll_calendar_periods` (
   `calendar_period_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -9995,7 +9995,7 @@ CREATE TABLE `0_hrm_payroll_calendar_periods` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`calendar_period_id`), UNIQUE KEY `uq_pc2_period_key` (`calendar_version_id`,`period_key`), UNIQUE KEY `uq_pc2_period_sha` (`period_sha256`),
   CONSTRAINT `fk_pc2_period_calver` FOREIGN KEY (`calendar_version_id`) REFERENCES `0_hrm_payroll_calendar_versions` (`calendar_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_payroll_groups` (
   `payroll_group_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10006,7 +10006,7 @@ CREATE TABLE `0_hrm_payroll_groups` (
   `created_by` int unsigned NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`payroll_group_id`), UNIQUE KEY `uq_pc2_group_code` (`group_code`), UNIQUE KEY `uq_pc2_group_sha` (`group_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_payroll_group_versions` (
   `group_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10021,7 +10021,7 @@ CREATE TABLE `0_hrm_payroll_group_versions` (
   PRIMARY KEY (`group_version_id`), UNIQUE KEY `uq_pc2_group_version` (`payroll_group_id`,`version_no`), UNIQUE KEY `uq_pc2_grpver_sha` (`version_sha256`),
   CONSTRAINT `fk_pc2_grpver_group` FOREIGN KEY (`payroll_group_id`) REFERENCES `0_hrm_payroll_groups` (`payroll_group_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc2_grpver_calver` FOREIGN KEY (`calendar_version_id`) REFERENCES `0_hrm_payroll_calendar_versions` (`calendar_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_payroll_relationships` (
   `payroll_relationship_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10035,7 +10035,7 @@ CREATE TABLE `0_hrm_payroll_relationships` (
   `created_by` int unsigned NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`payroll_relationship_id`), UNIQUE KEY `uq_pc2_relationship_key` (`relationship_key`), UNIQUE KEY `uq_pc2_relationship_sha` (`relationship_sha256`), KEY `idx_pc2_relationship_worker` (`worker_id`,`effective_from`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_payroll_relationship_members` (
   `relationship_member_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10048,7 +10048,7 @@ CREATE TABLE `0_hrm_payroll_relationship_members` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`relationship_member_id`), UNIQUE KEY `uq_pc2_relationship_member` (`payroll_relationship_id`,`assignment_id`,`effective_from`), UNIQUE KEY `uq_pc2_relmem_sha` (`member_sha256`),
   CONSTRAINT `fk_pc2_relmem_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_payroll_group_enrollments` (
   `enrollment_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10062,7 +10062,7 @@ CREATE TABLE `0_hrm_payroll_group_enrollments` (
   PRIMARY KEY (`enrollment_id`), UNIQUE KEY `uq_pc2_enrollment` (`payroll_relationship_id`,`group_version_id`,`effective_from`), UNIQUE KEY `uq_pc2_enrollment_sha` (`enrollment_sha256`),
   CONSTRAINT `fk_pc2_enr_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc2_enr_group_version` FOREIGN KEY (`group_version_id`) REFERENCES `0_hrm_payroll_group_versions` (`group_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TRIGGER `0_pc2_cal_u` BEFORE UPDATE ON `0_hrm_payroll_calendars` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_calendars';
 CREATE TRIGGER `0_pc2_cal_d` BEFORE DELETE ON `0_hrm_payroll_calendars` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_calendars';
@@ -10098,7 +10098,7 @@ CREATE TABLE `0_hrm_payroll_legacy_period_mapping_reviews` (
   PRIMARY KEY (`mapping_review_id`),
   UNIQUE KEY `uq_pc2m_legacy_period_review_sha` (`review_sha256`),
   KEY `idx_pc2m_legacy_period` (`legacy_period_id`,`review_status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TRIGGER `0_pc2m_lpmr_u` BEFORE UPDATE ON `0_hrm_payroll_legacy_period_mapping_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 legacy mapping review custody denies update';
 CREATE TRIGGER `0_pc2m_lpmr_d` BEFORE DELETE ON `0_hrm_payroll_legacy_period_mapping_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 legacy mapping review custody denies delete';
@@ -10110,13 +10110,13 @@ CREATE TABLE `0_hrm_payroll_seed_proposals` (
   `frequency_token` varchar(32) NOT NULL, `timezone_name` varchar(64) NOT NULL, `effective_from` date NOT NULL, `period_plan_json` text NOT NULL, `period_plan_sha256` char(64) NOT NULL, `proposal_sha256` char(64) NOT NULL,
   `maker_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`proposal_id`), UNIQUE KEY `uq_pc2_seed_prop_key` (`proposal_key`), UNIQUE KEY `uq_pc2_seed_prop_sha` (`proposal_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_payroll_seed_approvals` (
   `approval_id` bigint unsigned NOT NULL AUTO_INCREMENT, `proposal_id` bigint unsigned NOT NULL, `proposal_sha256` char(64) NOT NULL, `decision_token` varchar(24) NOT NULL,
   `evidence_sha256` char(64) NOT NULL, `approval_sha256` char(64) NOT NULL, `checker_id` int unsigned NOT NULL, `approved_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`approval_id`), UNIQUE KEY `uq_pc2_seed_approval_prop` (`proposal_id`), UNIQUE KEY `uq_pc2_seed_approval_sha` (`approval_sha256`),
   CONSTRAINT `fk_pc2_seed_approval_prop` FOREIGN KEY (`proposal_id`) REFERENCES `0_hrm_payroll_seed_proposals` (`proposal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_payroll_seed_executions` (
   `execution_id` bigint unsigned NOT NULL AUTO_INCREMENT, `proposal_id` bigint unsigned NOT NULL, `approval_id` bigint unsigned NOT NULL, `calendar_id` bigint unsigned NOT NULL,
   `calendar_version_id` bigint unsigned NOT NULL, `payroll_group_id` bigint unsigned NOT NULL, `group_version_id` bigint unsigned NOT NULL, `currency_code` char(3) NOT NULL, `period_count` int unsigned NOT NULL, `period_set_sha256` char(64) NOT NULL, `execution_sha256` char(64) NOT NULL,
@@ -10124,20 +10124,20 @@ CREATE TABLE `0_hrm_payroll_seed_executions` (
   PRIMARY KEY (`execution_id`), UNIQUE KEY `uq_pc2_seed_execution_prop` (`proposal_id`), UNIQUE KEY `uq_pc2_seed_execution_sha` (`execution_sha256`),
   CONSTRAINT `fk_pc2_seed_exec_prop` FOREIGN KEY (`proposal_id`) REFERENCES `0_hrm_payroll_seed_proposals` (`proposal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc2_seed_exec_approval` FOREIGN KEY (`approval_id`) REFERENCES `0_hrm_payroll_seed_approvals` (`approval_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_payroll_legacy_period_mapping_plans` (
   `mapping_plan_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legacy_period_id` int NOT NULL, `source_period_sha256` char(64) NOT NULL, `calendar_version_id` bigint unsigned NOT NULL,
   `group_version_id` bigint unsigned NOT NULL, `legal_entity_id` bigint unsigned NOT NULL, `currency_code` char(3) NOT NULL, `period_key` varchar(80) NOT NULL,
   `period_start` date NOT NULL, `period_end` date NOT NULL, `cutoff_date` date NOT NULL, `pay_date` date NOT NULL, `post_date` date NOT NULL, `file_date` date NOT NULL,
   `mapping_plan_sha256` char(64) NOT NULL, `maker_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`mapping_plan_id`), UNIQUE KEY `uq_pc2_map_plan_legacy` (`legacy_period_id`), UNIQUE KEY `uq_pc2_map_plan_sha` (`mapping_plan_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_payroll_legacy_period_mapping_approvals` (
   `mapping_approval_id` bigint unsigned NOT NULL AUTO_INCREMENT, `mapping_plan_id` bigint unsigned NOT NULL, `mapping_plan_sha256` char(64) NOT NULL, `evidence_sha256` char(64) NOT NULL,
   `approval_sha256` char(64) NOT NULL, `checker_id` int unsigned NOT NULL, `approved_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`mapping_approval_id`), UNIQUE KEY `uq_pc2_map_approval_plan` (`mapping_plan_id`), UNIQUE KEY `uq_pc2_map_approval_sha` (`approval_sha256`),
   CONSTRAINT `fk_pc2_map_approval_plan` FOREIGN KEY (`mapping_plan_id`) REFERENCES `0_hrm_payroll_legacy_period_mapping_plans` (`mapping_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_payroll_legacy_period_conversion_receipts` (
   `conversion_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `mapping_plan_id` bigint unsigned NOT NULL, `mapping_approval_id` bigint unsigned NOT NULL,
   `legacy_period_id` int NOT NULL, `source_period_sha256` char(64) NOT NULL, `calendar_period_id` bigint unsigned NOT NULL, `conversion_sha256` char(64) NOT NULL,
@@ -10145,26 +10145,26 @@ CREATE TABLE `0_hrm_payroll_legacy_period_conversion_receipts` (
   PRIMARY KEY (`conversion_receipt_id`), UNIQUE KEY `uq_pc2_conv_plan` (`mapping_plan_id`), UNIQUE KEY `uq_pc2_conv_legacy` (`legacy_period_id`), UNIQUE KEY `uq_pc2_conv_sha` (`conversion_sha256`),
   CONSTRAINT `fk_pc2_conv_plan` FOREIGN KEY (`mapping_plan_id`) REFERENCES `0_hrm_payroll_legacy_period_mapping_plans` (`mapping_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc2_conv_approval` FOREIGN KEY (`mapping_approval_id`) REFERENCES `0_hrm_payroll_legacy_period_mapping_approvals` (`mapping_approval_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_payroll_legacy_period_reconciliations` (
   `reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT, `conversion_receipt_id` bigint unsigned NOT NULL, `legacy_period_id` int NOT NULL, `source_period_sha256` char(64) NOT NULL,
   `target_period_sha256` char(64) NOT NULL, `status_token` varchar(24) NOT NULL, `evidence_sha256` char(64) NOT NULL, `reconciliation_sha256` char(64) NOT NULL,
   `reviewer_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`reconciliation_id`), UNIQUE KEY `uq_pc2_recon_receipt` (`conversion_receipt_id`), UNIQUE KEY `uq_pc2_recon_sha` (`reconciliation_sha256`),
   CONSTRAINT `fk_pc2_recon_receipt` FOREIGN KEY (`conversion_receipt_id`) REFERENCES `0_hrm_payroll_legacy_period_conversion_receipts` (`conversion_receipt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_payroll_relationship_migration_plans` (
   `relationship_plan_id` bigint unsigned NOT NULL AUTO_INCREMENT, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL,
   `legal_entity_id` bigint unsigned NOT NULL, `group_version_id` bigint unsigned NOT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL,
   `source_identity_sha256` char(64) NOT NULL, `relationship_plan_sha256` char(64) NOT NULL, `maker_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`relationship_plan_id`), UNIQUE KEY `uq_pc2_rel_plan_sha` (`relationship_plan_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_payroll_relationship_migration_approvals` (
   `relationship_approval_id` bigint unsigned NOT NULL AUTO_INCREMENT, `relationship_plan_id` bigint unsigned NOT NULL, `relationship_plan_sha256` char(64) NOT NULL,
   `evidence_sha256` char(64) NOT NULL, `approval_sha256` char(64) NOT NULL, `checker_id` int unsigned NOT NULL, `approved_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`relationship_approval_id`), UNIQUE KEY `uq_pc2_rel_approval_plan` (`relationship_plan_id`), UNIQUE KEY `uq_pc2_rel_approval_sha` (`approval_sha256`),
   CONSTRAINT `fk_pc2_relmig_approval_plan` FOREIGN KEY (`relationship_plan_id`) REFERENCES `0_hrm_payroll_relationship_migration_plans` (`relationship_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_payroll_relationship_migration_receipts` (
   `relationship_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `relationship_plan_id` bigint unsigned NOT NULL, `relationship_approval_id` bigint unsigned NOT NULL,
   `payroll_relationship_id` bigint unsigned NOT NULL, `relationship_member_id` bigint unsigned NOT NULL, `enrollment_id` bigint unsigned NOT NULL, `receipt_sha256` char(64) NOT NULL,
@@ -10172,7 +10172,7 @@ CREATE TABLE `0_hrm_payroll_relationship_migration_receipts` (
   PRIMARY KEY (`relationship_receipt_id`), UNIQUE KEY `uq_pc2_rel_receipt_plan` (`relationship_plan_id`), UNIQUE KEY `uq_pc2_rel_receipt_sha` (`receipt_sha256`),
   CONSTRAINT `fk_pc2_relmig_receipt_plan` FOREIGN KEY (`relationship_plan_id`) REFERENCES `0_hrm_payroll_relationship_migration_plans` (`relationship_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc2_relmig_receipt_approval` FOREIGN KEY (`relationship_approval_id`) REFERENCES `0_hrm_payroll_relationship_migration_approvals` (`relationship_approval_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_pc2_sdp_u` BEFORE UPDATE ON `0_hrm_payroll_seed_proposals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_seed_proposals';
 CREATE TRIGGER `0_pc2_sdp_d` BEFORE DELETE ON `0_hrm_payroll_seed_proposals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies delete on hrm_payroll_seed_proposals';
 CREATE TRIGGER `0_pc2_sda_u` BEFORE UPDATE ON `0_hrm_payroll_seed_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-002 immutable custody denies update on hrm_payroll_seed_approvals';
@@ -10204,7 +10204,7 @@ CREATE TABLE `0_hrm_pay_elements` (
   PRIMARY KEY (`pay_element_id`),
   UNIQUE KEY `uq_pc3_element_code` (`element_code`),
   UNIQUE KEY `uq_pc3_element_sha` (`identity_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_element_versions` (
   `element_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10223,7 +10223,7 @@ CREATE TABLE `0_hrm_pay_element_versions` (
   UNIQUE KEY `uq_pc3_element_version_sha` (`version_sha256`),
   KEY `idx_pc3_element_effective` (`pay_element_id`,`effective_from`,`effective_to`),
   CONSTRAINT `fk_pc3_elemv_element` FOREIGN KEY (`pay_element_id`) REFERENCES `0_hrm_pay_elements` (`pay_element_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_input_definitions` (
   `input_definition_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10240,7 +10240,7 @@ CREATE TABLE `0_hrm_pay_input_definitions` (
   UNIQUE KEY `uq_pc3_input_definition_sha` (`definition_sha256`),
   UNIQUE KEY `uq_pc3_indef_binding` (`input_definition_id`,`element_version_id`,`value_type`),
   CONSTRAINT `fk_pc3_indef_element_version` FOREIGN KEY (`element_version_id`) REFERENCES `0_hrm_pay_element_versions` (`element_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_eligibility_versions` (
   `eligibility_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10258,7 +10258,7 @@ CREATE TABLE `0_hrm_pay_eligibility_versions` (
   UNIQUE KEY `uq_pc3_eligibility_sha` (`eligibility_sha256`),
   KEY `idx_pc3_eligibility_effective` (`element_version_id`,`effective_from`,`effective_to`),
   CONSTRAINT `fk_pc3_eligv_element_version` FOREIGN KEY (`element_version_id`) REFERENCES `0_hrm_pay_element_versions` (`element_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_payroll_approved_inputs` (
   `approved_input_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10291,7 +10291,7 @@ CREATE TABLE `0_hrm_payroll_approved_inputs` (
   CONSTRAINT `fk_pc3_input_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc3_input_definition_binding` FOREIGN KEY (`input_definition_id`,`element_version_id`,`value_type`) REFERENCES `0_hrm_pay_input_definitions` (`input_definition_id`,`element_version_id`,`value_type`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc3_input_supersedes` FOREIGN KEY (`supersedes_input_id`) REFERENCES `0_hrm_payroll_approved_inputs` (`approved_input_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TRIGGER `0_pc3_elem_u` BEFORE UPDATE ON `0_hrm_pay_elements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_elements';
 CREATE TRIGGER `0_pc3_elem_d` BEFORE DELETE ON `0_hrm_pay_elements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_elements';
@@ -10324,7 +10324,7 @@ CREATE TABLE `0_hrm_pay_core_003_legacy_mapping_reviews` (
   PRIMARY KEY (`mapping_review_id`),
   UNIQUE KEY `uq_pc3m_review_sha` (`review_sha256`),
   KEY `idx_pc3m_source` (`source_kind`,`source_row_id`,`review_status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_pc3m_lsmr_u` BEFORE UPDATE ON `0_hrm_pay_core_003_legacy_mapping_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 legacy mapping review custody denies update';
 CREATE TRIGGER `0_pc3m_lsmr_d` BEFORE DELETE ON `0_hrm_pay_core_003_legacy_mapping_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 legacy mapping review custody denies delete';
 
@@ -10348,7 +10348,7 @@ CREATE TABLE `0_hrm_pay_core_003_legacy_mapping_plans` (
   KEY `idx_pc3_mapping_source` (`source_kind`,`source_row_id`,`source_sha256`),
   UNIQUE KEY `uq_pc3_mapping_supersedes` (`supersedes_mapping_plan_id`),
   CONSTRAINT `fk_pc3_mapping_supersedes` FOREIGN KEY (`supersedes_mapping_plan_id`) REFERENCES `0_hrm_pay_core_003_legacy_mapping_plans` (`mapping_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_003_legacy_mapping_approvals` (
   `mapping_approval_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10363,7 +10363,7 @@ CREATE TABLE `0_hrm_pay_core_003_legacy_mapping_approvals` (
   UNIQUE KEY `uq_pc3_mapping_approval_plan` (`mapping_plan_id`),
   UNIQUE KEY `uq_pc3_mapping_approval_sha` (`approval_sha256`),
   CONSTRAINT `fk_pc3_mapping_approval_plan` FOREIGN KEY (`mapping_plan_id`) REFERENCES `0_hrm_pay_core_003_legacy_mapping_plans` (`mapping_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_pc3_mpl_u` BEFORE UPDATE ON `0_hrm_pay_core_003_legacy_mapping_plans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_core_003_legacy_mapping_plans';
 CREATE TRIGGER `0_pc3_mpl_d` BEFORE DELETE ON `0_hrm_pay_core_003_legacy_mapping_plans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_core_003_legacy_mapping_plans';
 CREATE TRIGGER `0_pc3_map_u` BEFORE UPDATE ON `0_hrm_pay_core_003_legacy_mapping_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_core_003_legacy_mapping_approvals';
@@ -10389,7 +10389,7 @@ CREATE TABLE `0_hrm_pay_core_003_legacy_conversion_receipts` (
   UNIQUE KEY `uq_pc3_conversion_source` (`source_kind`,`source_row_id`,`source_sha256`),
   CONSTRAINT `fk_pc3_conversion_plan` FOREIGN KEY (`mapping_plan_id`) REFERENCES `0_hrm_pay_core_003_legacy_mapping_plans` (`mapping_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc3_conversion_approval` FOREIGN KEY (`mapping_approval_id`) REFERENCES `0_hrm_pay_core_003_legacy_mapping_approvals` (`mapping_approval_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_pc3_cvr_u` BEFORE UPDATE ON `0_hrm_pay_core_003_legacy_conversion_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_core_003_legacy_conversion_receipts';
 CREATE TRIGGER `0_pc3_cvr_d` BEFORE DELETE ON `0_hrm_pay_core_003_legacy_conversion_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_core_003_legacy_conversion_receipts';
 
@@ -10414,7 +10414,7 @@ CREATE TABLE `0_hrm_pay_core_003_legacy_conversion_reconciliations` (
   UNIQUE KEY `uq_pc3_reconciliation_supersedes` (`supersedes_reconciliation_id`),
   CONSTRAINT `fk_pc3_reconciliation_receipt` FOREIGN KEY (`conversion_receipt_id`) REFERENCES `0_hrm_pay_core_003_legacy_conversion_receipts` (`conversion_receipt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc3_reconciliation_supersedes` FOREIGN KEY (`supersedes_reconciliation_id`) REFERENCES `0_hrm_pay_core_003_legacy_conversion_reconciliations` (`reconciliation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_pc3_rcn_u` BEFORE UPDATE ON `0_hrm_pay_core_003_legacy_conversion_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_core_003_legacy_conversion_reconciliations';
 CREATE TRIGGER `0_pc3_rcn_d` BEFORE DELETE ON `0_hrm_pay_core_003_legacy_conversion_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_core_003_legacy_conversion_reconciliations';
 
@@ -10436,7 +10436,7 @@ CREATE TABLE `0_hrm_pay_core_003_compatibility_parity_evidence` (
   UNIQUE KEY `uq_pc3_parity_sha` (`parity_sha256`),
   KEY `idx_pc3_parity_receipt` (`conversion_receipt_id`,`status_token`),
   CONSTRAINT `fk_pc3_parity_receipt` FOREIGN KEY (`conversion_receipt_id`) REFERENCES `0_hrm_pay_core_003_legacy_conversion_receipts` (`conversion_receipt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_pc3_pry_u` BEFORE UPDATE ON `0_hrm_pay_core_003_compatibility_parity_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies update on hrm_pay_core_003_compatibility_parity_evidence';
 CREATE TRIGGER `0_pc3_pry_d` BEFORE DELETE ON `0_hrm_pay_core_003_compatibility_parity_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-003 immutable custody denies delete on hrm_pay_core_003_compatibility_parity_evidence';
 
@@ -10465,7 +10465,7 @@ CREATE TABLE `0_hrm_pay_core_004_snapshots` (
   KEY `idx_pc4_snapshot_scope` (`payroll_relationship_id`,`calendar_period_id`),
   CONSTRAINT `fk_pc4_snapshot_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc4_snapshot_period` FOREIGN KEY (`calendar_period_id`) REFERENCES `0_hrm_payroll_calendar_periods` (`calendar_period_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_004_results` (
   `result_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10484,7 +10484,7 @@ CREATE TABLE `0_hrm_pay_core_004_results` (
   UNIQUE KEY `uq_pc4_result_sha` (`result_sha256`),
   KEY `idx_pc4_result_snapshot` (`snapshot_id`),
   CONSTRAINT `fk_pc4_result_snapshot` FOREIGN KEY (`snapshot_id`) REFERENCES `0_hrm_pay_core_004_snapshots` (`snapshot_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_004_result_lines` (
   `result_line_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10505,7 +10505,7 @@ CREATE TABLE `0_hrm_pay_core_004_result_lines` (
   KEY `idx_pc4_result_line_element` (`element_version_id`),
   CONSTRAINT `fk_pc4_line_result` FOREIGN KEY (`result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc4_line_element` FOREIGN KEY (`element_version_id`) REFERENCES `0_hrm_pay_element_versions` (`element_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_004_traces` (
   `trace_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10523,7 +10523,7 @@ CREATE TABLE `0_hrm_pay_core_004_traces` (
   UNIQUE KEY `uq_pc4_trace_seq` (`result_id`,`trace_seq`),
   UNIQUE KEY `uq_pc4_trace_sha` (`result_id`,`trace_sha256`),
   CONSTRAINT `fk_pc4_trace_result` FOREIGN KEY (`result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_pc4_snap_u` BEFORE UPDATE ON `0_hrm_pay_core_004_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_snapshots';
 CREATE TRIGGER `0_pc4_snap_d` BEFORE DELETE ON `0_hrm_pay_core_004_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_snapshots';
 CREATE TRIGGER `0_pc4_res_u` BEFORE UPDATE ON `0_hrm_pay_core_004_results` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_results';
@@ -10549,7 +10549,7 @@ CREATE TABLE `0_hrm_pay_core_004_integrity_evidence` (
   UNIQUE KEY `uq_pc4_integrity_sha` (`integrity_sha256`),
   KEY `idx_pc4_integrity_result` (`result_id`,`verification_status`),
   CONSTRAINT `fk_pc4_integrity_result` FOREIGN KEY (`result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_pc4_integ_u` BEFORE UPDATE ON `0_hrm_pay_core_004_integrity_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_integrity_evidence';
 CREATE TRIGGER `0_pc4_integ_d` BEFORE DELETE ON `0_hrm_pay_core_004_integrity_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_integrity_evidence';
 
@@ -10569,7 +10569,7 @@ CREATE TABLE `0_hrm_pay_core_004_correction_lineage` (
   KEY `idx_pc4_lineage_predecessor` (`predecessor_result_id`),
   CONSTRAINT `fk_pc4_lineage_predecessor` FOREIGN KEY (`predecessor_result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc4_lineage_successor` FOREIGN KEY (`successor_result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_pc4_lin_u` BEFORE UPDATE ON `0_hrm_pay_core_004_correction_lineage` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_correction_lineage';
 CREATE TRIGGER `0_pc4_lin_d` BEFORE DELETE ON `0_hrm_pay_core_004_correction_lineage` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_correction_lineage';
 
@@ -10587,7 +10587,7 @@ CREATE TABLE `0_hrm_pay_core_004_legacy_provenance_gaps` (
   PRIMARY KEY (`legacy_provenance_id`),
   UNIQUE KEY `uq_pc4_legacy_provenance_sha` (`provenance_sha256`),
   UNIQUE KEY `uq_pc4_legacy_source_state` (`legacy_source_kind`,`legacy_source_id`,`legacy_source_sha256`,`provenance_state`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_pc4_lprov_u` BEFORE UPDATE ON `0_hrm_pay_core_004_legacy_provenance_gaps` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_legacy_provenance_gaps';
 CREATE TRIGGER `0_pc4_lprov_d` BEFORE DELETE ON `0_hrm_pay_core_004_legacy_provenance_gaps` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_legacy_provenance_gaps';
 
@@ -10606,7 +10606,7 @@ CREATE TABLE `0_hrm_pay_core_004_recovery_evidence` (
   KEY `idx_pc4_recovery_result` (`result_id`,`created_at`),
   CONSTRAINT `fk_pc4_recovery_result` FOREIGN KEY (`result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc4_recovery_integrity` FOREIGN KEY (`integrity_evidence_id`) REFERENCES `0_hrm_pay_core_004_integrity_evidence` (`integrity_evidence_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_004_archive_evidence` (
   `archive_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10624,7 +10624,7 @@ CREATE TABLE `0_hrm_pay_core_004_archive_evidence` (
   KEY `idx_pc4_archive_result` (`result_id`,`created_at`),
   CONSTRAINT `fk_pc4_archive_result` FOREIGN KEY (`result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc4_archive_integrity` FOREIGN KEY (`integrity_evidence_id`) REFERENCES `0_hrm_pay_core_004_integrity_evidence` (`integrity_evidence_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_pc4_recv_u` BEFORE UPDATE ON `0_hrm_pay_core_004_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_recovery_evidence';
 CREATE TRIGGER `0_pc4_recv_d` BEFORE DELETE ON `0_hrm_pay_core_004_recovery_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies delete on hrm_pay_core_004_recovery_evidence';
 CREATE TRIGGER `0_pc4_arch_u` BEFORE UPDATE ON `0_hrm_pay_core_004_archive_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-004 immutable custody denies update on hrm_pay_core_004_archive_evidence';
@@ -10656,7 +10656,7 @@ CREATE TABLE `0_hrm_pay_balance_definitions` (
   UNIQUE KEY `uq_pc6_balance_version` (`balance_code`,`version_no`),
   UNIQUE KEY `uq_pc6_balance_def_sha` (`definition_sha256`),
   KEY `idx_pc6_balance_effective` (`balance_code`,`effective_from`,`effective_to`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_pay_balance_movements` (
   `movement_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `balance_definition_id` bigint unsigned NOT NULL,
@@ -10694,7 +10694,7 @@ CREATE TABLE `0_hrm_pay_balance_movements` (
   CONSTRAINT `fk_pc6_movement_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc6_movement_period` FOREIGN KEY (`calendar_period_id`) REFERENCES `0_hrm_payroll_calendar_periods` (`calendar_period_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc6_movement_predecessor` FOREIGN KEY (`predecessor_movement_id`) REFERENCES `0_hrm_pay_balance_movements` (`movement_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_pay_balance_opening_inventory` (
   `opening_inventory_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `balance_definition_id` bigint unsigned NOT NULL,
@@ -10725,7 +10725,7 @@ CREATE TABLE `0_hrm_pay_balance_opening_inventory` (
   UNIQUE KEY `uq_pc6_opening_source` (`balance_definition_id`,`payroll_relationship_id`,`legacy_source_type`,`legacy_source_id`,`legacy_source_sha256`),
   CONSTRAINT `fk_pc6_opening_definition` FOREIGN KEY (`balance_definition_id`) REFERENCES `0_hrm_pay_balance_definitions` (`balance_definition_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc6_opening_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_pay_balance_snapshots` (
   `balance_snapshot_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `balance_definition_id` bigint unsigned NOT NULL,
@@ -10757,7 +10757,7 @@ CREATE TABLE `0_hrm_pay_balance_snapshots` (
   UNIQUE KEY `uq_pc6_snapshot_scope` (`balance_definition_id`,`scope_sha256`,`as_of_date`,`movement_set_sha256`),
   CONSTRAINT `fk_pc6_snapshot_definition` FOREIGN KEY (`balance_definition_id`) REFERENCES `0_hrm_pay_balance_definitions` (`balance_definition_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc6_snapshot_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_pay_balance_reconciliations` (
   `reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `balance_snapshot_id` bigint unsigned NOT NULL,
@@ -10775,7 +10775,7 @@ CREATE TABLE `0_hrm_pay_balance_reconciliations` (
   PRIMARY KEY (`reconciliation_id`),
   UNIQUE KEY `uq_pc6_reconciliation_sha` (`reconciliation_sha256`),
   CONSTRAINT `fk_pc6_recon_snapshot` FOREIGN KEY (`balance_snapshot_id`) REFERENCES `0_hrm_pay_balance_snapshots` (`balance_snapshot_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_balance_recovery_evidence` (
   `recovery_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10789,7 +10789,7 @@ CREATE TABLE `0_hrm_pay_balance_recovery_evidence` (
   PRIMARY KEY (`recovery_evidence_id`),
   UNIQUE KEY `uq_pc6_recovery_sha` (`recovery_sha256`),
   CONSTRAINT `fk_pc6_recovery_recon` FOREIGN KEY (`reconciliation_id`) REFERENCES `0_hrm_pay_balance_reconciliations` (`reconciliation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_pc6_def_u` BEFORE UPDATE ON `0_hrm_pay_balance_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies update on hrm_pay_balance_definitions';
 CREATE TRIGGER `0_pc6_def_d` BEFORE DELETE ON `0_hrm_pay_balance_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies delete on hrm_pay_balance_definitions';
 CREATE TRIGGER `0_pc6_mov_u` BEFORE UPDATE ON `0_hrm_pay_balance_movements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-006 immutable custody denies update on hrm_pay_balance_movements';
@@ -10827,7 +10827,7 @@ CREATE TABLE `0_hrm_pay_retro_events` (
   UNIQUE KEY `uq_pc7_event_source` (`payroll_relationship_id`,`source_family`,`source_system`,`source_key`),
   KEY `idx_pc7_event_effective` (`payroll_relationship_id`,`effective_from`,`effective_to`),
   CONSTRAINT `fk_pc7_event_relationship` FOREIGN KEY (`payroll_relationship_id`) REFERENCES `0_hrm_payroll_relationships` (`payroll_relationship_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_retro_affected_results` (
   `affected_result_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10846,7 +10846,7 @@ CREATE TABLE `0_hrm_pay_retro_affected_results` (
   UNIQUE KEY `uq_pc7_discovery_sha` (`discovery_sha256`),
   CONSTRAINT `fk_pc7_affected_event` FOREIGN KEY (`retro_event_id`) REFERENCES `0_hrm_pay_retro_events` (`retro_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc7_affected_result` FOREIGN KEY (`original_result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_retro_contexts` (
   `context_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10873,7 +10873,7 @@ CREATE TABLE `0_hrm_pay_retro_contexts` (
   UNIQUE KEY `uq_pc7_context_affected` (`affected_result_id`,`context_sha256`),
   CONSTRAINT `fk_pc7_context_affected` FOREIGN KEY (`affected_result_id`) REFERENCES `0_hrm_pay_retro_affected_results` (`affected_result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc7_context_result` FOREIGN KEY (`original_result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_retro_deltas` (
   `delta_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10894,7 +10894,7 @@ CREATE TABLE `0_hrm_pay_retro_deltas` (
   UNIQUE KEY `uq_pc7_delta_context_key` (`context_id`,`delta_key`),
   CONSTRAINT `fk_pc7_delta_affected` FOREIGN KEY (`affected_result_id`) REFERENCES `0_hrm_pay_retro_affected_results` (`affected_result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc7_delta_context` FOREIGN KEY (`context_id`) REFERENCES `0_hrm_pay_retro_contexts` (`context_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_retro_arrears` (
   `arrears_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10913,7 +10913,7 @@ CREATE TABLE `0_hrm_pay_retro_arrears` (
   UNIQUE KEY `uq_pc7_arrears_sha` (`arrears_sha256`),
   KEY `idx_pc7_arrears_scope` (`payroll_relationship_id`,`currency`),
   CONSTRAINT `fk_pc7_arrears_affected` FOREIGN KEY (`affected_result_id`) REFERENCES `0_hrm_pay_retro_affected_results` (`affected_result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_retro_arrears_movements` (
   `arrears_movement_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10929,7 +10929,7 @@ CREATE TABLE `0_hrm_pay_retro_arrears_movements` (
   PRIMARY KEY (`arrears_movement_id`),
   UNIQUE KEY `uq_pc7_arrears_movement_sha` (`movement_sha256`),
   CONSTRAINT `fk_pc7_arrears_movement` FOREIGN KEY (`arrears_id`) REFERENCES `0_hrm_pay_retro_arrears` (`arrears_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_retro_plans` (
   `retro_plan_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10952,7 +10952,7 @@ CREATE TABLE `0_hrm_pay_retro_plans` (
   UNIQUE KEY `uq_pc7_plan_idem` (`affected_result_id`,`idempotency_key`),
   CONSTRAINT `fk_pc7_plan_affected` FOREIGN KEY (`affected_result_id`) REFERENCES `0_hrm_pay_retro_affected_results` (`affected_result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc7_plan_context` FOREIGN KEY (`context_id`) REFERENCES `0_hrm_pay_retro_contexts` (`context_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_retro_approvals` (
   `approval_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10966,7 +10966,7 @@ CREATE TABLE `0_hrm_pay_retro_approvals` (
   UNIQUE KEY `uq_pc7_approval_plan` (`retro_plan_id`),
   UNIQUE KEY `uq_pc7_approval_sha` (`approval_sha256`),
   CONSTRAINT `fk_pc7_approval_plan` FOREIGN KEY (`retro_plan_id`) REFERENCES `0_hrm_pay_retro_plans` (`retro_plan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_retro_executions` (
   `execution_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -10994,7 +10994,7 @@ CREATE TABLE `0_hrm_pay_retro_executions` (
   CONSTRAINT `fk_pc7_execution_successor` FOREIGN KEY (`successor_result_id`) REFERENCES `0_hrm_pay_core_004_results` (`result_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc7_execution_snapshot` FOREIGN KEY (`successor_snapshot_id`) REFERENCES `0_hrm_pay_core_004_snapshots` (`snapshot_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc7_execution_lineage` FOREIGN KEY (`core004_lineage_id`) REFERENCES `0_hrm_pay_core_004_correction_lineage` (`lineage_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_retro_downstream_obligations` (
   `obligation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11013,7 +11013,7 @@ CREATE TABLE `0_hrm_pay_retro_downstream_obligations` (
   UNIQUE KEY `uq_pc7_obligation_exec_domain` (`execution_id`,`domain`,`obligation_kind`,`original_evidence_sha256`),
   CONSTRAINT `fk_pc7_obligation_execution` FOREIGN KEY (`execution_id`) REFERENCES `0_hrm_pay_retro_executions` (`execution_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pc7_obligation_predecessor` FOREIGN KEY (`predecessor_obligation_id`) REFERENCES `0_hrm_pay_retro_downstream_obligations` (`obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_retro_reconciliations` (
   `reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11030,7 +11030,7 @@ CREATE TABLE `0_hrm_pay_retro_reconciliations` (
   PRIMARY KEY (`reconciliation_id`),
   UNIQUE KEY `uq_pc7_reconciliation_sha` (`reconciliation_sha256`),
   CONSTRAINT `fk_pc7_recon_execution` FOREIGN KEY (`execution_id`) REFERENCES `0_hrm_pay_retro_executions` (`execution_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_retro_recovery_evidence` (
   `recovery_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11044,7 +11044,7 @@ CREATE TABLE `0_hrm_pay_retro_recovery_evidence` (
   PRIMARY KEY (`recovery_evidence_id`),
   UNIQUE KEY `uq_pc7_recovery_sha` (`recovery_sha256`),
   CONSTRAINT `fk_pc7_recovery_recon` FOREIGN KEY (`reconciliation_id`) REFERENCES `0_hrm_pay_retro_reconciliations` (`reconciliation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TRIGGER `0_pc7_evt_u` BEFORE UPDATE ON `0_hrm_pay_retro_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies update on hrm_pay_retro_events';
 CREATE TRIGGER `0_pc7_evt_d` BEFORE DELETE ON `0_hrm_pay_retro_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-007 immutable custody denies delete on hrm_pay_retro_events';
@@ -11078,44 +11078,44 @@ CREATE TABLE `0_hrm_pay_validation_validator_defs` (
   `validator_key` varchar(96) NOT NULL, `validator_version` varchar(64) NOT NULL, `domain` varchar(64) NOT NULL, `severity` varchar(16) NOT NULL, `origin` varchar(16) NOT NULL, `capability` varchar(64) NOT NULL, `purpose` varchar(255) NOT NULL,
   `input_contract_sha256` char(64) NOT NULL, `output_contract_sha256` char(64) NOT NULL, `threshold_policy_sha256` char(64) DEFAULT NULL, `applicability_json` longtext NOT NULL, `definition_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`validator_definition_id`), UNIQUE KEY `uq_pc8_validator_sha` (`definition_sha256`), UNIQUE KEY `uq_pc8_validator_version` (`validator_key`,`validator_version`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_pay_validation_threshold_policies` (
  `threshold_policy_id` bigint unsigned NOT NULL AUTO_INCREMENT, `policy_key` varchar(96) NOT NULL, `version_no` int unsigned NOT NULL, `measure` varchar(64) NOT NULL, `unit_code` varchar(32) NOT NULL, `currency_code` char(3) DEFAULT NULL, `mode` varchar(16) NOT NULL, `tolerance` decimal(30,8) NOT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL, `policy_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`threshold_policy_id`), UNIQUE KEY `uq_pc8_threshold_sha` (`policy_sha256`), UNIQUE KEY `uq_pc8_threshold_version` (`policy_key`,`version_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_pay_validation_pack_bindings` (
  `pack_binding_id` bigint unsigned NOT NULL AUTO_INCREMENT, `pack_key` varchar(96) NOT NULL, `pack_version` varchar(64) NOT NULL, `validator_definition_id` bigint unsigned NOT NULL, `capability` varchar(64) NOT NULL, `artifact_sha256` char(64) NOT NULL, `binding_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`pack_binding_id`), UNIQUE KEY `uq_pc8_pack_sha` (`binding_sha256`), UNIQUE KEY `uq_pc8_pack_version` (`pack_key`,`pack_version`,`validator_definition_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_pay_validation_runs` (
  `validation_run_id` bigint unsigned NOT NULL AUTO_INCREMENT, `validator_definition_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `worker_id` bigint unsigned DEFAULT NULL, `person_id` bigint unsigned DEFAULT NULL, `assignment_id` bigint unsigned DEFAULT NULL, `calendar_period_id` bigint unsigned DEFAULT NULL, `result_id` bigint unsigned NOT NULL, `result_sha256` char(64) NOT NULL, `source_sha256` char(64) NOT NULL, `evidence_set_sha256` char(64) NOT NULL, `idempotency_key` varchar(128) NOT NULL, `outcome` varchar(16) NOT NULL, `finding_set_sha256` char(64) NOT NULL, `execution_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`validation_run_id`), UNIQUE KEY `uq_pc8_run_command` (`validator_definition_id`,`payroll_relationship_id`,`idempotency_key`), UNIQUE KEY `uq_pc8_run_sha` (`execution_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_validation_findings` (
  `finding_id` bigint unsigned NOT NULL AUTO_INCREMENT, `validation_run_id` bigint unsigned NOT NULL, `finding_key` varchar(96) NOT NULL, `code` varchar(96) NOT NULL, `severity` varchar(16) NOT NULL, `evidence_sha256` char(64) NOT NULL, `finding_sha256` char(64) NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`finding_id`), UNIQUE KEY `uq_pc8_finding_run_key` (`validation_run_id`,`finding_key`), UNIQUE KEY `uq_pc8_finding_sha` (`finding_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_pay_validation_resolutions` (
  `resolution_id` bigint unsigned NOT NULL AUTO_INCREMENT, `finding_id` bigint unsigned NOT NULL, `reason_code` varchar(96) NOT NULL, `support_sha256` char(64) NOT NULL, `resulting_state` varchar(24) NOT NULL, `command_key` varchar(128) NOT NULL, `resolution_sha256` char(64) NOT NULL, `resolver_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`resolution_id`), UNIQUE KEY `uq_pc8_resolution_command` (`finding_id`,`command_key`), UNIQUE KEY `uq_pc8_resolution_sha` (`resolution_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_pay_validation_signoffs` (
  `signoff_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legal_entity_id` int unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `calendar_period_id` bigint unsigned DEFAULT NULL, `result_set_sha256` char(64) NOT NULL, `validation_set_sha256` char(64) NOT NULL, `resolution_set_sha256` char(64) NOT NULL, `signoff_state` varchar(16) NOT NULL, `command_key` varchar(128) NOT NULL, `signoff_sha256` char(64) NOT NULL, `signer_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`signoff_id`), UNIQUE KEY `uq_pc8_signoff_command` (`payroll_relationship_id`,`command_key`), UNIQUE KEY `uq_pc8_signoff_sha` (`signoff_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_pay_validation_variances` (
  `variance_id` bigint unsigned NOT NULL AUTO_INCREMENT, `variance_kind` varchar(24) NOT NULL, `legal_entity_id` int unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `current_result_id` bigint unsigned NOT NULL, `comparison_result_id` bigint unsigned NOT NULL, `current_result_sha256` char(64) NOT NULL, `comparison_result_sha256` char(64) NOT NULL, `currency` char(3) NOT NULL, `measure_set_json` longtext NOT NULL, `threshold_policy_sha256` char(64) DEFAULT NULL, `variance_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`variance_id`), UNIQUE KEY `uq_pc8_variance_sha` (`variance_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_pay_validation_reconciliations` (
  `reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT, `reconciliation_kind` varchar(24) NOT NULL, `legal_entity_id` int unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `calendar_period_id` bigint unsigned DEFAULT NULL, `result_set_sha256` char(64) NOT NULL, `source_evidence_sha256` char(64) NOT NULL, `expected_value` decimal(30,8) NOT NULL, `actual_value` decimal(30,8) NOT NULL, `difference_value` decimal(30,8) NOT NULL, `unit_code` varchar(32) NOT NULL, `currency_code` char(3) DEFAULT NULL, `threshold_policy_sha256` char(64) DEFAULT NULL, `reconciliation_state` varchar(24) NOT NULL, `evidence_sha256` char(64) NOT NULL, `reconciliation_sha256` char(64) NOT NULL, `reviewed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`reconciliation_id`), UNIQUE KEY `uq_pc8_reconciliation_sha` (`reconciliation_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_pay_validation_recovery_evidence` (
  `recovery_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT, `subject_type` varchar(64) NOT NULL, `subject_sha256` char(64) NOT NULL, `action_token` varchar(64) NOT NULL, `source_sha256` char(64) NOT NULL, `evidence_sha256` char(64) NOT NULL, `recovery_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`recovery_evidence_id`), UNIQUE KEY `uq_pc8_recovery_sha` (`recovery_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TRIGGER `0_pc8_vdf_u` BEFORE UPDATE ON `0_hrm_pay_validation_validator_defs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies update on hrm_pay_validation_validator_defs';
 CREATE TRIGGER `0_pc8_vdf_d` BEFORE DELETE ON `0_hrm_pay_validation_validator_defs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-008 immutable custody denies delete on hrm_pay_validation_validator_defs';
@@ -11177,7 +11177,7 @@ CREATE TABLE `0_hrm_pay_core_009_runs` (
   UNIQUE KEY `uq_pc9_payroll_period` (`payroll_period_id`),
   KEY `ix_pc9_run_state_lease` (`state`,`lease_expires_at`),
   KEY `ix_pc9_run_scope` (`legal_entity_id`,`calendar_period_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_009_items` (
   `run_item_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11208,7 +11208,7 @@ CREATE TABLE `0_hrm_pay_core_009_items` (
   UNIQUE KEY `uq_pc9_item_employee` (`run_id`,`employee_id_sha256`),
   KEY `ix_pc9_item_state` (`run_id`,`item_state`,`ordinal_no`),
   KEY `ix_pc9_item_scope` (`legal_entity_id`,`payroll_relationship_id`,`assignment_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_009_lease_events` (
   `lease_event_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11218,7 +11218,7 @@ CREATE TABLE `0_hrm_pay_core_009_lease_events` (
   `lease_event_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`lease_event_id`), UNIQUE KEY `uq_pc9_lease_sha` (`lease_event_sha256`), KEY `ix_pc9_lease_run` (`run_id`,`lease_event_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_009_attempts` (
   `attempt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `run_id` bigint unsigned NOT NULL,
@@ -11229,7 +11229,7 @@ CREATE TABLE `0_hrm_pay_core_009_attempts` (
   `evidence_sha256` char(64) NOT NULL, `attempt_sha256` char(64) NOT NULL,
   `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`attempt_id`), UNIQUE KEY `uq_pc9_attempt_sha` (`attempt_sha256`), UNIQUE KEY `uq_pc9_attempt_no` (`run_item_id`,`attempt_no`), KEY `ix_pc9_attempt_run` (`run_id`,`attempt_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_009_checkpoints` (
   `checkpoint_id` bigint unsigned NOT NULL AUTO_INCREMENT, `run_id` bigint unsigned NOT NULL,
@@ -11239,7 +11239,7 @@ CREATE TABLE `0_hrm_pay_core_009_checkpoints` (
   `evidence_sha256` char(64) NOT NULL, `checkpoint_sha256` char(64) NOT NULL,
   `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`checkpoint_id`), UNIQUE KEY `uq_pc9_checkpoint_sha` (`checkpoint_sha256`), UNIQUE KEY `uq_pc9_checkpoint_no` (`run_id`,`checkpoint_no`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_009_transitions` (
   `transition_id` bigint unsigned NOT NULL AUTO_INCREMENT, `run_id` bigint unsigned NOT NULL,
@@ -11249,7 +11249,7 @@ CREATE TABLE `0_hrm_pay_core_009_transitions` (
   `resulting_state_sha256` char(64) NOT NULL, `transition_sha256` char(64) NOT NULL,
   `actor_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`transition_id`), UNIQUE KEY `uq_pc9_transition_sha` (`transition_sha256`), UNIQUE KEY `uq_pc9_transition_version` (`run_id`,`resulting_version`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_009_quarantine` (
   `quarantine_id` bigint unsigned NOT NULL AUTO_INCREMENT, `run_id` bigint unsigned NOT NULL,
@@ -11258,7 +11258,7 @@ CREATE TABLE `0_hrm_pay_core_009_quarantine` (
   `quarantine_sha256` char(64) NOT NULL, `quarantined_by` int unsigned NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`quarantine_id`), UNIQUE KEY `uq_pc9_quarantine_sha` (`quarantine_sha256`), UNIQUE KEY `uq_pc9_quarantine_attempt` (`attempt_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_009_recovery_evidence` (
   `recovery_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT, `run_id` bigint unsigned NOT NULL,
@@ -11266,7 +11266,7 @@ CREATE TABLE `0_hrm_pay_core_009_recovery_evidence` (
   `evidence_sha256` char(64) NOT NULL, `recovery_sha256` char(64) NOT NULL,
   `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`recovery_evidence_id`), UNIQUE KEY `uq_pc9_recovery_sha` (`recovery_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TRIGGER `0_pc9_lea_u` BEFORE UPDATE ON `0_hrm_pay_core_009_lease_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies update on hrm_pay_core_009_lease_events';
 CREATE TRIGGER `0_pc9_lea_d` BEFORE DELETE ON `0_hrm_pay_core_009_lease_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-009 immutable custody denies delete on hrm_pay_core_009_lease_events';
@@ -11307,7 +11307,7 @@ CREATE TABLE `0_hrm_pay_core_010_approval_intents` (
   UNIQUE KEY `uq_pc10_intent_cmd` (`payroll_group_id`,`command_key`),
   KEY `ix_pc10_intent_period` (`payroll_period_id`,`result_set_sha256`),
   KEY `ix_pc10_intent_scope` (`legal_entity_id`,`payroll_group_id`,`calendar_period_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_010_approvals` (
   `approval_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11325,7 +11325,7 @@ CREATE TABLE `0_hrm_pay_core_010_approvals` (
   UNIQUE KEY `uq_pc10_approval_sha` (`approval_sha256`),
   UNIQUE KEY `uq_pc10_approval_draft` (`approval_draft_id`),
   KEY `ix_pc10_approval_period` (`payroll_period_id`,`result_set_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_010_projections` (
   `projection_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11354,7 +11354,7 @@ CREATE TABLE `0_hrm_pay_core_010_projections` (
   UNIQUE KEY `uq_pc10_projection_result` (`result_id`,`projection_contract_version`),
   KEY `ix_pc10_projection_period` (`payroll_period_id`,`result_id`),
   KEY `ix_pc10_projection_scope` (`legal_entity_id`,`payroll_group_id`,`payroll_relationship_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_010_parity_evidence` (
   `parity_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11374,7 +11374,7 @@ CREATE TABLE `0_hrm_pay_core_010_parity_evidence` (
   PRIMARY KEY (`parity_id`),
   UNIQUE KEY `uq_pc10_parity_sha` (`parity_sha256`),
   KEY `ix_pc10_parity_scope` (`payroll_group_id`,`payroll_period_id`,`parity_status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_010_cutover_transitions` (
   `transition_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11397,7 +11397,7 @@ CREATE TABLE `0_hrm_pay_core_010_cutover_transitions` (
   UNIQUE KEY `uq_pc10_transition_seq` (`payroll_group_id`,`sequence_no`),
   UNIQUE KEY `uq_pc10_transition_cmd` (`payroll_group_id`,`command_key`),
   KEY `ix_pc10_transition_scope` (`legal_entity_id`,`payroll_group_id`,`transition_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_010_recovery_evidence` (
   `recovery_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11413,7 +11413,7 @@ CREATE TABLE `0_hrm_pay_core_010_recovery_evidence` (
   PRIMARY KEY (`recovery_id`),
   UNIQUE KEY `uq_pc10_recovery_sha` (`recovery_sha256`),
   KEY `ix_pc10_recovery_scope` (`payroll_group_id`,`payroll_period_id`,`recovery_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_pay_core_010_usage_events` (
   `usage_event_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11429,7 +11429,7 @@ CREATE TABLE `0_hrm_pay_core_010_usage_events` (
   PRIMARY KEY (`usage_event_id`),
   UNIQUE KEY `uq_pc10_usage_sha` (`event_sha256`),
   KEY `ix_pc10_usage_scope` (`payroll_group_id`,`payroll_period_id`,`consumer_token`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_pc10_int_u` BEFORE UPDATE ON `0_hrm_pay_core_010_approval_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies update on hrm_pay_core_010_approval_intents';
 CREATE TRIGGER `0_pc10_int_d` BEFORE DELETE ON `0_hrm_pay_core_010_approval_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies delete on hrm_pay_core_010_approval_intents';
 CREATE TRIGGER `0_pc10_app_u` BEFORE UPDATE ON `0_hrm_pay_core_010_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CORE-010 immutable custody denies update on hrm_pay_core_010_approvals';
@@ -11467,7 +11467,7 @@ CREATE TABLE `0_hrm_time_work_patterns` (
   UNIQUE KEY `uq_tim1_pattern_from` (`assignment_id`,`effective_from`),
   KEY `ix_tim1_pattern_scope` (`legal_entity_id`,`worker_id`,`assignment_id`,`effective_from`),
   UNIQUE KEY `uq_tim1_pattern_pred` (`predecessor_pattern_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_time_work_pattern_segments` (
   `segment_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11486,7 +11486,7 @@ CREATE TABLE `0_hrm_time_work_pattern_segments` (
   UNIQUE KEY `uq_tim1_segment_sha` (`segment_sha256`),
   UNIQUE KEY `uq_tim1_segment_seq` (`work_pattern_id`,`cycle_day`,`segment_sequence`),
   KEY `ix_tim1_segment_pattern` (`work_pattern_id`,`cycle_day`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_time_raw_events` (
   `raw_event_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11514,7 +11514,7 @@ CREATE TABLE `0_hrm_time_raw_events` (
   UNIQUE KEY `uq_tim1_raw_cmd` (`ingest_command_key`),
   KEY `ix_tim1_raw_scope` (`legal_entity_id`,`worker_id`,`assignment_id`,`effective_utc_at`),
   UNIQUE KEY `uq_tim1_raw_pred` (`predecessor_event_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_time_raw_event_conflicts` (
   `conflict_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11531,7 +11531,7 @@ CREATE TABLE `0_hrm_time_raw_event_conflicts` (
   PRIMARY KEY (`conflict_id`),
   UNIQUE KEY `uq_tim1_conflict_sha` (`conflict_sha256`),
   KEY `ix_tim1_conflict_source` (`source_channel`,`source_event_key`,`conflict_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_time_reviewed_entries` (
   `reviewed_entry_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11556,7 +11556,7 @@ CREATE TABLE `0_hrm_time_reviewed_entries` (
   UNIQUE KEY `uq_tim1_review_cmd` (`review_command_key`),
   KEY `ix_tim1_review_scope` (`legal_entity_id`,`worker_id`,`assignment_id`,`work_date`),
   UNIQUE KEY `uq_tim1_review_pred` (`predecessor_entry_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_time_reviewed_event_links` (
   `reviewed_event_link_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11569,7 +11569,7 @@ CREATE TABLE `0_hrm_time_reviewed_event_links` (
   UNIQUE KEY `uq_tim1_rel_sha` (`link_sha256`),
   UNIQUE KEY `uq_tim1_rel_pair` (`reviewed_entry_id`,`raw_event_id`),
   KEY `ix_tim1_rel_event` (`raw_event_id`,`reviewed_entry_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_time_reviewed_allocations` (
   `allocation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11584,7 +11584,7 @@ CREATE TABLE `0_hrm_time_reviewed_allocations` (
   UNIQUE KEY `uq_tim1_alloc_sha` (`allocation_sha256`),
   KEY `ix_tim1_alloc_review` (`reviewed_entry_id`,`allocation_id`),
   KEY `ix_tim1_alloc_rel` (`payroll_relationship_id`,`assignment_id`,`reviewed_entry_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_time_approvals` (
   `approval_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11601,7 +11601,7 @@ CREATE TABLE `0_hrm_time_approvals` (
   UNIQUE KEY `uq_tim1_approval_cmd` (`approval_command_key`),
   UNIQUE KEY `uq_tim1_approval_review` (`reviewed_entry_id`,`review_sha256`),
   KEY `ix_tim1_approval_entry` (`reviewed_entry_id`,`approval_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_time_payroll_input_mappings` (
   `mapping_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11621,7 +11621,7 @@ CREATE TABLE `0_hrm_time_payroll_input_mappings` (
   UNIQUE KEY `uq_tim1_mapping_from` (`legal_entity_id`,`allocation_category`,`effective_from`),
   KEY `ix_tim1_mapping_scope` (`legal_entity_id`,`allocation_category`,`effective_from`,`effective_to`),
   UNIQUE KEY `uq_tim1_mapping_pred` (`predecessor_mapping_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_time_payroll_input_receipts` (
   `receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11644,7 +11644,7 @@ CREATE TABLE `0_hrm_time_payroll_input_receipts` (
   UNIQUE KEY `uq_tim1_receipt_cmd` (`command_key`),
   UNIQUE KEY `uq_tim1_receipt_alloc` (`approval_id`,`allocation_id`),
   KEY `ix_tim1_receipt_period` (`payroll_period_id`,`calendar_period_id`,`payroll_relationship_id`,`assignment_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_time_legacy_attendance_receipts` (
   `legacy_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT,
@@ -11665,7 +11665,7 @@ CREATE TABLE `0_hrm_time_legacy_attendance_receipts` (
   UNIQUE KEY `uq_tim1_legacy_attendance` (`attendance_id`),
   UNIQUE KEY `uq_tim1_legacy_sha` (`receipt_sha256`),
   KEY `ix_tim1_legacy_status` (`migration_status`,`legacy_receipt_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TRIGGER `0_tim1_pat_u` BEFORE UPDATE ON `0_hrm_time_work_patterns` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies update on hrm_time_work_patterns';
 CREATE TRIGGER `0_tim1_pat_d` BEFORE DELETE ON `0_hrm_time_work_patterns` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-001 immutable custody denies delete on hrm_time_work_patterns';
@@ -11695,43 +11695,43 @@ CREATE TRIGGER `0_tim1_leg_d` BEFORE DELETE ON `0_hrm_time_legacy_attendance_rec
 CREATE TABLE `0_hrm_time_overtime_policies` (
  `policy_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legal_entity_id` int unsigned NOT NULL, `policy_code` varchar(64) NOT NULL, `policy_version` varchar(64) NOT NULL, `source_kind` varchar(24) NOT NULL, `source_ref` varchar(160) NOT NULL, `source_evidence_sha256` char(64) NOT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL, `priority_rank` int unsigned NOT NULL, `week_start_day` tinyint unsigned DEFAULT NULL, `weekly_scope` varchar(24) DEFAULT NULL, `weekend_days` varchar(24) DEFAULT NULL, `predecessor_policy_id` bigint unsigned DEFAULT NULL, `policy_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`policy_id`), UNIQUE KEY `uq_tim2_policy_sha` (`policy_sha256`), UNIQUE KEY `uq_tim2_policy_ver` (`legal_entity_id`,`policy_code`,`policy_version`), UNIQUE KEY `uq_tim2_policy_pred` (`predecessor_policy_id`), KEY `ix_tim2_policy_scope` (`legal_entity_id`,`effective_from`,`effective_to`,`priority_rank`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_time_overtime_policy_rules` (
  `rule_id` bigint unsigned NOT NULL AUTO_INCREMENT, `policy_id` bigint unsigned NOT NULL, `rule_sequence` smallint unsigned NOT NULL, `daily_threshold_minutes` int unsigned DEFAULT NULL, `weekly_threshold_minutes` int unsigned DEFAULT NULL, `weekend_required` tinyint unsigned DEFAULT NULL, `holiday_required` tinyint unsigned DEFAULT NULL, `rest_day_required` tinyint unsigned DEFAULT NULL, `approved_request_required` tinyint unsigned NOT NULL DEFAULT 0, `schedule_deviation_min_minutes` int unsigned DEFAULT NULL, `qualification_mode` varchar(32) NOT NULL, `qualification_category` varchar(64) NOT NULL, `rule_sha256` char(64) NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`rule_id`), UNIQUE KEY `uq_tim2_rule_sha` (`rule_sha256`), UNIQUE KEY `uq_tim2_rule_seq` (`policy_id`,`rule_sequence`), KEY `ix_tim2_rule_policy` (`policy_id`,`rule_sequence`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_time_overtime_request_receipts` (
  `request_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `request_id` int unsigned NOT NULL, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `overtime_type_id` int unsigned NOT NULL, `work_date` date NOT NULL, `requested_minutes` int unsigned NOT NULL, `request_snapshot_sha256` char(64) NOT NULL, `approval_draft_id` int unsigned DEFAULT NULL, `approval_command_key` varchar(128) NOT NULL, `approved_by_actor` varchar(64) NOT NULL, `approval_receipt_sha256` char(64) NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`request_receipt_id`), UNIQUE KEY `uq_tim2_req_sha` (`approval_receipt_sha256`), UNIQUE KEY `uq_tim2_req_id` (`request_id`), UNIQUE KEY `uq_tim2_req_cmd` (`approval_command_key`), KEY `ix_tim2_req_scope` (`legal_entity_id`,`assignment_id`,`work_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_time_import_connectors` (
  `connector_id` bigint unsigned NOT NULL AUTO_INCREMENT, `connector_key` varchar(64) NOT NULL, `connector_version` varchar(64) NOT NULL, `legal_entity_id` int unsigned NOT NULL, `source_system` varchar(64) NOT NULL, `channel_kind` varchar(24) NOT NULL, `auth_mode` varchar(32) NOT NULL, `max_bytes` int unsigned NOT NULL, `max_items` int unsigned NOT NULL, `allowed_mime` varchar(96) NOT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL, `predecessor_connector_id` bigint unsigned DEFAULT NULL, `connector_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`connector_id`), UNIQUE KEY `uq_tim2_con_sha` (`connector_sha256`), UNIQUE KEY `uq_tim2_con_ver` (`legal_entity_id`,`connector_key`,`connector_version`), UNIQUE KEY `uq_tim2_con_pred` (`predecessor_connector_id`), KEY `ix_tim2_con_scope` (`legal_entity_id`,`connector_key`,`effective_from`,`effective_to`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_time_import_batches` (
  `import_batch_id` bigint unsigned NOT NULL AUTO_INCREMENT, `connector_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `source_batch_key` varchar(128) NOT NULL, `content_sha256` char(64) NOT NULL, `file_name_sha256` char(64) NOT NULL, `file_size_bytes` int unsigned NOT NULL, `normalization_version` varchar(48) NOT NULL, `received_at_utc` datetime NOT NULL, `command_key` varchar(128) NOT NULL, `retry_of_batch_id` bigint unsigned DEFAULT NULL, `status_token` varchar(24) NOT NULL, `batch_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`import_batch_id`), UNIQUE KEY `uq_tim2_batch_sha` (`batch_sha256`), UNIQUE KEY `uq_tim2_batch_cmd` (`command_key`), KEY `ix_tim2_batch_source` (`connector_id`,`source_batch_key`,`import_batch_id`), KEY `ix_tim2_batch_status` (`status_token`,`import_batch_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_time_import_items` (
  `import_item_id` bigint unsigned NOT NULL AUTO_INCREMENT, `import_batch_id` bigint unsigned NOT NULL, `source_item_key` varchar(128) NOT NULL, `item_index` int unsigned NOT NULL, `payload_sha256` char(64) NOT NULL, `event_kind` varchar(24) NOT NULL, `effective_at_utc` datetime DEFAULT NULL, `worker_id` bigint unsigned DEFAULT NULL, `employment_id` bigint unsigned DEFAULT NULL, `assignment_id` bigint unsigned DEFAULT NULL, `legal_entity_id` int unsigned DEFAULT NULL, `raw_event_id` bigint unsigned DEFAULT NULL, `raw_event_sha256` char(64) DEFAULT NULL, `predecessor_item_id` bigint unsigned DEFAULT NULL, `status_token` varchar(24) NOT NULL, `item_sha256` char(64) NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`import_item_id`), UNIQUE KEY `uq_tim2_item_sha` (`item_sha256`), UNIQUE KEY `uq_tim2_item_batchkey` (`import_batch_id`,`source_item_key`), UNIQUE KEY `uq_tim2_item_pred` (`predecessor_item_id`), KEY `ix_tim2_item_source` (`source_item_key`,`import_item_id`), KEY `ix_tim2_item_status` (`status_token`,`import_item_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_time_import_errors` (
  `import_error_id` bigint unsigned NOT NULL AUTO_INCREMENT, `import_batch_id` bigint unsigned NOT NULL, `import_item_id` bigint unsigned DEFAULT NULL, `source_item_key` varchar(128) DEFAULT NULL, `error_code` varchar(64) NOT NULL, `error_context_sha256` char(64) NOT NULL, `error_sha256` char(64) NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`import_error_id`), UNIQUE KEY `uq_tim2_err_sha` (`error_sha256`), KEY `ix_tim2_err_batch` (`import_batch_id`,`import_error_id`), KEY `ix_tim2_err_code` (`error_code`,`import_error_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_time_overtime_qualifications` (
  `qualification_id` bigint unsigned NOT NULL AUTO_INCREMENT, `policy_id` bigint unsigned NOT NULL, `policy_sha256` char(64) NOT NULL, `approval_id` bigint unsigned NOT NULL, `reviewed_entry_id` bigint unsigned NOT NULL, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `request_receipt_id` bigint unsigned DEFAULT NULL, `work_date` date NOT NULL, `source_minutes` int unsigned NOT NULL, `daily_approved_minutes` int unsigned NOT NULL, `weekly_approved_minutes` int unsigned NOT NULL, `scheduled_minutes` int unsigned NOT NULL, `is_weekend` tinyint unsigned NOT NULL, `is_holiday` tinyint unsigned NOT NULL, `is_rest_day` tinyint unsigned NOT NULL, `day_context_sha256` char(64) NOT NULL, `qualified_minutes` int unsigned NOT NULL, `qualification_status` varchar(24) NOT NULL, `qualification_category` varchar(64) DEFAULT NULL, `reason_token` varchar(64) NOT NULL, `input_sha256` char(64) NOT NULL, `predecessor_qualification_id` bigint unsigned DEFAULT NULL, `qualification_sha256` char(64) NOT NULL, `qualified_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`qualification_id`), UNIQUE KEY `uq_tim2_qual_sha` (`qualification_sha256`), UNIQUE KEY `uq_tim2_qual_pred` (`predecessor_qualification_id`), KEY `ix_tim2_qual_approval` (`approval_id`,`qualification_id`), KEY `ix_tim2_qual_scope` (`legal_entity_id`,`assignment_id`,`work_date`), KEY `ix_tim2_qual_status` (`qualification_status`,`qualification_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_time_overtime_payroll_mappings` (
  `mapping_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legal_entity_id` int unsigned NOT NULL, `qualification_category` varchar(64) NOT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL, `element_version_id` bigint unsigned NOT NULL, `input_definition_id` bigint unsigned NOT NULL, `unit_token` varchar(24) NOT NULL, `predecessor_mapping_id` bigint unsigned DEFAULT NULL, `mapping_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`mapping_id`), UNIQUE KEY `uq_tim2_map_sha` (`mapping_sha256`), UNIQUE KEY `uq_tim2_map_from` (`legal_entity_id`,`qualification_category`,`effective_from`), UNIQUE KEY `uq_tim2_map_pred` (`predecessor_mapping_id`), KEY `ix_tim2_map_scope` (`legal_entity_id`,`qualification_category`,`effective_from`,`effective_to`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_time_overtime_payroll_receipts` (
  `receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `qualification_id` bigint unsigned NOT NULL, `mapping_id` bigint unsigned NOT NULL, `payroll_period_id` int unsigned NOT NULL, `calendar_period_id` bigint unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `approved_input_id` bigint unsigned NOT NULL, `approved_input_sha256` char(64) NOT NULL, `adapter_version` varchar(48) NOT NULL, `command_key` varchar(128) NOT NULL, `receipt_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`receipt_id`), UNIQUE KEY `uq_tim2_pay_sha` (`receipt_sha256`), UNIQUE KEY `uq_tim2_pay_cmd` (`command_key`), UNIQUE KEY `uq_tim2_pay_qual` (`qualification_id`), KEY `ix_tim2_pay_period` (`payroll_period_id`,`calendar_period_id`,`payroll_relationship_id`,`assignment_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_tim2_pol_u` BEFORE UPDATE ON `0_hrm_time_overtime_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-002 immutable custody denies update on hrm_time_overtime_policies';
 CREATE TRIGGER `0_tim2_pol_d` BEFORE DELETE ON `0_hrm_time_overtime_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-002 immutable custody denies delete on hrm_time_overtime_policies';
 CREATE TRIGGER `0_tim2_rul_u` BEFORE UPDATE ON `0_hrm_time_overtime_policy_rules` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TIM-002 immutable custody denies update on hrm_time_overtime_policy_rules';
@@ -11756,43 +11756,43 @@ CREATE TRIGGER `0_tim2_pay_d` BEFORE DELETE ON `0_hrm_time_overtime_payroll_rece
 -- HRM-LVE-001 governed leave policy and immutable movement custody (1.0.707+)
 CREATE TABLE `0_hrm_leave_policy_versions` (
  `policy_version_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legal_entity_id` int unsigned NOT NULL, `policy_code` varchar(64) NOT NULL, `version_token` varchar(64) NOT NULL, `leave_id` int unsigned NOT NULL, `source_kind` varchar(32) NOT NULL, `source_ref` varchar(160) NOT NULL, `source_evidence_sha256` char(64) NOT NULL, `employment_type` int DEFAULT NULL, `grade_id` int unsigned DEFAULT NULL, `assignment_id` bigint unsigned DEFAULT NULL, `work_location_id` bigint unsigned DEFAULT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL, `priority_rank` int NOT NULL, `unit_code` varchar(16) NOT NULL, `cycle_basis` varchar(24) NOT NULL, `entitlement_mode` varchar(24) NOT NULL, `entitlement_units` decimal(20,6) DEFAULT NULL, `accrual_period` varchar(24) DEFAULT NULL, `waiting_days` int unsigned NOT NULL, `proration_mode` varchar(32) NOT NULL, `reference_cycle_minutes` int unsigned DEFAULT NULL, `carryover_enabled` tinyint(1) NOT NULL, `carryover_cap_units` decimal(20,6) DEFAULT NULL, `expiry_days` int unsigned DEFAULT NULL, `carryover_consumption_order` varchar(24) DEFAULT NULL, `negative_balance_limit_units` decimal(20,6) NOT NULL, `donation_allowed` tinyint(1) NOT NULL, `cashout_allowed` tinyint(1) NOT NULL, `min_request_units` decimal(20,6) DEFAULT NULL, `rounding_scale` tinyint unsigned NOT NULL, `predecessor_policy_version_id` bigint unsigned DEFAULT NULL, `policy_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`policy_version_id`), UNIQUE KEY `uq_lve1_pol_sha` (`policy_sha256`), UNIQUE KEY `uq_lve1_pol_ver` (`legal_entity_id`,`policy_code`,`version_token`), UNIQUE KEY `uq_lve1_pol_pred` (`predecessor_policy_version_id`), KEY `ix_lve1_pol_match` (`legal_entity_id`,`leave_id`,`effective_from`,`effective_to`,`priority_rank`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_leave_entitlements` (
  `entitlement_id` bigint unsigned NOT NULL AUTO_INCREMENT, `policy_version_id` bigint unsigned NOT NULL, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `leave_id` int unsigned NOT NULL, `cycle_start` date NOT NULL, `cycle_end` date NOT NULL, `unit_code` varchar(16) NOT NULL, `entitlement_units` decimal(20,6) NOT NULL, `policy_sha256` char(64) NOT NULL, `schedule_sha256` char(64) NOT NULL, `command_key` varchar(128) NOT NULL, `entitlement_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`entitlement_id`), UNIQUE KEY `uq_lve1_ent_cmd` (`command_key`), UNIQUE KEY `uq_lve1_ent_sha` (`entitlement_sha256`), UNIQUE KEY `uq_lve1_ent_cycle` (`policy_version_id`,`worker_id`,`assignment_id`,`cycle_start`), KEY `ix_lve1_ent_scope` (`worker_id`,`employment_id`,`assignment_id`,`legal_entity_id`,`leave_id`,`cycle_start`,`cycle_end`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_leave_movements` (
  `movement_id` bigint unsigned NOT NULL AUTO_INCREMENT, `entitlement_id` bigint unsigned NOT NULL, `policy_version_id` bigint unsigned NOT NULL, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `leave_id` int unsigned NOT NULL, `effective_date` date NOT NULL, `unit_code` varchar(16) NOT NULL, `movement_kind` varchar(24) NOT NULL, `units` decimal(20,6) NOT NULL, `source_type` varchar(48) NOT NULL, `source_key` varchar(128) NOT NULL, `source_sha256` char(64) NOT NULL, `request_id` bigint unsigned DEFAULT NULL, `predecessor_movement_id` bigint unsigned DEFAULT NULL, `command_key` varchar(160) NOT NULL, `lineage_sha256` char(64) NOT NULL, `movement_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`movement_id`), UNIQUE KEY `uq_lve1_mov_cmd` (`command_key`), UNIQUE KEY `uq_lve1_mov_sha` (`movement_sha256`), UNIQUE KEY `uq_lve1_mov_pred` (`predecessor_movement_id`), KEY `ix_lve1_mov_ent` (`entitlement_id`,`effective_date`,`movement_id`), KEY `ix_lve1_mov_req` (`request_id`,`movement_kind`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_leave_request_receipts` (
  `request_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `request_id` bigint unsigned NOT NULL, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `leave_id` int unsigned NOT NULL, `requested_from` date NOT NULL, `requested_to` date NOT NULL, `requested_units` decimal(20,6) NOT NULL, `unit_code` varchar(16) NOT NULL, `policy_set_sha256` char(64) NOT NULL, `schedule_sha256` char(64) NOT NULL, `request_snapshot_sha256` char(64) NOT NULL, `reservation_command_key` varchar(160) NOT NULL, `receipt_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`request_receipt_id`), UNIQUE KEY `uq_lve1_req_id` (`request_id`), UNIQUE KEY `uq_lve1_req_cmd` (`reservation_command_key`), UNIQUE KEY `uq_lve1_req_sha` (`receipt_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_leave_opening_inventory` (
  `opening_inventory_id` bigint unsigned NOT NULL AUTO_INCREMENT, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `leave_id` int unsigned NOT NULL, `fiscal_year` int NOT NULL, `legacy_balance_id` bigint unsigned NOT NULL, `legacy_balance_sha256` char(64) NOT NULL, `as_of_date` date NOT NULL, `unit_code` varchar(16) NOT NULL, `entitled_units` decimal(20,6) NOT NULL, `carried_units` decimal(20,6) NOT NULL, `taken_units` decimal(20,6) NOT NULL, `pending_units` decimal(20,6) NOT NULL, `adjusted_units` decimal(20,6) NOT NULL, `provenance_state` varchar(32) NOT NULL, `evidence_sha256` char(64) NOT NULL, `inventory_sha256` char(64) NOT NULL, `inventoried_by` int unsigned NOT NULL, `reviewed_by` int unsigned DEFAULT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`opening_inventory_id`), UNIQUE KEY `uq_lve1_opn_legacy` (`legacy_balance_id`), UNIQUE KEY `uq_lve1_opn_sha` (`inventory_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_leave_projection_snapshots` (
  `projection_id` bigint unsigned NOT NULL AUTO_INCREMENT, `entitlement_id` bigint unsigned NOT NULL, `as_of_date` date NOT NULL, `available_units` decimal(20,6) NOT NULL, `reserved_units` decimal(20,6) NOT NULL, `consumed_units` decimal(20,6) NOT NULL, `accrued_units` decimal(20,6) NOT NULL, `carried_units` decimal(20,6) NOT NULL, `expired_units` decimal(20,6) NOT NULL, `donated_units` decimal(20,6) NOT NULL, `cashed_out_units` decimal(20,6) NOT NULL, `movement_set_sha256` char(64) NOT NULL, `projection_sha256` char(64) NOT NULL, `built_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`projection_id`), UNIQUE KEY `uq_lve1_prj_sha` (`projection_sha256`), KEY `ix_lve1_prj_ent` (`entitlement_id`,`as_of_date`,`projection_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_leave_reconciliations` (
  `reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT, `projection_id` bigint unsigned NOT NULL, `legacy_balance_id` bigint unsigned DEFAULT NULL, `legacy_balance_sha256` char(64) DEFAULT NULL, `difference_units` decimal(20,6) NOT NULL, `reconciliation_state` varchar(32) NOT NULL, `evidence_sha256` char(64) NOT NULL, `reconciliation_sha256` char(64) NOT NULL, `reviewed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`reconciliation_id`), UNIQUE KEY `uq_lve1_rec_sha` (`reconciliation_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_leave_recovery_evidence` (
  `recovery_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT, `reconciliation_id` bigint unsigned NOT NULL, `action_token` varchar(64) NOT NULL, `source_sha256` char(64) NOT NULL, `evidence_sha256` char(64) NOT NULL, `recovery_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`recovery_evidence_id`), UNIQUE KEY `uq_lve1_rcv_sha` (`recovery_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_leave_payroll_mappings` (
  `mapping_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legal_entity_id` int unsigned NOT NULL, `leave_id` int unsigned NOT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL, `element_version_id` bigint unsigned NOT NULL, `input_definition_id` bigint unsigned NOT NULL, `unit_code` varchar(16) NOT NULL, `predecessor_mapping_id` bigint unsigned DEFAULT NULL, `mapping_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`mapping_id`), UNIQUE KEY `uq_lve1_map_sha` (`mapping_sha256`), UNIQUE KEY `uq_lve1_map_from` (`legal_entity_id`,`leave_id`,`effective_from`), UNIQUE KEY `uq_lve1_map_pred` (`predecessor_mapping_id`), KEY `ix_lve1_map_scope` (`legal_entity_id`,`leave_id`,`effective_from`,`effective_to`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_leave_payroll_handoffs` (
  `handoff_id` bigint unsigned NOT NULL AUTO_INCREMENT, `movement_id` bigint unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `payroll_period_id` bigint unsigned NOT NULL, `calendar_period_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `unit_code` varchar(16) NOT NULL, `approved_input_id` bigint unsigned NOT NULL, `approved_input_sha256` char(64) NOT NULL, `adapter_version` varchar(48) NOT NULL, `command_key` varchar(160) NOT NULL, `handoff_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`handoff_id`), UNIQUE KEY `uq_lve1_pay_mov` (`movement_id`), UNIQUE KEY `uq_lve1_pay_cmd` (`command_key`), UNIQUE KEY `uq_lve1_pay_sha` (`handoff_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TRIGGER `0_lve1_pol_u` BEFORE UPDATE ON `0_hrm_leave_policy_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-LVE-001 immutable custody denies update';
 
@@ -11838,77 +11838,77 @@ CREATE TRIGGER `0_lve1_pay_d` BEFORE DELETE ON `0_hrm_leave_payroll_handoffs` FO
 CREATE TABLE `0_hrm_comp_salary_ranges` (
  `range_version_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legal_entity_id` int unsigned NOT NULL, `grade_id` int unsigned NOT NULL, `range_code` varchar(64) NOT NULL, `version_token` varchar(64) NOT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL, `currency_code` char(3) NOT NULL, `pay_basis` varchar(24) NOT NULL, `minimum_amount` decimal(24,6) NOT NULL, `midpoint_amount` decimal(24,6) NOT NULL, `maximum_amount` decimal(24,6) NOT NULL, `source_kind` varchar(32) NOT NULL, `source_ref` varchar(160) NOT NULL, `source_evidence_sha256` char(64) NOT NULL, `predecessor_range_version_id` bigint unsigned DEFAULT NULL, `range_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`range_version_id`), UNIQUE KEY `uq_cmp1_rng_sha` (`range_sha256`), UNIQUE KEY `uq_cmp1_rng_ver` (`legal_entity_id`,`range_code`,`version_token`), UNIQUE KEY `uq_cmp1_rng_pred` (`predecessor_range_version_id`), KEY `ix_cmp1_rng_match` (`legal_entity_id`,`grade_id`,`currency_code`,`pay_basis`,`effective_from`,`effective_to`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_comp_review_cycles` (
  `review_cycle_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legal_entity_id` int unsigned NOT NULL, `cycle_code` varchar(64) NOT NULL, `version_token` varchar(64) NOT NULL, `open_date` date NOT NULL, `close_date` date NOT NULL, `award_effective_from` date NOT NULL, `award_effective_to` date NOT NULL, `status_token` varchar(16) NOT NULL, `purpose_code` varchar(64) NOT NULL, `evidence_sha256` char(64) NOT NULL, `predecessor_review_cycle_id` bigint unsigned DEFAULT NULL, `cycle_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`review_cycle_id`), UNIQUE KEY `uq_cmp1_cyc_sha` (`cycle_sha256`), UNIQUE KEY `uq_cmp1_cyc_ver` (`legal_entity_id`,`cycle_code`,`version_token`), UNIQUE KEY `uq_cmp1_cyc_pred` (`predecessor_review_cycle_id`), KEY `ix_cmp1_cyc_scope` (`legal_entity_id`,`status_token`,`open_date`,`close_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_comp_budgets` (
  `budget_version_id` bigint unsigned NOT NULL AUTO_INCREMENT, `review_cycle_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `currency_code` char(3) NOT NULL, `budget_amount` decimal(24,6) NOT NULL, `evidence_sha256` char(64) NOT NULL, `predecessor_budget_version_id` bigint unsigned DEFAULT NULL, `budget_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`budget_version_id`), UNIQUE KEY `uq_cmp1_bud_sha` (`budget_sha256`), UNIQUE KEY `uq_cmp1_bud_pred` (`predecessor_budget_version_id`), KEY `ix_cmp1_bud_scope` (`review_cycle_id`,`legal_entity_id`,`currency_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_comp_opening_inventory` (
  `opening_inventory_id` bigint unsigned NOT NULL AUTO_INCREMENT, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `employee_id` varchar(20) NOT NULL, `as_of_date` date NOT NULL, `legacy_source_kind` varchar(32) NOT NULL, `legacy_source_row_id` bigint unsigned NOT NULL, `legacy_source_sha256` char(64) NOT NULL, `base_amount` decimal(24,6) NOT NULL, `currency_code` char(3) NOT NULL, `pay_basis` varchar(24) NOT NULL, `basic_element_id` int unsigned NOT NULL, `evidence_sha256` char(64) NOT NULL, `inventory_sha256` char(64) NOT NULL, `inventoried_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`opening_inventory_id`), UNIQUE KEY `uq_cmp1_opn_sha` (`inventory_sha256`), UNIQUE KEY `uq_cmp1_opn_scope` (`assignment_id`,`as_of_date`), KEY `ix_cmp1_opn_employee` (`employee_id`,`as_of_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_comp_opening_reviews` (
  `opening_review_id` bigint unsigned NOT NULL AUTO_INCREMENT, `opening_inventory_id` bigint unsigned NOT NULL, `inventory_sha256` char(64) NOT NULL, `decision_token` varchar(16) NOT NULL, `evidence_sha256` char(64) NOT NULL, `review_sha256` char(64) NOT NULL, `reviewed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`opening_review_id`), UNIQUE KEY `uq_cmp1_opr_sha` (`review_sha256`), UNIQUE KEY `uq_cmp1_opr_inv` (`opening_inventory_id`), KEY `ix_cmp1_opr_dec` (`decision_token`,`opening_inventory_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_comp_cutover_plans` (
  `cutover_plan_id` bigint unsigned NOT NULL AUTO_INCREMENT, `opening_review_id` bigint unsigned NOT NULL, `opening_inventory_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `employee_id` varchar(20) NOT NULL, `effective_date` date NOT NULL, `request_key` varchar(128) NOT NULL, `opening_review_sha256` char(64) NOT NULL, `plan_sha256` char(64) NOT NULL, `maker_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`cutover_plan_id`), UNIQUE KEY `uq_cmp1_cut_plan_sha` (`plan_sha256`), UNIQUE KEY `uq_cmp1_cut_key` (`request_key`), UNIQUE KEY `uq_cmp1_cut_assignment` (`assignment_id`), KEY `ix_cmp1_cut_employee` (`employee_id`,`effective_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_comp_cutover_approvals` (
  `cutover_approval_id` bigint unsigned NOT NULL AUTO_INCREMENT, `cutover_plan_id` bigint unsigned NOT NULL, `plan_sha256` char(64) NOT NULL, `decision_token` varchar(16) NOT NULL, `evidence_sha256` char(64) NOT NULL, `approval_sha256` char(64) NOT NULL, `checker_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`cutover_approval_id`), UNIQUE KEY `uq_cmp1_cut_app_sha` (`approval_sha256`), UNIQUE KEY `uq_cmp1_cut_app_plan` (`cutover_plan_id`), KEY `ix_cmp1_cut_app_dec` (`decision_token`,`cutover_plan_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_comp_cutover_receipts` (
  `cutover_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `cutover_plan_id` bigint unsigned NOT NULL, `cutover_approval_id` bigint unsigned NOT NULL, `opening_inventory_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `employee_id` varchar(20) NOT NULL, `effective_date` date NOT NULL, `projection_salary_id` bigint unsigned DEFAULT NULL, `cutover_sha256` char(64) NOT NULL, `executor_id` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`cutover_receipt_id`), UNIQUE KEY `uq_cmp1_cut_rcp_sha` (`cutover_sha256`), UNIQUE KEY `uq_cmp1_cut_rcp_plan` (`cutover_plan_id`), UNIQUE KEY `uq_cmp1_cut_rcp_assignment` (`assignment_id`), KEY `ix_cmp1_cut_rcp_employee` (`employee_id`,`effective_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_comp_award_commands` (
  `award_command_id` bigint unsigned NOT NULL AUTO_INCREMENT, `worker_id` bigint unsigned NOT NULL, `employment_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `legal_entity_id` int unsigned NOT NULL, `employee_id` varchar(20) NOT NULL, `review_cycle_id` bigint unsigned NOT NULL, `range_version_id` bigint unsigned NOT NULL, `budget_version_id` bigint unsigned NOT NULL, `award_kind` varchar(24) NOT NULL, `effective_date` date NOT NULL, `old_amount` decimal(24,6) NOT NULL, `new_amount` decimal(24,6) NOT NULL, `currency_code` char(3) NOT NULL, `pay_basis` varchar(24) NOT NULL, `budget_impact` decimal(24,6) NOT NULL, `purpose_code` varchar(64) NOT NULL, `evidence_sha256` char(64) NOT NULL, `idempotency_hash` char(64) NOT NULL, `request_sha256` char(64) NOT NULL, `command_status` varchar(16) NOT NULL, `row_version` int unsigned NOT NULL, `approval_draft_id` bigint unsigned DEFAULT NULL, `requested_by` int unsigned NOT NULL, `approved_by` int unsigned DEFAULT NULL, `approved_at` datetime DEFAULT NULL, `executed_by` int unsigned DEFAULT NULL, `completed_at` datetime DEFAULT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`award_command_id`), UNIQUE KEY `uq_cmp1_cmd_idem` (`idempotency_hash`), UNIQUE KEY `uq_cmp1_cmd_req` (`request_sha256`), KEY `ix_cmp1_cmd_scope` (`assignment_id`,`effective_date`,`command_status`), KEY `ix_cmp1_cmd_draft` (`approval_draft_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_comp_award_receipts` (
  `award_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `award_command_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `review_cycle_id` bigint unsigned NOT NULL, `range_version_id` bigint unsigned NOT NULL, `budget_version_id` bigint unsigned NOT NULL, `award_kind` varchar(24) NOT NULL, `effective_date` date NOT NULL, `old_amount` decimal(24,6) NOT NULL, `new_amount` decimal(24,6) NOT NULL, `currency_code` char(3) NOT NULL, `pay_basis` varchar(24) NOT NULL, `budget_impact` decimal(24,6) NOT NULL, `purpose_code` varchar(64) NOT NULL, `request_sha256` char(64) NOT NULL, `predecessor_award_receipt_id` bigint unsigned DEFAULT NULL, `execution_key_hash` char(64) NOT NULL, `receipt_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`award_receipt_id`), UNIQUE KEY `uq_cmp1_awd_sha` (`receipt_sha256`), UNIQUE KEY `uq_cmp1_awd_cmd` (`award_command_id`), UNIQUE KEY `uq_cmp1_awd_pred` (`predecessor_award_receipt_id`), KEY `ix_cmp1_awd_scope` (`assignment_id`,`effective_date`,`award_receipt_id`), KEY `ix_cmp1_awd_budget` (`budget_version_id`,`currency_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_comp_legacy_projection_receipts` (
  `projection_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT, `award_receipt_id` bigint unsigned NOT NULL, `employee_id` varchar(20) NOT NULL, `basic_element_id` int unsigned NOT NULL, `employee_salary_id` bigint unsigned NOT NULL, `effective_date` date NOT NULL, `amount` decimal(24,6) NOT NULL, `source_sha256` char(64) NOT NULL, `projection_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`projection_receipt_id`), UNIQUE KEY `uq_cmp1_prj_sha` (`projection_sha256`), UNIQUE KEY `uq_cmp1_prj_award` (`award_receipt_id`), UNIQUE KEY `uq_cmp1_prj_salary` (`employee_salary_id`), KEY `ix_cmp1_prj_employee` (`employee_id`,`effective_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_comp_payroll_mappings` (
  `mapping_id` bigint unsigned NOT NULL AUTO_INCREMENT, `legal_entity_id` int unsigned NOT NULL, `currency_code` char(3) NOT NULL, `pay_basis` varchar(24) NOT NULL, `effective_from` date NOT NULL, `effective_to` date DEFAULT NULL, `element_version_id` bigint unsigned NOT NULL, `input_definition_id` bigint unsigned NOT NULL, `predecessor_mapping_id` bigint unsigned DEFAULT NULL, `mapping_sha256` char(64) NOT NULL, `created_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`mapping_id`), UNIQUE KEY `uq_cmp1_map_sha` (`mapping_sha256`), UNIQUE KEY `uq_cmp1_map_pred` (`predecessor_mapping_id`), KEY `ix_cmp1_map_scope` (`legal_entity_id`,`currency_code`,`pay_basis`,`effective_from`,`effective_to`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_comp_payroll_handoffs` (
  `handoff_id` bigint unsigned NOT NULL AUTO_INCREMENT, `award_receipt_id` bigint unsigned NOT NULL, `payroll_relationship_id` bigint unsigned NOT NULL, `payroll_period_id` int unsigned NOT NULL, `calendar_period_id` bigint unsigned NOT NULL, `assignment_id` bigint unsigned NOT NULL, `approved_input_id` bigint unsigned NOT NULL, `approved_input_sha256` char(64) NOT NULL, `adapter_version` varchar(64) NOT NULL, `command_key` varchar(128) NOT NULL, `handoff_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`handoff_id`), UNIQUE KEY `uq_cmp1_pay_sha` (`handoff_sha256`), UNIQUE KEY `uq_cmp1_pay_cmd` (`command_key`), UNIQUE KEY `uq_cmp1_pay_award` (`award_receipt_id`), KEY `ix_cmp1_pay_rel` (`payroll_relationship_id`,`payroll_period_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_comp_reconciliations` (
  `reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT, `assignment_id` bigint unsigned NOT NULL, `as_of_date` date NOT NULL, `governed_amount` decimal(24,6) NOT NULL, `legacy_amount` decimal(24,6) NOT NULL, `difference_amount` decimal(24,6) NOT NULL, `status_token` varchar(24) NOT NULL, `evidence_sha256` char(64) NOT NULL, `predecessor_reconciliation_id` bigint unsigned DEFAULT NULL, `reconciliation_sha256` char(64) NOT NULL, `reviewed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`reconciliation_id`), UNIQUE KEY `uq_cmp1_rec_sha` (`reconciliation_sha256`), UNIQUE KEY `uq_cmp1_rec_pred` (`predecessor_reconciliation_id`), KEY `ix_cmp1_rec_scope` (`assignment_id`,`as_of_date`,`status_token`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `0_hrm_comp_recovery_evidence` (
  `recovery_evidence_id` bigint unsigned NOT NULL AUTO_INCREMENT, `reconciliation_id` bigint unsigned NOT NULL, `action_token` varchar(48) NOT NULL, `source_sha256` char(64) NOT NULL, `evidence_sha256` char(64) NOT NULL, `recovery_sha256` char(64) NOT NULL, `executed_by` int unsigned NOT NULL, `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
  PRIMARY KEY (`recovery_evidence_id`), UNIQUE KEY `uq_cmp1_rcv_sha` (`recovery_sha256`), KEY `ix_cmp1_rcv_rec` (`reconciliation_id`,`created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TRIGGER `0_cmp1_rng_u` BEFORE UPDATE ON `0_hrm_comp_salary_ranges` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies update';
 CREATE TRIGGER `0_cmp1_rng_d` BEFORE DELETE ON `0_hrm_comp_salary_ranges` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-CMP-001 immutable custody denies delete';
@@ -11960,7 +11960,7 @@ CREATE TABLE `0_hrm_ben_pack_adapter_versions` (
   UNIQUE KEY `uq_ben1_pad_ver` (`adapter_code`,`version_token`),
   UNIQUE KEY `uq_ben1_pad_pred` (`predecessor_adapter_version_id`),
   KEY `ix_ben1_pad_eff` (`adapter_code`,`effective_from`,`effective_to`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_provider_adapter_versions` (
   `provider_adapter_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `adapter_code` varchar(64) NOT NULL,
@@ -11980,7 +11980,7 @@ CREATE TABLE `0_hrm_ben_provider_adapter_versions` (
   UNIQUE KEY `uq_ben1_prv_ver` (`adapter_code`,`version_token`),
   UNIQUE KEY `uq_ben1_prv_pred` (`predecessor_adapter_version_id`),
   KEY `ix_ben1_prv_eff` (`adapter_code`,`effective_from`,`effective_to`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_plans` (
   `plan_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `legal_entity_id` bigint unsigned NOT NULL,
@@ -11991,7 +11991,7 @@ CREATE TABLE `0_hrm_ben_plans` (
   PRIMARY KEY (`plan_id`),
   UNIQUE KEY `uq_ben1_plan_code` (`legal_entity_id`,`plan_code`),
   UNIQUE KEY `uq_ben1_plan_sha` (`identity_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_plan_versions` (
   `plan_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `plan_id` bigint unsigned NOT NULL,
@@ -12017,7 +12017,7 @@ CREATE TABLE `0_hrm_ben_plan_versions` (
   CONSTRAINT `fk_ben1_pvr_2` FOREIGN KEY (`pack_adapter_version_id`) REFERENCES `0_hrm_ben_pack_adapter_versions` (`pack_adapter_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_pvr_3` FOREIGN KEY (`provider_adapter_version_id`) REFERENCES `0_hrm_ben_provider_adapter_versions` (`provider_adapter_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_pvr_4` FOREIGN KEY (`predecessor_plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_eligibility_versions` (
   `eligibility_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `plan_version_id` bigint unsigned NOT NULL,
@@ -12036,7 +12036,7 @@ CREATE TABLE `0_hrm_ben_eligibility_versions` (
   KEY `ix_ben1_elig_eff` (`plan_version_id`,`effective_from`,`effective_to`),
   CONSTRAINT `fk_ben1_eli_1` FOREIGN KEY (`plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_eli_2` FOREIGN KEY (`predecessor_eligibility_version_id`) REFERENCES `0_hrm_ben_eligibility_versions` (`eligibility_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_enrollment_windows` (
   `window_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `plan_version_id` bigint unsigned NOT NULL,
@@ -12056,7 +12056,7 @@ CREATE TABLE `0_hrm_ben_enrollment_windows` (
   KEY `ix_ben1_win_date` (`plan_version_id`,`window_start`,`window_end`),
   CONSTRAINT `fk_ben1_win_1` FOREIGN KEY (`plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_win_2` FOREIGN KEY (`predecessor_window_id`) REFERENCES `0_hrm_ben_enrollment_windows` (`window_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_consents` (
   `consent_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `worker_id` bigint unsigned NOT NULL,
@@ -12074,7 +12074,7 @@ CREATE TABLE `0_hrm_ben_consents` (
   UNIQUE KEY `uq_ben1_con_sha` (`consent_sha256`),
   UNIQUE KEY `uq_ben1_con_pred` (`predecessor_consent_id`),
   KEY `ix_ben1_con_scope` (`worker_id`,`dependent_id`,`purpose_code`,`effective_from`,`effective_to`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_enrollments` (
   `enrollment_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `worker_id` bigint unsigned NOT NULL,
@@ -12105,7 +12105,7 @@ CREATE TABLE `0_hrm_ben_enrollments` (
   CONSTRAINT `fk_ben1_enr_3` FOREIGN KEY (`eligibility_version_id`) REFERENCES `0_hrm_ben_eligibility_versions` (`eligibility_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_enr_4` FOREIGN KEY (`window_id`) REFERENCES `0_hrm_ben_enrollment_windows` (`window_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_enr_5` FOREIGN KEY (`predecessor_enrollment_id`) REFERENCES `0_hrm_ben_enrollments` (`enrollment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_enrollment_dependants` (
   `enrollment_dependant_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `enrollment_id` bigint unsigned NOT NULL,
@@ -12125,7 +12125,7 @@ CREATE TABLE `0_hrm_ben_enrollment_dependants` (
   KEY `ix_ben1_dep_priv` (`dependent_id`,`privacy_classification`),
   CONSTRAINT `fk_ben1_dep_1` FOREIGN KEY (`enrollment_id`) REFERENCES `0_hrm_ben_enrollments` (`enrollment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_dep_2` FOREIGN KEY (`consent_id`) REFERENCES `0_hrm_ben_consents` (`consent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_life_event_type_versions` (
   `life_event_type_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `plan_version_id` bigint unsigned NOT NULL,
@@ -12144,7 +12144,7 @@ CREATE TABLE `0_hrm_ben_life_event_type_versions` (
   KEY `ix_ben1_let_eff` (`plan_version_id`,`event_type_code`,`effective_from`,`effective_to`),
   CONSTRAINT `fk_ben1_let_1` FOREIGN KEY (`plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_let_2` FOREIGN KEY (`predecessor_event_type_version_id`) REFERENCES `0_hrm_ben_life_event_type_versions` (`life_event_type_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_life_event_requests` (
   `life_event_request_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `worker_id` bigint unsigned NOT NULL,
@@ -12168,7 +12168,7 @@ CREATE TABLE `0_hrm_ben_life_event_requests` (
   CONSTRAINT `fk_ben1_ler_1` FOREIGN KEY (`life_event_type_version_id`) REFERENCES `0_hrm_ben_life_event_type_versions` (`life_event_type_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_ler_2` FOREIGN KEY (`enrollment_before_id`) REFERENCES `0_hrm_ben_enrollments` (`enrollment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_ler_3` FOREIGN KEY (`enrollment_after_id`) REFERENCES `0_hrm_ben_enrollments` (`enrollment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_life_event_reviews` (
   `life_event_review_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `life_event_request_id` bigint unsigned NOT NULL,
@@ -12182,7 +12182,7 @@ CREATE TABLE `0_hrm_ben_life_event_reviews` (
   UNIQUE KEY `uq_ben1_lrv_sha` (`review_sha256`),
   UNIQUE KEY `uq_ben1_lrv_req` (`life_event_request_id`),
   CONSTRAINT `fk_ben1_lrv_1` FOREIGN KEY (`life_event_request_id`) REFERENCES `0_hrm_ben_life_event_requests` (`life_event_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_life_events` (
   `life_event_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `life_event_request_id` bigint unsigned NOT NULL,
@@ -12208,7 +12208,7 @@ CREATE TABLE `0_hrm_ben_life_events` (
   KEY `ix_ben1_evt_scope` (`worker_id`,`effective_date`,`life_event_type_version_id`),
   CONSTRAINT `fk_ben1_evt_1` FOREIGN KEY (`life_event_request_id`) REFERENCES `0_hrm_ben_life_event_requests` (`life_event_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_evt_2` FOREIGN KEY (`life_event_review_id`) REFERENCES `0_hrm_ben_life_event_reviews` (`life_event_review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_contribution_versions` (
   `contribution_version_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `plan_version_id` bigint unsigned NOT NULL,
@@ -12232,7 +12232,7 @@ CREATE TABLE `0_hrm_ben_contribution_versions` (
   KEY `ix_ben1_cver_eff` (`plan_version_id`,`effective_from`,`effective_to`),
   CONSTRAINT `fk_ben1_cvr_1` FOREIGN KEY (`plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_cvr_2` FOREIGN KEY (`predecessor_contribution_version_id`) REFERENCES `0_hrm_ben_contribution_versions` (`contribution_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_contribution_receipts` (
   `contribution_receipt_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `enrollment_id` bigint unsigned NOT NULL,
@@ -12255,7 +12255,7 @@ CREATE TABLE `0_hrm_ben_contribution_receipts` (
   KEY `ix_ben1_crc_scope` (`enrollment_id`,`coverage_period_start`,`coverage_period_end`),
   CONSTRAINT `fk_ben1_crc_1` FOREIGN KEY (`enrollment_id`) REFERENCES `0_hrm_ben_enrollments` (`enrollment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_crc_2` FOREIGN KEY (`contribution_version_id`) REFERENCES `0_hrm_ben_contribution_versions` (`contribution_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_arrears` (
   `arrears_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `contribution_receipt_id` bigint unsigned NOT NULL,
@@ -12274,7 +12274,7 @@ CREATE TABLE `0_hrm_ben_arrears` (
   UNIQUE KEY `uq_ben1_arr_sha` (`obligation_sha256`),
   KEY `ix_ben1_arr_receipt` (`contribution_receipt_id`,`portion_code`),
   CONSTRAINT `fk_ben1_arr_1` FOREIGN KEY (`contribution_receipt_id`) REFERENCES `0_hrm_ben_contribution_receipts` (`contribution_receipt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_arrears_movements` (
   `arrears_movement_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `arrears_id` bigint unsigned NOT NULL,
@@ -12293,7 +12293,7 @@ CREATE TABLE `0_hrm_ben_arrears_movements` (
   KEY `ix_ben1_amv_scope` (`arrears_id`,`effective_date`),
   CONSTRAINT `fk_ben1_amv_1` FOREIGN KEY (`arrears_id`) REFERENCES `0_hrm_ben_arrears` (`arrears_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_amv_2` FOREIGN KEY (`predecessor_movement_id`) REFERENCES `0_hrm_ben_arrears_movements` (`arrears_movement_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_continuations` (
   `continuation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `enrollment_id` bigint unsigned NOT NULL,
@@ -12313,7 +12313,7 @@ CREATE TABLE `0_hrm_ben_continuations` (
   CONSTRAINT `fk_ben1_cnt_1` FOREIGN KEY (`enrollment_id`) REFERENCES `0_hrm_ben_enrollments` (`enrollment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_cnt_2` FOREIGN KEY (`pack_adapter_version_id`) REFERENCES `0_hrm_ben_pack_adapter_versions` (`pack_adapter_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_cnt_3` FOREIGN KEY (`predecessor_continuation_id`) REFERENCES `0_hrm_ben_continuations` (`continuation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_payroll_mappings` (
   `mapping_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `legal_entity_id` bigint unsigned NOT NULL,
@@ -12334,7 +12334,7 @@ CREATE TABLE `0_hrm_ben_payroll_mappings` (
   KEY `ix_ben1_pmap_eff` (`legal_entity_id`,`plan_version_id`,`portion_code`,`effective_from`,`effective_to`),
   CONSTRAINT `fk_ben1_pmp_1` FOREIGN KEY (`plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_pmp_2` FOREIGN KEY (`predecessor_mapping_id`) REFERENCES `0_hrm_ben_payroll_mappings` (`mapping_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_payroll_handoffs` (
   `handoff_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `contribution_receipt_id` bigint unsigned NOT NULL,
@@ -12358,7 +12358,7 @@ CREATE TABLE `0_hrm_ben_payroll_handoffs` (
   UNIQUE KEY `uq_ben1_pho_receipt_portion` (`contribution_receipt_id`,`portion_code`),
   CONSTRAINT `fk_ben1_pho_1` FOREIGN KEY (`contribution_receipt_id`) REFERENCES `0_hrm_ben_contribution_receipts` (`contribution_receipt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_pho_2` FOREIGN KEY (`mapping_id`) REFERENCES `0_hrm_ben_payroll_mappings` (`mapping_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_balance_mappings` (
   `balance_mapping_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `legal_entity_id` bigint unsigned NOT NULL,
@@ -12377,7 +12377,7 @@ CREATE TABLE `0_hrm_ben_balance_mappings` (
   KEY `ix_ben1_bmap_eff` (`legal_entity_id`,`plan_version_id`,`portion_code`,`effective_from`,`effective_to`),
   CONSTRAINT `fk_ben1_bmp_1` FOREIGN KEY (`plan_version_id`) REFERENCES `0_hrm_ben_plan_versions` (`plan_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_bmp_2` FOREIGN KEY (`predecessor_balance_mapping_id`) REFERENCES `0_hrm_ben_balance_mappings` (`balance_mapping_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_balance_handoffs` (
   `balance_handoff_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `arrears_id` bigint unsigned NOT NULL,
@@ -12395,7 +12395,7 @@ CREATE TABLE `0_hrm_ben_balance_handoffs` (
   UNIQUE KEY `uq_ben1_bho_arrears` (`arrears_id`),
   CONSTRAINT `fk_ben1_bho_1` FOREIGN KEY (`arrears_id`) REFERENCES `0_hrm_ben_arrears` (`arrears_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_bho_2` FOREIGN KEY (`balance_mapping_id`) REFERENCES `0_hrm_ben_balance_mappings` (`balance_mapping_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_provider_operations` (
   `provider_operation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `enrollment_id` bigint unsigned NOT NULL,
@@ -12422,7 +12422,7 @@ CREATE TABLE `0_hrm_ben_provider_operations` (
   KEY `ix_ben1_pop_state` (`provider_adapter_version_id`,`reconciliation_state`,`retry_state`,`recovery_state`),
   CONSTRAINT `fk_ben1_pop_1` FOREIGN KEY (`enrollment_id`) REFERENCES `0_hrm_ben_enrollments` (`enrollment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_pop_2` FOREIGN KEY (`provider_adapter_version_id`) REFERENCES `0_hrm_ben_provider_adapter_versions` (`provider_adapter_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TABLE `0_hrm_ben_provider_reconciliations` (
   `provider_reconciliation_id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `provider_operation_id` bigint unsigned NOT NULL,
@@ -12440,7 +12440,7 @@ CREATE TABLE `0_hrm_ben_provider_reconciliations` (
   KEY `ix_ben1_prec_op` (`provider_operation_id`,`status_token`),
   CONSTRAINT `fk_ben1_prc_1` FOREIGN KEY (`provider_operation_id`) REFERENCES `0_hrm_ben_provider_operations` (`provider_operation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ben1_prc_2` FOREIGN KEY (`predecessor_reconciliation_id`) REFERENCES `0_hrm_ben_provider_reconciliations` (`provider_reconciliation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 CREATE TRIGGER `0_ben1_pad_u` BEFORE UPDATE ON `0_hrm_ben_pack_adapter_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
 CREATE TRIGGER `0_ben1_pad_d` BEFORE DELETE ON `0_hrm_ben_pack_adapter_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be deleted';
 CREATE TRIGGER `0_ben1_prv_u` BEFORE UPDATE ON `0_hrm_ben_provider_adapter_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-BEN-001 immutable evidence cannot be updated';
@@ -12507,7 +12507,7 @@ CREATE TABLE `0_hrm_ess_002_delegation_capabilities` (
   UNIQUE KEY `uq_ess2_cap_scope` (`delegation_id`,`legal_entity_id`,`capability_code`,`effective_from`),
   KEY `ix_ess2_cap_asof` (`delegation_id`,`capability_code`,`effective_from`,`effective_to`),
   CONSTRAINT `fk_ess2_cap_delegation` FOREIGN KEY (`delegation_id`) REFERENCES `0_hrm_ess_manager_delegations` (`delegation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TABLE `0_hrm_ess_002_delegation_revocations` (
   `revocation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `capability_id` bigint(20) unsigned NOT NULL,
@@ -12521,7 +12521,7 @@ CREATE TABLE `0_hrm_ess_002_delegation_revocations` (
   UNIQUE KEY `uq_ess2_rev_cap` (`capability_id`),
   KEY `ix_ess2_rev_time` (`capability_id`,`revoked_at`),
   CONSTRAINT `fk_ess2_rev_capability` FOREIGN KEY (`capability_id`) REFERENCES `0_hrm_ess_002_delegation_capabilities` (`capability_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TABLE `0_hrm_ess_002_command_receipts` (
   `receipt_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `actor_user_id` smallint(6) unsigned NOT NULL,
@@ -12541,7 +12541,7 @@ CREATE TABLE `0_hrm_ess_002_command_receipts` (
   CONSTRAINT `fk_ess2_cmd_worker` FOREIGN KEY (`worker_id`) REFERENCES `0_hrm_workers` (`worker_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ess2_cmd_assignment` FOREIGN KEY (`assignment_id`) REFERENCES `0_hrm_assignments` (`assignment_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_ess2_cmd_legal_entity` FOREIGN KEY (`legal_entity_id`) REFERENCES `0_hrm_legal_entities` (`legal_entity_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ess2_cap_u` BEFORE UPDATE ON `0_hrm_ess_002_delegation_capabilities` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ESS-002 immutable delegation capability cannot be updated';
 CREATE TRIGGER `0_ess2_cap_d` BEFORE DELETE ON `0_hrm_ess_002_delegation_capabilities` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ESS-002 immutable delegation capability cannot be deleted';
 CREATE TRIGGER `0_ess2_rev_u` BEFORE UPDATE ON `0_hrm_ess_002_delegation_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ESS-002 immutable delegation revocation cannot be updated';
@@ -12562,7 +12562,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_raw_blobs` (
   `created_at` datetime NOT NULL,
   PRIMARY KEY (`raw_blob_id`),
   UNIQUE KEY `uq_pctry_rb_sha` (`raw_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_rb_u` BEFORE UPDATE ON `0_pay_ctry_raw_blobs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_raw_blobs row cannot be updated';
 CREATE TRIGGER `0_ct1_rb_d` BEFORE DELETE ON `0_pay_ctry_raw_blobs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_raw_blobs row cannot be deleted';
 -- PAY-CTRY-001 END GROUP raw
@@ -12575,7 +12575,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_packs` (
   `created_at` datetime NOT NULL,
   PRIMARY KEY (`pack_id`),
   UNIQUE KEY `uq_pctry_pack_code` (`pack_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_pk_u` BEFORE UPDATE ON `0_pay_ctry_packs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_packs row cannot be updated';
 CREATE TRIGGER `0_ct1_pk_d` BEFORE DELETE ON `0_pay_ctry_packs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_packs row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_pack_versions` (
@@ -12603,7 +12603,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_pack_versions` (
   KEY `ix_pctry_pv_raw` (`raw_blob_id`),
   CONSTRAINT `fk_pctry_pv_pack` FOREIGN KEY (`pack_id`) REFERENCES `0_pay_ctry_packs` (`pack_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pctry_pv_raw` FOREIGN KEY (`raw_blob_id`) REFERENCES `0_pay_ctry_raw_blobs` (`raw_blob_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_pv_u` BEFORE UPDATE ON `0_pay_ctry_pack_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_pack_versions row cannot be updated';
 CREATE TRIGGER `0_ct1_pv_d` BEFORE DELETE ON `0_pay_ctry_pack_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_pack_versions row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_artifacts` (
@@ -12622,7 +12622,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_artifacts` (
   UNIQUE KEY `uq_pctry_art_ord` (`pack_version_id`,`ordinal_no`),
   KEY `ix_pctry_art_sha` (`sha256`),
   CONSTRAINT `fk_pctry_art_pv` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_ar_u` BEFORE UPDATE ON `0_pay_ctry_artifacts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_artifacts row cannot be updated';
 CREATE TRIGGER `0_ct1_ar_d` BEFORE DELETE ON `0_pay_ctry_artifacts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_artifacts row cannot be deleted';
 -- PAY-CTRY-001 END GROUP identity
@@ -12640,7 +12640,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_publishers` (
   PRIMARY KEY (`publisher_id`),
   UNIQUE KEY `uq_pctry_pub_code` (`publisher_code`),
   UNIQUE KEY `uq_pctry_pub_sha` (`identity_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_pu_u` BEFORE UPDATE ON `0_pay_ctry_publishers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_publishers row cannot be updated';
 CREATE TRIGGER `0_ct1_pu_d` BEFORE DELETE ON `0_pay_ctry_publishers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_publishers row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_publisher_revocations` (
@@ -12656,7 +12656,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_publisher_revocations` (
   UNIQUE KEY `uq_pctry_pub_rev_pub` (`publisher_id`),
   UNIQUE KEY `uq_pctry_pub_rev_sha` (`revocation_sha256`),
   CONSTRAINT `fk_pctry_pub_rev_pub` FOREIGN KEY (`publisher_id`) REFERENCES `0_pay_ctry_publishers` (`publisher_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_pr_u` BEFORE UPDATE ON `0_pay_ctry_publisher_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_publisher_revocations row cannot be updated';
 CREATE TRIGGER `0_ct1_pr_d` BEFORE DELETE ON `0_pay_ctry_publisher_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_publisher_revocations row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_signers` (
@@ -12672,7 +12672,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_signers` (
   UNIQUE KEY `uq_pctry_signer_sha` (`identity_sha256`),
   KEY `ix_pctry_signer_pub` (`publisher_id`),
   CONSTRAINT `fk_pctry_signer_pub` FOREIGN KEY (`publisher_id`) REFERENCES `0_pay_ctry_publishers` (`publisher_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_si_u` BEFORE UPDATE ON `0_pay_ctry_signers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_signers row cannot be updated';
 CREATE TRIGGER `0_ct1_si_d` BEFORE DELETE ON `0_pay_ctry_signers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_signers row cannot be deleted';
 -- PAY-CTRY-001 END GROUP publisher
@@ -12697,7 +12697,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_trust_keys` (
   UNIQUE KEY `uq_pctry_key_sha` (`key_sha256`),
   KEY `ix_pctry_key_signer` (`signer_id`),
   CONSTRAINT `fk_pctry_key_signer` FOREIGN KEY (`signer_id`) REFERENCES `0_pay_ctry_signers` (`signer_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_tk_u` BEFORE UPDATE ON `0_pay_ctry_trust_keys` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_trust_keys row cannot be updated';
 CREATE TRIGGER `0_ct1_tk_d` BEFORE DELETE ON `0_pay_ctry_trust_keys` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_trust_keys row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_trust_key_revocations` (
@@ -12714,7 +12714,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_trust_key_revocations` (
   UNIQUE KEY `uq_pctry_key_rev_key` (`trust_key_id`),
   UNIQUE KEY `uq_pctry_key_rev_sha` (`revocation_sha256`),
   CONSTRAINT `fk_pctry_key_rev_key` FOREIGN KEY (`trust_key_id`) REFERENCES `0_pay_ctry_trust_keys` (`trust_key_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_kr_u` BEFORE UPDATE ON `0_pay_ctry_trust_key_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_trust_key_revocations row cannot be updated';
 CREATE TRIGGER `0_ct1_kr_d` BEFORE DELETE ON `0_pay_ctry_trust_key_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_trust_key_revocations row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_trust_key_supersessions` (
@@ -12731,7 +12731,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_trust_key_supersessions` (
   KEY `ix_pctry_key_sup_succ` (`successor_key_id`),
   CONSTRAINT `fk_pctry_key_sup_pred` FOREIGN KEY (`predecessor_key_id`) REFERENCES `0_pay_ctry_trust_keys` (`trust_key_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pctry_key_sup_succ` FOREIGN KEY (`successor_key_id`) REFERENCES `0_pay_ctry_trust_keys` (`trust_key_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_ks_u` BEFORE UPDATE ON `0_pay_ctry_trust_key_supersessions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_trust_key_supersessions row cannot be updated';
 CREATE TRIGGER `0_ct1_ks_d` BEFORE DELETE ON `0_pay_ctry_trust_key_supersessions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_trust_key_supersessions row cannot be deleted';
 -- PAY-CTRY-001 END GROUP trust
@@ -12770,7 +12770,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_verification_reports` (
   KEY `ix_pctry_vr_status` (`final_status`,`created_at`),
   CONSTRAINT `fk_pctry_vr_raw` FOREIGN KEY (`raw_blob_id`) REFERENCES `0_pay_ctry_raw_blobs` (`raw_blob_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pctry_vr_pv` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_vr_u` BEFORE UPDATE ON `0_pay_ctry_verification_reports` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_verification_reports row cannot be updated';
 CREATE TRIGGER `0_ct1_vr_d` BEFORE DELETE ON `0_pay_ctry_verification_reports` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_verification_reports row cannot be deleted';
 -- PAY-CTRY-001 END GROUP report
@@ -12785,7 +12785,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_capability_registry_versions` (
   PRIMARY KEY (`registry_version_id`),
   UNIQUE KEY `uq_pctry_cap_ver` (`registry_version`),
   UNIQUE KEY `uq_pctry_cap_ver_sha` (`registry_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_cv_u` BEFORE UPDATE ON `0_pay_ctry_capability_registry_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_capability_registry_versions row cannot be updated';
 CREATE TRIGGER `0_ct1_cv_d` BEFORE DELETE ON `0_pay_ctry_capability_registry_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_capability_registry_versions row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_capability_definitions` (
@@ -12802,7 +12802,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_capability_definitions` (
   UNIQUE KEY `uq_pctry_cap_def_code` (`registry_version_id`,`capability_code`),
   UNIQUE KEY `uq_pctry_cap_def_sha` (`definition_sha256`),
   CONSTRAINT `fk_pctry_cap_def_ver` FOREIGN KEY (`registry_version_id`) REFERENCES `0_pay_ctry_capability_registry_versions` (`registry_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_cd_u` BEFORE UPDATE ON `0_pay_ctry_capability_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_capability_definitions row cannot be updated';
 CREATE TRIGGER `0_ct1_cd_d` BEFORE DELETE ON `0_pay_ctry_capability_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_capability_definitions row cannot be deleted';
 INSERT INTO `0_pay_ctry_capability_registry_versions` (`registry_version`,`registry_sha256`,`created_by`,`created_at`) SELECT 'pay-ctry-capabilities-v1','95d41321a98412df4df289b0ac4df9dcabed417d618bbdb77086ea0fba7237bc',0,'2026-09-23 00:00:00' WHERE NOT EXISTS (SELECT 1 FROM `0_pay_ctry_capability_registry_versions` WHERE `registry_version`='pay-ctry-capabilities-v1');
@@ -12820,7 +12820,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_dependency_locks` (
   UNIQUE KEY `uq_pctry_dep_pack` (`pack_version_id`),
   UNIQUE KEY `uq_pctry_dep_sha` (`lock_sha256`),
   CONSTRAINT `fk_pctry_dep_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_dl_u` BEFORE UPDATE ON `0_pay_ctry_dependency_locks` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_dependency_locks row cannot be updated';
 CREATE TRIGGER `0_ct1_dl_d` BEFORE DELETE ON `0_pay_ctry_dependency_locks` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_dependency_locks row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_dependency_lock_members` (
@@ -12839,7 +12839,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_dependency_lock_members` (
   KEY `ix_pctry_dep_resolved` (`resolved_pack_version_id`),
   CONSTRAINT `fk_pctry_dep_member_lock` FOREIGN KEY (`dependency_lock_id`) REFERENCES `0_pay_ctry_dependency_locks` (`dependency_lock_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pctry_dep_member_resolved` FOREIGN KEY (`resolved_pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_dm_u` BEFORE UPDATE ON `0_pay_ctry_dependency_lock_members` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_dependency_lock_members row cannot be updated';
 CREATE TRIGGER `0_ct1_dm_d` BEFORE DELETE ON `0_pay_ctry_dependency_lock_members` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_dependency_lock_members row cannot be deleted';
 -- PAY-CTRY-001 END GROUP dependency
@@ -12863,7 +12863,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_install_receipts` (
   CONSTRAINT `fk_pctry_ir_raw` FOREIGN KEY (`raw_blob_id`) REFERENCES `0_pay_ctry_raw_blobs` (`raw_blob_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pctry_ir_report` FOREIGN KEY (`verification_report_id`) REFERENCES `0_pay_ctry_verification_reports` (`verification_report_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pctry_ir_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct1_ir_u` BEFORE UPDATE ON `0_pay_ctry_install_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_install_receipts row cannot be updated';
 CREATE TRIGGER `0_ct1_ir_d` BEFORE DELETE ON `0_pay_ctry_install_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-001 immutable pay_ctry_install_receipts row cannot be deleted';
 -- PAY-CTRY-001 END GROUP integration
@@ -12890,7 +12890,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_site_operation_journal` (
   CONSTRAINT `fk_pct2_op_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct2_op_pred` FOREIGN KEY (`predecessor_pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct2_op_report` FOREIGN KEY (`verification_report_id`) REFERENCES `0_pay_ctry_verification_reports` (`verification_report_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct2_oj_u` BEFORE UPDATE ON `0_pay_ctry_site_operation_journal` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_site_operation_journal row cannot be updated';
 CREATE TRIGGER `0_ct2_oj_d` BEFORE DELETE ON `0_pay_ctry_site_operation_journal` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_site_operation_journal row cannot be deleted';
 
@@ -12913,7 +12913,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_site_installations` (
   CONSTRAINT `fk_pct2_si_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct2_si_pred` FOREIGN KEY (`predecessor_site_installation_id`) REFERENCES `0_pay_ctry_site_installations` (`site_installation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct2_si_event` FOREIGN KEY (`operation_event_id`) REFERENCES `0_pay_ctry_site_operation_journal` (`operation_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct2_si_u` BEFORE UPDATE ON `0_pay_ctry_site_installations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_site_installations row cannot be updated';
 CREATE TRIGGER `0_ct2_si_d` BEFORE DELETE ON `0_pay_ctry_site_installations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_site_installations row cannot be deleted';
 -- PAY-CTRY-002 END GROUP site_lifecycle
@@ -12945,7 +12945,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_activation_impact_simulations` (
   KEY `ix_pct2_im_install` (`site_installation_id`,`created_at`),
   KEY `ix_pct2_im_scope` (`company_id`,`scope_type`,`legal_entity_id`,`payroll_scope_key`,`effective_from`),
   CONSTRAINT `fk_pct2_im_install` FOREIGN KEY (`site_installation_id`) REFERENCES `0_pay_ctry_site_installations` (`site_installation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct2_im_u` BEFORE UPDATE ON `0_pay_ctry_activation_impact_simulations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_impact_simulations row cannot be updated';
 CREATE TRIGGER `0_ct2_im_d` BEFORE DELETE ON `0_pay_ctry_activation_impact_simulations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_impact_simulations row cannot be deleted';
 -- PAY-CTRY-002 END GROUP impact_simulation
@@ -12977,7 +12977,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_activation_proposals` (
   KEY `ix_pct2_ap_scope` (`company_id`,`scope_type`,`legal_entity_id`,`payroll_scope_key`,`effective_from`),
   CONSTRAINT `fk_pct2_ap_install` FOREIGN KEY (`site_installation_id`) REFERENCES `0_pay_ctry_site_installations` (`site_installation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct2_ap_impact` FOREIGN KEY (`impact_simulation_id`) REFERENCES `0_pay_ctry_activation_impact_simulations` (`impact_simulation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct2_ap_u` BEFORE UPDATE ON `0_pay_ctry_activation_proposals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_proposals row cannot be updated';
 CREATE TRIGGER `0_ct2_ap_d` BEFORE DELETE ON `0_pay_ctry_activation_proposals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_proposals row cannot be deleted';
 -- PAY-CTRY-002 END GROUP activation_proposal
@@ -12997,7 +12997,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_activation_approvals` (
   UNIQUE KEY `uq_pct2_aa_hash` (`approval_sha256`),
   KEY `ix_pct2_aa_checker` (`checker_id`,`created_at`),
   CONSTRAINT `fk_pct2_aa_proposal` FOREIGN KEY (`activation_proposal_id`) REFERENCES `0_pay_ctry_activation_proposals` (`activation_proposal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct2_aa_u` BEFORE UPDATE ON `0_pay_ctry_activation_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_approvals row cannot be updated';
 CREATE TRIGGER `0_ct2_aa_d` BEFORE DELETE ON `0_pay_ctry_activation_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_approvals row cannot be deleted';
 -- PAY-CTRY-002 END GROUP activation_approval
@@ -13035,7 +13035,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_activations` (
   CONSTRAINT `fk_pct2_ac_proposal` FOREIGN KEY (`activation_proposal_id`) REFERENCES `0_pay_ctry_activation_proposals` (`activation_proposal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct2_ac_approval` FOREIGN KEY (`activation_approval_id`) REFERENCES `0_pay_ctry_activation_approvals` (`activation_approval_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct2_ac_install` FOREIGN KEY (`site_installation_id`) REFERENCES `0_pay_ctry_site_installations` (`site_installation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct2_ac_u` BEFORE UPDATE ON `0_pay_ctry_activations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activations row cannot be updated';
 CREATE TRIGGER `0_ct2_ac_d` BEFORE DELETE ON `0_pay_ctry_activations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activations row cannot be deleted';
 -- PAY-CTRY-002 END GROUP activation_execution
@@ -13066,7 +13066,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_activation_bindings` (
   CONSTRAINT `fk_pct2_bd_activation` FOREIGN KEY (`activation_id`) REFERENCES `0_pay_ctry_activations` (`activation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct2_bd_pred` FOREIGN KEY (`predecessor_binding_id`) REFERENCES `0_pay_ctry_activation_bindings` (`binding_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct2_bd_install` FOREIGN KEY (`site_installation_id`) REFERENCES `0_pay_ctry_site_installations` (`site_installation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct2_bd_u` BEFORE UPDATE ON `0_pay_ctry_activation_bindings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_bindings row cannot be updated';
 CREATE TRIGGER `0_ct2_bd_d` BEFORE DELETE ON `0_pay_ctry_activation_bindings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_bindings row cannot be deleted';
 -- PAY-CTRY-002 END GROUP activation_binding
@@ -13097,7 +13097,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_activation_suspensions` (
   KEY `ix_pct2_ss_scope` (`company_id`,`scope_type`,`legal_entity_id`,`payroll_scope_key`,`effective_at`),
   CONSTRAINT `fk_pct2_ss_activation` FOREIGN KEY (`activation_id`) REFERENCES `0_pay_ctry_activations` (`activation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct2_ss_binding` FOREIGN KEY (`binding_id`) REFERENCES `0_pay_ctry_activation_bindings` (`binding_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct2_ss_u` BEFORE UPDATE ON `0_pay_ctry_activation_suspensions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_suspensions row cannot be updated';
 CREATE TRIGGER `0_ct2_ss_d` BEFORE DELETE ON `0_pay_ctry_activation_suspensions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_suspensions row cannot be deleted';
 -- PAY-CTRY-002 END GROUP activation_suspension
@@ -13127,7 +13127,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_activation_outbox` (
   KEY `ix_pct2_ob_scope` (`company_id`,`scope_type`,`legal_entity_id`,`payroll_scope_key`,`effective_at`),
   CONSTRAINT `fk_pct2_ob_activation` FOREIGN KEY (`activation_id`) REFERENCES `0_pay_ctry_activations` (`activation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct2_ob_suspension` FOREIGN KEY (`suspension_id`) REFERENCES `0_pay_ctry_activation_suspensions` (`suspension_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct2_ob_u` BEFORE UPDATE ON `0_pay_ctry_activation_outbox` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_outbox row cannot be updated';
 CREATE TRIGGER `0_ct2_ob_d` BEFORE DELETE ON `0_pay_ctry_activation_outbox` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_outbox row cannot be deleted';
 
@@ -13147,7 +13147,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_activation_delivery_attempts` (
   UNIQUE KEY `uq_pct2_da_evidence` (`evidence_sha256`),
   KEY `ix_pct2_da_status` (`outbox_id`,`delivery_status`,`created_at`),
   CONSTRAINT `fk_pct2_da_outbox` FOREIGN KEY (`outbox_id`) REFERENCES `0_pay_ctry_activation_outbox` (`outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct2_da_u` BEFORE UPDATE ON `0_pay_ctry_activation_delivery_attempts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_delivery_attempts row cannot be updated';
 CREATE TRIGGER `0_ct2_da_d` BEFORE DELETE ON `0_pay_ctry_activation_delivery_attempts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_delivery_attempts row cannot be deleted';
 -- PAY-CTRY-002 END GROUP activation_outbox
@@ -13177,7 +13177,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_activation_run_bindings` (
   CONSTRAINT `fk_pct2_rg_run` FOREIGN KEY (`run_id`) REFERENCES `0_hrm_pay_core_009_runs` (`run_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct2_rg_binding` FOREIGN KEY (`binding_id`) REFERENCES `0_pay_ctry_activation_bindings` (`binding_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct2_rg_activation` FOREIGN KEY (`activation_id`) REFERENCES `0_pay_ctry_activations` (`activation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct2_rg_u` BEFORE UPDATE ON `0_pay_ctry_activation_run_bindings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_run_bindings row cannot be updated';
 CREATE TRIGGER `0_ct2_rg_d` BEFORE DELETE ON `0_pay_ctry_activation_run_bindings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_run_bindings row cannot be deleted';
 -- PAY-CTRY-002 END GROUP activation_run_guard
@@ -13208,7 +13208,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_activation_revocations` (
   KEY `ix_pct2_rv_scope` (`company_id`,`scope_type`,`legal_entity_id`,`payroll_scope_key`,`effective_at`),
   CONSTRAINT `fk_pct2_rv_activation` FOREIGN KEY (`activation_id`) REFERENCES `0_pay_ctry_activations` (`activation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct2_rv_binding` FOREIGN KEY (`binding_id`) REFERENCES `0_pay_ctry_activation_bindings` (`binding_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct2_rv_u` BEFORE UPDATE ON `0_pay_ctry_activation_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_revocations row cannot be updated';
 CREATE TRIGGER `0_ct2_rv_d` BEFORE DELETE ON `0_pay_ctry_activation_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-002 immutable pay_ctry_activation_revocations row cannot be deleted';
 -- PAY-CTRY-002 END GROUP activation_revocation
@@ -13230,7 +13230,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_capability_contract_versions` (
   UNIQUE KEY `uq_pct3_cv_version` (`registry_version`),
   UNIQUE KEY `uq_pct3_cv_sha` (`registry_sha256`),
   UNIQUE KEY `uq_pct3_cv_signature` (`signature_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct3_cv_u` BEFORE UPDATE ON `0_pay_ctry_capability_contract_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-003 immutable pay_ctry_capability_contract_versions row cannot be updated';
 CREATE TRIGGER `0_ct3_cv_d` BEFORE DELETE ON `0_pay_ctry_capability_contract_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-003 immutable pay_ctry_capability_contract_versions row cannot be deleted';
 -- PAY-CTRY-003 END GROUP registry
@@ -13254,7 +13254,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_capability_contract_definitions` (
   UNIQUE KEY `uq_pct3_cd_sha` (`definition_sha256`),
   KEY `ix_pct3_cd_adapter` (`host_adapter`,`host_version`),
   CONSTRAINT `fk_pct3_cd_registry` FOREIGN KEY (`registry_version_id`) REFERENCES `0_pay_ctry_capability_contract_versions` (`registry_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct3_cd_u` BEFORE UPDATE ON `0_pay_ctry_capability_contract_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-003 immutable pay_ctry_capability_contract_definitions row cannot be updated';
 CREATE TRIGGER `0_ct3_cd_d` BEFORE DELETE ON `0_pay_ctry_capability_contract_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-003 immutable pay_ctry_capability_contract_definitions row cannot be deleted';
 -- PAY-CTRY-003 END GROUP definitions
@@ -13271,7 +13271,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_host_adapters` (
   PRIMARY KEY (`host_adapter_id`),
   UNIQUE KEY `uq_pct3_ha_code` (`adapter_code`,`adapter_version`),
   UNIQUE KEY `uq_pct3_ha_sha` (`adapter_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct3_ha_u` BEFORE UPDATE ON `0_pay_ctry_host_adapters` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-003 immutable pay_ctry_host_adapters row cannot be updated';
 CREATE TRIGGER `0_ct3_ha_d` BEFORE DELETE ON `0_pay_ctry_host_adapters` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-003 immutable pay_ctry_host_adapters row cannot be deleted';
 -- PAY-CTRY-003 END GROUP adapters
@@ -13304,7 +13304,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_pack_artifact_contracts` (
   CONSTRAINT `fk_pct3_ac_artifact` FOREIGN KEY (`artifact_id`) REFERENCES `0_pay_ctry_artifacts` (`artifact_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct3_ac_registry` FOREIGN KEY (`registry_version_id`) REFERENCES `0_pay_ctry_capability_contract_versions` (`registry_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct3_ac_definition` FOREIGN KEY (`capability_definition_id`) REFERENCES `0_pay_ctry_capability_contract_definitions` (`capability_definition_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct3_ac_u` BEFORE UPDATE ON `0_pay_ctry_pack_artifact_contracts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-003 immutable pay_ctry_pack_artifact_contracts row cannot be updated';
 CREATE TRIGGER `0_ct3_ac_d` BEFORE DELETE ON `0_pay_ctry_pack_artifact_contracts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-003 immutable pay_ctry_pack_artifact_contracts row cannot be deleted';
 -- PAY-CTRY-003 END GROUP artifact
@@ -13330,7 +13330,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_contract_validation_reports` (
   CONSTRAINT `fk_pct3_vr_contract` FOREIGN KEY (`artifact_contract_id`) REFERENCES `0_pay_ctry_pack_artifact_contracts` (`artifact_contract_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct3_vr_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct3_vr_registry` FOREIGN KEY (`registry_version_id`) REFERENCES `0_pay_ctry_capability_contract_versions` (`registry_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct3_vr_u` BEFORE UPDATE ON `0_pay_ctry_contract_validation_reports` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-003 immutable pay_ctry_contract_validation_reports row cannot be updated';
 CREATE TRIGGER `0_ct3_vr_d` BEFORE DELETE ON `0_pay_ctry_contract_validation_reports` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-003 immutable pay_ctry_contract_validation_reports row cannot be deleted';
 -- PAY-CTRY-003 END GROUP report
@@ -13350,7 +13350,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_contract_migration_edges` (
   UNIQUE KEY `uq_pct3_me_successor` (`artifact_contract_id`,`successor_version`),
   KEY `ix_pct3_me_predecessor` (`predecessor_version`),
   CONSTRAINT `fk_pct3_me_contract` FOREIGN KEY (`artifact_contract_id`) REFERENCES `0_pay_ctry_pack_artifact_contracts` (`artifact_contract_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct3_me_u` BEFORE UPDATE ON `0_pay_ctry_contract_migration_edges` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-003 immutable pay_ctry_contract_migration_edges row cannot be updated';
 CREATE TRIGGER `0_ct3_me_d` BEFORE DELETE ON `0_pay_ctry_contract_migration_edges` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-003 immutable pay_ctry_contract_migration_edges row cannot be deleted';
 -- PAY-CTRY-003 END GROUP migration
@@ -13392,7 +13392,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_evidence_sources` (
   UNIQUE KEY `uq_pct4_es_identity` (`source_identity_sha256`),
   UNIQUE KEY `uq_pct4_es_code_version` (`source_code`,`source_version`,`evidence_digest`),
   KEY `ix_pct4_es_scope` (`jurisdiction`,`effective_from`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct4_es_u` BEFORE UPDATE ON `0_pay_ctry_evidence_sources` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_evidence_sources row cannot be updated';
 CREATE TRIGGER `0_ct4_es_d` BEFORE DELETE ON `0_pay_ctry_evidence_sources` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_evidence_sources row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_evidence_items` (
@@ -13409,7 +13409,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_evidence_items` (
   UNIQUE KEY `uq_pct4_ei_identity` (`evidence_identity_sha256`),
   UNIQUE KEY `uq_pct4_ei_source_content` (`evidence_source_id`,`content_sha256`),
   CONSTRAINT `fk_pct4_ei_source` FOREIGN KEY (`evidence_source_id`) REFERENCES `0_pay_ctry_evidence_sources` (`evidence_source_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct4_ei_u` BEFORE UPDATE ON `0_pay_ctry_evidence_items` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_evidence_items row cannot be updated';
 CREATE TRIGGER `0_ct4_ei_d` BEFORE DELETE ON `0_pay_ctry_evidence_items` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_evidence_items row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_evidence_inventories` (
@@ -13428,7 +13428,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_evidence_inventories` (
   UNIQUE KEY `uq_pct4_ev_root` (`pack_version_id`,`semantic_root`,`evidence_root`),
   KEY `ix_pct4_ev_pack` (`pack_version_id`,`created_at`),
   CONSTRAINT `fk_pct4_ev_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct4_ev_u` BEFORE UPDATE ON `0_pay_ctry_evidence_inventories` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_evidence_inventories row cannot be updated';
 CREATE TRIGGER `0_ct4_ev_d` BEFORE DELETE ON `0_pay_ctry_evidence_inventories` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_evidence_inventories row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_evidence_inventory_members` (
@@ -13445,7 +13445,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_evidence_inventory_members` (
   KEY `fk_pct4_em_item` (`evidence_item_id`),
   CONSTRAINT `fk_pct4_em_inventory` FOREIGN KEY (`evidence_inventory_id`) REFERENCES `0_pay_ctry_evidence_inventories` (`evidence_inventory_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct4_em_item` FOREIGN KEY (`evidence_item_id`) REFERENCES `0_pay_ctry_evidence_items` (`evidence_item_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct4_em_u` BEFORE UPDATE ON `0_pay_ctry_evidence_inventory_members` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_evidence_inventory_members row cannot be updated';
 CREATE TRIGGER `0_ct4_em_d` BEFORE DELETE ON `0_pay_ctry_evidence_inventory_members` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_evidence_inventory_members row cannot be deleted';
 -- PAY-CTRY-004 END GROUP evidence
@@ -13474,7 +13474,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_review_decisions` (
   CONSTRAINT `fk_pct4_rd_inventory` FOREIGN KEY (`evidence_inventory_id`) REFERENCES `0_pay_ctry_evidence_inventories` (`evidence_inventory_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct4_rd_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct4_rd_evidence` FOREIGN KEY (`evidence_item_id`) REFERENCES `0_pay_ctry_evidence_items` (`evidence_item_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct4_rd_u` BEFORE UPDATE ON `0_pay_ctry_review_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_review_decisions row cannot be updated';
 CREATE TRIGGER `0_ct4_rd_d` BEFORE DELETE ON `0_pay_ctry_review_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_review_decisions row cannot be deleted';
 -- PAY-CTRY-004 END GROUP reviews
@@ -13507,7 +13507,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_parallel_run_evidence` (
   KEY `ix_pct4_pr_inventory` (`evidence_inventory_id`,`executed_at`),
   CONSTRAINT `fk_pct4_pr_inventory` FOREIGN KEY (`evidence_inventory_id`) REFERENCES `0_pay_ctry_evidence_inventories` (`evidence_inventory_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct4_pr_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct4_pr_u` BEFORE UPDATE ON `0_pay_ctry_parallel_run_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_parallel_run_evidence row cannot be updated';
 CREATE TRIGGER `0_ct4_pr_d` BEFORE DELETE ON `0_pay_ctry_parallel_run_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_parallel_run_evidence row cannot be deleted';
 -- PAY-CTRY-004 END GROUP parallel
@@ -13531,7 +13531,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_certification_signing_keys` (
   UNIQUE KEY `uq_pct4_sk_public` (`public_key_sha256`),
   UNIQUE KEY `uq_pct4_sk_sha` (`key_sha256`),
   KEY `ix_pct4_sk_actor` (`actor_id`,`valid_from`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct4_sk_u` BEFORE UPDATE ON `0_pay_ctry_certification_signing_keys` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_signing_keys row cannot be updated';
 CREATE TRIGGER `0_ct4_sk_d` BEFORE DELETE ON `0_pay_ctry_certification_signing_keys` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_signing_keys row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_certification_key_revocations` (
@@ -13546,7 +13546,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_certification_key_revocations` (
   UNIQUE KEY `uq_pct4_kr_key` (`certification_signing_key_id`),
   UNIQUE KEY `uq_pct4_kr_sha` (`revocation_sha256`),
   CONSTRAINT `fk_pct4_kr_key` FOREIGN KEY (`certification_signing_key_id`) REFERENCES `0_pay_ctry_certification_signing_keys` (`certification_signing_key_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct4_kr_u` BEFORE UPDATE ON `0_pay_ctry_certification_key_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_key_revocations row cannot be updated';
 CREATE TRIGGER `0_ct4_kr_d` BEFORE DELETE ON `0_pay_ctry_certification_key_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_key_revocations row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_certification_events` (
@@ -13594,7 +13594,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_certification_events` (
   CONSTRAINT `fk_pct4_ce_registry` FOREIGN KEY (`registry_version_id`) REFERENCES `0_pay_ctry_capability_contract_versions` (`registry_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct4_ce_parallel` FOREIGN KEY (`parallel_evidence_id`) REFERENCES `0_pay_ctry_parallel_run_evidence` (`parallel_evidence_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct4_ce_signing` FOREIGN KEY (`certification_signing_key_id`) REFERENCES `0_pay_ctry_certification_signing_keys` (`certification_signing_key_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct4_ce_u` BEFORE UPDATE ON `0_pay_ctry_certification_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_events row cannot be updated';
 CREATE TRIGGER `0_ct4_ce_d` BEFORE DELETE ON `0_pay_ctry_certification_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_events row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_pay_ctry_certification_claims` (
@@ -13622,7 +13622,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_certification_claims` (
   KEY `ix_pct4_cc_event` (`certification_event_id`,`effective_to`),
   KEY `ix_pct4_cc_scope` (`jurisdiction`,`scope_type`,`company_id`,`legal_entity_id`),
   CONSTRAINT `fk_pct4_cc_event` FOREIGN KEY (`certification_event_id`) REFERENCES `0_pay_ctry_certification_events` (`certification_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct4_cc_u` BEFORE UPDATE ON `0_pay_ctry_certification_claims` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_claims row cannot be updated';
 CREATE TRIGGER `0_ct4_cc_d` BEFORE DELETE ON `0_pay_ctry_certification_claims` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_claims row cannot be deleted';
 -- PAY-CTRY-004 END GROUP certification
@@ -13649,7 +13649,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_publication_records` (
   CONSTRAINT `fk_pct4_pb_event` FOREIGN KEY (`certification_event_id`) REFERENCES `0_pay_ctry_certification_events` (`certification_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct4_pb_claim` FOREIGN KEY (`certification_claim_id`) REFERENCES `0_pay_ctry_certification_claims` (`certification_claim_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct4_pb_pred` FOREIGN KEY (`predecessor_publication_id`) REFERENCES `0_pay_ctry_publication_records` (`publication_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct4_pb_u` BEFORE UPDATE ON `0_pay_ctry_publication_records` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_publication_records row cannot be updated';
 CREATE TRIGGER `0_ct4_pb_d` BEFORE DELETE ON `0_pay_ctry_publication_records` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_publication_records row cannot be deleted';
 -- PAY-CTRY-004 END GROUP publication
@@ -13676,7 +13676,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_certification_emergency_actions` (
   KEY `fk_pct4_ea_claim` (`certification_claim_id`),
   CONSTRAINT `fk_pct4_ea_event` FOREIGN KEY (`certification_event_id`) REFERENCES `0_pay_ctry_certification_events` (`certification_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct4_ea_claim` FOREIGN KEY (`certification_claim_id`) REFERENCES `0_pay_ctry_certification_claims` (`certification_claim_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct4_ea_u` BEFORE UPDATE ON `0_pay_ctry_certification_emergency_actions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_emergency_actions row cannot be updated';
 CREATE TRIGGER `0_ct4_ea_d` BEFORE DELETE ON `0_pay_ctry_certification_emergency_actions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_emergency_actions row cannot be deleted';
 -- PAY-CTRY-004 END GROUP emergency
@@ -13697,7 +13697,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_certification_raci_assignments` (
   UNIQUE KEY `uq_pct4_ra_sha` (`assignment_sha256`),
   KEY `ix_pct4_ra_role` (`governance_role`,`principal_id`),
   KEY `ix_pct4_ra_scope` (`jurisdiction`,`valid_from`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct4_ra_u` BEFORE UPDATE ON `0_pay_ctry_certification_raci_assignments` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_raci_assignments row cannot be updated';
 CREATE TRIGGER `0_ct4_ra_d` BEFORE DELETE ON `0_pay_ctry_certification_raci_assignments` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_raci_assignments row cannot be deleted';
 -- PAY-CTRY-004 END GROUP raci
@@ -13721,7 +13721,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_certification_recovery_records` (
   KEY `fk_pct4_rr_pred` (`predecessor_recovery_id`),
   CONSTRAINT `fk_pct4_rr_event` FOREIGN KEY (`certification_event_id`) REFERENCES `0_pay_ctry_certification_events` (`certification_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct4_rr_pred` FOREIGN KEY (`predecessor_recovery_id`) REFERENCES `0_pay_ctry_certification_recovery_records` (`recovery_record_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct4_rr_u` BEFORE UPDATE ON `0_pay_ctry_certification_recovery_records` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_recovery_records row cannot be updated';
 CREATE TRIGGER `0_ct4_rr_d` BEFORE DELETE ON `0_pay_ctry_certification_recovery_records` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-004 immutable pay_ctry_certification_recovery_records row cannot be deleted';
 -- PAY-CTRY-004 END GROUP recovery
@@ -13756,7 +13756,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_catalog_releases` (
   CONSTRAINT `fk_pct7_cr_publisher` FOREIGN KEY (`publisher_id`) REFERENCES `0_pay_ctry_publishers` (`publisher_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct7_cr_signer` FOREIGN KEY (`signer_id`) REFERENCES `0_pay_ctry_signers` (`signer_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct7_cr_key` FOREIGN KEY (`trust_key_id`) REFERENCES `0_pay_ctry_trust_keys` (`trust_key_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct7_cr_u` BEFORE UPDATE ON `0_pay_ctry_catalog_releases` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_catalog_releases row cannot be updated';
 CREATE TRIGGER `0_ct7_cr_d` BEFORE DELETE ON `0_pay_ctry_catalog_releases` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_catalog_releases row cannot be deleted';
 
@@ -13777,7 +13777,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_catalog_release_admissions` (
   UNIQUE KEY `uq_pct7_ca_sha` (`admission_sha256`),
   KEY `ix_pct7_ca_checker` (`checker_id`,`decided_at`),
   CONSTRAINT `fk_pct7_ca_release` FOREIGN KEY (`catalog_release_id`) REFERENCES `0_pay_ctry_catalog_releases` (`catalog_release_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct7_ca_u` BEFORE UPDATE ON `0_pay_ctry_catalog_release_admissions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_catalog_release_admissions row cannot be updated';
 CREATE TRIGGER `0_ct7_ca_d` BEFORE DELETE ON `0_pay_ctry_catalog_release_admissions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_catalog_release_admissions row cannot be deleted';
 
@@ -13810,7 +13810,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notices` (
   KEY `ix_pct7_un_deadline` (`severity`,`deadline_at`),
   KEY `fk_pct7_un_release` (`catalog_release_id`),
   CONSTRAINT `fk_pct7_un_release` FOREIGN KEY (`catalog_release_id`) REFERENCES `0_pay_ctry_catalog_releases` (`catalog_release_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct7_un_u` BEFORE UPDATE ON `0_pay_ctry_update_notices` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notices row cannot be updated';
 CREATE TRIGGER `0_ct7_un_d` BEFORE DELETE ON `0_pay_ctry_update_notices` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notices row cannot be deleted';
 
@@ -13833,7 +13833,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notice_applicability` (
   KEY `ix_pct7_na_notice` (`update_notice_id`,`company_id`),
   KEY `ix_pct7_na_scope` (`company_id`,`scope_type`,`legal_entity_id`,`payroll_scope_key`),
   CONSTRAINT `fk_pct7_na_notice` FOREIGN KEY (`update_notice_id`) REFERENCES `0_pay_ctry_update_notices` (`update_notice_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct7_na_u` BEFORE UPDATE ON `0_pay_ctry_update_notice_applicability` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_applicability row cannot be updated';
 CREATE TRIGGER `0_ct7_na_d` BEFORE DELETE ON `0_pay_ctry_update_notice_applicability` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_applicability row cannot be deleted';
 -- PAY-CTRY-007 END GROUP catalog_notice
@@ -13859,7 +13859,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notice_audiences` (
   CONSTRAINT `fk_pct7_au_notice` FOREIGN KEY (`update_notice_id`) REFERENCES `0_pay_ctry_update_notices` (`update_notice_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   KEY `fk_pct7_au_app` (`notice_applicability_id`),
   CONSTRAINT `fk_pct7_au_app` FOREIGN KEY (`notice_applicability_id`) REFERENCES `0_pay_ctry_update_notice_applicability` (`notice_applicability_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct7_au_u` BEFORE UPDATE ON `0_pay_ctry_update_notice_audiences` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_audiences row cannot be updated';
 CREATE TRIGGER `0_ct7_au_d` BEFORE DELETE ON `0_pay_ctry_update_notice_audiences` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_audiences row cannot be deleted';
 
@@ -13891,7 +13891,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notice_recipient_events` (
   KEY `fk_pct7_re_app` (`notice_applicability_id`),
   CONSTRAINT `fk_pct7_re_app` FOREIGN KEY (`notice_applicability_id`) REFERENCES `0_pay_ctry_update_notice_applicability` (`notice_applicability_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct7_re_pred` FOREIGN KEY (`predecessor_recipient_event_id`) REFERENCES `0_pay_ctry_update_notice_recipient_events` (`recipient_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct7_re_u` BEFORE UPDATE ON `0_pay_ctry_update_notice_recipient_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_recipient_events row cannot be updated';
 CREATE TRIGGER `0_ct7_re_d` BEFORE DELETE ON `0_pay_ctry_update_notice_recipient_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_recipient_events row cannot be deleted';
 
@@ -13915,7 +13915,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notice_acknowledgements` (
   CONSTRAINT `fk_pct7_ack_notice` FOREIGN KEY (`update_notice_id`) REFERENCES `0_pay_ctry_update_notices` (`update_notice_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   KEY `fk_pct7_ack_app` (`notice_applicability_id`),
   CONSTRAINT `fk_pct7_ack_app` FOREIGN KEY (`notice_applicability_id`) REFERENCES `0_pay_ctry_update_notice_applicability` (`notice_applicability_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct7_ak_u` BEFORE UPDATE ON `0_pay_ctry_update_notice_acknowledgements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_acknowledgements row cannot be updated';
 CREATE TRIGGER `0_ct7_ak_d` BEFORE DELETE ON `0_pay_ctry_update_notice_acknowledgements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_acknowledgements row cannot be deleted';
 
@@ -13942,7 +13942,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notice_lifecycle_events` (
   KEY `fk_pct7_le_app` (`notice_applicability_id`),
   CONSTRAINT `fk_pct7_le_app` FOREIGN KEY (`notice_applicability_id`) REFERENCES `0_pay_ctry_update_notice_applicability` (`notice_applicability_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_pct7_le_recipient` FOREIGN KEY (`recipient_event_id`) REFERENCES `0_pay_ctry_update_notice_recipient_events` (`recipient_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct7_le_u` BEFORE UPDATE ON `0_pay_ctry_update_notice_lifecycle_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_lifecycle_events row cannot be updated';
 CREATE TRIGGER `0_ct7_le_d` BEFORE DELETE ON `0_pay_ctry_update_notice_lifecycle_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_lifecycle_events row cannot be deleted';
 -- PAY-CTRY-007 END GROUP recipient_lifecycle
@@ -13972,7 +13972,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notice_delivery_outbox` (
   CONSTRAINT `fk_pct7_ob_notice` FOREIGN KEY (`update_notice_id`) REFERENCES `0_pay_ctry_update_notices` (`update_notice_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   KEY `fk_pct7_ob_app` (`notice_applicability_id`),
   CONSTRAINT `fk_pct7_ob_app` FOREIGN KEY (`notice_applicability_id`) REFERENCES `0_pay_ctry_update_notice_applicability` (`notice_applicability_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct7_ob_u` BEFORE UPDATE ON `0_pay_ctry_update_notice_delivery_outbox` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_delivery_outbox row cannot be updated';
 CREATE TRIGGER `0_ct7_ob_d` BEFORE DELETE ON `0_pay_ctry_update_notice_delivery_outbox` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_delivery_outbox row cannot be deleted';
 
@@ -13993,7 +13993,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_ctry_update_notice_delivery_attempts` (
   UNIQUE KEY `uq_pct7_da_sha` (`delivery_attempt_sha256`),
   KEY `ix_pct7_da_status` (`delivery_outbox_id`,`delivery_status`,`attempted_at`),
   CONSTRAINT `fk_pct7_da_outbox` FOREIGN KEY (`delivery_outbox_id`) REFERENCES `0_pay_ctry_update_notice_delivery_outbox` (`delivery_outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ct7_da_u` BEFORE UPDATE ON `0_pay_ctry_update_notice_delivery_attempts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_delivery_attempts row cannot be updated';
 CREATE TRIGGER `0_ct7_da_d` BEFORE DELETE ON `0_pay_ctry_update_notice_delivery_attempts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CTRY-007 immutable pay_ctry_update_notice_delivery_attempts row cannot be deleted';
 -- PAY-CTRY-007 END GROUP delivery_outbox
@@ -14016,7 +14016,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_journal_intents` (
  PRIMARY KEY (`journal_intent_id`), UNIQUE KEY `uq_pgl1_ji_sha` (`journal_sha256`),
  UNIQUE KEY `uq_pgl1_ji_result` (`result_set_sha256`,`approval_sha256`),
  KEY `ix_pgl1_ji_scope` (`legal_entity_id`,`payroll_group_id`,`payroll_period_id`), KEY `ix_pgl1_ji_date` (`journal_date`,`currency_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_ji_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_journal_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_journal_intents row cannot be updated';
 CREATE TRIGGER `0_pgl1_ji_d` BEFORE DELETE ON `0_hrm_pay_gl_001_journal_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_journal_intents row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_journal_lines` (
@@ -14034,7 +14034,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_journal_lines` (
  KEY `ix_pgl1_jl_account` (`account_code`,`entry_side`), KEY `ix_pgl1_jl_source` (`source_result_sha256`,`source_line_key`),
  KEY `ix_pgl1_jl_mapping` (`mapping_rule_sha256`), KEY `fk_pgl1_jl_intent` (`journal_intent_id`),
  CONSTRAINT `fk_pgl1_jl_intent` FOREIGN KEY (`journal_intent_id`) REFERENCES `0_hrm_pay_gl_001_journal_intents` (`journal_intent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_jl_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_journal_lines` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_journal_lines row cannot be updated';
 CREATE TRIGGER `0_pgl1_jl_d` BEFORE DELETE ON `0_hrm_pay_gl_001_journal_lines` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_journal_lines row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_allocations` (
@@ -14043,7 +14043,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_allocations` (
  `allocation_weight_ppm` int(10) unsigned NOT NULL, `allocation_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `created_at` datetime NOT NULL,
  PRIMARY KEY (`allocation_id`), UNIQUE KEY `uq_pgl1_al_no` (`journal_line_id`,`allocation_no`), UNIQUE KEY `uq_pgl1_al_sha` (`allocation_sha256`), KEY `fk_pgl1_al_line` (`journal_line_id`),
  CONSTRAINT `fk_pgl1_al_line` FOREIGN KEY (`journal_line_id`) REFERENCES `0_hrm_pay_gl_001_journal_lines` (`journal_line_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_al_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_allocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_allocations row cannot be updated';
 CREATE TRIGGER `0_pgl1_al_d` BEFORE DELETE ON `0_hrm_pay_gl_001_allocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_allocations row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_allocation_axes` (
@@ -14054,7 +14054,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_allocation_axes` (
  `axis_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `created_at` datetime NOT NULL,
  PRIMARY KEY (`allocation_axis_id`), UNIQUE KEY `uq_pgl1_ax_no` (`allocation_id`,`axis_no`), UNIQUE KEY `uq_pgl1_ax_code` (`allocation_id`,`axis_code`), UNIQUE KEY `uq_pgl1_ax_sha` (`axis_sha256`), KEY `fk_pgl1_ax_alloc` (`allocation_id`),
  CONSTRAINT `fk_pgl1_ax_alloc` FOREIGN KEY (`allocation_id`) REFERENCES `0_hrm_pay_gl_001_allocations` (`allocation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_ax_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_allocation_axes` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_allocation_axes row cannot be updated';
 CREATE TRIGGER `0_pgl1_ax_d` BEFORE DELETE ON `0_hrm_pay_gl_001_allocation_axes` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_allocation_axes row cannot be deleted';
 -- PAY-GL-001 END GROUP journal_intent
@@ -14070,7 +14070,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_mapping_versions` (
  `created_at` datetime NOT NULL,
  PRIMARY KEY (`mapping_version_id`), UNIQUE KEY `uq_pgl1_mv_scope` (`company_id`,`legal_entity_id`,`mapping_key`,`effective_from`),
  UNIQUE KEY `uq_pgl1_mv_sha` (`mapping_snapshot_sha256`), KEY `ix_pgl1_mv_effective` (`company_id`,`legal_entity_id`,`effective_from`,`effective_to`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_mv_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_mapping_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_mapping_versions row cannot be updated';
 CREATE TRIGGER `0_pgl1_mv_d` BEFORE DELETE ON `0_hrm_pay_gl_001_mapping_versions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_mapping_versions row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_mapping_rules` (
@@ -14086,7 +14086,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_mapping_rules` (
  UNIQUE KEY `uq_pgl1_mr_sha` (`rule_sha256`), KEY `ix_pgl1_mr_source` (`source_kind`,`source_key`,`entry_side`),
  KEY `fk_pgl1_mr_version` (`mapping_version_id`),
  CONSTRAINT `fk_pgl1_mr_version` FOREIGN KEY (`mapping_version_id`) REFERENCES `0_hrm_pay_gl_001_mapping_versions` (`mapping_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_mr_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_mapping_rules` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_mapping_rules row cannot be updated';
 CREATE TRIGGER `0_pgl1_mr_d` BEFORE DELETE ON `0_hrm_pay_gl_001_mapping_rules` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_mapping_rules row cannot be deleted';
 -- PAY-GL-001 END GROUP mapping_governance
@@ -14105,7 +14105,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_reconciliations` (
  PRIMARY KEY (`reconciliation_id`), UNIQUE KEY `uq_pgl1_rc_intent` (`journal_intent_id`),
  UNIQUE KEY `uq_pgl1_rc_sha` (`reconciliation_sha256`), KEY `fk_pgl1_rc_intent` (`journal_intent_id`),
  CONSTRAINT `fk_pgl1_rc_intent` FOREIGN KEY (`journal_intent_id`) REFERENCES `0_hrm_pay_gl_001_journal_intents` (`journal_intent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_rc_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_reconciliations row cannot be updated';
 CREATE TRIGGER `0_pgl1_rc_d` BEFORE DELETE ON `0_hrm_pay_gl_001_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_reconciliations row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_reviews` (
@@ -14116,7 +14116,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_reviews` (
  PRIMARY KEY (`review_id`), UNIQUE KEY `uq_pgl1_rv_recon` (`reconciliation_id`),
  UNIQUE KEY `uq_pgl1_rv_sha` (`review_sha256`), KEY `fk_pgl1_rv_recon` (`reconciliation_id`),
  CONSTRAINT `fk_pgl1_rv_recon` FOREIGN KEY (`reconciliation_id`) REFERENCES `0_hrm_pay_gl_001_reconciliations` (`reconciliation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_rv_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_reviews row cannot be updated';
 CREATE TRIGGER `0_pgl1_rv_d` BEFORE DELETE ON `0_hrm_pay_gl_001_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_reviews row cannot be deleted';
 -- PAY-GL-001 END GROUP writer_reconciliation
@@ -14133,7 +14133,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_posting_authorities` (
  CONSTRAINT `fk_pgl1_pa_intent` FOREIGN KEY (`journal_intent_id`) REFERENCES `0_hrm_pay_gl_001_journal_intents` (`journal_intent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pgl1_pa_recon` FOREIGN KEY (`reconciliation_id`) REFERENCES `0_hrm_pay_gl_001_reconciliations` (`reconciliation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pgl1_pa_review` FOREIGN KEY (`review_id`) REFERENCES `0_hrm_pay_gl_001_reviews` (`review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_pa_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_posting_authorities` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_posting_authorities row cannot be updated';
 CREATE TRIGGER `0_pgl1_pa_d` BEFORE DELETE ON `0_hrm_pay_gl_001_posting_authorities` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_posting_authorities row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_gl_postings` (
@@ -14149,7 +14149,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_gl_postings` (
  CONSTRAINT `fk_pgl1_gp_intent` FOREIGN KEY (`journal_intent_id`) REFERENCES `0_hrm_pay_gl_001_journal_intents` (`journal_intent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pgl1_gp_auth` FOREIGN KEY (`authority_id`) REFERENCES `0_hrm_pay_gl_001_posting_authorities` (`authority_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pgl1_gp_pred` FOREIGN KEY (`predecessor_posting_id`) REFERENCES `0_hrm_pay_gl_001_gl_postings` (`posting_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_gp_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_gl_postings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_gl_postings row cannot be updated';
 CREATE TRIGGER `0_pgl1_gp_d` BEFORE DELETE ON `0_hrm_pay_gl_001_gl_postings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_gl_postings row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_gl_posting_lines` (
@@ -14165,7 +14165,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_gl_posting_lines` (
  CONSTRAINT `fk_pgl1_gpl_post` FOREIGN KEY (`posting_id`) REFERENCES `0_hrm_pay_gl_001_gl_postings` (`posting_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pgl1_gpl_line` FOREIGN KEY (`journal_line_id`) REFERENCES `0_hrm_pay_gl_001_journal_lines` (`journal_line_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pgl1_gpl_alloc` FOREIGN KEY (`allocation_id`) REFERENCES `0_hrm_pay_gl_001_allocations` (`allocation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_gpl_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_gl_posting_lines` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_gl_posting_lines row cannot be updated';
 CREATE TRIGGER `0_pgl1_gpl_d` BEFORE DELETE ON `0_hrm_pay_gl_001_gl_posting_lines` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_gl_posting_lines row cannot be deleted';
 -- PAY-GL-001 END GROUP posting_bridge
@@ -14182,7 +14182,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_recovery_commands` (
  KEY `ix_pgl1_gc_target` (`target_posting_id`,`command_kind`), KEY `fk_pgl1_gc_intent` (`journal_intent_id`),
  CONSTRAINT `fk_pgl1_gc_intent` FOREIGN KEY (`journal_intent_id`) REFERENCES `0_hrm_pay_gl_001_journal_intents` (`journal_intent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pgl1_gc_target` FOREIGN KEY (`target_posting_id`) REFERENCES `0_hrm_pay_gl_001_gl_postings` (`posting_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_gc_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_recovery_commands` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_recovery_commands row cannot be updated';
 CREATE TRIGGER `0_pgl1_gc_d` BEFORE DELETE ON `0_hrm_pay_gl_001_recovery_commands` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_recovery_commands row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_reversal_repost_links` (
@@ -14196,7 +14196,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_reversal_repost_links` (
  CONSTRAINT `fk_pgl1_gr_cmd` FOREIGN KEY (`recovery_command_id`) REFERENCES `0_hrm_pay_gl_001_recovery_commands` (`recovery_command_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pgl1_gr_pred` FOREIGN KEY (`predecessor_posting_id`) REFERENCES `0_hrm_pay_gl_001_gl_postings` (`posting_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pgl1_gr_succ` FOREIGN KEY (`successor_posting_id`) REFERENCES `0_hrm_pay_gl_001_gl_postings` (`posting_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_gr_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_reversal_repost_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_reversal_repost_links row cannot be updated';
 CREATE TRIGGER `0_pgl1_gr_d` BEFORE DELETE ON `0_hrm_pay_gl_001_reversal_repost_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_reversal_repost_links row cannot be deleted';
 -- PAY-GL-001 END GROUP reversal_recovery
@@ -14215,7 +14215,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_gl_001_cutovers` (
  UNIQUE KEY `uq_pgl1_co_scope` (`company_id`,`legal_entity_id`,`payroll_group_id`,`effective_from`),
  UNIQUE KEY `uq_pgl1_co_sha` (`cutover_sha256`),
  KEY `ix_pgl1_co_effective` (`company_id`,`legal_entity_id`,`payroll_group_id`,`effective_from`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pgl1_co_u` BEFORE UPDATE ON `0_hrm_pay_gl_001_cutovers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_cutovers row cannot be updated';
 CREATE TRIGGER `0_pgl1_co_d` BEFORE DELETE ON `0_hrm_pay_gl_001_cutovers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-GL-001 immutable hrm_pay_gl_001_cutovers row cannot be deleted';
 -- PAY-GL-001 END GROUP legacy_cutover
@@ -14240,7 +14240,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_payment_intents` (
  UNIQUE KEY `uq_ppm1_pi_sha` (`intent_sha256`),
  UNIQUE KEY `uq_ppm1_pi_result` (`result_set_sha256`,`approval_sha256`,`currency_code`),
  KEY `ix_ppm1_pi_scope` (`company_id`,`legal_entity_id`,`payroll_group_id`,`payroll_period_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ppm1_pi_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_payment_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_payment_intents row cannot be updated';
 CREATE TRIGGER `0_ppm1_pi_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_payment_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_payment_intents row cannot be deleted';
 
@@ -14260,7 +14260,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_payment_items` (
  UNIQUE KEY `uq_ppm1_it_sha` (`item_sha256`), KEY `ix_ppm1_it_benef` (`beneficiary_subject_sha256`,`currency_code`),
  KEY `fk_ppm1_it_intent` (`payment_intent_id`),
  CONSTRAINT `fk_ppm1_it_intent` FOREIGN KEY (`payment_intent_id`) REFERENCES `0_hrm_pay_pmt_001_payment_intents` (`payment_intent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ppm1_it_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_payment_items` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_payment_items row cannot be updated';
 CREATE TRIGGER `0_ppm1_it_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_payment_items` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_payment_items row cannot be deleted';
 
@@ -14275,7 +14275,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_item_allocations` (
  UNIQUE KEY `uq_ppm1_al_sha` (`allocation_sha256`), KEY `ix_ppm1_al_bank` (`person_bank_account_id`,`bank_account_row_version`),
  KEY `fk_ppm1_al_item` (`payment_item_id`),
  CONSTRAINT `fk_ppm1_al_item` FOREIGN KEY (`payment_item_id`) REFERENCES `0_hrm_pay_pmt_001_payment_items` (`payment_item_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ppm1_al_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_item_allocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_item_allocations row cannot be updated';
 CREATE TRIGGER `0_ppm1_al_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_item_allocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_item_allocations row cannot be deleted';
 
@@ -14292,7 +14292,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_batches` (
  PRIMARY KEY (`payment_batch_id`), UNIQUE KEY `uq_ppm1_ba_sha` (`batch_sha256`),
  KEY `ix_ppm1_ba_scope` (`company_id`,`legal_entity_id`,`payroll_group_id`,`payroll_period_id`),
  KEY `ix_ppm1_ba_date` (`payment_date`,`currency_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ppm1_ba_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_batches` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_batches row cannot be updated';
 CREATE TRIGGER `0_ppm1_ba_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_batches` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_batches row cannot be deleted';
 
@@ -14307,7 +14307,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_batch_items` (
  KEY `fk_ppm1_bi_batch` (`payment_batch_id`), KEY `fk_ppm1_bi_item` (`payment_item_id`),
  CONSTRAINT `fk_ppm1_bi_batch` FOREIGN KEY (`payment_batch_id`) REFERENCES `0_hrm_pay_pmt_001_batches` (`payment_batch_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_ppm1_bi_item` FOREIGN KEY (`payment_item_id`) REFERENCES `0_hrm_pay_pmt_001_payment_items` (`payment_item_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ppm1_bi_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_batch_items` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_batch_items row cannot be updated';
 CREATE TRIGGER `0_ppm1_bi_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_batch_items` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_batch_items row cannot be deleted';
 -- PAY-PMT-001 END GROUP payment_custody
@@ -14331,7 +14331,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_batch_releases` (
  PRIMARY KEY (`batch_release_id`), UNIQUE KEY `uq_ppm1_br_sha` (`release_sha256`),
  UNIQUE KEY `uq_ppm1_br_batch` (`payment_batch_id`),
  CONSTRAINT `fk_ppm1_br_batch` FOREIGN KEY (`payment_batch_id`) REFERENCES `0_hrm_pay_pmt_001_batches` (`payment_batch_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ppm1_br_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_batch_releases` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_batch_releases row cannot be updated';
 CREATE TRIGGER `0_ppm1_br_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_batch_releases` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_batch_releases row cannot be deleted';
 -- PAY-PMT-001 END GROUP batch_release
@@ -14357,7 +14357,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_artifacts` (
  UNIQUE KEY `uq_ppm1_ar_binding` (`batch_release_id`,`provider_id`,`provider_config_sha256`),
  KEY `ix_ppm1_ar_batch` (`source_batch_sha256`),
  CONSTRAINT `fk_ppm1_ar_release` FOREIGN KEY (`batch_release_id`) REFERENCES `0_hrm_pay_pmt_001_batch_releases` (`batch_release_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ppm1_ar_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_artifacts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_artifacts row cannot be updated';
 CREATE TRIGGER `0_ppm1_ar_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_artifacts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_artifacts row cannot be deleted';
 -- PAY-PMT-001 END GROUP renderer_artifact
@@ -14377,7 +14377,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_outbox` (
  PRIMARY KEY (`outbox_id`), UNIQUE KEY `uq_ppm1_ob_idem` (`idempotency_key_sha256`),
  KEY `ix_ppm1_ob_artifact` (`payment_artifact_id`),
  CONSTRAINT `fk_ppm1_ob_artifact` FOREIGN KEY (`payment_artifact_id`) REFERENCES `0_hrm_pay_pmt_001_artifacts` (`payment_artifact_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ppm1_ob_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_outbox` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_outbox row cannot be updated';
 CREATE TRIGGER `0_ppm1_ob_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_outbox` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_outbox row cannot be deleted';
 
@@ -14393,7 +14393,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_transmission_attempts` (
  PRIMARY KEY (`transmission_attempt_id`), UNIQUE KEY `uq_ppm1_ta_no` (`outbox_id`,`attempt_no`),
  UNIQUE KEY `uq_ppm1_ta_sha` (`attempt_sha256`), KEY `ix_ppm1_ta_status` (`outbox_id`,`attempt_status`),
  CONSTRAINT `fk_ppm1_ta_outbox` FOREIGN KEY (`outbox_id`) REFERENCES `0_hrm_pay_pmt_001_outbox` (`outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ppm1_ta_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_transmission_attempts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_transmission_attempts row cannot be updated';
 CREATE TRIGGER `0_ppm1_ta_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_transmission_attempts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_transmission_attempts row cannot be deleted';
 -- PAY-PMT-001 END GROUP transmission_outbox
@@ -14412,7 +14412,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_failures` (
  PRIMARY KEY (`payment_failure_id`), UNIQUE KEY `uq_ppm1_fl_sha` (`failure_sha256`),
  KEY `ix_ppm1_fl_outbox` (`outbox_id`,`failure_kind`),
  CONSTRAINT `fk_ppm1_fl_outbox` FOREIGN KEY (`outbox_id`) REFERENCES `0_hrm_pay_pmt_001_outbox` (`outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ppm1_fl_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_failures` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_failures row cannot be updated';
 CREATE TRIGGER `0_ppm1_fl_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_failures` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_failures row cannot be deleted';
 
@@ -14435,7 +14435,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_reissues` (
  CONSTRAINT `fk_ppm1_ri_failure` FOREIGN KEY (`payment_failure_id`) REFERENCES `0_hrm_pay_pmt_001_failures` (`payment_failure_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_ppm1_ri_pred` FOREIGN KEY (`predecessor_payment_item_id`) REFERENCES `0_hrm_pay_pmt_001_payment_items` (`payment_item_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_ppm1_ri_succ` FOREIGN KEY (`successor_payment_intent_id`) REFERENCES `0_hrm_pay_pmt_001_payment_intents` (`payment_intent_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ppm1_ri_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_reissues` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_reissues row cannot be updated';
 CREATE TRIGGER `0_ppm1_ri_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_reissues` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_reissues row cannot be deleted';
 -- PAY-PMT-001 END GROUP return_reissue
@@ -14454,7 +14454,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_settlements` (
  PRIMARY KEY (`payment_settlement_id`), UNIQUE KEY `uq_ppm1_st_sha` (`settlement_sha256`),
  KEY `ix_ppm1_st_outbox` (`outbox_id`,`settlement_status`),
  CONSTRAINT `fk_ppm1_st_outbox` FOREIGN KEY (`outbox_id`) REFERENCES `0_hrm_pay_pmt_001_outbox` (`outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ppm1_st_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_settlements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_settlements row cannot be updated';
 CREATE TRIGGER `0_ppm1_st_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_settlements` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_settlements row cannot be deleted';
 
@@ -14484,7 +14484,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_reconciliations` (
  CONSTRAINT `fk_ppm1_rc_artifact` FOREIGN KEY (`payment_artifact_id`) REFERENCES `0_hrm_pay_pmt_001_artifacts` (`payment_artifact_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_ppm1_rc_outbox` FOREIGN KEY (`outbox_id`) REFERENCES `0_hrm_pay_pmt_001_outbox` (`outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_ppm1_rc_settlement` FOREIGN KEY (`payment_settlement_id`) REFERENCES `0_hrm_pay_pmt_001_settlements` (`payment_settlement_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ppm1_rc_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_reconciliations row cannot be updated';
 CREATE TRIGGER `0_ppm1_rc_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_reconciliations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_reconciliations row cannot be deleted';
 -- PAY-PMT-001 END GROUP settlement_reconciliation
@@ -14502,7 +14502,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_pmt_001_cutovers` (
  PRIMARY KEY (`payment_cutover_id`), UNIQUE KEY `uq_ppm1_co_sha` (`cutover_sha256`),
  UNIQUE KEY `uq_ppm1_co_scope` (`company_id`,`legal_entity_id`,`payroll_group_id`,`effective_from`),
  KEY `ix_ppm1_co_current` (`company_id`,`legal_entity_id`,`payroll_group_id`,`effective_from`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_ppm1_co_u` BEFORE UPDATE ON `0_hrm_pay_pmt_001_cutovers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_cutovers row cannot be updated';
 CREATE TRIGGER `0_ppm1_co_d` BEFORE DELETE ON `0_hrm_pay_pmt_001_cutovers` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-PMT-001 immutable hrm_pay_pmt_001_cutovers row cannot be deleted';
 -- PAY-PMT-001 END GROUP legacy_cutover_completion
@@ -14527,7 +14527,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_obligations` (
  PRIMARY KEY (`filing_obligation_id`), UNIQUE KEY `uq_pfl1_ob_sha` (`obligation_sha256`),
  UNIQUE KEY `uq_pfl1_ob_sem` (`company_id`,`legal_entity_id`,`jurisdiction_code`,`obligation_type`,`period_end`,`country_pack_version`,`schema_version`),
  KEY `ix_pfl1_ob_due` (`company_id`,`legal_entity_id`,`due_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pfl1_ob_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_obligations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_obligations row cannot be updated';
 CREATE TRIGGER `0_pfl1_ob_d` BEFORE DELETE ON `0_hrm_pay_fil_001_obligations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_obligations row cannot be deleted';
 
@@ -14544,7 +14544,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_source_sets` (
  UNIQUE KEY `uq_pfl1_ss_ob` (`filing_obligation_id`,`source_set_sha256`),
  KEY `fk_pfl1_ss_ob` (`filing_obligation_id`),
  CONSTRAINT `fk_pfl1_ss_ob` FOREIGN KEY (`filing_obligation_id`) REFERENCES `0_hrm_pay_fil_001_obligations` (`filing_obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pfl1_ss_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_source_sets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_source_sets row cannot be updated';
 CREATE TRIGGER `0_pfl1_ss_d` BEFORE DELETE ON `0_hrm_pay_fil_001_source_sets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_source_sets row cannot be deleted';
 
@@ -14563,7 +14563,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_source_links` (
  UNIQUE KEY `uq_pfl1_sl_sha` (`source_link_sha256`), KEY `ix_pfl1_sl_src` (`source_kind`,`source_sha256`),
  KEY `fk_pfl1_sl_set` (`filing_source_set_id`),
  CONSTRAINT `fk_pfl1_sl_set` FOREIGN KEY (`filing_source_set_id`) REFERENCES `0_hrm_pay_fil_001_source_sets` (`filing_source_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pfl1_sl_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_source_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_source_links row cannot be updated';
 CREATE TRIGGER `0_pfl1_sl_d` BEFORE DELETE ON `0_hrm_pay_fil_001_source_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_source_links row cannot be deleted';
 -- PAY-FIL-001 END GROUP obligation_source_custody
@@ -14582,7 +14582,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_artifacts` (
  KEY `fk_pfl1_ar_ob` (`filing_obligation_id`), KEY `fk_pfl1_ar_set` (`filing_source_set_id`),
  CONSTRAINT `fk_pfl1_ar_ob` FOREIGN KEY (`filing_obligation_id`) REFERENCES `0_hrm_pay_fil_001_obligations` (`filing_obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pfl1_ar_set` FOREIGN KEY (`filing_source_set_id`) REFERENCES `0_hrm_pay_fil_001_source_sets` (`filing_source_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pfl1_ar_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_artifacts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_artifacts row cannot be updated';
 CREATE TRIGGER `0_pfl1_ar_d` BEFORE DELETE ON `0_hrm_pay_fil_001_artifacts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_artifacts row cannot be deleted';
 -- PAY-FIL-001 END GROUP internal_render_artifact
@@ -14599,7 +14599,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_validations` (
  `validated_by` bigint(20) unsigned NOT NULL, `validated_at` datetime NOT NULL, `created_at` datetime NOT NULL,
  PRIMARY KEY (`filing_validation_id`), UNIQUE KEY `uq_pfl1_va_sha` (`validation_sha256`), KEY `ix_pfl1_va_art` (`artifact_sha256`), KEY `fk_pfl1_va_art` (`filing_artifact_id`),
  CONSTRAINT `fk_pfl1_va_art` FOREIGN KEY (`filing_artifact_id`) REFERENCES `0_hrm_pay_fil_001_artifacts` (`filing_artifact_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pfl1_va_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_validations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_validations row cannot be updated';
 CREATE TRIGGER `0_pfl1_va_d` BEFORE DELETE ON `0_hrm_pay_fil_001_validations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_validations row cannot be deleted';
 -- PAY-FIL-001 END GROUP validation_evidence
@@ -14622,7 +14622,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_schema_authorities` (
  PRIMARY KEY (`filing_schema_authority_id`), UNIQUE KEY `uq_pfl1_sa_sha` (`authority_sha256`),
  UNIQUE KEY `uq_pfl1_sa_scope` (`company_id`,`legal_entity_id`,`jurisdiction_code`,`obligation_type`,`country_pack_id`,`country_pack_version`,`schema_id`,`schema_version`,`effective_from`),
  KEY `ix_pfl1_sa_effective` (`company_id`,`legal_entity_id`,`effective_from`,`effective_to`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pfl1_sa_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_schema_authorities` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_schema_authorities row cannot be updated';
 CREATE TRIGGER `0_pfl1_sa_d` BEFORE DELETE ON `0_hrm_pay_fil_001_schema_authorities` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_schema_authorities row cannot be deleted';
 -- PAY-FIL-001 END GROUP official_schema_authority
@@ -14646,7 +14646,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_authorization_intents` (
  CONSTRAINT `fk_pfl1_au_art` FOREIGN KEY (`filing_artifact_id`) REFERENCES `0_hrm_pay_fil_001_artifacts` (`filing_artifact_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pfl1_au_val` FOREIGN KEY (`filing_validation_id`) REFERENCES `0_hrm_pay_fil_001_validations` (`filing_validation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pfl1_au_sa` FOREIGN KEY (`filing_schema_authority_id`) REFERENCES `0_hrm_pay_fil_001_schema_authorities` (`filing_schema_authority_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pfl1_au_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_authorization_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_authorization_intents row cannot be updated';
 CREATE TRIGGER `0_pfl1_au_d` BEFORE DELETE ON `0_hrm_pay_fil_001_authorization_intents` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_authorization_intents row cannot be deleted';
 -- PAY-FIL-001 END GROUP authorization_intent
@@ -14674,7 +14674,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_tt80_taxpayer_profiles` (
  UNIQUE KEY `uq_pfl1_tp_ob_sha` (`filing_obligation_id`,`profile_sha256`),
  KEY `fk_pfl1_tp_ob` (`filing_obligation_id`),
  CONSTRAINT `fk_pfl1_tp_ob` FOREIGN KEY (`filing_obligation_id`) REFERENCES `0_hrm_pay_fil_001_obligations` (`filing_obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pfl1_tp_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_tt80_taxpayer_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_taxpayer_profiles row cannot be updated';
 CREATE TRIGGER `0_pfl1_tp_d` BEFORE DELETE ON `0_hrm_pay_fil_001_tt80_taxpayer_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_taxpayer_profiles row cannot be deleted';
 
@@ -14705,7 +14705,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_tt80_person_facts` (
  KEY `ix_pfl1_pf_set_sub` (`filing_source_set_id`,`subject_key`),
  KEY `fk_pfl1_pf_set` (`filing_source_set_id`),
  CONSTRAINT `fk_pfl1_pf_set` FOREIGN KEY (`filing_source_set_id`) REFERENCES `0_hrm_pay_fil_001_source_sets` (`filing_source_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pfl1_pf_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_tt80_person_facts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_person_facts row cannot be updated';
 CREATE TRIGGER `0_pfl1_pf_d` BEFORE DELETE ON `0_hrm_pay_fil_001_tt80_person_facts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_person_facts row cannot be deleted';
 
@@ -14724,7 +14724,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_tt80_person_fact_links` (
  KEY `fk_pfl1_pl_link` (`filing_source_link_id`),
  CONSTRAINT `fk_pfl1_pl_fact` FOREIGN KEY (`tt80_person_fact_id`) REFERENCES `0_hrm_pay_fil_001_tt80_person_facts` (`tt80_person_fact_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pfl1_pl_link` FOREIGN KEY (`filing_source_link_id`) REFERENCES `0_hrm_pay_fil_001_source_links` (`filing_source_link_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pfl1_pl_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_tt80_person_fact_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_person_fact_links row cannot be updated';
 CREATE TRIGGER `0_pfl1_pl_d` BEFORE DELETE ON `0_hrm_pay_fil_001_tt80_person_fact_links` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_person_fact_links row cannot be deleted';
 -- PAY-FIL-001 END GROUP tt80_semantic_source_custody
@@ -14761,7 +14761,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_tt80_semantic_reviews` (
  CONSTRAINT `fk_pfl1_sr_ob` FOREIGN KEY (`filing_obligation_id`) REFERENCES `0_hrm_pay_fil_001_obligations` (`filing_obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pfl1_sr_set` FOREIGN KEY (`filing_source_set_id`) REFERENCES `0_hrm_pay_fil_001_source_sets` (`filing_source_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pfl1_sr_tp` FOREIGN KEY (`tt80_taxpayer_profile_id`) REFERENCES `0_hrm_pay_fil_001_tt80_taxpayer_profiles` (`tt80_taxpayer_profile_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pfl1_sr_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_tt80_semantic_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_semantic_reviews row cannot be updated';
 CREATE TRIGGER `0_pfl1_sr_d` BEFORE DELETE ON `0_hrm_pay_fil_001_tt80_semantic_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_semantic_reviews row cannot be deleted';
 -- PAY-FIL-001 END GROUP tt80_semantic_source_review
@@ -14790,7 +14790,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_fil_001_tt80_semantic_mappings` (
  CONSTRAINT `fk_pfl1_sm_review` FOREIGN KEY (`tt80_semantic_review_id`) REFERENCES `0_hrm_pay_fil_001_tt80_semantic_reviews` (`tt80_semantic_review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pfl1_sm_ob` FOREIGN KEY (`filing_obligation_id`) REFERENCES `0_hrm_pay_fil_001_obligations` (`filing_obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pfl1_sm_set` FOREIGN KEY (`filing_source_set_id`) REFERENCES `0_hrm_pay_fil_001_source_sets` (`filing_source_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pfl1_sm_u` BEFORE UPDATE ON `0_hrm_pay_fil_001_tt80_semantic_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_semantic_mappings row cannot be updated';
 CREATE TRIGGER `0_pfl1_sm_d` BEFORE DELETE ON `0_hrm_pay_fil_001_tt80_semantic_mappings` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-FIL-001 immutable hrm_pay_fil_001_tt80_semantic_mappings row cannot be deleted';
 -- PAY-FIL-001 END GROUP tt80_semantic_mapping_publication
@@ -14802,15 +14802,15 @@ CREATE TRIGGER `0_pfl1_sm_d` BEFORE DELETE ON `0_hrm_pay_fil_001_tt80_semantic_m
 -- PAY-API-001 zero-seed security/authentication/governance foundation through 1.0.865.
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_resources` (
  `api_resource_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT, `resource_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `contract_version` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `resource_kind` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `company_scope_required` tinyint(1) unsigned NOT NULL, `object_scope_required` tinyint(1) unsigned NOT NULL, `read_capable` tinyint(1) unsigned NOT NULL, `command_capable` tinyint(1) unsigned NOT NULL, `resource_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `reviewed_by` bigint(20) unsigned NOT NULL, `approved_by` bigint(20) unsigned NOT NULL, `approved_at` datetime NOT NULL, `created_at` datetime NOT NULL, PRIMARY KEY (`api_resource_id`), UNIQUE KEY `uq_papi1_rs_key_ver` (`resource_key`,`contract_version`), UNIQUE KEY `uq_papi1_rs_sha` (`resource_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_rs_u` BEFORE UPDATE ON `0_hrm_pay_api_001_resources` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_resources row cannot be updated';
 CREATE TRIGGER `0_papi1_rs_d` BEFORE DELETE ON `0_hrm_pay_api_001_resources` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_resources row cannot be deleted';
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_machine_principals` (
  `api_principal_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT, `company_id` int(11) unsigned NOT NULL, `principal_key` varchar(96) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `display_name` varchar(160) NOT NULL, `purpose_code` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `principal_status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `principal_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `reviewed_by` bigint(20) unsigned NOT NULL, `approved_by` bigint(20) unsigned NOT NULL, `approved_at` datetime NOT NULL, `created_at` datetime NOT NULL, PRIMARY KEY (`api_principal_id`), UNIQUE KEY `uq_papi1_mp_key` (`company_id`,`principal_key`), UNIQUE KEY `uq_papi1_mp_sha` (`principal_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_principal_scopes` (
  `api_principal_scope_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT, `api_principal_id` bigint(20) unsigned NOT NULL, `api_resource_id` bigint(20) unsigned NOT NULL, `action_code` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `object_scope_type` varchar(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL, `object_scope_key` varchar(128) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL, `scope_sha256` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, `reviewed_by` bigint(20) unsigned NOT NULL, `approved_by` bigint(20) unsigned NOT NULL, `approved_at` datetime NOT NULL, `created_at` datetime NOT NULL, PRIMARY KEY (`api_principal_scope_id`), UNIQUE KEY `uq_papi1_ps_sha` (`scope_sha256`), UNIQUE KEY `uq_papi1_ps_scope` (`api_principal_id`,`api_resource_id`,`action_code`,`object_scope_type`,`object_scope_key`), KEY `fk_papi1_ps_principal` (`api_principal_id`), KEY `fk_papi1_ps_resource` (`api_resource_id`), CONSTRAINT `fk_papi1_ps_principal` FOREIGN KEY (`api_principal_id`) REFERENCES `0_hrm_pay_api_001_machine_principals` (`api_principal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT, CONSTRAINT `fk_papi1_ps_resource` FOREIGN KEY (`api_resource_id`) REFERENCES `0_hrm_pay_api_001_resources` (`api_resource_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_mp_u` BEFORE UPDATE ON `0_hrm_pay_api_001_machine_principals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_machine_principals row cannot be updated';
 CREATE TRIGGER `0_papi1_mp_d` BEFORE DELETE ON `0_hrm_pay_api_001_machine_principals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_machine_principals row cannot be deleted';
 CREATE TRIGGER `0_papi1_ps_u` BEFORE UPDATE ON `0_hrm_pay_api_001_principal_scopes` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_principal_scopes row cannot be updated';
@@ -14830,7 +14830,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_credentials` (
  PRIMARY KEY (`api_credential_id`), UNIQUE KEY `uq_papi1_cr_key` (`credential_key`), UNIQUE KEY `uq_papi1_cr_sha` (`credential_sha256`),
  KEY `fk_papi1_cr_principal` (`api_principal_id`),
  CONSTRAINT `fk_papi1_cr_principal` FOREIGN KEY (`api_principal_id`) REFERENCES `0_hrm_pay_api_001_machine_principals` (`api_principal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_credential_revocations` (
  `credential_revocation_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
  `api_credential_id` bigint(20) unsigned NOT NULL,
@@ -14840,7 +14840,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_credential_revocations` (
  PRIMARY KEY (`credential_revocation_id`), UNIQUE KEY `uq_papi1_cv_credential` (`api_credential_id`), UNIQUE KEY `uq_papi1_cv_sha` (`revocation_sha256`),
  KEY `fk_papi1_cv_credential` (`api_credential_id`),
  CONSTRAINT `fk_papi1_cv_credential` FOREIGN KEY (`api_credential_id`) REFERENCES `0_hrm_pay_api_001_credentials` (`api_credential_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_cr_u` BEFORE UPDATE ON `0_hrm_pay_api_001_credentials` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_credentials row cannot be updated';
 CREATE TRIGGER `0_papi1_cr_d` BEFORE DELETE ON `0_hrm_pay_api_001_credentials` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_credentials row cannot be deleted';
 CREATE TRIGGER `0_papi1_cv_u` BEFORE UPDATE ON `0_hrm_pay_api_001_credential_revocations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_credential_revocations row cannot be updated';
@@ -14864,7 +14864,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_authn_decisions` (
  KEY `fk_papi1_ad_principal` (`api_principal_id`), KEY `fk_papi1_ad_credential` (`api_credential_id`),
  CONSTRAINT `fk_papi1_ad_principal` FOREIGN KEY (`api_principal_id`) REFERENCES `0_hrm_pay_api_001_machine_principals` (`api_principal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_ad_credential` FOREIGN KEY (`api_credential_id`) REFERENCES `0_hrm_pay_api_001_credentials` (`api_credential_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_ad_u` BEFORE UPDATE ON `0_hrm_pay_api_001_authn_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_authn_decisions row cannot be updated';
 CREATE TRIGGER `0_papi1_ad_d` BEFORE DELETE ON `0_hrm_pay_api_001_authn_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_authn_decisions row cannot be deleted';
 -- PAY-API-001 END GROUP authn_decision_custody
@@ -14884,7 +14884,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_provision_requests` (
  PRIMARY KEY (`provision_request_id`),
  UNIQUE KEY `uq_papi1_pr_sha` (`request_sha256`),
  KEY `ix_papi1_pr_company_kind` (`company_id`,`target_kind`,`requested_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_pr_u` BEFORE UPDATE ON `0_hrm_pay_api_001_provision_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_provision_requests row cannot be updated';
 CREATE TRIGGER `0_papi1_pr_d` BEFORE DELETE ON `0_hrm_pay_api_001_provision_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_provision_requests row cannot be deleted';
 -- PAY-API-001 END GROUP provision_request_custody
@@ -14903,7 +14903,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_provision_reviews` (
  UNIQUE KEY `uq_papi1_pv_request` (`provision_request_id`),
  UNIQUE KEY `uq_papi1_pv_sha` (`review_sha256`),
  CONSTRAINT `fk_papi1_pv_request` FOREIGN KEY (`provision_request_id`) REFERENCES `0_hrm_pay_api_001_provision_requests` (`provision_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_provision_approvals` (
  `provision_approval_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
  `provision_request_id` bigint(20) unsigned NOT NULL,
@@ -14921,7 +14921,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_provision_approvals` (
  UNIQUE KEY `uq_papi1_pa_sha` (`approval_sha256`),
  CONSTRAINT `fk_papi1_pa_request` FOREIGN KEY (`provision_request_id`) REFERENCES `0_hrm_pay_api_001_provision_requests` (`provision_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_pa_review` FOREIGN KEY (`provision_review_id`) REFERENCES `0_hrm_pay_api_001_provision_reviews` (`provision_review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_pv_u` BEFORE UPDATE ON `0_hrm_pay_api_001_provision_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_provision_reviews row cannot be updated';
 CREATE TRIGGER `0_papi1_pv_d` BEFORE DELETE ON `0_hrm_pay_api_001_provision_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_provision_reviews row cannot be deleted';
 CREATE TRIGGER `0_papi1_pa_u` BEFORE UPDATE ON `0_hrm_pay_api_001_provision_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_provision_approvals row cannot be updated';
@@ -14944,7 +14944,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_rate_limit_policies` (
  UNIQUE KEY `uq_papi1_rlp_resource_action` (`api_resource_id`,`action_code`),
  UNIQUE KEY `uq_papi1_rlp_sha` (`policy_sha256`),
  CONSTRAINT `fk_papi1_rlp_resource` FOREIGN KEY (`api_resource_id`) REFERENCES `0_hrm_pay_api_001_resources` (`api_resource_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_rate_limit_decisions` (
  `api_rate_limit_decision_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
  `company_id` int(11) unsigned NOT NULL,
@@ -14965,7 +14965,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_rate_limit_decisions` (
  CONSTRAINT `fk_papi1_rld_principal` FOREIGN KEY (`api_principal_id`) REFERENCES `0_hrm_pay_api_001_machine_principals` (`api_principal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_rld_resource` FOREIGN KEY (`api_resource_id`) REFERENCES `0_hrm_pay_api_001_resources` (`api_resource_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_rld_policy` FOREIGN KEY (`api_rate_limit_policy_id`) REFERENCES `0_hrm_pay_api_001_rate_limit_policies` (`api_rate_limit_policy_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_rlp_u` BEFORE UPDATE ON `0_hrm_pay_api_001_rate_limit_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_rate_limit_policies row cannot be updated';
 CREATE TRIGGER `0_papi1_rlp_d` BEFORE DELETE ON `0_hrm_pay_api_001_rate_limit_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_rate_limit_policies row cannot be deleted';
 CREATE TRIGGER `0_papi1_rld_u` BEFORE UPDATE ON `0_hrm_pay_api_001_rate_limit_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_rate_limit_decisions row cannot be updated';
@@ -14990,7 +14990,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_provision_executions` (
  UNIQUE KEY `uq_papi1_pe_sha` (`execution_sha256`),
  CONSTRAINT `fk_papi1_pe_request` FOREIGN KEY (`provision_request_id`) REFERENCES `0_hrm_pay_api_001_provision_requests` (`provision_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_pe_approval` FOREIGN KEY (`provision_approval_id`) REFERENCES `0_hrm_pay_api_001_provision_approvals` (`provision_approval_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_pe_u` BEFORE UPDATE ON `0_hrm_pay_api_001_provision_executions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_provision_executions row cannot be updated';
 CREATE TRIGGER `0_papi1_pe_d` BEFORE DELETE ON `0_hrm_pay_api_001_provision_executions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_provision_executions row cannot be deleted';
 -- PAY-API-001 END GROUP provision_execution_custody
@@ -15022,7 +15022,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_read_requests` (
  CONSTRAINT `fk_papi1_rr_principal` FOREIGN KEY (`api_principal_id`) REFERENCES `0_hrm_pay_api_001_machine_principals` (`api_principal_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_rr_resource` FOREIGN KEY (`api_resource_id`) REFERENCES `0_hrm_pay_api_001_resources` (`api_resource_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_rr_rate` FOREIGN KEY (`api_rate_limit_decision_id`) REFERENCES `0_hrm_pay_api_001_rate_limit_decisions` (`api_rate_limit_decision_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_rr_u` BEFORE UPDATE ON `0_hrm_pay_api_001_read_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_read_requests row cannot be updated';
 CREATE TRIGGER `0_papi1_rr_d` BEFORE DELETE ON `0_hrm_pay_api_001_read_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_read_requests row cannot be deleted';
 -- PAY-API-001 END GROUP read_request_audit_custody
@@ -15044,7 +15044,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_read_responses` (
  UNIQUE KEY `uq_papi1_rres_request` (`api_read_request_id`),
  UNIQUE KEY `uq_papi1_rres_sha` (`response_sha256`),
  CONSTRAINT `fk_papi1_rres_request` FOREIGN KEY (`api_read_request_id`) REFERENCES `0_hrm_pay_api_001_read_requests` (`api_read_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_rres_u` BEFORE UPDATE ON `0_hrm_pay_api_001_read_responses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_read_responses row cannot be updated';
 CREATE TRIGGER `0_papi1_rres_d` BEFORE DELETE ON `0_hrm_pay_api_001_read_responses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_read_responses row cannot be deleted';
 -- PAY-API-001 END GROUP read_response_audit_custody
@@ -15068,7 +15068,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_targets` (
  PRIMARY KEY (`webhook_target_id`),
  UNIQUE KEY `uq_papi1_wt_key` (`company_id`,`target_key`),
  UNIQUE KEY `uq_papi1_wt_sha` (`target_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wt_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_targets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_targets row cannot be updated';
 CREATE TRIGGER `0_papi1_wt_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_targets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_targets row cannot be deleted';
 
@@ -15090,7 +15090,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_events` (
  PRIMARY KEY (`webhook_event_id`),
  UNIQUE KEY `uq_papi1_we_dedupe` (`company_id`,`dedupe_key_sha256`),
  UNIQUE KEY `uq_papi1_we_sha` (`event_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_we_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_events row cannot be updated';
 CREATE TRIGGER `0_papi1_we_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_events row cannot be deleted';
 
@@ -15110,7 +15110,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_outbox` (
  UNIQUE KEY `uq_papi1_wo_sha` (`outbox_sha256`),
  CONSTRAINT `fk_papi1_wo_event` FOREIGN KEY (`webhook_event_id`) REFERENCES `0_hrm_pay_api_001_webhook_events` (`webhook_event_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_wo_target` FOREIGN KEY (`webhook_target_id`) REFERENCES `0_hrm_pay_api_001_webhook_targets` (`webhook_target_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wo_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_outbox` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_outbox row cannot be updated';
 CREATE TRIGGER `0_papi1_wo_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_outbox` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_outbox row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_outbox_custody
@@ -15134,7 +15134,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_delivery_attempts` (
  UNIQUE KEY `uq_papi1_wa_lineage` (`webhook_outbox_id`,`webhook_delivery_attempt_id`),
  UNIQUE KEY `uq_papi1_wa_sha` (`attempt_sha256`),
  CONSTRAINT `fk_papi1_wa_outbox` FOREIGN KEY (`webhook_outbox_id`) REFERENCES `0_hrm_pay_api_001_webhook_outbox` (`webhook_outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wa_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_delivery_attempts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_delivery_attempts row cannot be updated';
 CREATE TRIGGER `0_papi1_wa_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_delivery_attempts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_delivery_attempts row cannot be deleted';
 
@@ -15154,7 +15154,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_dead_letters` (
  UNIQUE KEY `uq_papi1_wd_sha` (`dead_letter_sha256`),
  CONSTRAINT `fk_papi1_wd_outbox` FOREIGN KEY (`webhook_outbox_id`) REFERENCES `0_hrm_pay_api_001_webhook_outbox` (`webhook_outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_wd_attempt` FOREIGN KEY (`webhook_outbox_id`,`last_attempt_id`) REFERENCES `0_hrm_pay_api_001_webhook_delivery_attempts` (`webhook_outbox_id`,`webhook_delivery_attempt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wd_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_dead_letters` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_dead_letters row cannot be updated';
 CREATE TRIGGER `0_papi1_wd_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_dead_letters` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_dead_letters row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_delivery_audit_custody
@@ -15178,7 +15178,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_target_lifecycle` (
  UNIQUE KEY `uq_papi1_wtl_sha` (`lifecycle_sha256`),
  CONSTRAINT `fk_papi1_wtl_target` FOREIGN KEY (`webhook_target_id`) REFERENCES `0_hrm_pay_api_001_webhook_targets` (`webhook_target_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_wtl_successor` FOREIGN KEY (`successor_target_id`) REFERENCES `0_hrm_pay_api_001_webhook_targets` (`webhook_target_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wtl_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_target_lifecycle` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_target_lifecycle row cannot be updated';
 CREATE TRIGGER `0_papi1_wtl_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_target_lifecycle` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_target_lifecycle row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_target_lifecycle_custody
@@ -15198,7 +15198,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_secret_refs` (
  PRIMARY KEY (`webhook_secret_ref_id`),
  UNIQUE KEY `uq_papi1_wsr_ref` (`company_id`,`ref_kind`,`secret_ref_sha256`),
  UNIQUE KEY `uq_papi1_wsr_sha` (`secret_ref_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wsr_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_secret_refs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_secret_refs row cannot be updated';
 CREATE TRIGGER `0_papi1_wsr_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_secret_refs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_secret_refs row cannot be deleted';
 
@@ -15219,7 +15219,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_secret_rotations` (
  UNIQUE KEY `uq_papi1_wsrn_sha` (`rotation_sha256`),
  CONSTRAINT `fk_papi1_wsrn_previous` FOREIGN KEY (`previous_secret_ref_id`) REFERENCES `0_hrm_pay_api_001_webhook_secret_refs` (`webhook_secret_ref_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_wsrn_successor` FOREIGN KEY (`successor_secret_ref_id`) REFERENCES `0_hrm_pay_api_001_webhook_secret_refs` (`webhook_secret_ref_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wsrn_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_secret_rotations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_secret_rotations row cannot be updated';
 CREATE TRIGGER `0_papi1_wsrn_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_secret_rotations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_secret_rotations row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_secret_reference_custody
@@ -15243,7 +15243,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_delivery_policies` (
  UNIQUE KEY `uq_papi1_wdp_version` (`webhook_target_id`,`policy_version`),
  UNIQUE KEY `uq_papi1_wdp_sha` (`policy_sha256`),
  CONSTRAINT `fk_papi1_wdp_target` FOREIGN KEY (`webhook_target_id`) REFERENCES `0_hrm_pay_api_001_webhook_targets` (`webhook_target_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wdp_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_delivery_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_delivery_policies row cannot be updated';
 CREATE TRIGGER `0_papi1_wdp_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_delivery_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_delivery_policies row cannot be deleted';
 
@@ -15264,7 +15264,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_claim_leases` (
  UNIQUE KEY `uq_papi1_wcl_sha` (`claim_sha256`),
  CONSTRAINT `fk_papi1_wcl_outbox` FOREIGN KEY (`webhook_outbox_id`) REFERENCES `0_hrm_pay_api_001_webhook_outbox` (`webhook_outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_wcl_policy` FOREIGN KEY (`webhook_delivery_policy_id`) REFERENCES `0_hrm_pay_api_001_webhook_delivery_policies` (`webhook_delivery_policy_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wcl_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_claim_leases` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_claim_leases row cannot be updated';
 CREATE TRIGGER `0_papi1_wcl_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_claim_leases` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_claim_leases row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_delivery_policy_lease_custody
@@ -15290,7 +15290,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_egress_tls_policies` (
  UNIQUE KEY `uq_papi1_wetp_version` (`webhook_target_id`,`policy_version`),
  UNIQUE KEY `uq_papi1_wetp_sha` (`policy_sha256`),
  CONSTRAINT `fk_papi1_wetp_target` FOREIGN KEY (`webhook_target_id`) REFERENCES `0_hrm_pay_api_001_webhook_targets` (`webhook_target_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wetp_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_egress_tls_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_egress_tls_policies row cannot be updated';
 CREATE TRIGGER `0_papi1_wetp_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_egress_tls_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_egress_tls_policies row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_egress_tls_policy_custody
@@ -15316,7 +15316,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_signing_profiles` (
  UNIQUE KEY `uq_papi1_wsp_sha` (`profile_sha256`),
  CONSTRAINT `fk_papi1_wsp_target` FOREIGN KEY (`webhook_target_id`) REFERENCES `0_hrm_pay_api_001_webhook_targets` (`webhook_target_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_wsp_secret` FOREIGN KEY (`webhook_secret_ref_id`) REFERENCES `0_hrm_pay_api_001_webhook_secret_refs` (`webhook_secret_ref_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wsp_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_signing_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_signing_profiles row cannot be updated';
 CREATE TRIGGER `0_papi1_wsp_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_signing_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_signing_profiles row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_signing_profile_custody
@@ -15337,7 +15337,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_provider_responses` (
  UNIQUE KEY `uq_papi1_wpr_attempt` (`webhook_delivery_attempt_id`),
  UNIQUE KEY `uq_papi1_wpr_sha` (`response_sha256`),
  CONSTRAINT `fk_papi1_wpr_attempt` FOREIGN KEY (`webhook_delivery_attempt_id`) REFERENCES `0_hrm_pay_api_001_webhook_delivery_attempts` (`webhook_delivery_attempt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wpr_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_provider_responses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_provider_responses row cannot be updated';
 CREATE TRIGGER `0_papi1_wpr_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_provider_responses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_provider_responses row cannot be deleted';
 
@@ -15356,7 +15356,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_replay_defenses` (
  UNIQUE KEY `uq_papi1_wrd_key` (`replay_key_sha256`),
  UNIQUE KEY `uq_papi1_wrd_sha` (`defense_sha256`),
  CONSTRAINT `fk_papi1_wrd_outbox` FOREIGN KEY (`webhook_outbox_id`) REFERENCES `0_hrm_pay_api_001_webhook_outbox` (`webhook_outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wrd_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_replay_defenses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_replay_defenses row cannot be updated';
 CREATE TRIGGER `0_papi1_wrd_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_replay_defenses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_replay_defenses row cannot be deleted';
 
@@ -15377,7 +15377,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_reprocess_authorizations` 
  UNIQUE KEY `uq_papi1_wra_request` (`request_sha256`),
  UNIQUE KEY `uq_papi1_wra_sha` (`authorization_sha256`),
  CONSTRAINT `fk_papi1_wra_deadletter` FOREIGN KEY (`webhook_dead_letter_id`) REFERENCES `0_hrm_pay_api_001_webhook_dead_letters` (`webhook_dead_letter_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wra_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_reprocess_authorizations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_authorizations row cannot be updated';
 CREATE TRIGGER `0_papi1_wra_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_reprocess_authorizations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_authorizations row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_response_replay_reprocess_custody
@@ -15404,7 +15404,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_retry_dispatch_reservation
  CONSTRAINT `fk_papi1_wrr_outbox` FOREIGN KEY (`webhook_outbox_id`) REFERENCES `0_hrm_pay_api_001_webhook_outbox` (`webhook_outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_wrr_attempt` FOREIGN KEY (`webhook_outbox_id`,`previous_attempt_id`) REFERENCES `0_hrm_pay_api_001_webhook_delivery_attempts` (`webhook_outbox_id`,`webhook_delivery_attempt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_wrr_claim` FOREIGN KEY (`webhook_claim_lease_id`) REFERENCES `0_hrm_pay_api_001_webhook_claim_leases` (`webhook_claim_lease_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wrr_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_retry_dispatch_reservations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_retry_dispatch_reservations row cannot be updated';
 CREATE TRIGGER `0_papi1_wrr_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_retry_dispatch_reservations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_retry_dispatch_reservations row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_retry_reservation_custody
@@ -15422,7 +15422,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_reprocess_requests` (
  UNIQUE KEY `uq_papi1_wrq_sha` (`request_sha256`),
  KEY `ix_papi1_wrq_deadletter` (`webhook_dead_letter_id`),
  CONSTRAINT `fk_papi1_wrq_deadletter` FOREIGN KEY (`webhook_dead_letter_id`) REFERENCES `0_hrm_pay_api_001_webhook_dead_letters` (`webhook_dead_letter_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wrq_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_reprocess_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_requests row cannot be updated';
 CREATE TRIGGER `0_papi1_wrq_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_reprocess_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_requests row cannot be deleted';
 
@@ -15440,7 +15440,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_reprocess_reviews` (
  UNIQUE KEY `uq_papi1_wrv_pair` (`webhook_reprocess_request_id`,`webhook_reprocess_review_id`),
  UNIQUE KEY `uq_papi1_wrv_sha` (`review_sha256`),
  CONSTRAINT `fk_papi1_wrv_request` FOREIGN KEY (`webhook_reprocess_request_id`) REFERENCES `0_hrm_pay_api_001_webhook_reprocess_requests` (`webhook_reprocess_request_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wrv_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_reprocess_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_reviews row cannot be updated';
 CREATE TRIGGER `0_papi1_wrv_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_reprocess_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_reviews row cannot be deleted';
 
@@ -15460,7 +15460,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_reprocess_approvals` (
  UNIQUE KEY `uq_papi1_wrp_review` (`webhook_reprocess_review_id`),
  UNIQUE KEY `uq_papi1_wrp_sha` (`approval_sha256`),
  CONSTRAINT `fk_papi1_wrp_review` FOREIGN KEY (`webhook_reprocess_request_id`,`webhook_reprocess_review_id`) REFERENCES `0_hrm_pay_api_001_webhook_reprocess_reviews` (`webhook_reprocess_request_id`,`webhook_reprocess_review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wrp_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_reprocess_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_approvals row cannot be updated';
 CREATE TRIGGER `0_papi1_wrp_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_reprocess_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_approvals row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_reprocess_governance_custody
@@ -15487,7 +15487,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_reprocess_dispatch_reserva
  CONSTRAINT `fk_papi1_wdr_deadletter` FOREIGN KEY (`webhook_dead_letter_id`,`webhook_outbox_id`,`previous_attempt_id`) REFERENCES `0_hrm_pay_api_001_webhook_dead_letters` (`webhook_dead_letter_id`,`webhook_outbox_id`,`last_attempt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_wdr_outbox` FOREIGN KEY (`webhook_outbox_id`) REFERENCES `0_hrm_pay_api_001_webhook_outbox` (`webhook_outbox_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_papi1_wdr_attempt` FOREIGN KEY (`webhook_outbox_id`,`previous_attempt_id`) REFERENCES `0_hrm_pay_api_001_webhook_delivery_attempts` (`webhook_outbox_id`,`webhook_delivery_attempt_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wdr_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_reprocess_dispatch_reservations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_dispatch_reservations row cannot be updated';
 CREATE TRIGGER `0_papi1_wdr_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_reprocess_dispatch_reservations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_reprocess_dispatch_reservations row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_reprocess_dispatch_reservation_custody
@@ -15517,7 +15517,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_inbound_sources` (
  UNIQUE KEY `uq_papi1_wis_keyver` (`company_id`,`source_key`,`profile_version`),
  UNIQUE KEY `uq_papi1_wis_sha` (`source_sha256`),
  CONSTRAINT `fk_papi1_wis_secret` FOREIGN KEY (`webhook_secret_ref_id`) REFERENCES `0_hrm_pay_api_001_webhook_secret_refs` (`webhook_secret_ref_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wis_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_inbound_sources` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_inbound_sources row cannot be updated';
 CREATE TRIGGER `0_papi1_wis_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_inbound_sources` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_inbound_sources row cannot be deleted';
 
@@ -15542,7 +15542,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_inbound_receipts` (
  UNIQUE KEY `uq_papi1_wir_corr` (`company_id`,`correlation_sha256`),
  UNIQUE KEY `uq_papi1_wir_sha` (`receipt_sha256`),
  CONSTRAINT `fk_papi1_wir_source` FOREIGN KEY (`webhook_inbound_source_id`) REFERENCES `0_hrm_pay_api_001_webhook_inbound_sources` (`webhook_inbound_source_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wir_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_inbound_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_inbound_receipts row cannot be updated';
 CREATE TRIGGER `0_papi1_wir_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_inbound_receipts` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_inbound_receipts row cannot be deleted';
 
@@ -15561,7 +15561,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_api_001_webhook_inbound_replay_defenses` (
  UNIQUE KEY `uq_papi1_wid_replay` (`webhook_inbound_source_id`,`replay_key_sha256`),
  UNIQUE KEY `uq_papi1_wid_sha` (`defense_sha256`),
  CONSTRAINT `fk_papi1_wid_receipt` FOREIGN KEY (`webhook_inbound_receipt_id`,`webhook_inbound_source_id`) REFERENCES `0_hrm_pay_api_001_webhook_inbound_receipts` (`webhook_inbound_receipt_id`,`webhook_inbound_source_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_papi1_wid_u` BEFORE UPDATE ON `0_hrm_pay_api_001_webhook_inbound_replay_defenses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_inbound_replay_defenses row cannot be updated';
 CREATE TRIGGER `0_papi1_wid_d` BEFORE DELETE ON `0_hrm_pay_api_001_webhook_inbound_replay_defenses` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-API-001 immutable hrm_pay_api_001_webhook_inbound_replay_defenses row cannot be deleted';
 -- PAY-API-001 END GROUP webhook_inbound_custody
@@ -15591,7 +15591,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_anl_001_metric_definitions` (
  UNIQUE KEY `uq_hanl1_md_lineage` (`metric_definition_id`,`company_id`),
  UNIQUE KEY `uq_hanl1_md_keyver` (`company_id`,`metric_key`,`definition_version`),
  UNIQUE KEY `uq_hanl1_md_sha` (`definition_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_hanl1_md_u` BEFORE UPDATE ON `0_hrm_anl_001_metric_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_metric_definitions row cannot be updated';
 CREATE TRIGGER `0_hanl1_md_d` BEFORE DELETE ON `0_hrm_anl_001_metric_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_metric_definitions row cannot be deleted';
 
@@ -15613,7 +15613,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_anl_001_suppression_policies` (
  UNIQUE KEY `uq_hanl1_sp_lineage` (`suppression_policy_id`,`company_id`),
  UNIQUE KEY `uq_hanl1_sp_keyver` (`company_id`,`policy_key`,`policy_version`),
  UNIQUE KEY `uq_hanl1_sp_sha` (`policy_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_hanl1_sp_u` BEFORE UPDATE ON `0_hrm_anl_001_suppression_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_suppression_policies row cannot be updated';
 CREATE TRIGGER `0_hanl1_sp_d` BEFORE DELETE ON `0_hrm_anl_001_suppression_policies` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_suppression_policies row cannot be deleted';
 -- HRM-ANL-001 END GROUP metric_catalog
@@ -15641,7 +15641,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_anl_001_snapshot_requests` (
  KEY `ix_hanl1_sr_metric_asof` (`company_id`,`metric_definition_id`,`as_of_utc`),
  CONSTRAINT `fk_hanl1_sr_metric` FOREIGN KEY (`metric_definition_id`,`company_id`) REFERENCES `0_hrm_anl_001_metric_definitions` (`metric_definition_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_hanl1_sr_policy` FOREIGN KEY (`suppression_policy_id`,`company_id`) REFERENCES `0_hrm_anl_001_suppression_policies` (`suppression_policy_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_hanl1_sr_u` BEFORE UPDATE ON `0_hrm_anl_001_snapshot_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_snapshot_requests row cannot be updated';
 CREATE TRIGGER `0_hanl1_sr_d` BEFORE DELETE ON `0_hrm_anl_001_snapshot_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_snapshot_requests row cannot be deleted';
 
@@ -15662,7 +15662,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_anl_001_snapshots` (
  UNIQUE KEY `uq_hanl1_ss_request` (`snapshot_request_id`),
  UNIQUE KEY `uq_hanl1_ss_sha` (`snapshot_sha256`),
  CONSTRAINT `fk_hanl1_ss_request` FOREIGN KEY (`snapshot_request_id`,`company_id`) REFERENCES `0_hrm_anl_001_snapshot_requests` (`snapshot_request_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_hanl1_ss_u` BEFORE UPDATE ON `0_hrm_anl_001_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_snapshots row cannot be updated';
 CREATE TRIGGER `0_hanl1_ss_d` BEFORE DELETE ON `0_hrm_anl_001_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_snapshots row cannot be deleted';
 -- HRM-ANL-001 END GROUP snapshot_custody
@@ -15695,7 +15695,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_anl_001_query_audits` (
  KEY `ix_hanl1_qa_actor_time` (`company_id`,`actor_user_id`,`occurred_at`),
  CONSTRAINT `fk_hanl1_qa_metric` FOREIGN KEY (`metric_definition_id`,`company_id`) REFERENCES `0_hrm_anl_001_metric_definitions` (`metric_definition_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_hanl1_qa_snapshot` FOREIGN KEY (`snapshot_id`,`company_id`) REFERENCES `0_hrm_anl_001_snapshots` (`snapshot_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_hanl1_qa_u` BEFORE UPDATE ON `0_hrm_anl_001_query_audits` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_query_audits row cannot be updated';
 CREATE TRIGGER `0_hanl1_qa_d` BEFORE DELETE ON `0_hrm_anl_001_query_audits` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_query_audits row cannot be deleted';
 
@@ -15720,7 +15720,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_anl_001_drilldown_authorizations` (
  KEY `ix_hanl1_da_query` (`company_id`,`query_audit_id`,`expires_at`),
  CONSTRAINT `fk_hanl1_da_query` FOREIGN KEY (`query_audit_id`,`company_id`) REFERENCES `0_hrm_anl_001_query_audits` (`query_audit_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_hanl1_da_metric` FOREIGN KEY (`metric_definition_id`,`company_id`) REFERENCES `0_hrm_anl_001_metric_definitions` (`metric_definition_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_hanl1_da_u` BEFORE UPDATE ON `0_hrm_anl_001_drilldown_authorizations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_drilldown_authorizations row cannot be updated';
 CREATE TRIGGER `0_hanl1_da_d` BEFORE DELETE ON `0_hrm_anl_001_drilldown_authorizations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-ANL-001 immutable hrm_anl_001_drilldown_authorizations row cannot be deleted';
 -- HRM-ANL-001 END GROUP query_governance
@@ -15745,7 +15745,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_ai_001_requests` (
  UNIQUE KEY `uq_pai1_rq_lineage` (`ai_request_id`,`company_id`),
  UNIQUE KEY `uq_pai1_rq_sha` (`request_sha256`),
  KEY `ix_pai1_rq_actor_time` (`company_id`,`actor_user_id`,`requested_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pai1_rq_u` BEFORE UPDATE ON `0_hrm_pay_ai_001_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AI-001 immutable hrm_pay_ai_001_requests row cannot be updated';
 CREATE TRIGGER `0_pai1_rq_d` BEFORE DELETE ON `0_hrm_pay_ai_001_requests` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AI-001 immutable hrm_pay_ai_001_requests row cannot be deleted';
 -- PAY-AI-001 END GROUP request_custody
@@ -15770,7 +15770,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_ai_001_outputs` (
  UNIQUE KEY `uq_pai1_ou_sha` (`output_sha256`),
  KEY `ix_pai1_ou_request` (`company_id`,`ai_request_id`,`generated_at`),
  CONSTRAINT `fk_pai1_ou_request` FOREIGN KEY (`ai_request_id`,`company_id`) REFERENCES `0_hrm_pay_ai_001_requests` (`ai_request_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pai1_ou_u` BEFORE UPDATE ON `0_hrm_pay_ai_001_outputs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AI-001 immutable hrm_pay_ai_001_outputs row cannot be updated';
 CREATE TRIGGER `0_pai1_ou_d` BEFORE DELETE ON `0_hrm_pay_ai_001_outputs` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AI-001 immutable hrm_pay_ai_001_outputs row cannot be deleted';
 -- PAY-AI-001 END GROUP output_custody
@@ -15793,7 +15793,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_ai_001_reviews` (
  UNIQUE KEY `uq_pai1_rv_sha` (`review_sha256`),
  KEY `ix_pai1_rv_output` (`company_id`,`ai_output_id`,`reviewed_at`),
  CONSTRAINT `fk_pai1_rv_output` FOREIGN KEY (`ai_output_id`,`company_id`) REFERENCES `0_hrm_pay_ai_001_outputs` (`ai_output_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pai1_rv_u` BEFORE UPDATE ON `0_hrm_pay_ai_001_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AI-001 immutable hrm_pay_ai_001_reviews row cannot be updated';
 CREATE TRIGGER `0_pai1_rv_d` BEFORE DELETE ON `0_hrm_pay_ai_001_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-AI-001 immutable hrm_pay_ai_001_reviews row cannot be deleted';
 -- PAY-AI-001 END GROUP review_custody
@@ -15816,7 +15816,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_skill_definitions` (
  UNIQUE KEY `uq_htal1_sd_version` (`company_id`,`skill_code`,`effective_from`),
  UNIQUE KEY `uq_htal1_sd_sha` (`definition_sha256`),
  KEY `ix_htal1_sd_effective` (`company_id`,`skill_code`,`effective_from`,`effective_to`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_htal1_sd_u` BEFORE UPDATE ON `0_hrm_tal_001_skill_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_skill_definitions row cannot be updated';
 CREATE TRIGGER `0_htal1_sd_d` BEFORE DELETE ON `0_hrm_tal_001_skill_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_skill_definitions row cannot be deleted';
 -- HRM-TAL-001 END GROUP skill_definition_custody
@@ -15842,7 +15842,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_employee_skill_evidence` (
  KEY `ix_htal1_se_employee` (`company_id`,`employee_id`,`valid_from`,`valid_to`),
  KEY `ix_htal1_se_skill` (`company_id`,`skill_definition_id`,`evidence_date`),
  CONSTRAINT `fk_htal1_se_skill` FOREIGN KEY (`skill_definition_id`,`company_id`) REFERENCES `0_hrm_tal_001_skill_definitions` (`skill_definition_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_htal1_se_u` BEFORE UPDATE ON `0_hrm_tal_001_employee_skill_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_employee_skill_evidence row cannot be updated';
 CREATE TRIGGER `0_htal1_se_d` BEFORE DELETE ON `0_hrm_tal_001_employee_skill_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_employee_skill_evidence row cannot be deleted';
 -- HRM-TAL-001 END GROUP skill_evidence_custody
@@ -15867,7 +15867,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_certification_definitions` (
  UNIQUE KEY `uq_htal1_cd_version` (`company_id`,`certification_code`,`effective_from`),
  UNIQUE KEY `uq_htal1_cd_sha` (`definition_sha256`),
  KEY `ix_htal1_cd_effective` (`company_id`,`certification_code`,`effective_from`,`effective_to`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_htal1_cd_u` BEFORE UPDATE ON `0_hrm_tal_001_certification_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_certification_definitions row cannot be updated';
 CREATE TRIGGER `0_htal1_cd_d` BEFORE DELETE ON `0_hrm_tal_001_certification_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_certification_definitions row cannot be deleted';
 -- HRM-TAL-001 END GROUP certification_definition_custody
@@ -15892,7 +15892,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_employee_certification_evidence` (
  KEY `ix_htal1_ce_employee` (`company_id`,`employee_id`,`issued_on`,`expires_on`),
  KEY `ix_htal1_ce_cert` (`company_id`,`certification_definition_id`,`issued_on`),
  CONSTRAINT `fk_htal1_ce_cert` FOREIGN KEY (`certification_definition_id`,`company_id`) REFERENCES `0_hrm_tal_001_certification_definitions` (`certification_definition_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_htal1_ce_u` BEFORE UPDATE ON `0_hrm_tal_001_employee_certification_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_employee_certification_evidence row cannot be updated';
 CREATE TRIGGER `0_htal1_ce_d` BEFORE DELETE ON `0_hrm_tal_001_employee_certification_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_employee_certification_evidence row cannot be deleted';
 -- HRM-TAL-001 END GROUP certification_evidence_custody
@@ -15911,7 +15911,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_export_audit` (
  PRIMARY KEY (`export_audit_id`),
  KEY `ix_htal1_xa_company_actor_time` (`company_id`,`actor_user_id`,`created_at`),
  KEY `ix_htal1_xa_subject` (`company_id`,`subject_reference_sha256`,`created_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_htal1_xa_u` BEFORE UPDATE ON `0_hrm_tal_001_export_audit` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_export_audit row cannot be updated';
 CREATE TRIGGER `0_htal1_xa_d` BEFORE DELETE ON `0_hrm_tal_001_export_audit` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_export_audit row cannot be deleted';
 -- HRM-TAL-001 END GROUP export_audit_custody
@@ -15937,7 +15937,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_performance_cycle_definitions` (
  UNIQUE KEY `uq_htal1_pc_sha` (`definition_sha256`),
  KEY `ix_htal1_pc_effective` (`company_id`,`cycle_code`,`effective_from`,`effective_to`),
  KEY `ix_htal1_pc_period` (`company_id`,`period_start`,`period_end`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_htal1_pc_u` BEFORE UPDATE ON `0_hrm_tal_001_performance_cycle_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_cycle_definitions row cannot be updated';
 CREATE TRIGGER `0_htal1_pc_d` BEFORE DELETE ON `0_hrm_tal_001_performance_cycle_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_cycle_definitions row cannot be deleted';
 -- HRM-TAL-001 END GROUP performance_cycle_definition_custody
@@ -15961,7 +15961,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_performance_review_subjects` (
  UNIQUE KEY `uq_htal1_pr_sha` (`subject_sha256`),
  KEY `ix_htal1_pr_employee` (`company_id`,`employee_id`,`review_window_start`,`review_window_end`),
  CONSTRAINT `fk_htal1_pr_cycle` FOREIGN KEY (`performance_cycle_definition_id`,`company_id`) REFERENCES `0_hrm_tal_001_performance_cycle_definitions` (`performance_cycle_definition_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_htal1_pr_u` BEFORE UPDATE ON `0_hrm_tal_001_performance_review_subjects` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_review_subjects row cannot be updated';
 CREATE TRIGGER `0_htal1_pr_d` BEFORE DELETE ON `0_hrm_tal_001_performance_review_subjects` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_review_subjects row cannot be deleted';
 -- HRM-TAL-001 END GROUP performance_review_subject_custody
@@ -15985,7 +15985,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_performance_assessment_evidence` (
  KEY `ix_htal1_pa_subject` (`company_id`,`performance_review_subject_id`,`evidence_date`),
  KEY `ix_htal1_pa_dimension` (`company_id`,`dimension_code`,`evidence_date`),
  CONSTRAINT `fk_htal1_pa_subject` FOREIGN KEY (`performance_review_subject_id`,`company_id`) REFERENCES `0_hrm_tal_001_performance_review_subjects` (`performance_review_subject_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_htal1_pa_u` BEFORE UPDATE ON `0_hrm_tal_001_performance_assessment_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_assessment_evidence row cannot be updated';
 CREATE TRIGGER `0_htal1_pa_d` BEFORE DELETE ON `0_hrm_tal_001_performance_assessment_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_assessment_evidence row cannot be deleted';
 -- HRM-TAL-001 END GROUP performance_assessment_evidence_custody
@@ -16009,7 +16009,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_performance_workflow_events` (
  UNIQUE KEY `uq_htal1_pw_sha` (`transition_sha256`),
  KEY `ix_htal1_pw_subject` (`company_id`,`performance_review_subject_id`,`performance_workflow_event_id`),
  CONSTRAINT `fk_htal1_pw_subject` FOREIGN KEY (`performance_review_subject_id`,`company_id`) REFERENCES `0_hrm_tal_001_performance_review_subjects` (`performance_review_subject_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_htal1_pw_u` BEFORE UPDATE ON `0_hrm_tal_001_performance_workflow_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_workflow_events row cannot be updated';
 CREATE TRIGGER `0_htal1_pw_d` BEFORE DELETE ON `0_hrm_tal_001_performance_workflow_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_performance_workflow_events row cannot be deleted';
 -- HRM-TAL-001 END GROUP performance_workflow_event_custody
@@ -16033,7 +16033,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_learning_definitions` (
  UNIQUE KEY `uq_htal1_ld_version` (`company_id`,`learning_code`,`effective_from`),
  UNIQUE KEY `uq_htal1_ld_sha` (`definition_sha256`),
  KEY `ix_htal1_ld_effective` (`company_id`,`learning_code`,`effective_from`,`effective_to`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_htal1_ld_u` BEFORE UPDATE ON `0_hrm_tal_001_learning_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_learning_definitions row cannot be updated';
 CREATE TRIGGER `0_htal1_ld_d` BEFORE DELETE ON `0_hrm_tal_001_learning_definitions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_learning_definitions row cannot be deleted';
 -- HRM-TAL-001 END GROUP learning_definition_custody
@@ -16056,7 +16056,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_learning_assignments` (
  UNIQUE KEY `uq_htal1_la_sha` (`assignment_sha256`),
  KEY `ix_htal1_la_employee` (`company_id`,`employee_id`,`assigned_on`,`due_on`),
  CONSTRAINT `fk_htal1_la_def` FOREIGN KEY (`learning_definition_id`,`company_id`) REFERENCES `0_hrm_tal_001_learning_definitions` (`learning_definition_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_htal1_la_u` BEFORE UPDATE ON `0_hrm_tal_001_learning_assignments` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_learning_assignments row cannot be updated';
 CREATE TRIGGER `0_htal1_la_d` BEFORE DELETE ON `0_hrm_tal_001_learning_assignments` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_learning_assignments row cannot be deleted';
 -- HRM-TAL-001 END GROUP learning_assignment_custody
@@ -16078,7 +16078,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_learning_completion_evidence` (
  UNIQUE KEY `uq_htal1_lc_sha` (`evidence_sha256`),
  KEY `ix_htal1_lc_assignment` (`company_id`,`learning_assignment_id`,`completed_on`),
  CONSTRAINT `fk_htal1_lc_assignment` FOREIGN KEY (`learning_assignment_id`,`company_id`) REFERENCES `0_hrm_tal_001_learning_assignments` (`learning_assignment_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_htal1_lc_u` BEFORE UPDATE ON `0_hrm_tal_001_learning_completion_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_learning_completion_evidence row cannot be updated';
 CREATE TRIGGER `0_htal1_lc_d` BEFORE DELETE ON `0_hrm_tal_001_learning_completion_evidence` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_learning_completion_evidence row cannot be deleted';
 -- HRM-TAL-001 END GROUP learning_completion_custody
@@ -16102,7 +16102,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_confidential_cases` (
  UNIQUE KEY `uq_htal1_cc_ref` (`case_reference_sha256`),
  KEY `ix_htal1_cc_subject` (`company_id`,`subject_employee_id`,`opened_on`),
  KEY `ix_htal1_cc_retention` (`company_id`,`retention_until`,`confidential_case_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_htal1_cc_u` BEFORE UPDATE ON `0_hrm_tal_001_confidential_cases` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_confidential_cases row cannot be updated';
 CREATE TRIGGER `0_htal1_cc_d` BEFORE DELETE ON `0_hrm_tal_001_confidential_cases` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_confidential_cases row cannot be deleted';
 -- HRM-TAL-001 END GROUP confidential_case_custody
@@ -16125,7 +16125,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_tal_001_confidential_case_access_grants` (
  UNIQUE KEY `uq_htal1_cg_ref` (`grant_reference_sha256`),
  KEY `ix_htal1_cg_case_user` (`company_id`,`confidential_case_id`,`grantee_user_id`,`valid_from`,`valid_to`),
  CONSTRAINT `fk_htal1_cg_case` FOREIGN KEY (`confidential_case_id`,`company_id`) REFERENCES `0_hrm_tal_001_confidential_cases` (`confidential_case_id`,`company_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_htal1_cg_u` BEFORE UPDATE ON `0_hrm_tal_001_confidential_case_access_grants` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_confidential_case_access_grants row cannot be updated';
 CREATE TRIGGER `0_htal1_cg_d` BEFORE DELETE ON `0_hrm_tal_001_confidential_case_access_grants` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='HRM-TAL-001 immutable hrm_tal_001_confidential_case_access_grants row cannot be deleted';
 -- HRM-TAL-001 END GROUP confidential_case_access_custody
@@ -16148,7 +16148,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_publisher_profiles` (
   UNIQUE KEY `uq_peco1_pp_sha` (`profile_sha256`),
   KEY `ix_peco1_pp_pub` (`publisher_id`,`requested_at`),
   CONSTRAINT `fk_peco1_pp_pub` FOREIGN KEY (`publisher_id`) REFERENCES `0_pay_ctry_publishers` (`publisher_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_peco1_pp_u` BEFORE UPDATE ON `0_pay_eco_001_publisher_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_publisher_profiles row cannot be updated';
 CREATE TRIGGER `0_peco1_pp_d` BEFORE DELETE ON `0_pay_eco_001_publisher_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_publisher_profiles row cannot be deleted';
 
@@ -16174,7 +16174,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_pack_candidates` (
   KEY `ix_peco1_pc_pack` (`pack_version_id`,`submitted_at`),
   CONSTRAINT `fk_peco1_pc_profile` FOREIGN KEY (`publisher_profile_id`) REFERENCES `0_pay_eco_001_publisher_profiles` (`publisher_profile_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_peco1_pc_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_peco1_pc_u` BEFORE UPDATE ON `0_pay_eco_001_pack_candidates` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_pack_candidates row cannot be updated';
 CREATE TRIGGER `0_peco1_pc_d` BEFORE DELETE ON `0_pay_eco_001_pack_candidates` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_pack_candidates row cannot be deleted';
 
@@ -16197,7 +16197,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_catalog_decisions` (
   UNIQUE KEY `uq_peco1_cd_sha` (`decision_sha256`),
   KEY `ix_peco1_cd_checker` (`checker_id`,`decided_at`),
   CONSTRAINT `fk_peco1_cd_candidate` FOREIGN KEY (`catalog_candidate_id`) REFERENCES `0_pay_eco_001_pack_candidates` (`catalog_candidate_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_peco1_cd_u` BEFORE UPDATE ON `0_pay_eco_001_catalog_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_decisions row cannot be updated';
 CREATE TRIGGER `0_peco1_cd_d` BEFORE DELETE ON `0_pay_eco_001_catalog_decisions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_decisions row cannot be deleted';
 -- PAY-ECO-001 END GROUP foundation
@@ -16223,7 +16223,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_sandbox_evaluations` (
   UNIQUE KEY `uq_peco1_se_sha` (`evaluation_sha256`),
   KEY `ix_peco1_se_result` (`result`,`evaluated_at`),
   CONSTRAINT `fk_peco1_se_candidate` FOREIGN KEY (`catalog_candidate_id`) REFERENCES `0_pay_eco_001_pack_candidates` (`catalog_candidate_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_peco1_se_u` BEFORE UPDATE ON `0_pay_eco_001_sandbox_evaluations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_sandbox_evaluations row cannot be updated';
 CREATE TRIGGER `0_peco1_se_d` BEFORE DELETE ON `0_pay_eco_001_sandbox_evaluations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_sandbox_evaluations row cannot be deleted';
 -- PAY-ECO-001 END GROUP sandbox_evaluation
@@ -16256,7 +16256,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_dependency_scans` (
   CONSTRAINT `fk_peco1_ds_candidate` FOREIGN KEY (`catalog_candidate_id`) REFERENCES `0_pay_eco_001_pack_candidates` (`catalog_candidate_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_peco1_ds_sandbox` FOREIGN KEY (`sandbox_evaluation_id`) REFERENCES `0_pay_eco_001_sandbox_evaluations` (`sandbox_evaluation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_peco1_ds_lock` FOREIGN KEY (`dependency_lock_id`) REFERENCES `0_pay_ctry_dependency_locks` (`dependency_lock_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_peco1_ds_u` BEFORE UPDATE ON `0_pay_eco_001_dependency_scans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_dependency_scans row cannot be updated';
 CREATE TRIGGER `0_peco1_ds_d` BEFORE DELETE ON `0_pay_eco_001_dependency_scans` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_dependency_scans row cannot be deleted';
 -- PAY-ECO-001 END GROUP dependency_scan
@@ -16280,7 +16280,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_vulnerability_snapshots` (
   UNIQUE KEY `uq_peco1_vs_code` (`source_code`,`snapshot_code`),
   UNIQUE KEY `uq_peco1_vs_sha` (`snapshot_sha256`),
   KEY `ix_peco1_vs_effective` (`issued_at`,`expires_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_peco1_vs_u` BEFORE UPDATE ON `0_pay_eco_001_vulnerability_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_vulnerability_snapshots row cannot be updated';
 CREATE TRIGGER `0_peco1_vs_d` BEFORE DELETE ON `0_pay_eco_001_vulnerability_snapshots` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_vulnerability_snapshots row cannot be deleted';
 
@@ -16301,7 +16301,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_vulnerability_advisories` (
   UNIQUE KEY `uq_peco1_va_snapshot_sha` (`vulnerability_snapshot_id`,`advisory_sha256`),
   KEY `ix_peco1_va_subject` (`package_code`,`affected_version`),
   CONSTRAINT `fk_peco1_va_snapshot` FOREIGN KEY (`vulnerability_snapshot_id`) REFERENCES `0_pay_eco_001_vulnerability_snapshots` (`vulnerability_snapshot_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_peco1_va_u` BEFORE UPDATE ON `0_pay_eco_001_vulnerability_advisories` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_vulnerability_advisories row cannot be updated';
 CREATE TRIGGER `0_peco1_va_d` BEFORE DELETE ON `0_pay_eco_001_vulnerability_advisories` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_vulnerability_advisories row cannot be deleted';
 
@@ -16325,7 +16325,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_vulnerability_correlations` (
   KEY `fk_peco1_vc_snapshot` (`vulnerability_snapshot_id`),
   CONSTRAINT `fk_peco1_vc_scan` FOREIGN KEY (`dependency_scan_id`) REFERENCES `0_pay_eco_001_dependency_scans` (`dependency_scan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_peco1_vc_snapshot` FOREIGN KEY (`vulnerability_snapshot_id`) REFERENCES `0_pay_eco_001_vulnerability_snapshots` (`vulnerability_snapshot_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_peco1_vc_u` BEFORE UPDATE ON `0_pay_eco_001_vulnerability_correlations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_vulnerability_correlations row cannot be updated';
 CREATE TRIGGER `0_peco1_vc_d` BEFORE DELETE ON `0_pay_eco_001_vulnerability_correlations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_vulnerability_correlations row cannot be deleted';
 -- PAY-ECO-001 END GROUP vulnerability_intelligence
@@ -16364,7 +16364,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_artifact_admissions` (
   CONSTRAINT `fk_peco1_aa_sandbox` FOREIGN KEY (`sandbox_evaluation_id`) REFERENCES `0_pay_eco_001_sandbox_evaluations` (`sandbox_evaluation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_peco1_aa_scan` FOREIGN KEY (`dependency_scan_id`) REFERENCES `0_pay_eco_001_dependency_scans` (`dependency_scan_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_peco1_aa_correlation` FOREIGN KEY (`vulnerability_correlation_id`) REFERENCES `0_pay_eco_001_vulnerability_correlations` (`vulnerability_correlation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_peco1_aa_u` BEFORE UPDATE ON `0_pay_eco_001_artifact_admissions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_artifact_admissions row cannot be updated';
 CREATE TRIGGER `0_peco1_aa_d` BEFORE DELETE ON `0_pay_eco_001_artifact_admissions` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_artifact_admissions row cannot be deleted';
 -- PAY-ECO-001 END GROUP artifact_admission
@@ -16401,7 +16401,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_catalog_publications` (
   CONSTRAINT `fk_peco1_cp_certpub` FOREIGN KEY (`certification_publication_id`) REFERENCES `0_pay_ctry_publication_records` (`publication_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_peco1_cp_release` FOREIGN KEY (`catalog_release_id`) REFERENCES `0_pay_ctry_catalog_releases` (`catalog_release_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_peco1_cp_catalog_admission` FOREIGN KEY (`catalog_admission_id`) REFERENCES `0_pay_ctry_catalog_release_admissions` (`catalog_admission_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_peco1_cp_u` BEFORE UPDATE ON `0_pay_eco_001_catalog_publications` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_publications row cannot be updated';
 CREATE TRIGGER `0_peco1_cp_d` BEFORE DELETE ON `0_pay_eco_001_catalog_publications` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_publications row cannot be deleted';
 -- PAY-ECO-001 END GROUP catalog_publication
@@ -16435,7 +16435,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_catalog_lifecycle_events` (
   CONSTRAINT `fk_peco1_cl_cert_action` FOREIGN KEY (`certification_emergency_action_id`) REFERENCES `0_pay_ctry_certification_emergency_actions` (`emergency_action_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_peco1_cl_pub_rev` FOREIGN KEY (`publisher_revocation_id`) REFERENCES `0_pay_ctry_publisher_revocations` (`publisher_revocation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_peco1_cl_key_rev` FOREIGN KEY (`trust_key_revocation_id`) REFERENCES `0_pay_ctry_trust_key_revocations` (`key_revocation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_peco1_cl_u` BEFORE UPDATE ON `0_pay_eco_001_catalog_lifecycle_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_lifecycle_events row cannot be updated';
 CREATE TRIGGER `0_peco1_cl_d` BEFORE DELETE ON `0_pay_eco_001_catalog_lifecycle_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_catalog_lifecycle_events row cannot be deleted';
 -- PAY-ECO-001 END GROUP catalog_lifecycle
@@ -16459,7 +16459,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_marketplace_installations` (
   CONSTRAINT `fk_peco1_mi_publication` FOREIGN KEY (`catalog_publication_id`) REFERENCES `0_pay_eco_001_catalog_publications` (`catalog_publication_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_peco1_mi_install` FOREIGN KEY (`site_installation_id`) REFERENCES `0_pay_ctry_site_installations` (`site_installation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_peco1_mi_pack` FOREIGN KEY (`pack_version_id`) REFERENCES `0_pay_ctry_pack_versions` (`pack_version_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_peco1_mi_u` BEFORE UPDATE ON `0_pay_eco_001_marketplace_installations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_marketplace_installations row cannot be updated';
 CREATE TRIGGER `0_peco1_mi_d` BEFORE DELETE ON `0_pay_eco_001_marketplace_installations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_marketplace_installations row cannot be deleted';
 
@@ -16490,7 +16490,7 @@ CREATE TABLE IF NOT EXISTS `0_pay_eco_001_marketplace_activations` (
   CONSTRAINT `fk_peco1_ma_market_install` FOREIGN KEY (`marketplace_installation_id`) REFERENCES `0_pay_eco_001_marketplace_installations` (`marketplace_installation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_peco1_ma_activation` FOREIGN KEY (`activation_id`) REFERENCES `0_pay_ctry_activations` (`activation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
   CONSTRAINT `fk_peco1_ma_binding` FOREIGN KEY (`binding_id`) REFERENCES `0_pay_ctry_activation_bindings` (`binding_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_peco1_ma_u` BEFORE UPDATE ON `0_pay_eco_001_marketplace_activations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_marketplace_activations row cannot be updated';
 CREATE TRIGGER `0_peco1_ma_d` BEFORE DELETE ON `0_pay_eco_001_marketplace_activations` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-ECO-001 immutable pay_eco_001_marketplace_activations row cannot be deleted';
 -- PAY-ECO-001 END GROUP marketplace_activation
@@ -16521,7 +16521,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_profiles` (
  KEY `fk_pr1_pf_ob` (`filing_obligation_id`),
  CONSTRAINT `fk_pr1_pf_run` FOREIGN KEY (`pay_core_run_id`) REFERENCES `0_hrm_pay_core_009_runs` (`run_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pr1_pf_ob` FOREIGN KEY (`filing_obligation_id`) REFERENCES `0_hrm_pay_fil_001_obligations` (`filing_obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pr1_pf_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_profiles row cannot be updated';
 CREATE TRIGGER `0_pr1_pf_d` BEFORE DELETE ON `0_hrm_pay_rec_001_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_profiles row cannot be deleted';
 
@@ -16545,7 +16545,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_evidence_sets` (
  KEY `ix_pr1_es_current` (`reconciliation_profile_id`,`evidence_kind`,`current_evidence`),
  KEY `fk_pr1_es_pf` (`reconciliation_profile_id`),
  CONSTRAINT `fk_pr1_es_pf` FOREIGN KEY (`reconciliation_profile_id`) REFERENCES `0_hrm_pay_rec_001_profiles` (`reconciliation_profile_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pr1_es_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_evidence_sets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_evidence_sets row cannot be updated';
 CREATE TRIGGER `0_pr1_es_d` BEFORE DELETE ON `0_hrm_pay_rec_001_evidence_sets` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_evidence_sets row cannot be deleted';
 
@@ -16575,7 +16575,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_checklists` (
  CONSTRAINT `fk_pr1_cl_gl` FOREIGN KEY (`gl_evidence_set_id`) REFERENCES `0_hrm_pay_rec_001_evidence_sets` (`reconciliation_evidence_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pr1_cl_pmt` FOREIGN KEY (`payment_evidence_set_id`) REFERENCES `0_hrm_pay_rec_001_evidence_sets` (`reconciliation_evidence_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pr1_cl_fil` FOREIGN KEY (`filing_evidence_set_id`) REFERENCES `0_hrm_pay_rec_001_evidence_sets` (`reconciliation_evidence_set_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pr1_cl_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_checklists` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_checklists row cannot be updated';
 CREATE TRIGGER `0_pr1_cl_d` BEFORE DELETE ON `0_hrm_pay_rec_001_checklists` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_checklists row cannot be deleted';
 -- PAY-REC-001 END GROUP reconciliation_profile_checklist_custody
@@ -16597,7 +16597,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_reviews` (
  UNIQUE KEY `uq_pr1_rv_sha` (`review_sha256`),
  KEY `fk_pr1_rv_checklist` (`close_checklist_id`),
  CONSTRAINT `fk_pr1_rv_checklist` FOREIGN KEY (`close_checklist_id`) REFERENCES `0_hrm_pay_rec_001_checklists` (`close_checklist_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pr1_rv_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_reviews row cannot be updated';
 CREATE TRIGGER `0_pr1_rv_d` BEFORE DELETE ON `0_hrm_pay_rec_001_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_reviews row cannot be deleted';
 
@@ -16620,7 +16620,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_approvals` (
  KEY `fk_pr1_ap_checklist` (`close_checklist_id`),
  CONSTRAINT `fk_pr1_ap_review` FOREIGN KEY (`reconciliation_review_id`) REFERENCES `0_hrm_pay_rec_001_reviews` (`reconciliation_review_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pr1_ap_checklist` FOREIGN KEY (`close_checklist_id`) REFERENCES `0_hrm_pay_rec_001_checklists` (`close_checklist_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pr1_ap_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_approvals row cannot be updated';
 CREATE TRIGGER `0_pr1_ap_d` BEFORE DELETE ON `0_hrm_pay_rec_001_approvals` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_approvals row cannot be deleted';
 -- PAY-REC-001 END GROUP independent_review_approval_custody
@@ -16666,7 +16666,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_rec_001_state_events` (
  CONSTRAINT `fk_pr1_se_approval` FOREIGN KEY (`reconciliation_approval_id`) REFERENCES `0_hrm_pay_rec_001_approvals` (`reconciliation_approval_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pr1_se_run` FOREIGN KEY (`pay_core_run_id`) REFERENCES `0_hrm_pay_core_009_runs` (`run_id`) ON UPDATE RESTRICT ON DELETE RESTRICT,
  CONSTRAINT `fk_pr1_se_obligation` FOREIGN KEY (`filing_obligation_id`) REFERENCES `0_hrm_pay_fil_001_obligations` (`filing_obligation_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 CREATE TRIGGER `0_pr1_se_u` BEFORE UPDATE ON `0_hrm_pay_rec_001_state_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_state_events row cannot be updated';
 CREATE TRIGGER `0_pr1_se_d` BEFORE DELETE ON `0_hrm_pay_rec_001_state_events` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-REC-001 immutable hrm_pay_rec_001_state_events row cannot be deleted';
 -- PAY-REC-001 END GROUP development_close_state_custody
@@ -16693,7 +16693,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_con_001_provider_profiles` (
  PRIMARY KEY (`provider_profile_id`),
  UNIQUE KEY `uq_pcon1_pp_code` (`company_id`,`provider_code`),
  UNIQUE KEY `uq_pcon1_pp_sha` (`profile_sha256`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TABLE IF NOT EXISTS `0_hrm_pay_con_001_mapping_versions` (
  `mapping_version_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -16717,7 +16717,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_con_001_mapping_versions` (
  UNIQUE KEY `uq_pcon1_mv_sha` (`mapping_version_sha256`),
  KEY `fk_pcon1_mv_profile` (`provider_profile_id`),
  CONSTRAINT `fk_pcon1_mv_profile` FOREIGN KEY (`provider_profile_id`) REFERENCES `0_hrm_pay_con_001_provider_profiles` (`provider_profile_id`) ON UPDATE RESTRICT ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TRIGGER `0_pcon1_pp_u` BEFORE UPDATE ON `0_hrm_pay_con_001_provider_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CON-001 immutable hrm_pay_con_001_provider_profiles row cannot be updated';
 CREATE TRIGGER `0_pcon1_pp_d` BEFORE DELETE ON `0_hrm_pay_con_001_provider_profiles` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CON-001 immutable hrm_pay_con_001_provider_profiles row cannot be deleted';
@@ -16751,7 +16751,7 @@ CREATE TABLE IF NOT EXISTS `0_hrm_pay_con_001_provider_admission_reviews` (
  PRIMARY KEY (`provider_admission_review_id`),
  UNIQUE KEY `uq_pcon1_par_hash` (`admission_review_sha256`),
  KEY `ix_pcon1_par_provider` (`company_id`,`provider_code`,`approved_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci ROW_FORMAT=DYNAMIC;
 
 CREATE TRIGGER `0_pcon1_par_u` BEFORE UPDATE ON `0_hrm_pay_con_001_provider_admission_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CON-001 immutable hrm_pay_con_001_provider_admission_reviews row cannot be updated';
 CREATE TRIGGER `0_pcon1_par_d` BEFORE DELETE ON `0_hrm_pay_con_001_provider_admission_reviews` FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='PAY-CON-001 immutable hrm_pay_con_001_provider_admission_reviews row cannot be deleted';

@@ -77,7 +77,11 @@ function hrm_pay_core_009_transition(array $current,$expected_state,$expected_ve
     if($cur===false||!$cmd||$actor<=0||$expected_state!==$cur['state']||$expected_version!==$cur['state_version']){$error=$cur===false?$ce:'stale_state';return false;}
     $allowed=hrm_pay_core_009_allowed_transitions();if(!in_array($target_state,$allowed[$cur['state']],true)){$error='transition_denied';return false;}
     $next=hrm_pay_core_009_state_descriptor($cur['run_key'],$target_state,$cur['state_version']+1,$cur['request_sha256'],$cur['checkpoint_no'],$cur['lease_token_sha256'],$ne);if($next===false){$error=$ne;return false;}
-    $t=array('run_key'=>$cur['run_key'],'from_state'=>$cur['state'],'to_state'=>$target_state,'expected_version'=>$cur['state_version'],'resulting_version'=>$next['state_version'],'command_key'=>$cmd,'predecessor_state_sha256'=>$cur['state_sha256'],'resulting_state_sha256'=>$next['state_sha256'],'actor_id'=>$actor);$t['transition_sha256']=hrm_pay_core_009_hash($t);return array('state'=>$next,'transition'=>$t);
+    $t=array('run_key'=>$cur['run_key'],'from_state'=>$cur['state'],'to_state'=>$target_state,'expected_version'=>$cur['state_version'],
+      'resulting_version'=>$next['state_version'],'command_key'=>$cmd,'predecessor_state_sha256'=>$cur['state_sha256'],'resulting_state_sha256'=>$next['state_sha256'],
+      'actor_id'=>$actor);
+    $t['transition_sha256']=hrm_pay_core_009_hash($t);
+    return array('state'=>$next,'transition'=>$t);
 }
 
 function hrm_pay_core_009_lease($run_key,$worker_token,$lease_token_sha256,$acquired_at,$expires_at,$event,&$error=null)

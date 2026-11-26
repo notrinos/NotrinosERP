@@ -13,7 +13,16 @@ display_note(_('Read-only self-scoped notice center. It contains country-pack me
 start_table(TABLESTYLE,"width='100%'");
 table_header(array(_('Pack'),_('Current'),_('Successor'),_('Severity'),_('Deadline'),_('Required action')));
 $k=0;
-foreach($rows as $row){alt_table_row_color($k);label_cell(htmlspecialchars((string)$row['pack_code'],ENT_QUOTES,'UTF-8'));label_cell(htmlspecialchars((string)$row['current_pack_version'],ENT_QUOTES,'UTF-8'));label_cell(htmlspecialchars((string)$row['successor_pack_version'],ENT_QUOTES,'UTF-8'));label_cell(htmlspecialchars((string)$row['severity'],ENT_QUOTES,'UTF-8'));label_cell(htmlspecialchars((string)$row['deadline_at'],ENT_QUOTES,'UTF-8'));label_cell(htmlspecialchars((string)$row['required_action'],ENT_QUOTES,'UTF-8'));end_row();}
+foreach($rows as $row){
+	alt_table_row_color($k);
+	label_cell(htmlspecialchars((string)$row['pack_code'],ENT_QUOTES,'UTF-8'));
+	label_cell(htmlspecialchars((string)$row['current_pack_version'],ENT_QUOTES,'UTF-8'));
+	label_cell(htmlspecialchars((string)$row['successor_pack_version'],ENT_QUOTES,'UTF-8'));
+	label_cell(htmlspecialchars((string)$row['severity'],ENT_QUOTES,'UTF-8'));
+	label_cell(htmlspecialchars((string)$row['deadline_at'],ENT_QUOTES,'UTF-8'));
+	label_cell(htmlspecialchars((string)$row['required_action'],ENT_QUOTES,'UTF-8'));
+	end_row();
+}
 if(!$rows)label_row(_('Status'),_('No delivered, current, unacknowledged regulatory update notices are available for your user and company scope.'),'colspan=1','colspan=5');
 end_table(1);end_page();
 ?>

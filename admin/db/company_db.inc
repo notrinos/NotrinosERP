@@ -139,8 +139,8 @@ function clean_user_themes($theme) {
 	$connections = $db_connections;	// do not use db_connections directly here, or script will hang due to db_connections usage inside the loop
 	foreach ($connections as $n => $conn) {
 		$db = $_SESSION['wa_current_user']->set_db_connection($n);
-		$sql = "UPDATE {$conn['tbpref']}users SET theme='default' WHERE theme='$theme'";
-		if (!db_query($sql, 'Cannot update user theme settings'))
+		$sql = "UPDATE ".$conn['tbpref']."users SET theme='default' WHERE theme = ?";
+		if (!db_execute($sql, array($theme), 'Cannot update user theme settings'))
 			return false;
 	}
 	$db = $_SESSION['wa_current_user']->set_db_connection($comp);

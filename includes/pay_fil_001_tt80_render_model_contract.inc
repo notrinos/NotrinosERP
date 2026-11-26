@@ -87,8 +87,14 @@ function pay_fil_001_tt80_build_render_model(array $source,array $taxpayer,array
     $contact=$c['taxpayer_contact'];
     $model=array(
         'source_binding'=>array('company_id'=>$source['company_id'],'legal_entity_id'=>$source['legal_entity_id'],'obligation_sha256'=>$source['obligation_sha256'],'source_set_sha256'=>$source['source_set_sha256'],'semantic_mapping_sha256'=>$mapping['mapping_sha256'],'currency_code'=>'VND'),
-        'header'=>array('record_id'=>$c['record_id'],'service_name'=>$c['service_name'],'service_version'=>$c['service_version'],'provider_info'=>$c['provider_info'],'declaration_kind'=>$c['declaration_kind'],'sequence_no'=>$c['sequence_no'],'period'=>$period,'period_start'=>$source['period_start'],'period_end'=>$source['period_end'],'prepared_on'=>$c['prepared_on'],'signer_name'=>$c['signer_name'],'signed_on'=>$c['signed_on']),
-        'taxpayer'=>array('tax_code'=>$taxpayer['taxpayer_tax_code'],'name'=>$taxpayer['taxpayer_name'],'address'=>$taxpayer['taxpayer_address'],'ward_name'=>$taxpayer['taxpayer_ward_name'],'ward_code'=>$taxpayer['taxpayer_ward_code'],'district_code'=>$contact['district_code'],'district_name'=>$contact['district_name'],'province_code'=>$taxpayer['taxpayer_province_code'],'province_name'=>$taxpayer['taxpayer_province_name'],'phone'=>$contact['phone'],'fax'=>$contact['fax'],'email'=>$contact['email'],'business_activity'=>$contact['business_activity']),
+        'header'=>array('record_id'=>$c['record_id'],'service_name'=>$c['service_name'],'service_version'=>$c['service_version'],
+          'provider_info'=>$c['provider_info'],'declaration_kind'=>$c['declaration_kind'],'sequence_no'=>$c['sequence_no'],
+          'period'=>$period,'period_start'=>$source['period_start'],'period_end'=>$source['period_end'],'prepared_on'=>$c['prepared_on'],
+          'signer_name'=>$c['signer_name'],'signed_on'=>$c['signed_on']),
+        'taxpayer'=>array('tax_code'=>$taxpayer['taxpayer_tax_code'],'name'=>$taxpayer['taxpayer_name'],'address'=>$taxpayer['taxpayer_address'],
+          'ward_name'=>$taxpayer['taxpayer_ward_name'],'ward_code'=>$taxpayer['taxpayer_ward_code'],'district_code'=>$contact['district_code'],
+          'district_name'=>$contact['district_name'],'province_code'=>$taxpayer['taxpayer_province_code'],'province_name'=>$taxpayer['taxpayer_province_name'],
+          'phone'=>$contact['phone'],'fax'=>$contact['fax'],'email'=>$contact['email'],'business_activity'=>$contact['business_activity']),
         'tax_office'=>array('code'=>$taxpayer['tax_office_code'],'name'=>$taxpayer['tax_office_name']),
         'tax_agent'=>$c['tax_agent'],'extension'=>$c['extension'],'indicators'=>$ind
     );

@@ -4,12 +4,26 @@ include_once(dirname(__FILE__).'/migration_readiness_db.inc');
 function hrm_pay_core_008_validator_columns(){return array('hrm_pay_validation_validator_defs'=>array('validator_definition_id','validator_key','validator_version','domain','severity','origin','capability','purpose','input_contract_sha256','output_contract_sha256','threshold_policy_sha256','applicability_json','definition_sha256','created_by','created_at'));}
 function hrm_pay_core_008_threshold_columns(){return array('hrm_pay_validation_threshold_policies'=>array('threshold_policy_id','policy_key','version_no','measure','unit_code','currency_code','mode','tolerance','effective_from','effective_to','policy_sha256','created_by','created_at'));}
 function hrm_pay_core_008_pack_columns(){return array('hrm_pay_validation_pack_bindings'=>array('pack_binding_id','pack_key','pack_version','validator_definition_id','capability','artifact_sha256','binding_sha256','created_by','created_at'));}
-function hrm_pay_core_008_execution_columns(){return array('hrm_pay_validation_runs'=>array('validation_run_id','validator_definition_id','legal_entity_id','payroll_relationship_id','worker_id','person_id','assignment_id','calendar_period_id','result_id','result_sha256','source_sha256','evidence_set_sha256','idempotency_key','outcome','finding_set_sha256','execution_sha256','executed_by','created_at'),'hrm_pay_validation_findings'=>array('finding_id','validation_run_id','finding_key','code','severity','evidence_sha256','finding_sha256','created_at'));}
+function hrm_pay_core_008_execution_columns(){
+	return array('hrm_pay_validation_runs'=>array('validation_run_id','validator_definition_id','legal_entity_id','payroll_relationship_id',
+		'worker_id','person_id','assignment_id','calendar_period_id','result_id','result_sha256','source_sha256','evidence_set_sha256',
+		'idempotency_key','outcome','finding_set_sha256','execution_sha256','executed_by','created_at'),'hrm_pay_validation_findings'=>array('finding_id',
+		'validation_run_id','finding_key','code','severity','evidence_sha256','finding_sha256','created_at'));
+}
 function hrm_pay_core_008_resolution_columns(){return array('hrm_pay_validation_resolutions'=>array('resolution_id','finding_id','reason_code','support_sha256','resulting_state','command_key','resolution_sha256','resolver_id','created_at'));}
 function hrm_pay_core_008_signoff_columns(){return array('hrm_pay_validation_signoffs'=>array('signoff_id','legal_entity_id','payroll_relationship_id','calendar_period_id','result_set_sha256','validation_set_sha256','resolution_set_sha256','signoff_state','command_key','signoff_sha256','signer_id','created_at'));}
 function hrm_pay_core_008_variance_columns(){return array('hrm_pay_validation_variances'=>array('variance_id','variance_kind','legal_entity_id','payroll_relationship_id','current_result_id','comparison_result_id','current_result_sha256','comparison_result_sha256','currency','measure_set_json','threshold_policy_sha256','variance_sha256','executed_by','created_at'));}
-function hrm_pay_core_008_reconciliation_columns(){return array('hrm_pay_validation_reconciliations'=>array('reconciliation_id','reconciliation_kind','legal_entity_id','payroll_relationship_id','calendar_period_id','result_set_sha256','source_evidence_sha256','expected_value','actual_value','difference_value','unit_code','currency_code','threshold_policy_sha256','reconciliation_state','evidence_sha256','reconciliation_sha256','reviewed_by','created_at'));}
+function hrm_pay_core_008_reconciliation_columns(){
+	return array('hrm_pay_validation_reconciliations'=>array('reconciliation_id','reconciliation_kind','legal_entity_id','payroll_relationship_id',
+		'calendar_period_id','result_set_sha256','source_evidence_sha256','expected_value','actual_value','difference_value','unit_code',
+		'currency_code','threshold_policy_sha256','reconciliation_state','evidence_sha256','reconciliation_sha256','reviewed_by',
+		'created_at'));
+}
 function hrm_pay_core_008_recovery_columns(){return array('hrm_pay_validation_recovery_evidence'=>array('recovery_evidence_id','subject_type','subject_sha256','action_token','source_sha256','evidence_sha256','recovery_sha256','executed_by','created_at'));}
 function hrm_pay_core_008_all_columns(){return array_merge(hrm_pay_core_008_validator_columns(),hrm_pay_core_008_threshold_columns(),hrm_pay_core_008_pack_columns(),hrm_pay_core_008_execution_columns(),hrm_pay_core_008_resolution_columns(),hrm_pay_core_008_signoff_columns(),hrm_pay_core_008_variance_columns(),hrm_pay_core_008_reconciliation_columns(),hrm_pay_core_008_recovery_columns());}
-function hrm_pay_core_008_trigger_codes(){return array('hrm_pay_validation_validator_defs'=>'vdf','hrm_pay_validation_threshold_policies'=>'thr','hrm_pay_validation_pack_bindings'=>'pak','hrm_pay_validation_runs'=>'run','hrm_pay_validation_findings'=>'fnd','hrm_pay_validation_resolutions'=>'res','hrm_pay_validation_signoffs'=>'sig','hrm_pay_validation_variances'=>'var','hrm_pay_validation_reconciliations'=>'rec','hrm_pay_validation_recovery_evidence'=>'rcv');}
+function hrm_pay_core_008_trigger_codes(){
+	return array('hrm_pay_validation_validator_defs'=>'vdf','hrm_pay_validation_threshold_policies'=>'thr','hrm_pay_validation_pack_bindings'=>'pak',
+		'hrm_pay_validation_runs'=>'run','hrm_pay_validation_findings'=>'fnd','hrm_pay_validation_resolutions'=>'res','hrm_pay_validation_signoffs'=>'sig',
+		'hrm_pay_validation_variances'=>'var','hrm_pay_validation_reconciliations'=>'rec','hrm_pay_validation_recovery_evidence'=>'rcv');
+}
 ?>

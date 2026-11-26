@@ -1,10 +1,34 @@
 <?php
 /** Frozen schema helpers for PAY-CORE-006 append-only balance custody. */
 include_once(dirname(__FILE__).'/migration_readiness_db.inc');
-function hrm_pay_core_006_definition_columns(){return array('hrm_pay_balance_definitions'=>array('balance_definition_id','balance_code','version_no','unit_code','currency_code','dimension_mask','accumulator_mask','reset_policy','reset_month','reset_day','expiry_policy','expiry_date','expiry_days','carry_forward_allowed','effective_from','effective_to','definition_sha256','status','created_by','created_at'));}
-function hrm_pay_core_006_movement_columns(){return array('hrm_pay_balance_movements'=>array('movement_id','balance_definition_id','legal_entity_id','payroll_relationship_id','person_id','worker_id','assignment_id','calendar_period_id','jurisdiction_code','leave_type_id','loan_id','source_system','source_type','source_event_key','source_event_sha256','movement_kind','effective_date','recognition_date','currency_code','unit_code','amount','definition_sha256','predecessor_movement_id','lineage_sha256','movement_sha256','created_by','created_at'));}
-function hrm_pay_core_006_opening_columns(){return array('hrm_pay_balance_opening_inventory'=>array('opening_inventory_id','balance_definition_id','legal_entity_id','payroll_relationship_id','person_id','worker_id','assignment_id','calendar_period_id','jurisdiction_code','leave_type_id','loan_id','legacy_source_type','legacy_source_id','legacy_source_sha256','as_of_date','currency_code','unit_code','amount','provenance_state','evidence_sha256','inventory_sha256','inventoried_by','reviewed_by','created_at'));}
-function hrm_pay_core_006_snapshot_columns(){return array('hrm_pay_balance_snapshots'=>array('balance_snapshot_id','balance_definition_id','legal_entity_id','payroll_relationship_id','person_id','worker_id','assignment_id','calendar_period_id','jurisdiction_code','leave_type_id','loan_id','as_of_date','period_start','period_end','ptd_amount','mtd_amount','qtd_amount','ytd_amount','lifetime_amount','movement_set_sha256','scope_sha256','definition_sha256','snapshot_sha256','built_by','created_at'));}
-function hrm_pay_core_006_recovery_columns(){return array('hrm_pay_balance_reconciliations'=>array('reconciliation_id','balance_snapshot_id','accumulator_kind','source_type','source_sha256','expected_amount','actual_amount','difference_amount','reconciliation_state','evidence_sha256','reconciliation_sha256','reviewed_by','created_at'),'hrm_pay_balance_recovery_evidence'=>array('recovery_evidence_id','reconciliation_id','action_token','source_sha256','evidence_sha256','recovery_sha256','executed_by','created_at'));}
+function hrm_pay_core_006_definition_columns(){
+	return array('hrm_pay_balance_definitions'=>array('balance_definition_id','balance_code','version_no','unit_code','currency_code',
+		'dimension_mask','accumulator_mask','reset_policy','reset_month','reset_day','expiry_policy','expiry_date','expiry_days',
+		'carry_forward_allowed','effective_from','effective_to','definition_sha256','status','created_by','created_at'));
+}
+function hrm_pay_core_006_movement_columns(){
+	return array('hrm_pay_balance_movements'=>array('movement_id','balance_definition_id','legal_entity_id','payroll_relationship_id',
+		'person_id','worker_id','assignment_id','calendar_period_id','jurisdiction_code','leave_type_id','loan_id','source_system',
+		'source_type','source_event_key','source_event_sha256','movement_kind','effective_date','recognition_date','currency_code',
+		'unit_code','amount','definition_sha256','predecessor_movement_id','lineage_sha256','movement_sha256','created_by','created_at'));
+}
+function hrm_pay_core_006_opening_columns(){
+	return array('hrm_pay_balance_opening_inventory'=>array('opening_inventory_id','balance_definition_id','legal_entity_id',
+		'payroll_relationship_id','person_id','worker_id','assignment_id','calendar_period_id','jurisdiction_code','leave_type_id',
+		'loan_id','legacy_source_type','legacy_source_id','legacy_source_sha256','as_of_date','currency_code','unit_code','amount',
+		'provenance_state','evidence_sha256','inventory_sha256','inventoried_by','reviewed_by','created_at'));
+}
+function hrm_pay_core_006_snapshot_columns(){
+	return array('hrm_pay_balance_snapshots'=>array('balance_snapshot_id','balance_definition_id','legal_entity_id','payroll_relationship_id',
+		'person_id','worker_id','assignment_id','calendar_period_id','jurisdiction_code','leave_type_id','loan_id','as_of_date',
+		'period_start','period_end','ptd_amount','mtd_amount','qtd_amount','ytd_amount','lifetime_amount','movement_set_sha256',
+		'scope_sha256','definition_sha256','snapshot_sha256','built_by','created_at'));
+}
+function hrm_pay_core_006_recovery_columns(){
+	return array('hrm_pay_balance_reconciliations'=>array('reconciliation_id','balance_snapshot_id','accumulator_kind','source_type',
+		'source_sha256','expected_amount','actual_amount','difference_amount','reconciliation_state','evidence_sha256','reconciliation_sha256',
+		'reviewed_by','created_at'),'hrm_pay_balance_recovery_evidence'=>array('recovery_evidence_id','reconciliation_id','action_token',
+		'source_sha256','evidence_sha256','recovery_sha256','executed_by','created_at'));
+}
 function hrm_pay_core_006_all_columns(){return array_merge(hrm_pay_core_006_definition_columns(),hrm_pay_core_006_movement_columns(),hrm_pay_core_006_opening_columns(),hrm_pay_core_006_snapshot_columns(),hrm_pay_core_006_recovery_columns());}
 ?>

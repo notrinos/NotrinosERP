@@ -31,7 +31,7 @@ function db_get_version() {
 */
 function get_mysql_encoding_name($encoding) {
 	$db_encoding = array(
-		'UTF-8' => 'utf8',
+		'UTF-8' => 'utf8mb4',
 		'ISO-8859-1' => 'latin1',
 		'ISO-8859-2' => 'latin2',
 		'ISO-8859-7' => 'greek',
@@ -65,32 +65,36 @@ function get_mysql_encoding_name($encoding) {
 /*
 	Returns 'best' mysql collation for various FA backend language codes.
 */
+/**
+ * Database collation of a NotrinosERP collation key (config_db.php 'collation', for example utf8_xx or utf8_is).
+ * Keys keep their old names; every collation is utf8mb4.
+ */
 function get_mysql_collation($lang=null) {
 	if (!$lang)
 		$lang = 'utf8_'.substr($_SESSION['language']->code, 0, 2);
 
 	$db_collation = array(
-		'utf8_is' => 'utf8_icelandic_ci',
-		'utf8_lv' => 'utf8_latvian_ci',
-		'utf8_ro' => 'utf8_romanian_ci',
-		'utf8_sl' => 'utf8_slovenian_ci',
-		'utf8_pl' => 'utf8_polish_ci',
-		'utf8_et' => 'utf8_estonian_ci',
-		'utf8_es' => 'utf8_spanish_ci', // or 'spanish2',
-		'utf8_sw' => 'utf8_swedish_ci',
-		'utf8_tr' => 'utf8_turkish_ci',
-		'utf8_cs' => 'utf8_czech_ci',
-		'utf8_da' => 'utf8_danish_ci',
-		'utf8_lt' => 'utf8_lithuanian_ci',
-		'utf8_sk' => 'utf8_slovak_ci',
-		'utf8_sp' => 'utf8_spanish2_ci',
-		'utf8_fa' => 'utf8_persian_ci',
-		'utf8_hu' => 'utf8_hungarian_ci',
-		'utf8_fr' => 'utf8_roman_ci',
-		'utf8_it' => 'utf8_roman_ci',
+		'utf8_is' => 'utf8mb4_icelandic_ci',
+		'utf8_lv' => 'utf8mb4_latvian_ci',
+		'utf8_ro' => 'utf8mb4_romanian_ci',
+		'utf8_sl' => 'utf8mb4_slovenian_ci',
+		'utf8_pl' => 'utf8mb4_polish_ci',
+		'utf8_et' => 'utf8mb4_estonian_ci',
+		'utf8_es' => 'utf8mb4_spanish_ci', // or 'spanish2',
+		'utf8_sw' => 'utf8mb4_swedish_ci',
+		'utf8_tr' => 'utf8mb4_turkish_ci',
+		'utf8_cs' => 'utf8mb4_czech_ci',
+		'utf8_da' => 'utf8mb4_danish_ci',
+		'utf8_lt' => 'utf8mb4_lithuanian_ci',
+		'utf8_sk' => 'utf8mb4_slovak_ci',
+		'utf8_sp' => 'utf8mb4_spanish2_ci',
+		'utf8_fa' => 'utf8mb4_persian_ci',
+		'utf8_hu' => 'utf8mb4_hungarian_ci',
+		'utf8_fr' => 'utf8mb4_roman_ci',
+		'utf8_it' => 'utf8mb4_roman_ci',
 	);
 
-	return isset($db_collation[$lang]) ? $db_collation[$lang] : 'utf8_unicode_ci';
+	return isset($db_collation[$lang]) ? $db_collation[$lang] : 'utf8mb4_unicode_ci';
 }
 
 /*

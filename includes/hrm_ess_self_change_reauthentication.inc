@@ -159,15 +159,24 @@ function hrm_ess_self_change_reauth_consume_federated($action,$now_epoch=null)
     do{
         $row=federation_assurance_consumer_custody_for_update($session_id);
         if(!federation_assurance_consumer_current_custody_valid($row,$now,true))break;
-        $q=db_query('SELECT assurance_event_id,session_id,assurance_level,assurance_method,action_class,action_hash,issued_at,expires_at,consumed_at FROM '.TB_PREF.'user_session_assurance_events WHERE session_id='.$session_id.' AND action_class='.db_escape($fresh['action_class']).' AND action_hash='.db_escape($fresh['action_hash']).' ORDER BY assurance_event_id DESC LIMIT 2 FOR UPDATE','could not lock HRM-ESS-001 assurance event');
+        $q=db_query('SELECT assurance_event_id,session_id,assurance_level,assurance_method,action_class,action_hash,issued_at,expires_at,consumed_at FROM '
+          .TB_PREF.'user_session_assurance_events WHERE session_id='.$session_id.' AND action_class='.db_escape($fresh['action_class'])
+          .' AND action_hash='.db_escape($fresh['action_hash']).' ORDER BY assurance_event_id DESC LIMIT 2 FOR UPDATE','could not lock HRM-ESS-001 assurance event');
         if(!$q)break; $event=db_fetch_assoc($q); if(!$event||db_fetch_assoc($q)!==false||(int)$event['session_id']!==$session_id||(int)$event['assurance_level']!==2||(string)$event['assurance_method']!=='oidc_acr_amr'||$event['consumed_at']!==null||!hash_equals((string)$event['action_hash'],(string)$fresh['action_hash']))break;
         $issued=strtotime((string)$event['issued_at'].' UTC');$expires=strtotime((string)$event['expires_at'].' UTC');$session_issued=strtotime((string)$row['assurance_issued_at'].' UTC');$session_expires=strtotime((string)$row['assurance_expires_at'].' UTC');
         if($issued===false||$expires===false||$session_issued===false||$session_expires===false||$issued!==$session_issued||$expires!==$session_expires||$now<$issued||$now>=$expires)break;
         $at=gmdate('Y-m-d H:i:s',$now);
         if(!db_query('UPDATE '.TB_PREF.'user_session_assurance_events SET consumed_at='.db_escape($at).' WHERE assurance_event_id='.(int)$event['assurance_event_id'].' AND consumed_at IS NULL AND expires_at>'.db_escape($at),'could not consume HRM-ESS-001 assurance event')||!function_exists('db_num_affected_rows')||(int)db_num_affected_rows()!==1)break;
         $restore=federation_assurance_consumer_restore_level_one_sql($row,$now); if($restore===false)break;
-        if(!db_query('UPDATE '.TB_PREF.'user_sessions SET '.$restore.' WHERE id='.$session_id." AND revoked_at IS NULL AND assurance_level=2 AND assurance_method='oidc_acr_amr' AND assurance_issued_at=".db_escape((string)$row['assurance_issued_at']).' AND assurance_expires_at='.db_escape((string)$row['assurance_expires_at']),'could not reset HRM-ESS-001 federated session assurance')||(int)db_num_affected_rows()!==1)break;
-        if(append_domain_audit_event(array('company_id'=>(int)$fresh['company'],'legal_entity_id'=>0,'entity_type'=>'security_session_assurance','entity_key'=>array('assurance_event_id'=>(int)$event['assurance_event_id'],'session_id'=>$session_id),'action'=>'security.session.assurance.consumed','reason_code'=>'hrm_ess_001_self_change_reauthentication','before'=>array('assurance_level'=>2),'after'=>array('assurance_level'=>1),'restricted_diff'=>array('operation'=>(string)$fresh['operation'],'request_id'=>(int)$fresh['request_id'],'action_class'=>(string)$fresh['action_class'],'action_hash'=>(string)$fresh['action_hash'],'values_logged'=>false,'single_use'=>true,'business_action_committed'=>false,'bank_tax_identifier_compensation_authority_added'=>false,'payroll_accounting_authority_changed'=>false)))===false)break;
+        if(!db_query('UPDATE '.TB_PREF.'user_sessions SET '.$restore.' WHERE id='.$session_id." AND revoked_at IS NULL AND assurance_level=2 AND assurance_method='oidc_acr_amr' AND assurance_issued_at="
+          .db_escape((string)$row['assurance_issued_at']).' AND assurance_expires_at='.db_escape((string)$row['assurance_expires_at']),
+          'could not reset HRM-ESS-001 federated session assurance')||(int)db_num_affected_rows()!==1)break;
+        if(append_domain_audit_event(array('company_id'=>(int)$fresh['company'],'legal_entity_id'=>0,'entity_type'=>'security_session_assurance',
+          'entity_key'=>array('assurance_event_id'=>(int)$event['assurance_event_id'],'session_id'=>$session_id),'action'=>'security.session.assurance.consumed',
+          'reason_code'=>'hrm_ess_001_self_change_reauthentication','before'=>array('assurance_level'=>2),'after'=>array('assurance_level'=>1),
+          'restricted_diff'=>array('operation'=>(string)$fresh['operation'],'request_id'=>(int)$fresh['request_id'],'action_class'=>(string)$fresh['action_class'],
+          'action_hash'=>(string)$fresh['action_hash'],'values_logged'=>false,'single_use'=>true,'business_action_committed'=>false,
+          'bank_tax_identifier_compensation_authority_added'=>false,'payroll_accounting_authority_changed'=>false)))===false)break;
         $ok=true;$result=array('assurance_event_id'=>(int)$event['assurance_event_id'],'session_id'=>$session_id,'action_class'=>$fresh['action_class'],'action_hash'=>$fresh['action_hash'],'consumed_at'=>$at);
     }while(false);
     if(!$ok){@db_query('ROLLBACK TO SAVEPOINT hrm_ess_001_reauth','could not roll back HRM-ESS-001 reauthentication savepoint');@db_query('RELEASE SAVEPOINT hrm_ess_001_reauth','could not release failed HRM-ESS-001 reauthentication savepoint');return false;}
@@ -178,7 +187,14 @@ function hrm_ess_self_change_reauth_consume_federated($action,$now_epoch=null)
 function hrm_ess_self_change_reauth_session_context($session_id,$now)
 {
     $session_id=(int)$session_id;if($session_id<=0||!is_int($now)||$now<=0||!defined('TB_PREF'))return false;
-    $sql="SELECT s.id session_id,s.session_key_hash,s.user_id,s.role_id,s.auth_method,s.assurance_level,s.assurance_method,s.assurance_issued_at,s.assurance_expires_at,s.idle_expires_at,s.absolute_expires_at,s.revoked_at,s.user_agent_hash,b.verifier_decision_id,b.external_subject_link_id,d.external_subject_hash,d.verified_assurance_level decision_assurance_level,d.assurance_method decision_assurance_method,d.verified_at decision_verified_at,d.valid_until decision_valid_until,t.verifier_config_id,c.provider_id,c.audience_hash,c.trust_material_ref_hash,c.assurance_level_cap,c.config_status,p.issuer_hash,p.provider_status,l.user_id linked_user_id,l.link_status,l.deprovisioned_at,u.role_id current_role_id,u.inactive user_inactive,r.inactive role_inactive FROM ".TB_PREF."user_sessions s INNER JOIN ".TB_PREF."user_federation_session_bindings b ON b.session_id=s.id INNER JOIN ".TB_PREF."user_federation_verifier_decisions d ON d.verifier_decision_id=b.verifier_decision_id INNER JOIN ".TB_PREF."user_federation_verifier_transactions t ON t.verifier_transaction_id=d.verifier_transaction_id INNER JOIN ".TB_PREF."user_federation_provider_verifier_configs c ON c.verifier_config_id=t.verifier_config_id INNER JOIN ".TB_PREF."user_federation_providers p ON p.provider_id=c.provider_id INNER JOIN ".TB_PREF."user_federation_external_subject_links l ON l.external_subject_link_id=b.external_subject_link_id AND l.provider_id=c.provider_id AND l.external_subject_hash=d.external_subject_hash INNER JOIN ".TB_PREF."users u ON u.id=s.user_id AND u.id=l.user_id INNER JOIN ".TB_PREF."security_roles r ON r.id=u.role_id WHERE s.id=".$session_id." LIMIT 2";
+    $sql="SELECT s.id session_id,s.session_key_hash,s.user_id,s.role_id,s.auth_method,s.assurance_level,s.assurance_method,s.assurance_issued_at,s.assurance_expires_at,s.idle_expires_at,s.absolute_expires_at,s.revoked_at,s.user_agent_hash,b.verifier_decision_id,b.external_subject_link_id,d.external_subject_hash,d.verified_assurance_level decision_assurance_level,d.assurance_method decision_assurance_method,d.verified_at decision_verified_at,d.valid_until decision_valid_until,t.verifier_config_id,c.provider_id,c.audience_hash,c.trust_material_ref_hash,c.assurance_level_cap,c.config_status,p.issuer_hash,p.provider_status,l.user_id linked_user_id,l.link_status,l.deprovisioned_at,u.role_id current_role_id,u.inactive user_inactive,r.inactive role_inactive FROM "
+      .TB_PREF."user_sessions s INNER JOIN ".TB_PREF."user_federation_session_bindings b ON b.session_id=s.id INNER JOIN "
+      .TB_PREF."user_federation_verifier_decisions d ON d.verifier_decision_id=b.verifier_decision_id INNER JOIN ".TB_PREF
+      ."user_federation_verifier_transactions t ON t.verifier_transaction_id=d.verifier_transaction_id INNER JOIN ".TB_PREF
+      ."user_federation_provider_verifier_configs c ON c.verifier_config_id=t.verifier_config_id INNER JOIN ".TB_PREF."user_federation_providers p ON p.provider_id=c.provider_id INNER JOIN "
+      .TB_PREF."user_federation_external_subject_links l ON l.external_subject_link_id=b.external_subject_link_id AND l.provider_id=c.provider_id AND l.external_subject_hash=d.external_subject_hash INNER JOIN "
+      .TB_PREF."users u ON u.id=s.user_id AND u.id=l.user_id INNER JOIN ".TB_PREF."security_roles r ON r.id=u.role_id WHERE s.id="
+      .$session_id." LIMIT 2";
     $q=db_query($sql,'could not read HRM-ESS-001 federated reauthentication session custody'); if(!$q)return false;$row=db_fetch_assoc($q);
     if(!$row||db_fetch_assoc($q)!==false||!federation_assurance_consumer_current_custody_valid($row,$now,false)||(int)$row['assurance_level']!==1||(string)$row['assurance_method']!=='oidc_rs256'||(int)$row['assurance_level_cap']<2)return false;
     return $row;
@@ -226,7 +242,11 @@ function hrm_ess_self_change_reauth_bind_pending($state,$session,$action,$tx,$re
 {
     if(!is_string($state)||preg_match('/^[A-Za-z0-9_-]{43}$/D',$state)!==1||!is_array($session)||!is_array($action)||!is_array($tx)||!isset($tx['verifier_transaction_id'],$tx['expires_at_epoch'])||!is_string($redirect))return false;
     hrm_ess_self_change_reauth_prune_pending($now);$pending=&$_SESSION['hrm_ess_self_change_reauth_pending'];foreach($pending as $r)if(is_array($r)&&(int)$r['session_id']===(int)$session['session_id']&&(string)$r['action_hash']===(string)$action['action_hash'])return false;if(count($pending)>=HRM_ESS_SELF_CHANGE_REAUTH_MAX_PENDING)return false;
-    $pending[hash('sha256',$state)]=array('company'=>(int)$action['company'],'session_id'=>(int)$session['session_id'],'verifier_config_id'=>(int)$session['verifier_config_id'],'verifier_transaction_id'=>(int)$tx['verifier_transaction_id'],'operation'=>(string)$action['operation'],'request_id'=>(int)$action['request_id'],'intent_digest'=>(string)$action['intent_digest'],'action_class'=>(string)$action['action_class'],'action_hash'=>(string)$action['action_hash'],'redirect_uri_hash'=>hash('sha256',$redirect),'expires_at_epoch'=>(int)$tx['expires_at_epoch']);return true;
+    $pending[hash('sha256',$state)]=array('company'=>(int)$action['company'],'session_id'=>(int)$session['session_id'],'verifier_config_id'=>(int)$session['verifier_config_id'],
+      'verifier_transaction_id'=>(int)$tx['verifier_transaction_id'],'operation'=>(string)$action['operation'],'request_id'=>(int)$action['request_id'],
+      'intent_digest'=>(string)$action['intent_digest'],'action_class'=>(string)$action['action_class'],'action_hash'=>(string)$action['action_hash'],
+      'redirect_uri_hash'=>hash('sha256',$redirect),'expires_at_epoch'=>(int)$tx['expires_at_epoch']);
+    return true;
 }
 
 function hrm_ess_self_change_reauth_pending($company,$state,$now)
@@ -235,7 +255,13 @@ function hrm_ess_self_change_reauth_pending($company,$state,$now)
     if((int)$r['company']!==(int)$company||(int)$r['session_id']!==(isset($_SESSION['security_session_registry_id'])?(int)$_SESSION['security_session_registry_id']:0))return false;return $r;
 }
 function hrm_ess_self_change_reauth_forget_pending($state){if(is_string($state)){ $h=hash('sha256',$state);unset($_SESSION['hrm_ess_self_change_reauth_pending'][$h]);}}
-function hrm_ess_self_change_reauth_nonce($jwt,$expected){if(!is_string($expected)||preg_match('/^[a-f0-9]{64}$/D',$expected)!==1)return false;$p=federation_oidc_token_verifier_parse($jwt);if(!is_array($p)||!isset($p['claims']['nonce'])||!is_string($p['claims']['nonce'])||preg_match('/^[A-Za-z0-9_-]{32,128}$/D',$p['claims']['nonce'])!==1)return false;return federation_control_hash_equals($expected,hash('sha256',$p['claims']['nonce']))?$p['claims']['nonce']:false;}
+function hrm_ess_self_change_reauth_nonce($jwt,$expected){
+	if(!is_string($expected)||preg_match('/^[a-f0-9]{64}$/D',$expected)!==1)return false;
+	$p=federation_oidc_token_verifier_parse($jwt);
+	if(!is_array($p)||!isset($p['claims']['nonce'])||!is_string($p['claims']['nonce'])||preg_match('/^[A-Za-z0-9_-]{32,128}$/D',
+		$p['claims']['nonce'])!==1)return false;
+	return federation_control_hash_equals($expected,hash('sha256',$p['claims']['nonce']))?$p['claims']['nonce']:false;
+}
 
 function hrm_ess_self_change_reauth_result($status,$reason,$extra=array())
 {
@@ -248,10 +274,27 @@ function hrm_ess_self_change_reauth_start_oidc($action,$csrf_token,$required_cal
     global $path_to_root;$now=$now_epoch===null?time():$now_epoch;$ttl_seconds=(int)$ttl_seconds;
     if(!is_array($action)||!is_int($now)||$now<=0||hrm_ess_self_change_reauth_current_auth_method()!=='federated_oidc')return hrm_ess_self_change_reauth_result('denied','federated_session_required');
     if(!hrm_ess_self_change_reauth_dependencies())return hrm_ess_self_change_reauth_result('retry_later','runtime_dependency_unavailable');$fresh=hrm_ess_self_change_reauth_revalidate_action($action);if(!is_array($fresh))return hrm_ess_self_change_reauth_result('denied','action_stale');
-    if(!hrm_ess_self_change_reauth_consume_csrf($fresh,$csrf_token,$now))return hrm_ess_self_change_reauth_result('denied','csrf_rejected');$root=isset($path_to_root)?realpath($path_to_root):false;$dep=$root===false?false:federation_verifier_dependency_configured_status($root);if(!is_array($dep)||empty($dep['available']))return hrm_ess_self_change_reauth_result('retry_later','verifier_dependency_unavailable');
-    $sid=isset($_SESSION['security_session_registry_id'])?(int)$_SESSION['security_session_registry_id']:0;$session=hrm_ess_self_change_reauth_session_context($sid,$now);if(!is_array($session))return hrm_ess_self_change_reauth_result('denied','federated_session_ineligible');$material=hrm_ess_self_change_reauth_material_context((int)$fresh['company'],$session,$required_callback_path);if(!is_array($material))return hrm_ess_self_change_reauth_result('retry_later','step_up_material_unavailable');
-    $tx=federation_oidc_issue_transaction((int)$fresh['company'],(int)$session['verifier_config_id'],(string)$material['redirect_uri'],$ttl_seconds);if(!is_array($tx)||!isset($tx['state'],$tx['authorization_url'],$tx['expires_at_epoch'],$tx['verifier_transaction_id']))return hrm_ess_self_change_reauth_result('retry_later','transaction_issue_failed');$url=hrm_ess_self_change_reauth_authorization_url((string)$tx['authorization_url'],$material['policy']);if($url===false||!hrm_ess_self_change_reauth_bind_pending((string)$tx['state'],$session,$fresh,$tx,(string)$material['redirect_uri'],$now))return hrm_ess_self_change_reauth_result('denied','browser_correlation_failed');
-    return hrm_ess_self_change_reauth_result('authorization_required','reauthentication_required',array('authorization_url'=>$url,'expires_at_epoch'=>(int)$tx['expires_at_epoch'],'verifier_transaction_id'=>(int)$tx['verifier_transaction_id'],'operation'=>$fresh['operation'],'request_id'=>$fresh['request_id'],'intent_digest'=>$fresh['intent_digest'],'action_class'=>$fresh['action_class'],'action_hash'=>$fresh['action_hash']));
+    if(!hrm_ess_self_change_reauth_consume_csrf($fresh,$csrf_token,$now))return hrm_ess_self_change_reauth_result('denied',
+      'csrf_rejected');
+    $root=isset($path_to_root)?realpath($path_to_root):false;
+    $dep=$root===false?false:federation_verifier_dependency_configured_status($root);
+    if(!is_array($dep)||empty($dep['available']))return hrm_ess_self_change_reauth_result('retry_later','verifier_dependency_unavailable');
+    $sid=isset($_SESSION['security_session_registry_id'])?(int)$_SESSION['security_session_registry_id']:0;
+    $session=hrm_ess_self_change_reauth_session_context($sid,$now);
+    if(!is_array($session))return hrm_ess_self_change_reauth_result('denied','federated_session_ineligible');
+    $material=hrm_ess_self_change_reauth_material_context((int)$fresh['company'],$session,$required_callback_path);
+    if(!is_array($material))return hrm_ess_self_change_reauth_result('retry_later','step_up_material_unavailable');
+    $tx=federation_oidc_issue_transaction((int)$fresh['company'],(int)$session['verifier_config_id'],(string)$material['redirect_uri'],
+      $ttl_seconds);
+    if(!is_array($tx)||!isset($tx['state'],$tx['authorization_url'],$tx['expires_at_epoch'],$tx['verifier_transaction_id']))return hrm_ess_self_change_reauth_result('retry_later',
+      'transaction_issue_failed');
+    $url=hrm_ess_self_change_reauth_authorization_url((string)$tx['authorization_url'],$material['policy']);
+    if($url===false||!hrm_ess_self_change_reauth_bind_pending((string)$tx['state'],$session,$fresh,$tx,(string)$material['redirect_uri'],
+      $now))return hrm_ess_self_change_reauth_result('denied','browser_correlation_failed');
+    return hrm_ess_self_change_reauth_result('authorization_required','reauthentication_required',array('authorization_url'=>$url,
+      'expires_at_epoch'=>(int)$tx['expires_at_epoch'],'verifier_transaction_id'=>(int)$tx['verifier_transaction_id'],'operation'=>$fresh['operation'],
+      'request_id'=>$fresh['request_id'],'intent_digest'=>$fresh['intent_digest'],'action_class'=>$fresh['action_class'],
+      'action_hash'=>$fresh['action_hash']));
 }
 
 function hrm_ess_self_change_reauth_complete_oidc($company,$state,$authorization_code,$required_callback_path,$lease_seconds=HRM_ESS_SELF_CHANGE_REAUTH_DEFAULT_LEASE,$now_epoch=null,$transport=null,$signature_verifier=null)
@@ -259,11 +302,86 @@ function hrm_ess_self_change_reauth_complete_oidc($company,$state,$authorization
     global $path_to_root;$company=(int)$company;$now=$now_epoch===null?time():$now_epoch;$lease_seconds=(int)$lease_seconds;
     if($company<0||!is_int($now)||$now<=0||$lease_seconds<15||$lease_seconds>300||!is_string($state)||preg_match('/^[A-Za-z0-9_-]{43}$/D',$state)!==1||!is_string($authorization_code)||strlen($authorization_code)<1||strlen($authorization_code)>4096||hrm_ess_self_change_reauth_current_auth_method()!=='federated_oidc')return hrm_ess_self_change_reauth_result('denied','callback_invalid');
     if(!hrm_ess_self_change_reauth_dependencies())return hrm_ess_self_change_reauth_result('retry_later','runtime_dependency_unavailable');$pending=hrm_ess_self_change_reauth_pending($company,$state,$now);if(!is_array($pending))return hrm_ess_self_change_reauth_result('denied','browser_correlation_missing');
-    $root=isset($path_to_root)?realpath($path_to_root):false;$dep=$root===false?false:federation_verifier_dependency_configured_status($root);if(!is_array($dep)||empty($dep['available']))return hrm_ess_self_change_reauth_result('retry_later','verifier_dependency_unavailable');$session=hrm_ess_self_change_reauth_session_context((int)$pending['session_id'],$now);if(!is_array($session)||(int)$session['verifier_config_id']!==(int)$pending['verifier_config_id']){hrm_ess_self_change_reauth_forget_pending($state);return hrm_ess_self_change_reauth_result('denied','federated_session_changed');}$material=hrm_ess_self_change_reauth_material_context($company,$session,$required_callback_path);if(!is_array($material)||!hash_equals((string)$pending['redirect_uri_hash'],hash('sha256',(string)$material['redirect_uri'])))return hrm_ess_self_change_reauth_result('retry_later','step_up_material_unavailable');
-    $claim=federation_oidc_acquire_callback_claim($company,$state,$lease_seconds);if(!is_array($claim)){hrm_ess_self_change_reauth_forget_pending($state);return hrm_ess_self_change_reauth_result('denied','callback_claim_unavailable');}$claim_token=(string)$claim['claim_token'];$retry_after=(int)$claim['claim_expires_at_epoch'];if((int)$claim['verifier_transaction_id']!==(int)$pending['verifier_transaction_id']||(int)$claim['verifier_config_id']!==(int)$pending['verifier_config_id']){federation_oidc_terminalize_callback_claim($company,$claim_token,'callback_invalid');hrm_ess_self_change_reauth_forget_pending($state);return hrm_ess_self_change_reauth_result('denied','callback_context_invalid');}
-    $proof=federation_oidc_load_proof($company,(string)$claim['proof_ref_hash'],$now);if(!is_array($proof)||(int)$proof['verifier_config_id']!==(int)$claim['verifier_config_id']||(string)$proof['transaction_key_hash']!==hash('sha256',$state)){federation_oidc_terminalize_callback_claim($company,$claim_token,'proof_unavailable');hrm_ess_self_change_reauth_forget_pending($state);return hrm_ess_self_change_reauth_result('denied','proof_unavailable');}
-    $materials=$material['materials'];$contract=federation_oidc_token_verifier_material_contract($materials);if($contract===false)return hrm_ess_self_change_reauth_result('retry_later','verifier_material_unavailable',array('retry_after_epoch'=>$retry_after));$exchange=federation_oidc_exchange_authorization_code($authorization_code,(string)$material['redirect_uri'],(string)$proof['code_verifier'],$materials,$transport);if(!is_array($exchange)||!isset($exchange['classification'])){federation_oidc_terminalize_callback_claim($company,$claim_token,'exchange_uncertain');hrm_ess_self_change_reauth_forget_pending($state);return hrm_ess_self_change_reauth_result('denied','exchange_uncertain');}if((string)$exchange['classification']==='pre_send_failure')return hrm_ess_self_change_reauth_result('retry_later','exchange_pre_send_failure',array('retry_after_epoch'=>$retry_after));if((string)$exchange['classification']!=='exchange_succeeded'||!isset($exchange['id_token'])){$reason=(string)$exchange['classification']==='exchange_rejected'?'exchange_rejected':'exchange_uncertain';federation_oidc_terminalize_callback_claim($company,$claim_token,$reason);hrm_ess_self_change_reauth_forget_pending($state);return hrm_ess_self_change_reauth_result('denied',$reason);}
-    $nonce=hrm_ess_self_change_reauth_nonce((string)$exchange['id_token'],(string)$claim['nonce_hash']);if($nonce===false){federation_oidc_terminalize_callback_claim($company,$claim_token,'verifier_rejected');hrm_ess_self_change_reauth_forget_pending($state);return hrm_ess_self_change_reauth_result('denied','nonce_rejected');}$expect=array('company_id'=>$company,'provider_id'=>(int)$session['provider_id'],'issuer'=>(string)$contract['issuer'],'client_id'=>(string)$contract['client_id'],'nonce'=>$nonce);$base=federation_oidc_token_verifier_verify((string)$exchange['id_token'],$expect,$materials,$now,$signature_verifier);$candidate=federation_oidc_assurance_candidate_verify((string)$exchange['id_token'],$expect,$materials,$now,$signature_verifier);if(!is_array($base)||empty($base['verified'])||!is_array($candidate)||empty($candidate['verified'])){federation_oidc_terminalize_callback_claim($company,$claim_token,'verifier_rejected');hrm_ess_self_change_reauth_forget_pending($state);return hrm_ess_self_change_reauth_result('denied','assurance_candidate_rejected');}$decision=federation_oidc_commit_verified_decision($company,$claim_token,$authorization_code,$base);if(!is_array($decision))$decision=federation_oidc_commit_verified_decision($company,$claim_token,$authorization_code,$base);if(!is_array($decision)){hrm_ess_self_change_reauth_forget_pending($state);return hrm_ess_self_change_reauth_result('denied','decision_commit_failed');}
-    $action=hrm_ess_self_change_reauth_action_context((string)$pending['operation'],(int)$pending['request_id'],(string)$pending['intent_digest']);if(!is_array($action)||!hash_equals((string)$action['action_hash'],(string)$pending['action_hash'])){hrm_ess_self_change_reauth_forget_pending($state);return hrm_ess_self_change_reauth_result('denied','action_stale');}$issued=federation_issue_privileged_assurance($company,(int)$pending['session_id'],$candidate,(string)$pending['action_class'],(string)$pending['action_hash'],$now);if(!is_array($issued))$issued=federation_issue_privileged_assurance($company,(int)$pending['session_id'],$candidate,(string)$pending['action_class'],(string)$pending['action_hash'],$now);hrm_ess_self_change_reauth_forget_pending($state);if(!is_array($issued)||!isset($issued['assurance_event_id']))return hrm_ess_self_change_reauth_result('denied','assurance_issue_failed');
+    $root=isset($path_to_root)?realpath($path_to_root):false;
+    $dep=$root===false?false:federation_verifier_dependency_configured_status($root);
+    if(!is_array($dep)||empty($dep['available']))return hrm_ess_self_change_reauth_result('retry_later','verifier_dependency_unavailable');
+    $session=hrm_ess_self_change_reauth_session_context((int)$pending['session_id'],$now);
+    if(!is_array($session)||(int)$session['verifier_config_id']!==(int)$pending['verifier_config_id']){
+      hrm_ess_self_change_reauth_forget_pending($state);
+      return hrm_ess_self_change_reauth_result('denied','federated_session_changed');
+    }
+    $material=hrm_ess_self_change_reauth_material_context($company,$session,$required_callback_path);
+    if(!is_array($material)||!hash_equals((string)$pending['redirect_uri_hash'],hash('sha256',(string)$material['redirect_uri'])))return hrm_ess_self_change_reauth_result('retry_later',
+      'step_up_material_unavailable');
+    $claim=federation_oidc_acquire_callback_claim($company,$state,$lease_seconds);
+    if(!is_array($claim)){
+      hrm_ess_self_change_reauth_forget_pending($state);
+      return hrm_ess_self_change_reauth_result('denied','callback_claim_unavailable');
+    }
+    $claim_token=(string)$claim['claim_token'];
+    $retry_after=(int)$claim['claim_expires_at_epoch'];
+    if((int)$claim['verifier_transaction_id']!==(int)$pending['verifier_transaction_id']||(int)$claim['verifier_config_id']!==(int)$pending['verifier_config_id']){
+      federation_oidc_terminalize_callback_claim($company,$claim_token,'callback_invalid');
+      hrm_ess_self_change_reauth_forget_pending($state);
+      return hrm_ess_self_change_reauth_result('denied','callback_context_invalid');
+    }
+    $proof=federation_oidc_load_proof($company,(string)$claim['proof_ref_hash'],$now);
+    if(!is_array($proof)||(int)$proof['verifier_config_id']!==(int)$claim['verifier_config_id']||(string)$proof['transaction_key_hash']!==hash('sha256',
+      $state)){
+      federation_oidc_terminalize_callback_claim($company,$claim_token,'proof_unavailable');
+      hrm_ess_self_change_reauth_forget_pending($state);
+      return hrm_ess_self_change_reauth_result('denied','proof_unavailable');
+    }
+    $materials=$material['materials'];
+    $contract=federation_oidc_token_verifier_material_contract($materials);
+    if($contract===false)return hrm_ess_self_change_reauth_result('retry_later','verifier_material_unavailable',array('retry_after_epoch'=>$retry_after));
+    $exchange=federation_oidc_exchange_authorization_code($authorization_code,(string)$material['redirect_uri'],(string)$proof['code_verifier'],
+      $materials,$transport);
+    if(!is_array($exchange)||!isset($exchange['classification'])){
+      federation_oidc_terminalize_callback_claim($company,$claim_token,'exchange_uncertain');
+      hrm_ess_self_change_reauth_forget_pending($state);
+      return hrm_ess_self_change_reauth_result('denied','exchange_uncertain');
+    }
+    if((string)$exchange['classification']==='pre_send_failure')return hrm_ess_self_change_reauth_result('retry_later','exchange_pre_send_failure',
+      array('retry_after_epoch'=>$retry_after));
+    if((string)$exchange['classification']!=='exchange_succeeded'||!isset($exchange['id_token'])){
+      $reason=(string)$exchange['classification']==='exchange_rejected'?'exchange_rejected':'exchange_uncertain';
+      federation_oidc_terminalize_callback_claim($company,$claim_token,$reason);
+      hrm_ess_self_change_reauth_forget_pending($state);
+      return hrm_ess_self_change_reauth_result('denied',$reason);
+    }
+    $nonce=hrm_ess_self_change_reauth_nonce((string)$exchange['id_token'],(string)$claim['nonce_hash']);
+    if($nonce===false){
+      federation_oidc_terminalize_callback_claim($company,$claim_token,'verifier_rejected');
+      hrm_ess_self_change_reauth_forget_pending($state);
+      return hrm_ess_self_change_reauth_result('denied','nonce_rejected');
+    }
+    $expect=array('company_id'=>$company,'provider_id'=>(int)$session['provider_id'],'issuer'=>(string)$contract['issuer'],
+      'client_id'=>(string)$contract['client_id'],'nonce'=>$nonce);
+    $base=federation_oidc_token_verifier_verify((string)$exchange['id_token'],$expect,$materials,$now,$signature_verifier);
+    $candidate=federation_oidc_assurance_candidate_verify((string)$exchange['id_token'],$expect,$materials,$now,$signature_verifier);
+    if(!is_array($base)||empty($base['verified'])||!is_array($candidate)||empty($candidate['verified'])){
+      federation_oidc_terminalize_callback_claim($company,$claim_token,'verifier_rejected');
+      hrm_ess_self_change_reauth_forget_pending($state);
+      return hrm_ess_self_change_reauth_result('denied','assurance_candidate_rejected');
+    }
+    $decision=federation_oidc_commit_verified_decision($company,$claim_token,$authorization_code,$base);
+    if(!is_array($decision))$decision=federation_oidc_commit_verified_decision($company,$claim_token,$authorization_code,
+      $base);
+    if(!is_array($decision)){
+      hrm_ess_self_change_reauth_forget_pending($state);
+      return hrm_ess_self_change_reauth_result('denied','decision_commit_failed');
+    }
+    $action=hrm_ess_self_change_reauth_action_context((string)$pending['operation'],(int)$pending['request_id'],(string)$pending['intent_digest']);
+    if(!is_array($action)||!hash_equals((string)$action['action_hash'],(string)$pending['action_hash'])){
+      hrm_ess_self_change_reauth_forget_pending($state);
+      return hrm_ess_self_change_reauth_result('denied','action_stale');
+    }
+    $issued=federation_issue_privileged_assurance($company,(int)$pending['session_id'],$candidate,(string)$pending['action_class'],
+      (string)$pending['action_hash'],$now);
+    if(!is_array($issued))$issued=federation_issue_privileged_assurance($company,(int)$pending['session_id'],$candidate,(string)$pending['action_class'],
+      (string)$pending['action_hash'],$now);
+    hrm_ess_self_change_reauth_forget_pending($state);
+    if(!is_array($issued)||!isset($issued['assurance_event_id']))return hrm_ess_self_change_reauth_result('denied','assurance_issue_failed');
     return hrm_ess_self_change_reauth_result('assured','ok',array('assurance_event_id'=>(int)$issued['assurance_event_id'],'session_id'=>(int)$pending['session_id'],'operation'=>$pending['operation'],'request_id'=>(int)$pending['request_id'],'intent_digest'=>$pending['intent_digest'],'action_class'=>$pending['action_class'],'action_hash'=>$pending['action_hash']));
 }

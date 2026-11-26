@@ -25,7 +25,10 @@ function pay_api_001_webhook_runtime_configuration($target_id,$company,$now,&$er
 {
     $policy=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_delivery_policies WHERE webhook_target_id='.(int)$target_id.' AND company_id='.(int)$company.' ORDER BY webhook_delivery_policy_id DESC LIMIT 1 FOR UPDATE','could not read PAY-API-001 webhook delivery policy');
     $tls=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_egress_tls_policies WHERE webhook_target_id='.(int)$target_id.' AND company_id='.(int)$company.' ORDER BY webhook_egress_tls_policy_id DESC LIMIT 1 FOR UPDATE','could not read PAY-API-001 webhook TLS policy');
-    $sign=pay_api_001_runtime_one('SELECT s.*,r.secret_ref_sha256,r.ref_kind,r.provider_key,r.provider_reference_sha256,r.company_id secret_company,r.valid_from FROM '.TB_PREF.'hrm_pay_api_001_webhook_signing_profiles s INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_secret_refs r ON r.webhook_secret_ref_id=s.webhook_secret_ref_id WHERE s.webhook_target_id='.(int)$target_id.' AND s.company_id='.(int)$company.' ORDER BY s.webhook_signing_profile_id DESC LIMIT 1 FOR UPDATE','could not read PAY-API-001 webhook signing profile');
+    $sign=pay_api_001_runtime_one('SELECT s.*,r.secret_ref_sha256,r.ref_kind,r.provider_key,r.provider_reference_sha256,r.company_id secret_company,r.valid_from FROM '
+      .TB_PREF.'hrm_pay_api_001_webhook_signing_profiles s INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_secret_refs r ON r.webhook_secret_ref_id=s.webhook_secret_ref_id WHERE s.webhook_target_id='
+      .(int)$target_id.' AND s.company_id='.(int)$company.' ORDER BY s.webhook_signing_profile_id DESC LIMIT 1 FOR UPDATE',
+      'could not read PAY-API-001 webhook signing profile');
     if(!$policy||!$tls||!$sign||(int)$sign['secret_company']!==(int)$company||(string)$sign['ref_kind']!=='webhook_signing_key'||strcmp((string)$sign['valid_from'],$now)>0){$error='webhook_runtime_configuration_missing';return false;}
     if((int)$policy['max_attempts']<1||(int)$policy['max_attempts']>10||(int)$policy['lease_seconds']<30||(int)$policy['lease_seconds']>3600||(int)$policy['initial_backoff_seconds']<1||(int)$policy['max_backoff_seconds']<(int)$policy['initial_backoff_seconds']){$error='webhook_delivery_policy_invalid';return false;}
     if((string)$tls['scheme_code']!=='https'||(int)$tls['destination_port']!==443||!in_array((string)$tls['minimum_tls_version'],array('TLS1.2','TLS1.3'),true)||(int)$tls['verify_peer_required']!==1||(int)$tls['verify_hostname_required']!==1){$error='webhook_tls_policy_invalid';return false;}
@@ -42,12 +45,51 @@ function pay_api_001_enqueue_payroll_period_summary_webhook($company_id,$webhook
     $manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();$target=pay_api_001_webhook_active_target($target_id,$company,$now,$error);$cfg=$target?pay_api_001_webhook_runtime_configuration($target_id,$company,$now,$error):false;if(!$target||!$cfg){if($manage)cancel_transaction();return false;}
     if(!hash_equals((string)$target['signing_key_ref_sha256'],(string)$cfg['signing_profile']['secret_ref_sha256'])){if($manage)cancel_transaction();$error='webhook_signing_reference_mismatch';return false;}
     $q=db_query('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_events WHERE company_id='.$company.' AND dedupe_key_sha256='.db_escape($event['dedupe_key_sha256']).' LIMIT 2 FOR UPDATE');if(!$q||db_num_rows($q)>1){if($manage)cancel_transaction();$error='webhook_event_replay_state_invalid';return false;}
-    if(db_num_rows($q)===1){$old=db_fetch_assoc($q);foreach(array('payload_sha256','source_evidence_sha256') as $k)if(!hash_equals((string)$old[$k],(string)$event[$k])){if($manage)cancel_transaction();$error='webhook_event_replay_mismatch';return false;}foreach(array('event_type','contract_version','resource_key','object_scope_type','object_scope_key') as $k)if((string)$old[$k]!== (string)$event[$k]){if($manage)cancel_transaction();$error='webhook_event_replay_mismatch';return false;}$event_id=(int)$old['webhook_event_id'];$event_sha=$old['event_sha256'];}
-    else{$sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_events (company_id,event_type,contract_version,resource_key,object_scope_type,object_scope_key,payload_json,payload_sha256,source_evidence_sha256,dedupe_key_sha256,event_sha256,occurred_at,created_at) VALUES ('.$company.','.db_escape($event['event_type']).','.db_escape($event['contract_version']).','.db_escape($event['resource_key']).','.db_escape($event['object_scope_type']).','.db_escape($event['object_scope_key']).','.db_escape($event['payload_json']).','.db_escape($event['payload_sha256']).','.db_escape($event['source_evidence_sha256']).','.db_escape($event['dedupe_key_sha256']).','.db_escape($event['event_sha256']).','.db_escape($event['occurred_at']).','.db_escape($now).')';if(!db_query($sql)){if($manage)cancel_transaction();$error='webhook_event_insert_failed';return false;}$event_id=(int)db_insert_id();$event_sha=$event['event_sha256'];}
+    if(db_num_rows($q)===1){
+      $old=db_fetch_assoc($q);
+      foreach(array('payload_sha256','source_evidence_sha256') as $k)if(!hash_equals((string)$old[$k],(string)$event[$k])){
+        if($manage)cancel_transaction();
+        $error='webhook_event_replay_mismatch';
+        return false;
+      }
+      foreach(array('event_type','contract_version','resource_key','object_scope_type','object_scope_key') as $k)if((string)$old[$k]!== (string)$event[$k]){
+        if($manage)cancel_transaction();
+        $error='webhook_event_replay_mismatch';
+        return false;
+      }
+      $event_id=(int)$old['webhook_event_id'];
+      $event_sha=$old['event_sha256'];
+    }
+    else{
+      $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_events (company_id,event_type,contract_version,resource_key,object_scope_type,object_scope_key,payload_json,payload_sha256,source_evidence_sha256,dedupe_key_sha256,event_sha256,occurred_at,created_at) VALUES ('
+        .$company.','.db_escape($event['event_type']).','.db_escape($event['contract_version']).','.db_escape($event['resource_key'])
+        .','.db_escape($event['object_scope_type']).','.db_escape($event['object_scope_key']).','.db_escape($event['payload_json'])
+        .','.db_escape($event['payload_sha256']).','.db_escape($event['source_evidence_sha256']).','.db_escape($event['dedupe_key_sha256'])
+        .','.db_escape($event['event_sha256']).','.db_escape($event['occurred_at']).','.db_escape($now).')';
+      if(!db_query($sql)){
+        if($manage)cancel_transaction();
+        $error='webhook_event_insert_failed';
+        return false;
+      }
+      $event_id=(int)db_insert_id();
+      $event_sha=$event['event_sha256'];
+    }
     $queue_sha=pay_api_001_provisioning_hash(array('company_id'=>$company,'webhook_event_id'=>$event_id,'webhook_target_id'=>$target_id,'payload_sha256'=>$event['payload_sha256'],'event_sha256'=>$event_sha,'target_sha256'=>$target['target_sha256']));
     $q=db_query('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_outbox WHERE webhook_event_id='.$event_id.' AND webhook_target_id='.$target_id.' LIMIT 2 FOR UPDATE');if(!$q||db_num_rows($q)>1){if($manage)cancel_transaction();$error='webhook_outbox_replay_state_invalid';return false;}
     if(db_num_rows($q)===1){$old=db_fetch_assoc($q);if(!hash_equals((string)$old['queue_key_sha256'],$queue_sha)||!hash_equals((string)$old['payload_sha256'],$event['payload_sha256'])){if($manage)cancel_transaction();$error='webhook_outbox_replay_mismatch';return false;}$outbox_id=(int)$old['webhook_outbox_id'];$replayed=true;}
-    else{$outbox_sha=pay_api_001_provisioning_hash(array('queue_key_sha256'=>$queue_sha,'queued_by'=>$actor));$sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_outbox (webhook_event_id,webhook_target_id,queue_key_sha256,payload_sha256,outbox_sha256,queued_by,queued_at,created_at) VALUES ('.$event_id.','.$target_id.','.db_escape($queue_sha).','.db_escape($event['payload_sha256']).','.db_escape($outbox_sha).','.$actor.','.db_escape($now).','.db_escape($now).')';if(!db_query($sql)){if($manage)cancel_transaction();$error='webhook_outbox_insert_failed';return false;}$outbox_id=(int)db_insert_id();$replayed=false;}
+    else{
+      $outbox_sha=pay_api_001_provisioning_hash(array('queue_key_sha256'=>$queue_sha,'queued_by'=>$actor));
+      $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_outbox (webhook_event_id,webhook_target_id,queue_key_sha256,payload_sha256,outbox_sha256,queued_by,queued_at,created_at) VALUES ('
+        .$event_id.','.$target_id.','.db_escape($queue_sha).','.db_escape($event['payload_sha256']).','.db_escape($outbox_sha)
+        .','.$actor.','.db_escape($now).','.db_escape($now).')';
+      if(!db_query($sql)){
+        if($manage)cancel_transaction();
+        $error='webhook_outbox_insert_failed';
+        return false;
+      }
+      $outbox_id=(int)db_insert_id();
+      $replayed=false;
+    }
     if($manage)commit_transaction();return array('webhook_event_id'=>$event_id,'webhook_outbox_id'=>$outbox_id,'queue_key_sha256'=>$queue_sha,'replayed'=>$replayed);
 }
 
@@ -56,14 +98,54 @@ function pay_api_001_claim_webhook_outbox($company_id,$webhook_outbox_id,$claim_
 {
     $error=null;$actor=current_user_id_or_zero();$company=pay_api_001_uint_value($company_id,true,4294967295);$outbox_id=pay_api_001_positive_id($webhook_outbox_id);$token=pay_api_001_webhook_claim_token($claim_token_sha256);$t=$unix_time===null?time():pay_api_001_uint_value($unix_time,true,PHP_INT_MAX);
     if($actor<=0||!pay_api_001_runtime_access('SA_HRM_EXECUTE_PAY_API')||$company===false||$outbox_id===false||$token===false||$t===false||!pay_api_001_webhook_runtime_enabled('claim')){$error='webhook_claim_access_or_version_denied';return false;}if(!pay_api_001_runtime_require_company($company,$error))return false;$now=gmdate('Y-m-d H:i:s',$t);
-    $manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();$o=pay_api_001_runtime_one('SELECT o.*,e.company_id,t.webhook_target_id target_id FROM '.TB_PREF.'hrm_pay_api_001_webhook_outbox o INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_events e ON e.webhook_event_id=o.webhook_event_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_targets t ON t.webhook_target_id=o.webhook_target_id WHERE o.webhook_outbox_id='.$outbox_id.' LIMIT 2 FOR UPDATE','could not lock PAY-API-001 webhook outbox');if(!$o||(int)$o['company_id']!==$company){if($manage)cancel_transaction();$error='webhook_claim_scope_invalid';return false;}
+    $manage=pay_api_001_runtime_manage_transaction();
+    if($manage)begin_transaction();
+    $o=pay_api_001_runtime_one('SELECT o.*,e.company_id,t.webhook_target_id target_id FROM '.TB_PREF.'hrm_pay_api_001_webhook_outbox o INNER JOIN '
+      .TB_PREF.'hrm_pay_api_001_webhook_events e ON e.webhook_event_id=o.webhook_event_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_targets t ON t.webhook_target_id=o.webhook_target_id WHERE o.webhook_outbox_id='
+      .$outbox_id.' LIMIT 2 FOR UPDATE','could not lock PAY-API-001 webhook outbox');
+    if(!$o||(int)$o['company_id']!==$company){
+      if($manage)cancel_transaction();
+      $error='webhook_claim_scope_invalid';
+      return false;
+    }
     $target=pay_api_001_webhook_active_target((int)$o['target_id'],$company,$now,$error);$cfg=$target?pay_api_001_webhook_runtime_configuration((int)$o['target_id'],$company,$now,$error):false;if(!$target||!$cfg){if($manage)cancel_transaction();return false;}
     $dead=db_query('SELECT webhook_dead_letter_id FROM '.TB_PREF.'hrm_pay_api_001_webhook_dead_letters WHERE webhook_outbox_id='.$outbox_id.' LIMIT 2 FOR UPDATE');if(!$dead||db_num_rows($dead)>0){if($manage)cancel_transaction();$error='webhook_claim_dead_lettered';return false;}
     $delivered=db_query('SELECT webhook_delivery_attempt_id FROM '.TB_PREF.'hrm_pay_api_001_webhook_delivery_attempts WHERE webhook_outbox_id='.$outbox_id.' AND outcome_code=\'delivered\' LIMIT 1 FOR UPDATE');if(!$delivered||db_num_rows($delivered)>0){if($manage)cancel_transaction();$error='webhook_claim_already_delivered';return false;}
     $attempts=db_query('SELECT COUNT(*) c FROM '.TB_PREF.'hrm_pay_api_001_webhook_delivery_attempts WHERE webhook_outbox_id='.$outbox_id);$ar=$attempts?db_fetch_assoc($attempts):false;if(!$ar||(int)$ar['c']>=(int)$cfg['delivery_policy']['max_attempts']){if($manage)cancel_transaction();$error='webhook_claim_attempt_budget_exhausted';return false;}
-    $replay=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_claim_leases WHERE claim_token_sha256='.db_escape($token).' LIMIT 2 FOR UPDATE','could not read PAY-API-001 claim replay');if($replay){if((int)$replay['webhook_outbox_id']!==$outbox_id||(int)$replay['claimed_by']!==$actor){if($manage)cancel_transaction();$error='webhook_claim_replay_mismatch';return false;}if($manage)commit_transaction();return array('webhook_claim_lease_id'=>(int)$replay['webhook_claim_lease_id'],'expires_at'=>$replay['expires_at'],'replayed'=>true);}
+    $replay=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_claim_leases WHERE claim_token_sha256='
+      .db_escape($token).' LIMIT 2 FOR UPDATE','could not read PAY-API-001 claim replay');
+    if($replay){
+      if((int)$replay['webhook_outbox_id']!==$outbox_id||(int)$replay['claimed_by']!==$actor){
+        if($manage)cancel_transaction();
+        $error='webhook_claim_replay_mismatch';
+        return false;
+      }
+      if($manage)commit_transaction();
+      return array('webhook_claim_lease_id'=>(int)$replay['webhook_claim_lease_id'],'expires_at'=>$replay['expires_at'],'replayed'=>true);
+    }
     $active=db_query('SELECT webhook_claim_lease_id FROM '.TB_PREF.'hrm_pay_api_001_webhook_claim_leases WHERE webhook_outbox_id='.$outbox_id.' AND expires_at>'.db_escape($now).' LIMIT 1 FOR UPDATE');if(!$active||db_num_rows($active)>0){if($manage)cancel_transaction();$error='webhook_claim_lease_active';return false;}
-    $q=db_query('SELECT COALESCE(MAX(lease_ordinal),0) m FROM '.TB_PREF.'hrm_pay_api_001_webhook_claim_leases WHERE webhook_outbox_id='.$outbox_id);$r=$q?db_fetch_assoc($q):false;$ordinal=$r?(int)$r['m']+1:0;if($ordinal<1||$ordinal>4294967295){if($manage)cancel_transaction();$error='webhook_claim_ordinal_invalid';return false;}$expires=gmdate('Y-m-d H:i:s',$t+(int)$cfg['delivery_policy']['lease_seconds']);$claim_sha=pay_api_001_provisioning_hash(array('webhook_outbox_id'=>$outbox_id,'webhook_delivery_policy_id'=>(int)$cfg['delivery_policy']['webhook_delivery_policy_id'],'lease_ordinal'=>$ordinal,'claim_token_sha256'=>$token,'claimed_by'=>$actor,'claimed_at'=>$now,'expires_at'=>$expires));
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_claim_leases (webhook_outbox_id,webhook_delivery_policy_id,lease_ordinal,claim_token_sha256,claimed_by,claimed_at,expires_at,claim_sha256,created_at) VALUES ('.$outbox_id.','.(int)$cfg['delivery_policy']['webhook_delivery_policy_id'].','.$ordinal.','.db_escape($token).','.$actor.','.db_escape($now).','.db_escape($expires).','.db_escape($claim_sha).','.db_escape($now).')';if(!db_query($sql)){if($manage)cancel_transaction();$error='webhook_claim_insert_failed';return false;}$id=(int)db_insert_id();if($manage)commit_transaction();return array('webhook_claim_lease_id'=>$id,'expires_at'=>$expires,'replayed'=>false);
+    $q=db_query('SELECT COALESCE(MAX(lease_ordinal),0) m FROM '.TB_PREF.'hrm_pay_api_001_webhook_claim_leases WHERE webhook_outbox_id='
+      .$outbox_id);
+    $r=$q?db_fetch_assoc($q):false;
+    $ordinal=$r?(int)$r['m']+1:0;
+    if($ordinal<1||$ordinal>4294967295){
+      if($manage)cancel_transaction();
+      $error='webhook_claim_ordinal_invalid';
+      return false;
+    }
+    $expires=gmdate('Y-m-d H:i:s',$t+(int)$cfg['delivery_policy']['lease_seconds']);
+    $claim_sha=pay_api_001_provisioning_hash(array('webhook_outbox_id'=>$outbox_id,'webhook_delivery_policy_id'=>(int)$cfg['delivery_policy']['webhook_delivery_policy_id'],
+      'lease_ordinal'=>$ordinal,'claim_token_sha256'=>$token,'claimed_by'=>$actor,'claimed_at'=>$now,'expires_at'=>$expires));
+    $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_claim_leases (webhook_outbox_id,webhook_delivery_policy_id,lease_ordinal,claim_token_sha256,claimed_by,claimed_at,expires_at,claim_sha256,created_at) VALUES ('
+      .$outbox_id.','.(int)$cfg['delivery_policy']['webhook_delivery_policy_id'].','.$ordinal.','.db_escape($token).','.$actor
+      .','.db_escape($now).','.db_escape($expires).','.db_escape($claim_sha).','.db_escape($now).')';
+    if(!db_query($sql)){
+      if($manage)cancel_transaction();
+      $error='webhook_claim_insert_failed';
+      return false;
+    }
+    $id=(int)db_insert_id();
+    if($manage)commit_transaction();
+    return array('webhook_claim_lease_id'=>$id,'expires_at'=>$expires,'replayed'=>false);
 }
 ?>

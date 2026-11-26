@@ -121,7 +121,9 @@ function pay_glb_001_native_producer_scope($period_id,$minor_units,&$error=null,
     $entity=hrm_pay_core_004_read_one('SELECT legal_entity_id,entity_code,country_code,base_currency,entity_status,source FROM '.TB_PREF.'hrm_legal_entities WHERE legal_entity_id='.(int)$period['legal_entity_id'].' LIMIT 2'.(!empty($GLOBALS['transaction_level'])?' FOR UPDATE':''));
     if($entity!==false)$entity=pay_glb_001_native_producer_sql_strings($entity,$error);
     $group=hrm_pay_core_004_read_one('SELECT gv.version_sha256,gv.effective_from,gv.effective_to,g.group_sha256 FROM '.TB_PREF.'hrm_payroll_group_versions gv INNER JOIN '.TB_PREF.'hrm_payroll_groups g ON g.payroll_group_id=gv.payroll_group_id WHERE gv.group_version_id='.(int)$period['group_version_id'].' LIMIT 2'.(!empty($GLOBALS['transaction_level'])?' FOR UPDATE':''));
-    $calendar=hrm_pay_core_004_read_one('SELECT cp.period_start,cp.period_end,mp.period_start mapped_start,mp.period_end mapped_end,mp.currency_code FROM '.TB_PREF.'hrm_payroll_calendar_periods cp INNER JOIN '.TB_PREF.'hrm_payroll_legacy_period_mapping_plans mp ON mp.calendar_version_id=cp.calendar_version_id WHERE cp.calendar_period_id='.(int)$period['calendar_period_id'].' AND mp.legacy_period_id='.$id.' LIMIT 2'.(!empty($GLOBALS['transaction_level'])?' FOR UPDATE':''));
+    $calendar=hrm_pay_core_004_read_one('SELECT cp.period_start,cp.period_end,mp.period_start mapped_start,mp.period_end mapped_end,mp.currency_code FROM '
+      .TB_PREF.'hrm_payroll_calendar_periods cp INNER JOIN '.TB_PREF.'hrm_payroll_legacy_period_mapping_plans mp ON mp.calendar_version_id=cp.calendar_version_id WHERE cp.calendar_period_id='
+      .(int)$period['calendar_period_id'].' AND mp.legacy_period_id='.$id.' LIMIT 2'.(!empty($GLOBALS['transaction_level'])?' FOR UPDATE':''));
     if (!$entity || !$group || $entity['entity_status']!=='active' || !pay_glb_001_code($entity['entity_code'])
         || !is_string($entity['country_code']) || preg_match('/^[A-Z]{2}$/D',$entity['country_code'])!==1
         || !pay_glb_001_native_field_valid('execution','currency_code',$entity['base_currency'])
@@ -159,7 +161,9 @@ function pay_glb_001_native_producer_scope($period_id,$minor_units,&$error=null,
 function pay_glb_001_native_producer_population(array $mapped,&$error=null)
 {
     $error=null;$scope=$mapped['scope'];$dates=$mapped['evidence'];
-    $q=db_query('SELECT r.payroll_relationship_id,r.legal_entity_id,r.relationship_sha256,r.effective_from relationship_from,r.effective_to relationship_to,ge.enrollment_id,ge.enrollment_sha256,ge.effective_from enrollment_from,ge.effective_to enrollment_to FROM '.TB_PREF.'hrm_payroll_group_enrollments ge INNER JOIN '.TB_PREF.'hrm_payroll_relationships r ON r.payroll_relationship_id=ge.payroll_relationship_id WHERE ge.group_version_id='.(int)$scope['group_version_id']
+    $q=db_query('SELECT r.payroll_relationship_id,r.legal_entity_id,r.relationship_sha256,r.effective_from relationship_from,r.effective_to relationship_to,ge.enrollment_id,ge.enrollment_sha256,ge.effective_from enrollment_from,ge.effective_to enrollment_to FROM '
+      .TB_PREF.'hrm_payroll_group_enrollments ge INNER JOIN '.TB_PREF.'hrm_payroll_relationships r ON r.payroll_relationship_id=ge.payroll_relationship_id WHERE ge.group_version_id='
+      .(int)$scope['group_version_id']
         .' AND ge.effective_from<='.db_escape($dates['to_date']).' AND (ge.effective_to IS NULL OR ge.effective_to>='.db_escape($dates['from_date']).')'
         .' AND r.effective_from<='.db_escape($dates['to_date']).' AND (r.effective_to IS NULL OR r.effective_to>='.db_escape($dates['from_date']).')'
         .' ORDER BY r.payroll_relationship_id,ge.enrollment_id LIMIT 4097'.(!empty($GLOBALS['transaction_level'])?' FOR UPDATE':''));

@@ -124,7 +124,9 @@ function pay_ctry_004_validate_certification_event(array $event,&$error=null)
 }
 function pay_ctry_004_certification_signature_fields(array $event)
 {
-    return array('decision'=>pay_ctry_004_certification_decision_fields($event),'decision_sha256'=>isset($event['decision_sha256'])?(string)$event['decision_sha256']:'','certification_signing_key_id'=>isset($event['certification_signing_key_id'])?(int)$event['certification_signing_key_id']:0,'signature_algorithm'=>isset($event['signature_algorithm'])?(string)$event['signature_algorithm']:'','signed_at'=>isset($event['signed_at'])?(string)$event['signed_at']:'');
+    return array('decision'=>pay_ctry_004_certification_decision_fields($event),'decision_sha256'=>isset($event['decision_sha256'])?(string)$event['decision_sha256']:'',
+      'certification_signing_key_id'=>isset($event['certification_signing_key_id'])?(int)$event['certification_signing_key_id']:0,
+      'signature_algorithm'=>isset($event['signature_algorithm'])?(string)$event['signature_algorithm']:'','signed_at'=>isset($event['signed_at'])?(string)$event['signed_at']:'');
 }
 function pay_ctry_004_certification_signature_payload(array $event)
 {
@@ -242,7 +244,11 @@ function pay_ctry_004_evidence_root(array $inventory, &$error=null)
 }
 function pay_ctry_004_source_identity_fields(array $source)
 {
-    return array('source_code'=>isset($source['source_code'])?(string)$source['source_code']:'','source_version'=>isset($source['source_version'])?(string)$source['source_version']:'','issuer'=>isset($source['issuer'])?(string)$source['issuer']:'','jurisdiction'=>isset($source['jurisdiction'])?(string)$source['jurisdiction']:'','effective_from'=>isset($source['effective_from'])?(string)$source['effective_from']:'','effective_to'=>isset($source['effective_to'])&&$source['effective_to']!==null?(string)$source['effective_to']:'','acquired_at'=>isset($source['acquired_at'])?(string)$source['acquired_at']:'','recorded_at'=>isset($source['recorded_at'])?(string)$source['recorded_at']:'','evidence_digest'=>isset($source['evidence_digest'])?(string)$source['evidence_digest']:'','trust_status'=>isset($source['trust_status'])?(string)$source['trust_status']:'');
+    return array('source_code'=>isset($source['source_code'])?(string)$source['source_code']:'','source_version'=>isset($source['source_version'])?(string)$source['source_version']:'',
+      'issuer'=>isset($source['issuer'])?(string)$source['issuer']:'','jurisdiction'=>isset($source['jurisdiction'])?(string)$source['jurisdiction']:'',
+      'effective_from'=>isset($source['effective_from'])?(string)$source['effective_from']:'','effective_to'=>isset($source['effective_to'])&&$source['effective_to']!==null?(string)$source['effective_to']:'',
+      'acquired_at'=>isset($source['acquired_at'])?(string)$source['acquired_at']:'','recorded_at'=>isset($source['recorded_at'])?(string)$source['recorded_at']:'',
+      'evidence_digest'=>isset($source['evidence_digest'])?(string)$source['evidence_digest']:'','trust_status'=>isset($source['trust_status'])?(string)$source['trust_status']:'');
 }
 function pay_ctry_004_source_identity(array $source){return pay_ctry_004_canonical_hash(pay_ctry_004_source_identity_fields($source));}
 function pay_ctry_004_validate_source(array $source, &$error=null)
@@ -264,7 +270,12 @@ function pay_ctry_004_review_independence_sha256($reviewer_id,array $prior_revie
 }
 function pay_ctry_004_review_decision_fields(array $review)
 {
-    return array('review_type'=>isset($review['review_type'])?(string)$review['review_type']:'','reviewer_id'=>isset($review['reviewer_id'])?(int)$review['reviewer_id']:0,'reviewer_role'=>isset($review['reviewer_role'])?(string)$review['reviewer_role']:'','independence_sha256'=>isset($review['independence_sha256'])?(string)$review['independence_sha256']:'','decision'=>isset($review['decision'])?(string)$review['decision']:'','reason_code'=>isset($review['reason_code'])?(string)$review['reason_code']:'','evidence_identity_sha256'=>isset($review['evidence_identity_sha256'])?(string)$review['evidence_identity_sha256']:'','semantic_root'=>isset($review['semantic_root'])?(string)$review['semantic_root']:'','evidence_root'=>isset($review['evidence_root'])?(string)$review['evidence_root']:'','decided_at'=>isset($review['decided_at'])?(string)$review['decided_at']:'');
+    return array('review_type'=>isset($review['review_type'])?(string)$review['review_type']:'','reviewer_id'=>isset($review['reviewer_id'])?(int)$review['reviewer_id']:0,
+      'reviewer_role'=>isset($review['reviewer_role'])?(string)$review['reviewer_role']:'','independence_sha256'=>isset($review['independence_sha256'])?(string)$review['independence_sha256']:'',
+      'decision'=>isset($review['decision'])?(string)$review['decision']:'','reason_code'=>isset($review['reason_code'])?(string)$review['reason_code']:'',
+      'evidence_identity_sha256'=>isset($review['evidence_identity_sha256'])?(string)$review['evidence_identity_sha256']:'',
+      'semantic_root'=>isset($review['semantic_root'])?(string)$review['semantic_root']:'','evidence_root'=>isset($review['evidence_root'])?(string)$review['evidence_root']:'',
+      'decided_at'=>isset($review['decided_at'])?(string)$review['decided_at']:'');
 }
 function pay_ctry_004_review_decision_sha256(array $review){return pay_ctry_004_canonical_hash(pay_ctry_004_review_decision_fields($review));}
 function pay_ctry_004_validate_review(array $review, array $prior_reviews=array(), &$error=null)
@@ -296,7 +307,11 @@ function pay_ctry_004_validate_parallel_run(array $run, &$error=null)
 /** Return the canonical fields bound by a parallel-run evidence digest. */
 function pay_ctry_004_parallel_evidence_fields(array $run)
 {
-    return array('semantic_root'=>(string)$run['semantic_root'],'evidence_root'=>(string)$run['evidence_root'],'runner_identity'=>(string)$run['runner_identity'],'test_identity'=>(string)$run['test_identity'],'test_version'=>(string)$run['test_version'],'fixture_identity'=>(string)$run['fixture_identity'],'result_digest'=>(string)$run['result_digest'],'expected_digest'=>(string)$run['expected_digest'],'observed_digest'=>(string)$run['observed_digest'],'acceptance_criteria_sha256'=>(string)$run['acceptance_criteria_sha256'],'executed_at'=>(string)$run['executed_at'],'accepted'=>empty($run['accepted'])?0:1,'synthetic'=>empty($run['synthetic'])?0:1,'engineering_only'=>empty($run['engineering_only'])?0:1);
+    return array('semantic_root'=>(string)$run['semantic_root'],'evidence_root'=>(string)$run['evidence_root'],'runner_identity'=>(string)$run['runner_identity'],
+      'test_identity'=>(string)$run['test_identity'],'test_version'=>(string)$run['test_version'],'fixture_identity'=>(string)$run['fixture_identity'],
+      'result_digest'=>(string)$run['result_digest'],'expected_digest'=>(string)$run['expected_digest'],'observed_digest'=>(string)$run['observed_digest'],
+      'acceptance_criteria_sha256'=>(string)$run['acceptance_criteria_sha256'],'executed_at'=>(string)$run['executed_at'],
+      'accepted'=>empty($run['accepted'])?0:1,'synthetic'=>empty($run['synthetic'])?0:1,'engineering_only'=>empty($run['engineering_only'])?0:1);
 }
 /** Return the deterministic custody digest for parallel-run evidence. */
 function pay_ctry_004_parallel_evidence_sha256(array $run){return pay_ctry_004_canonical_hash(pay_ctry_004_parallel_evidence_fields($run));}
@@ -357,12 +372,34 @@ function pay_ctry_004_independent_principals(array $principal_ids,&$error=null)
 function pay_ctry_004_validate_review_chain(array $reviews,$semantic_root,$evidence_root,&$error=null)
 {
     $error=null;$expected=array('technical','payroll_expert','legal');if(count($reviews)!==3){$error='review_chain_incomplete';return false;}$prior=array();$ids=array();
-    foreach($expected as $i=>$type){$review=$reviews[$i];if(!is_array($review)||(isset($review['review_type'])?(string)$review['review_type']:'')!==$type){$error='review_chain_order_invalid';return false;}if(!pay_ctry_004_validate_review($review,$prior,$error))return false;if((string)$review['decision']!=='accepted'){$error='review_chain_rejected';return false;}if((string)$review['semantic_root']!==(string)$semantic_root||(string)$review['evidence_root']!==(string)$evidence_root){$error='review_chain_root_mismatch';return false;}$prior[]=$review;$ids[]=$review['reviewer_id'];}
+    foreach($expected as $i=>$type){
+      $review=$reviews[$i];
+      if(!is_array($review)||(isset($review['review_type'])?(string)$review['review_type']:'')!==$type){
+        $error='review_chain_order_invalid';
+        return false;
+      }
+      if(!pay_ctry_004_validate_review($review,$prior,$error))return false;
+      if((string)$review['decision']!=='accepted'){
+        $error='review_chain_rejected';
+        return false;
+      }
+      if((string)$review['semantic_root']!==(string)$semantic_root||(string)$review['evidence_root']!==(string)$evidence_root){
+        $error='review_chain_root_mismatch';
+        return false;
+      }
+      $prior[]=$review;
+      $ids[]=$review['reviewer_id'];
+    }
     if(!pay_ctry_004_independent_principals($ids,$error))return false;return true;
 }
 function pay_ctry_004_review_chain_sha256(array $reviews,$semantic_root,$evidence_root,&$error=null)
 {
-    if(!pay_ctry_004_validate_review_chain($reviews,$semantic_root,$evidence_root,$error))return false;$canonical=array();foreach($reviews as $r)$canonical[]=array('review_type'=>(string)$r['review_type'],'reviewer_id'=>(int)$r['reviewer_id'],'reviewer_role'=>(string)$r['reviewer_role'],'decision'=>(string)$r['decision'],'evidence_identity_sha256'=>(string)$r['evidence_identity_sha256'],'semantic_root'=>(string)$r['semantic_root'],'evidence_root'=>(string)$r['evidence_root']);return pay_ctry_004_canonical_hash($canonical);
+    if(!pay_ctry_004_validate_review_chain($reviews,$semantic_root,$evidence_root,$error))return false;
+    $canonical=array();
+    foreach($reviews as $r)$canonical[]=array('review_type'=>(string)$r['review_type'],'reviewer_id'=>(int)$r['reviewer_id'],
+      'reviewer_role'=>(string)$r['reviewer_role'],'decision'=>(string)$r['decision'],'evidence_identity_sha256'=>(string)$r['evidence_identity_sha256'],
+      'semantic_root'=>(string)$r['semantic_root'],'evidence_root'=>(string)$r['evidence_root']);
+    return pay_ctry_004_canonical_hash($canonical);
 }
 function pay_ctry_004_effective_status($status,$expires_at,$at)
 {
@@ -424,7 +461,12 @@ function pay_ctry_004_publication_events(){return array('Published','Superseded'
 /** Return the canonical fields bound by a publication custody digest. */
 function pay_ctry_004_publication_fields(array $event)
 {
-    return array('certification_event_id'=>isset($event['certification_event_id'])?(int)$event['certification_event_id']:0,'certification_claim_id'=>isset($event['certification_claim_id'])?(int)$event['certification_claim_id']:0,'publication_event'=>isset($event['publication_event'])?(string)$event['publication_event']:'','predecessor_publication_id'=>isset($event['predecessor_publication_id'])&&$event['predecessor_publication_id']!==null?(int)$event['predecessor_publication_id']:0,'published_at'=>isset($event['published_at'])?(string)$event['published_at']:'','support_until'=>isset($event['support_until'])&&$event['support_until']!==null?(string)$event['support_until']:'','actor_id'=>isset($event['actor_id'])?(int)$event['actor_id']:0,'actor_role'=>isset($event['actor_role'])?(string)$event['actor_role']:'','assurance_sha256'=>isset($event['assurance_sha256'])?(string)$event['assurance_sha256']:'');
+    return array('certification_event_id'=>isset($event['certification_event_id'])?(int)$event['certification_event_id']:0,
+      'certification_claim_id'=>isset($event['certification_claim_id'])?(int)$event['certification_claim_id']:0,'publication_event'=>isset($event['publication_event'])?(string)$event['publication_event']:'',
+      'predecessor_publication_id'=>isset($event['predecessor_publication_id'])&&$event['predecessor_publication_id']!==null?(int)$event['predecessor_publication_id']:0,
+      'published_at'=>isset($event['published_at'])?(string)$event['published_at']:'','support_until'=>isset($event['support_until'])&&$event['support_until']!==null?(string)$event['support_until']:'',
+      'actor_id'=>isset($event['actor_id'])?(int)$event['actor_id']:0,'actor_role'=>isset($event['actor_role'])?(string)$event['actor_role']:'',
+      'assurance_sha256'=>isset($event['assurance_sha256'])?(string)$event['assurance_sha256']:'');
 }
 /** Return the deterministic custody digest for a publication event. */
 function pay_ctry_004_publication_sha256(array $event){return pay_ctry_004_canonical_hash(pay_ctry_004_publication_fields($event));}
@@ -442,13 +484,28 @@ function pay_ctry_004_validate_publication_event(array $event,&$error=null)
 /** Return the canonical fields bound by an emergency custody digest. */
 function pay_ctry_004_emergency_action_fields(array $action)
 {
-    return array('certification_event_id'=>isset($action['certification_event_id'])?(int)$action['certification_event_id']:0,'certification_claim_id'=>isset($action['certification_claim_id'])&&$action['certification_claim_id']!==null?(int)$action['certification_claim_id']:0,'action_type'=>isset($action['action_type'])?(string)$action['action_type']:'','effective_at'=>isset($action['effective_at'])?(string)$action['effective_at']:'','reason_code'=>isset($action['reason_code'])?(string)$action['reason_code']:'','reason_sha256'=>isset($action['reason_sha256'])?(string)$action['reason_sha256']:'','affected_scope_sha256'=>isset($action['affected_scope_sha256'])?(string)$action['affected_scope_sha256']:'','follow_up_required'=>empty($action['follow_up_required'])?0:1,'assurance_event_id'=>isset($action['assurance_event_id'])&&$action['assurance_event_id']!==null?(int)$action['assurance_event_id']:0,'acted_by'=>isset($action['acted_by'])?(int)$action['acted_by']:0,'actor_role'=>isset($action['actor_role'])?(string)$action['actor_role']:'');
+    return array('certification_event_id'=>isset($action['certification_event_id'])?(int)$action['certification_event_id']:0,
+      'certification_claim_id'=>isset($action['certification_claim_id'])&&$action['certification_claim_id']!==null?(int)$action['certification_claim_id']:0,
+      'action_type'=>isset($action['action_type'])?(string)$action['action_type']:'','effective_at'=>isset($action['effective_at'])?(string)$action['effective_at']:'',
+      'reason_code'=>isset($action['reason_code'])?(string)$action['reason_code']:'','reason_sha256'=>isset($action['reason_sha256'])?(string)$action['reason_sha256']:'',
+      'affected_scope_sha256'=>isset($action['affected_scope_sha256'])?(string)$action['affected_scope_sha256']:'','follow_up_required'=>empty($action['follow_up_required'])?0:1,
+      'assurance_event_id'=>isset($action['assurance_event_id'])&&$action['assurance_event_id']!==null?(int)$action['assurance_event_id']:0,
+      'acted_by'=>isset($action['acted_by'])?(int)$action['acted_by']:0,'actor_role'=>isset($action['actor_role'])?(string)$action['actor_role']:'');
 }
 /** Return the deterministic custody digest for an emergency action. */
 function pay_ctry_004_emergency_action_sha256(array $action){return pay_ctry_004_canonical_hash(pay_ctry_004_emergency_action_fields($action));}
 function pay_ctry_004_validate_emergency_action(array $action,&$error=null)
 {
-    $error=null;foreach(array('certification_event_id','action_type','effective_at','reason_code','reason_sha256','affected_scope_sha256','follow_up_required','action_sha256','acted_by','actor_role') as $k)if(!isset($action[$k])){$error='emergency_field_missing';return false;}if(!in_array((string)$action['action_type'],array('suspend','revoke'),true)){$error='emergency_action_invalid';return false;}
+    $error=null;
+    foreach(array('certification_event_id','action_type','effective_at','reason_code','reason_sha256','affected_scope_sha256',
+      'follow_up_required','action_sha256','acted_by','actor_role') as $k)if(!isset($action[$k])){
+      $error='emergency_field_missing';
+      return false;
+    }
+    if(!in_array((string)$action['action_type'],array('suspend','revoke'),true)){
+      $error='emergency_action_invalid';
+      return false;
+    }
     if(pay_ctry_004_uint($action['certification_event_id'],false)===false){$error='emergency_identity_invalid';return false;}
     if(!isset($action['actor_role'])||(string)$action['actor_role']!=='emergency_authority'||!isset($action['acted_by'])||pay_ctry_004_uint($action['acted_by'],false)===false){$error='emergency_authority_required';return false;}
     if(empty($action['step_up_verified'])){$error='emergency_step_up_required';return false;}
@@ -460,7 +517,10 @@ function pay_ctry_004_validate_emergency_action(array $action,&$error=null)
 /** Return the canonical fields bound by a RACI custody digest. */
 function pay_ctry_004_raci_assignment_fields(array $assignment)
 {
-    return array('governance_role'=>isset($assignment['governance_role'])?(string)$assignment['governance_role']:'','principal_id'=>isset($assignment['principal_id'])?(int)$assignment['principal_id']:0,'responsibility'=>isset($assignment['responsibility'])?(string)$assignment['responsibility']:'','jurisdiction'=>isset($assignment['jurisdiction'])?(string)$assignment['jurisdiction']:'','valid_from'=>isset($assignment['valid_from'])?(string)$assignment['valid_from']:'','valid_to'=>isset($assignment['valid_to'])&&$assignment['valid_to']!==null?(string)$assignment['valid_to']:'','assigned_by'=>isset($assignment['assigned_by'])?(int)$assignment['assigned_by']:0);
+    return array('governance_role'=>isset($assignment['governance_role'])?(string)$assignment['governance_role']:'','principal_id'=>isset($assignment['principal_id'])?(int)$assignment['principal_id']:0,
+      'responsibility'=>isset($assignment['responsibility'])?(string)$assignment['responsibility']:'','jurisdiction'=>isset($assignment['jurisdiction'])?(string)$assignment['jurisdiction']:'',
+      'valid_from'=>isset($assignment['valid_from'])?(string)$assignment['valid_from']:'','valid_to'=>isset($assignment['valid_to'])&&$assignment['valid_to']!==null?(string)$assignment['valid_to']:'',
+      'assigned_by'=>isset($assignment['assigned_by'])?(int)$assignment['assigned_by']:0);
 }
 /** Return the deterministic custody digest for a RACI assignment. */
 function pay_ctry_004_raci_assignment_sha256(array $assignment){return pay_ctry_004_canonical_hash(pay_ctry_004_raci_assignment_fields($assignment));}
@@ -470,7 +530,14 @@ function pay_ctry_004_validate_raci(array $assignment,&$error=null)
     if(!isset($assignment['principal_id'])||pay_ctry_004_uint($assignment['principal_id'],false)===false){$error='raci_principal_invalid';return false;}
     if(!isset($assignment['responsibility'])||!in_array((string)$assignment['responsibility'],array('R','A','C','I'),true)){$error='raci_responsibility_invalid';return false;}
     if(!isset($assignment['jurisdiction'])||trim((string)$assignment['jurisdiction'])===''||strlen((string)$assignment['jurisdiction'])>64){$error='raci_scope_invalid';return false;}
-    if(!isset($assignment['valid_from'])||pay_ctry_004_datetime_epoch((string)$assignment['valid_from'])===false){$error='raci_period_invalid';return false;}if(isset($assignment['valid_to'])&&$assignment['valid_to']!==null&&$assignment['valid_to']!==''&&(pay_ctry_004_datetime_epoch((string)$assignment['valid_to'])===false||pay_ctry_004_datetime_epoch((string)$assignment['valid_to'])<=pay_ctry_004_datetime_epoch((string)$assignment['valid_from']))){$error='raci_period_invalid';return false;}
+    if(!isset($assignment['valid_from'])||pay_ctry_004_datetime_epoch((string)$assignment['valid_from'])===false){
+      $error='raci_period_invalid';
+      return false;
+    }
+    if(isset($assignment['valid_to'])&&$assignment['valid_to']!==null&&$assignment['valid_to']!==''&&(pay_ctry_004_datetime_epoch((string)$assignment['valid_to'])===false||pay_ctry_004_datetime_epoch((string)$assignment['valid_to'])<=pay_ctry_004_datetime_epoch((string)$assignment['valid_from']))){
+      $error='raci_period_invalid';
+      return false;
+    }
     if(pay_ctry_004_uint($assignment['assigned_by'],false)===false){$error='raci_assigner_invalid';return false;}
     if(pay_ctry_004_sha256((string)$assignment['assignment_sha256'])===false||(string)$assignment['assignment_sha256']!==pay_ctry_004_raci_assignment_sha256($assignment)){$error='raci_digest_mismatch';return false;}
     return true;
@@ -481,7 +548,9 @@ function pay_ctry_004_reconciliation_sha256(array $record,&$error=null)
     if(pay_ctry_004_uint($record['certification_event_id'],false)===false||pay_ctry_004_uint($record['recovered_by'],false)===false){$error='recovery_identity_invalid';return false;}
     if(pay_ctry_004_sha256((string)$record['observed_state_sha256'])===false||pay_ctry_004_sha256((string)$record['expected_state_sha256'])===false){$error='recovery_digest_invalid';return false;}
     if(!in_array((string)$record['decision'],array('reconciled','quarantined','recertify'),true)){$error='recovery_decision_invalid';return false;}
-    return pay_ctry_004_canonical_hash(array('certification_event_id'=>(int)$record['certification_event_id'],'recovery_type'=>(string)$record['recovery_type'],'observed_state_sha256'=>(string)$record['observed_state_sha256'],'expected_state_sha256'=>(string)$record['expected_state_sha256'],'decision'=>(string)$record['decision'],'reason_code'=>(string)$record['reason_code'],'recovered_by'=>(int)$record['recovered_by']));
+    return pay_ctry_004_canonical_hash(array('certification_event_id'=>(int)$record['certification_event_id'],'recovery_type'=>(string)$record['recovery_type'],
+      'observed_state_sha256'=>(string)$record['observed_state_sha256'],'expected_state_sha256'=>(string)$record['expected_state_sha256'],
+      'decision'=>(string)$record['decision'],'reason_code'=>(string)$record['reason_code'],'recovered_by'=>(int)$record['recovered_by']));
 }
 function pay_ctry_004_authority_contract()
 {

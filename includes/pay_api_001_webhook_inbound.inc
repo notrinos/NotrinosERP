@@ -64,7 +64,10 @@ function pay_api_001_webhook_inbound_verify(array $source,array $headers,$body,$
     foreach($required as $k)if(!array_key_exists($k,$source)){$error='inbound_source_invalid';return false;}
     $sid=pay_api_001_positive_id($source['webhook_inbound_source_id']);$company=pay_api_001_uint_value($source['company_id'],true,4294967295);$source_key=pay_api_001_webhook_inbound_source_key($source['source_key']);$event=pay_api_001_webhook_inbound_event_type($source['event_type']);
     $skew=pay_api_001_uint_value($source['max_clock_skew_seconds'],false,900);$ttl=pay_api_001_uint_value($source['replay_ttl_seconds'],false,86400);
-    if($sid===false||$company===false||$source_key===false||$event===false||$skew===false||$skew<30||$ttl===false||$ttl<$skew||!is_sha256_hex($source['source_sha256'])||$source['canonicalization_code']!==PAY_API_001_WEBHOOK_INBOUND_CANONICALIZATION||$source['signature_algorithm']!=='hmac-sha256'||$source['signature_header_name']!=='X-Notrinos-Signature'||$source['timestamp_header_name']!=='X-Notrinos-Timestamp'){$error='inbound_source_invalid';return false;}
+    if($sid===false||$company===false||$source_key===false||$event===false||$skew===false||$skew<30||$ttl===false||$ttl<$skew||!is_sha256_hex($source['source_sha256'])||$source['canonicalization_code']!==PAY_API_001_WEBHOOK_INBOUND_CANONICALIZATION||$source['signature_algorithm']!=='hmac-sha256'||$source['signature_header_name']!=='X-Notrinos-Signature'||$source['timestamp_header_name']!=='X-Notrinos-Timestamp'){
+      $error='inbound_source_invalid';
+      return false;
+    }
     if(array_keys($headers)!==array('event','delivery','timestamp','signature')){$error='inbound_headers_invalid';return false;}
     $got_event=pay_api_001_webhook_inbound_event_type($headers['event']);$delivery=pay_api_001_webhook_inbound_delivery_key($headers['delivery']);$stamp=(string)$headers['timestamp'];$signature=pay_api_001_webhook_inbound_signature($headers['signature']);$stamp_unix=pay_api_001_webhook_inbound_timestamp($stamp);
     $now=$unix_time===null?time():pay_api_001_uint_value($unix_time,true,PHP_INT_MAX);
@@ -79,7 +82,10 @@ function pay_api_001_webhook_inbound_verify(array $source,array $headers,$body,$
     $delivery_sha=hash('sha256',$delivery);$signature_sha=hash('sha256',$signature);
     $replay=pay_api_001_provisioning_hash(array('source_sha256'=>$source['source_sha256'],'delivery_key_sha256'=>$delivery_sha,'event_type'=>$event,'timestamp'=>$stamp,'payload_sha256'=>$payload_sha));
     $correlation=pay_api_001_provisioning_hash(array('source_sha256'=>$source['source_sha256'],'replay_key_sha256'=>$replay,'signature_sha256'=>$signature_sha));
-    return array('company_id'=>$company,'webhook_inbound_source_id'=>$sid,'source_key'=>$source_key,'event_type'=>$event,'delivery_key_sha256'=>$delivery_sha,'request_target_sha256'=>hash('sha256',PAY_API_001_WEBHOOK_INBOUND_PATH),'event_type_sha256'=>hash('sha256',$event),'payload_sha256'=>$payload_sha,'signature_sha256'=>$signature_sha,'timestamp_value'=>$stamp,'replay_key_sha256'=>$replay,'correlation_sha256'=>$correlation,'valid_until'=>gmdate('Y-m-d H:i:s',$stamp_unix+$ttl));
+    return array('company_id'=>$company,'webhook_inbound_source_id'=>$sid,'source_key'=>$source_key,'event_type'=>$event,
+      'delivery_key_sha256'=>$delivery_sha,'request_target_sha256'=>hash('sha256',PAY_API_001_WEBHOOK_INBOUND_PATH),'event_type_sha256'=>hash('sha256',
+      $event),'payload_sha256'=>$payload_sha,'signature_sha256'=>$signature_sha,'timestamp_value'=>$stamp,'replay_key_sha256'=>$replay,
+      'correlation_sha256'=>$correlation,'valid_until'=>gmdate('Y-m-d H:i:s',$stamp_unix+$ttl));
 }
 function pay_api_001_webhook_inbound_security_headers(){if(!headers_sent()){header('Cache-Control: no-store');header('Pragma: no-cache');header('X-Content-Type-Options: nosniff');header('Content-Type: application/json; charset=UTF-8');}}
 function pay_api_001_webhook_inbound_respond($status,$body=array())

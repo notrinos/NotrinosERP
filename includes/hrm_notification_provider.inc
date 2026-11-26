@@ -134,7 +134,9 @@ class HrmNotificationProvider implements NotificationProvider
 			'documents_expiring' => array('id' => 'hrm-documents-expiring', 'area' => 'SA_EMPLOYEE', 'title' => _('Expiring Employee Documents'), 'summary' => _('%d employee documents expire in next 30 days'), 'url' => $path_to_root.'/hrm/manage/employees.php?_tabs_sel=tab_documents&sel_app=hrm', 'type' => 'warning'),
 			'probation_ending' => array('id' => 'hrm-probation-ending', 'area' => 'SA_EMPLOYEEREP', 'title' => _('Probation Periods Ending'), 'summary' => _('%d employees reach end of probation in next 30 days'), 'url' => $path_to_root.'/hrm/inquiry/employee_directory.php?sel_app=hrm', 'type' => 'warning'),
 			'pending_appraisals' => array('id' => 'hrm-appraisal-pending', 'area' => 'SA_EMPLOYEE', 'title' => _('Pending Appraisals'), 'summary' => _('%d employee appraisals awaiting approval'), 'url' => $path_to_root.'/hrm/manage/appraisals.php?sel_app=hrm', 'type' => 'pending'),
-			'work_authorization_expiry' => array('id' => 'hrm-work-authorization-expiry', 'area' => 'SA_EMPLOYEE', 'sensitive_field' => 'restricted_work_authorization', 'sensitive_action' => 'view', 'title' => _('Work Authorization Expiry Attention'), 'summary' => _('%d governed work authorizations require expiry attention'), 'url' => $path_to_root.'/hrm/inquiry/work_authorization_expiry_attention.php?sel_app=hrm', 'type' => 'warning'),
+			'work_authorization_expiry' => array('id' => 'hrm-work-authorization-expiry', 'area' => 'SA_EMPLOYEE', 'sensitive_field' => 'restricted_work_authorization',
+				'sensitive_action' => 'view', 'title' => _('Work Authorization Expiry Attention'), 'summary' => _('%d governed work authorizations require expiry attention'),
+				'url' => $path_to_root.'/hrm/inquiry/work_authorization_expiry_attention.php?sel_app=hrm', 'type' => 'warning'),
 		);
 	}
 

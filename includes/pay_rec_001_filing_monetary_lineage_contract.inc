@@ -216,7 +216,9 @@ function pay_rec_001_verify_filing_monetary_lineage(array $person_facts,array $l
     }
     foreach($facts as $sha=>$fact)foreach($fields as $field=>$spec){$expected=(int)$fact[$field];$actual=isset($sums[$sha.'|'.$field])?(int)$sums[$sha.'|'.$field]:0;if($expected!==$actual)return pay_rec_001_fail($error,$expected>0?'filing_monetary_lineage_amount_mismatch':'filing_monetary_lineage_unexpected_amount');}
     $result_hashes=array_keys($verified_results);sort($result_hashes,SORT_STRING);
-    $receipt=array('contract_sha256'=>pay_rec_001_hash(pay_rec_001_filing_monetary_lineage_contract()),'person_fact_set_sha256'=>pay_rec_001_hash(array_keys($facts)),'lineage_row_count'=>count($lineage_rows),'lineage_set_sha256'=>pay_rec_001_hash($lineage_rows),'pay_core_result_set_sha256'=>pay_rec_001_hash($result_hashes),'classification_profile_set_sha256'=>pay_rec_001_hash(array_keys($profiles)),'currency_code'=>'VND','verification_status'=>'verified');
+    $receipt=array('contract_sha256'=>pay_rec_001_hash(pay_rec_001_filing_monetary_lineage_contract()),'person_fact_set_sha256'=>pay_rec_001_hash(array_keys($facts)),
+      'lineage_row_count'=>count($lineage_rows),'lineage_set_sha256'=>pay_rec_001_hash($lineage_rows),'pay_core_result_set_sha256'=>pay_rec_001_hash($result_hashes),
+      'classification_profile_set_sha256'=>pay_rec_001_hash(array_keys($profiles)),'currency_code'=>'VND','verification_status'=>'verified');
     $receipt['receipt_sha256']=pay_rec_001_hash($receipt);return $receipt;
 }
 ?>

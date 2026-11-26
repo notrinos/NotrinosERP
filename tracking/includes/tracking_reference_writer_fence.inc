@@ -127,7 +127,11 @@ function dimension_writer_master_id($owner,$value)
  */
 function dimension_ordinary_master_write($owner, $key, $next, $callback, $partial = false, $remove = false, $historical = array())
 {
-    $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id', 'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id', 'purch_requisition_lines'=>'id', 'wh_material_request_lines'=>'line_id', 'wh_transfer_order_lines'=>'line_id', 'wh_material_requests'=>'request_id', 'wh_transfer_orders'=>'transfer_id', 'purch_requisitions'=>'id', 'purch_rfq'=>'id', 'purch_rfq_items'=>'id', 'purch_rfq_vendors'=>'id', 'purch_rfq_vendor_lines'=>'id');
+    $sources = array('suppliers'=>'supplier_id', 'debtors_master'=>'debtor_no', 'quick_entry_lines'=>'id', 'stock_category'=>'category_id',
+      'stock_master'=>'stock_id', 'chart_master'=>'account_code', 'bank_accounts'=>'id', 'budget_trans'=>'id', 'purch_requisition_lines'=>'id',
+      'wh_material_request_lines'=>'line_id', 'wh_transfer_order_lines'=>'line_id', 'wh_material_requests'=>'request_id',
+      'wh_transfer_orders'=>'transfer_id', 'purch_requisitions'=>'id', 'purch_rfq'=>'id', 'purch_rfq_items'=>'id', 'purch_rfq_vendors'=>'id',
+      'purch_rfq_vendor_lines'=>'id');
     $sources['warranty_provision_log'] = 'id';
     $sources['gl_trans'] = 'counter';
     $sources['bank_trans'] = 'id';
@@ -137,7 +141,57 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
     $sources['debtor_trans_details'] = 'id';
     $sources['stock_moves'] = 'trans_id';
     $sources['areas']='area_code';$sources['tax_types']='id';$sources['chart_types']='id';$sources['chart_class']='cid';
-    $sources['purch_orders']='order_no';$sources['purch_order_details']='po_detail_item';$sources['grn_batch']='id';$sources['grn_items']='id';$sources['vendor_evaluations']='id';$sources['vendor_performance_log']='id';$sources['purch_matching_config']='id';$sources['purch_matching_exceptions']='id';$sources['purch_bill_control_policy']='id';$sources['purch_order_templates']='id';$sources['purch_order_template_lines']='id';$sources['procurement_plan']='id';$sources['procurement_plan_lines']='id';$sources['sales_quotation_templates']='id';$sources['sales_quotation_template_lines']='id';$sources['sales_discount_programs']='id';$sources['sales_coupons']='id';$sources['sales_commission_plans']='id';$sources['sales_commission_entries']='id';$sources['sales_pricelists']='id';$sources['sales_pricelist_rules']='id';$sources['sales_rma']='id';$sources['sales_rma_lines']='id';$sources['wh_storage_categories']='id';$sources['wh_putaway_rules']='rule_id';$sources['wh_routes']='route_id';$sources['wh_route_rules']='rule_id';$sources['wh_replenishment_rules']='rule_id';$sources['wh_cycle_count_plans']='plan_id';$sources['wh_scrap']='scrap_id';$sources['wh_picking_waves']='wave_id';$sources['wh_packages']='package_id';$sources['wh_return_orders']='return_id';$sources['wh_return_order_lines']='line_id';$sources['wh_consignment_stock']='id';$sources['wh_cycle_counts']='count_id';$sources['workorders']='id';$sources['wo_issue_items']='id';$sources['udi_registrations']='id';$sources['fsma_tracking_events']='id';$sources['dscsa_transactions']='id';$sources['quality_inspections']='id';$sources['recall_campaigns']='id';$sources['warranty_claims']='id';$sources['serial_numbers']='id';$sources['stock_batches']='id';$sources['wh_operations']='op_id';$sources['wh_operation_lines']='line_id';$sources['wh_locations']='loc_id';$sources['wh_bin_stock']='id';$sources['locations']='loc_code';
+    $sources['purch_orders']='order_no';
+    $sources['purch_order_details']='po_detail_item';
+    $sources['grn_batch']='id';
+    $sources['grn_items']='id';
+    $sources['vendor_evaluations']='id';
+    $sources['vendor_performance_log']='id';
+    $sources['purch_matching_config']='id';
+    $sources['purch_matching_exceptions']='id';
+    $sources['purch_bill_control_policy']='id';
+    $sources['purch_order_templates']='id';
+    $sources['purch_order_template_lines']='id';
+    $sources['procurement_plan']='id';
+    $sources['procurement_plan_lines']='id';
+    $sources['sales_quotation_templates']='id';
+    $sources['sales_quotation_template_lines']='id';
+    $sources['sales_discount_programs']='id';
+    $sources['sales_coupons']='id';
+    $sources['sales_commission_plans']='id';
+    $sources['sales_commission_entries']='id';
+    $sources['sales_pricelists']='id';
+    $sources['sales_pricelist_rules']='id';
+    $sources['sales_rma']='id';
+    $sources['sales_rma_lines']='id';
+    $sources['wh_storage_categories']='id';
+    $sources['wh_putaway_rules']='rule_id';
+    $sources['wh_routes']='route_id';
+    $sources['wh_route_rules']='rule_id';
+    $sources['wh_replenishment_rules']='rule_id';
+    $sources['wh_cycle_count_plans']='plan_id';
+    $sources['wh_scrap']='scrap_id';
+    $sources['wh_picking_waves']='wave_id';
+    $sources['wh_packages']='package_id';
+    $sources['wh_return_orders']='return_id';
+    $sources['wh_return_order_lines']='line_id';
+    $sources['wh_consignment_stock']='id';
+    $sources['wh_cycle_counts']='count_id';
+    $sources['workorders']='id';
+    $sources['wo_issue_items']='id';
+    $sources['udi_registrations']='id';
+    $sources['fsma_tracking_events']='id';
+    $sources['dscsa_transactions']='id';
+    $sources['quality_inspections']='id';
+    $sources['recall_campaigns']='id';
+    $sources['warranty_claims']='id';
+    $sources['serial_numbers']='id';
+    $sources['stock_batches']='id';
+    $sources['wh_operations']='op_id';
+    $sources['wh_operation_lines']='line_id';
+    $sources['wh_locations']='loc_id';
+    $sources['wh_bin_stock']='id';
+    $sources['locations']='loc_code';
     $sources['vendor_pricelists']='id';$sources['item_codes']='id';$sources['sales_pos']='id';$sources['sales_types']='id';$sources['salesman']='salesman_code';$sources['prices']='id';
     $sources['sales_agreements'] = 'id';
     $sources['sales_agreement_lines'] = 'id';
@@ -152,7 +206,17 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
     // Chart and bank accounts retain JSON but have no scalar Dimension slots.
     if ($owner === 'purch_requisition_lines' || $owner === 'wh_material_request_lines' || $owner === 'wh_transfer_order_lines' || $owner === 'wh_material_requests' || $owner === 'wh_transfer_orders' || $owner === 'chart_master' || $owner === 'bank_accounts' || $owner === 'purch_rfq_items' || $owner === 'purch_rfq_vendors' || $owner === 'purch_rfq_vendor_lines') $columns = array();
     if ($owner === 'purch_agreement_lines' || $owner === 'sales_agreement_lines') $columns = array();
-    if (in_array($owner,array('sales_orders','sales_order_details','supp_trans','debtor_trans_details','stock_moves','areas','tax_types','chart_types','chart_class','sales_pos','sales_types','salesman','prices','item_codes','vendor_pricelists','purch_orders','purch_order_details','grn_batch','grn_items','vendor_evaluations','vendor_performance_log','purch_matching_config','purch_matching_exceptions','purch_bill_control_policy','purch_order_templates','purch_order_template_lines','procurement_plan','procurement_plan_lines','sales_quotation_templates','sales_quotation_template_lines','sales_discount_programs','sales_coupons','sales_commission_plans','sales_commission_entries','sales_pricelists','sales_pricelist_rules','sales_rma','sales_rma_lines','wh_storage_categories','wh_putaway_rules','wh_routes','wh_route_rules','wh_replenishment_rules','wh_cycle_count_plans','wh_scrap','wh_picking_waves','wh_packages','wh_return_orders','wh_return_order_lines','wh_consignment_stock','wh_cycle_counts','workorders','wo_issue_items','udi_registrations','fsma_tracking_events','dscsa_transactions','quality_inspections','recall_campaigns','warranty_claims','serial_numbers','stock_batches','wh_operations','wh_operation_lines','wh_locations','wh_bin_stock','locations'),true)) $columns = array();
+    if (in_array($owner,array('sales_orders','sales_order_details','supp_trans','debtor_trans_details','stock_moves','areas',
+      'tax_types','chart_types','chart_class','sales_pos','sales_types','salesman','prices','item_codes','vendor_pricelists',
+      'purch_orders','purch_order_details','grn_batch','grn_items','vendor_evaluations','vendor_performance_log','purch_matching_config',
+      'purch_matching_exceptions','purch_bill_control_policy','purch_order_templates','purch_order_template_lines','procurement_plan',
+      'procurement_plan_lines','sales_quotation_templates','sales_quotation_template_lines','sales_discount_programs','sales_coupons',
+      'sales_commission_plans','sales_commission_entries','sales_pricelists','sales_pricelist_rules','sales_rma','sales_rma_lines',
+      'wh_storage_categories','wh_putaway_rules','wh_routes','wh_route_rules','wh_replenishment_rules','wh_cycle_count_plans',
+      'wh_scrap','wh_picking_waves','wh_packages','wh_return_orders','wh_return_order_lines','wh_consignment_stock','wh_cycle_counts',
+      'workorders','wo_issue_items','udi_registrations','fsma_tracking_events','dscsa_transactions','quality_inspections',
+      'recall_campaigns','warranty_claims','serial_numbers','stock_batches','wh_operations','wh_operation_lines','wh_locations',
+      'wh_bin_stock','locations'),true)) $columns = array();
     $composite = in_array($owner,array('debtor_trans','supp_trans','sales_orders'),true);
     if ($compound) $columns = array();
     $string_key = in_array($owner,array('stock_master','chart_master','chart_types','chart_class','locations'),true);
@@ -189,7 +253,18 @@ function dimension_ordinary_master_write($owner, $key, $next, $callback, $partia
     try {
         if (!function_exists('begin_transaction') || !begin_transaction()) return false;
         if ($compound && !db_query('SELECT custom_data FROM '.TB_PREF.$owner.' LIMIT 0')) { cancel_transaction(); return false; }
-        if ($identity === null && in_array($owner, array('purch_agreements','purch_agreement_lines','sales_agreements','sales_agreement_lines','sales_orders','sales_order_details','supp_trans','debtor_trans_details','stock_moves','areas','tax_types','chart_types','chart_class','sales_pos','sales_types','salesman','prices','item_codes','vendor_pricelists','purch_orders','purch_order_details','grn_batch','grn_items','vendor_evaluations','vendor_performance_log','purch_matching_config','purch_matching_exceptions','purch_bill_control_policy','purch_order_templates','purch_order_template_lines','procurement_plan','procurement_plan_lines','sales_quotation_templates','sales_quotation_template_lines','sales_discount_programs','sales_coupons','sales_commission_plans','sales_commission_entries','sales_pricelists','sales_pricelist_rules','sales_rma','sales_rma_lines','wh_storage_categories','wh_putaway_rules','wh_routes','wh_route_rules','wh_replenishment_rules','wh_cycle_count_plans','wh_scrap','wh_picking_waves','wh_packages','wh_return_orders','wh_return_order_lines','wh_consignment_stock','wh_cycle_counts','workorders','wo_issue_items','udi_registrations','fsma_tracking_events','dscsa_transactions','quality_inspections','recall_campaigns','warranty_claims','serial_numbers','stock_batches','wh_operations','wh_operation_lines','wh_locations','wh_bin_stock','locations'), true)
+        if ($identity === null && in_array($owner, array('purch_agreements','purch_agreement_lines','sales_agreements','sales_agreement_lines',
+          'sales_orders','sales_order_details','supp_trans','debtor_trans_details','stock_moves','areas','tax_types','chart_types',
+          'chart_class','sales_pos','sales_types','salesman','prices','item_codes','vendor_pricelists','purch_orders','purch_order_details',
+          'grn_batch','grn_items','vendor_evaluations','vendor_performance_log','purch_matching_config','purch_matching_exceptions',
+          'purch_bill_control_policy','purch_order_templates','purch_order_template_lines','procurement_plan','procurement_plan_lines',
+          'sales_quotation_templates','sales_quotation_template_lines','sales_discount_programs','sales_coupons','sales_commission_plans',
+          'sales_commission_entries','sales_pricelists','sales_pricelist_rules','sales_rma','sales_rma_lines','wh_storage_categories',
+          'wh_putaway_rules','wh_routes','wh_route_rules','wh_replenishment_rules','wh_cycle_count_plans','wh_scrap','wh_picking_waves',
+          'wh_packages','wh_return_orders','wh_return_order_lines','wh_consignment_stock','wh_cycle_counts','workorders',
+          'wo_issue_items','udi_registrations','fsma_tracking_events','dscsa_transactions','quality_inspections','recall_campaigns',
+          'warranty_claims','serial_numbers','stock_batches','wh_operations','wh_operation_lines','wh_locations','wh_bin_stock',
+          'locations'), true)
             && !db_query('SELECT custom_data FROM '.TB_PREF.$owner.' LIMIT 0')) {
             cancel_transaction(); return false;
         }

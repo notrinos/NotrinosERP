@@ -76,7 +76,9 @@ function pay_ctry_002_execution_action_hash(array $row)
 function pay_ctry_002_execution_assurance_event_for_update($session_id,$action_hash)
 {
     if((int)$session_id<=0||pay_ctry_002_sha256($action_hash)===false)return false;
-    $q=db_query("SELECT assurance_event_id,session_id,assurance_level,assurance_method,action_class,action_hash,issued_at,expires_at,consumed_at FROM ".TB_PREF."user_session_assurance_events WHERE session_id=".(int)$session_id." AND action_class=".db_escape(PAY_CTRY_002_EXECUTION_ACTION_CLASS)." AND action_hash=".db_escape($action_hash)." ORDER BY assurance_event_id DESC LIMIT 2 FOR UPDATE",'could not lock PAY-CTRY-002 execution assurance event');
+    $q=db_query("SELECT assurance_event_id,session_id,assurance_level,assurance_method,action_class,action_hash,issued_at,expires_at,consumed_at FROM "
+      .TB_PREF."user_session_assurance_events WHERE session_id=".(int)$session_id." AND action_class=".db_escape(PAY_CTRY_002_EXECUTION_ACTION_CLASS)
+      ." AND action_hash=".db_escape($action_hash)." ORDER BY assurance_event_id DESC LIMIT 2 FOR UPDATE",'could not lock PAY-CTRY-002 execution assurance event');
     if(!$q)return false;$row=db_fetch_assoc($q);if(!$row)return null;return db_fetch_assoc($q)===false?$row:false;
 }
 function pay_ctry_002_consume_execution_assurance($company,$action_hash,$now_epoch)
@@ -89,8 +91,14 @@ function pay_ctry_002_consume_execution_assurance($company,$action_hash,$now_epo
     $issued=strtotime((string)$event['issued_at'].' UTC');$expires=strtotime((string)$event['expires_at'].' UTC');if($issued===false||$expires===false||$now_epoch<$issued||$now_epoch>=$expires)return false;
     $at=gmdate('Y-m-d H:i:s',$now_epoch);
     if(!db_query('UPDATE '.TB_PREF.'user_session_assurance_events SET consumed_at='.db_escape($at).' WHERE assurance_event_id='.(int)$event['assurance_event_id'].' AND consumed_at IS NULL AND expires_at>'.db_escape($at),'could not consume PAY-CTRY-002 execution assurance')||(function_exists('db_num_affected_rows')&&(int)db_num_affected_rows()!==1))return false;
-    $restore=federation_assurance_consumer_restore_level_one_sql($custody,$now_epoch);if($restore===false||!db_query('UPDATE '.TB_PREF.'user_sessions SET '.$restore.' WHERE id='.$session_id." AND revoked_at IS NULL AND assurance_level=2 AND assurance_method='oidc_acr_amr'",'could not reset PAY-CTRY-002 execution session assurance')||(function_exists('db_num_affected_rows')&&(int)db_num_affected_rows()!==1))return false;
-    if(append_domain_audit_event(array('company_id'=>(int)$company,'legal_entity_id'=>0,'entity_type'=>'security_session_assurance','entity_key'=>array('assurance_event_id'=>(int)$event['assurance_event_id'],'session_id'=>$session_id),'action'=>'security.session.assurance.consumed','reason_code'=>'pay_ctry_002_activation_execution','before'=>array('assurance_level'=>2),'after'=>array('assurance_level'=>1),'restricted_diff'=>array('action_class'=>PAY_CTRY_002_EXECUTION_ACTION_CLASS,'action_hash'=>$action_hash,'single_use_event_consumed'=>true,'session_assurance_reset_to_level_one'=>true,'payroll_result_mutated'=>false,'historical_payroll_accounting_rows_rewritten'=>0)))===false)return false;
+    $restore=federation_assurance_consumer_restore_level_one_sql($custody,$now_epoch);
+    if($restore===false||!db_query('UPDATE '.TB_PREF.'user_sessions SET '.$restore.' WHERE id='.$session_id." AND revoked_at IS NULL AND assurance_level=2 AND assurance_method='oidc_acr_amr'",
+      'could not reset PAY-CTRY-002 execution session assurance')||(function_exists('db_num_affected_rows')&&(int)db_num_affected_rows()!==1))return false;
+    if(append_domain_audit_event(array('company_id'=>(int)$company,'legal_entity_id'=>0,'entity_type'=>'security_session_assurance',
+      'entity_key'=>array('assurance_event_id'=>(int)$event['assurance_event_id'],'session_id'=>$session_id),'action'=>'security.session.assurance.consumed',
+      'reason_code'=>'pay_ctry_002_activation_execution','before'=>array('assurance_level'=>2),'after'=>array('assurance_level'=>1),
+      'restricted_diff'=>array('action_class'=>PAY_CTRY_002_EXECUTION_ACTION_CLASS,'action_hash'=>$action_hash,'single_use_event_consumed'=>true,
+      'session_assurance_reset_to_level_one'=>true,'payroll_result_mutated'=>false,'historical_payroll_accounting_rows_rewritten'=>0)))===false)return false;
     return (int)$event['assurance_event_id'];
 }
 
@@ -98,7 +106,9 @@ function pay_ctry_002_consume_execution_assurance($company,$action_hash,$now_epo
 function pay_ctry_002_lifecycle_assurance_event_for_update($session_id,$action_hash)
 {
     if((int)$session_id<=0||pay_ctry_002_sha256($action_hash)===false)return false;
-    $q=db_query("SELECT assurance_event_id,session_id,assurance_level,assurance_method,action_class,action_hash,issued_at,expires_at,consumed_at FROM ".TB_PREF."user_session_assurance_events WHERE session_id=".(int)$session_id." AND action_class=".db_escape(PAY_CTRY_002_LIFECYCLE_ACTION_CLASS)." AND action_hash=".db_escape($action_hash)." ORDER BY assurance_event_id DESC LIMIT 2 FOR UPDATE",'could not lock PAY-CTRY-002 lifecycle assurance event');
+    $q=db_query("SELECT assurance_event_id,session_id,assurance_level,assurance_method,action_class,action_hash,issued_at,expires_at,consumed_at FROM "
+      .TB_PREF."user_session_assurance_events WHERE session_id=".(int)$session_id." AND action_class=".db_escape(PAY_CTRY_002_LIFECYCLE_ACTION_CLASS)
+      ." AND action_hash=".db_escape($action_hash)." ORDER BY assurance_event_id DESC LIMIT 2 FOR UPDATE",'could not lock PAY-CTRY-002 lifecycle assurance event');
     if(!$q)return false;$row=db_fetch_assoc($q);if(!$row)return null;return db_fetch_assoc($q)===false?$row:false;
 }
 function pay_ctry_002_consume_lifecycle_assurance($company,$action_hash,$now_epoch)
@@ -108,8 +118,14 @@ function pay_ctry_002_consume_lifecycle_assurance($company,$action_hash,$now_epo
     $event=pay_ctry_002_lifecycle_assurance_event_for_update($session_id,$action_hash);if(!is_array($event)||(int)$event['assurance_level']!==2||(string)$event['assurance_method']!=='oidc_acr_amr'||(string)$event['action_class']!==PAY_CTRY_002_LIFECYCLE_ACTION_CLASS||!pay_ctry_002_activation_hash_equals((string)$event['action_hash'],$action_hash)||$event['consumed_at']!==null)return false;
     $issued=strtotime((string)$event['issued_at'].' UTC');$expires=strtotime((string)$event['expires_at'].' UTC');if($issued===false||$expires===false||$now_epoch<$issued||$now_epoch>=$expires)return false;$at=gmdate('Y-m-d H:i:s',$now_epoch);
     if(!db_query('UPDATE '.TB_PREF.'user_session_assurance_events SET consumed_at='.db_escape($at).' WHERE assurance_event_id='.(int)$event['assurance_event_id'].' AND consumed_at IS NULL AND expires_at>'.db_escape($at),'could not consume PAY-CTRY-002 lifecycle assurance')||(function_exists('db_num_affected_rows')&&(int)db_num_affected_rows()!==1))return false;
-    $restore=federation_assurance_consumer_restore_level_one_sql($custody,$now_epoch);if($restore===false||!db_query('UPDATE '.TB_PREF.'user_sessions SET '.$restore.' WHERE id='.$session_id." AND revoked_at IS NULL AND assurance_level=2 AND assurance_method='oidc_acr_amr'",'could not reset PAY-CTRY-002 lifecycle session assurance')||(function_exists('db_num_affected_rows')&&(int)db_num_affected_rows()!==1))return false;
-    if(append_domain_audit_event(array('company_id'=>(int)$company,'legal_entity_id'=>0,'entity_type'=>'security_session_assurance','entity_key'=>array('assurance_event_id'=>(int)$event['assurance_event_id'],'session_id'=>$session_id),'action'=>'security.session.assurance.consumed','reason_code'=>'pay_ctry_002_activation_lifecycle','before'=>array('assurance_level'=>2),'after'=>array('assurance_level'=>1),'restricted_diff'=>array('action_class'=>PAY_CTRY_002_LIFECYCLE_ACTION_CLASS,'action_hash'=>$action_hash,'single_use_event_consumed'=>true,'session_assurance_reset_to_level_one'=>true,'payroll_result_mutated'=>false,'historical_payroll_accounting_rows_rewritten'=>0)))===false)return false;
+    $restore=federation_assurance_consumer_restore_level_one_sql($custody,$now_epoch);
+    if($restore===false||!db_query('UPDATE '.TB_PREF.'user_sessions SET '.$restore.' WHERE id='.$session_id." AND revoked_at IS NULL AND assurance_level=2 AND assurance_method='oidc_acr_amr'",
+      'could not reset PAY-CTRY-002 lifecycle session assurance')||(function_exists('db_num_affected_rows')&&(int)db_num_affected_rows()!==1))return false;
+    if(append_domain_audit_event(array('company_id'=>(int)$company,'legal_entity_id'=>0,'entity_type'=>'security_session_assurance',
+      'entity_key'=>array('assurance_event_id'=>(int)$event['assurance_event_id'],'session_id'=>$session_id),'action'=>'security.session.assurance.consumed',
+      'reason_code'=>'pay_ctry_002_activation_lifecycle','before'=>array('assurance_level'=>2),'after'=>array('assurance_level'=>1),
+      'restricted_diff'=>array('action_class'=>PAY_CTRY_002_LIFECYCLE_ACTION_CLASS,'action_hash'=>$action_hash,'single_use_event_consumed'=>true,
+      'session_assurance_reset_to_level_one'=>true,'payroll_result_mutated'=>false,'historical_payroll_accounting_rows_rewritten'=>0)))===false)return false;
     return (int)$event['assurance_event_id'];
 }
 
@@ -118,8 +134,28 @@ function pay_ctry_002_activation_lifecycle_clear_for_execution($binding_id,$now_
 {
     $error=null;if((int)$binding_id<=0)return true;
     if(!function_exists('hrm_migration_table_exists')||!hrm_migration_table_exists('pay_ctry_activation_suspensions')||!hrm_migration_table_exists('pay_ctry_activation_revocations')){$error='lifecycle_schema_unavailable';return false;}
-    $at=gmdate('Y-m-d H:i:s',(int)$now_epoch);$q=db_query('SELECT revocation_id FROM '.TB_PREF.'pay_ctry_activation_revocations WHERE binding_id='.(int)$binding_id.' AND effective_at<='.db_escape($at).' ORDER BY effective_at DESC,revocation_id DESC LIMIT 1 FOR UPDATE');if(!$q){$error='revocation_state_unavailable';return false;}if(db_num_rows($q)!==0){$error='hard_revoked_for_new_execution';return false;}
-    $q=db_query('SELECT action_type FROM '.TB_PREF.'pay_ctry_activation_suspensions WHERE binding_id='.(int)$binding_id.' AND effective_at<='.db_escape($at).' ORDER BY effective_at DESC,suspension_id DESC LIMIT 1 FOR UPDATE');if(!$q){$error='suspension_state_unavailable';return false;}if(db_num_rows($q)===1&&db_fetch_assoc($q)['action_type']==='suspend'){$error='activation_suspended_for_new_execution';return false;}return true;
+    $at=gmdate('Y-m-d H:i:s',(int)$now_epoch);
+    $q=db_query('SELECT revocation_id FROM '.TB_PREF.'pay_ctry_activation_revocations WHERE binding_id='.(int)$binding_id
+      .' AND effective_at<='.db_escape($at).' ORDER BY effective_at DESC,revocation_id DESC LIMIT 1 FOR UPDATE');
+    if(!$q){
+      $error='revocation_state_unavailable';
+      return false;
+    }
+    if(db_num_rows($q)!==0){
+      $error='hard_revoked_for_new_execution';
+      return false;
+    }
+    $q=db_query('SELECT action_type FROM '.TB_PREF.'pay_ctry_activation_suspensions WHERE binding_id='.(int)$binding_id.' AND effective_at<='
+      .db_escape($at).' ORDER BY effective_at DESC,suspension_id DESC LIMIT 1 FOR UPDATE');
+    if(!$q){
+      $error='suspension_state_unavailable';
+      return false;
+    }
+    if(db_num_rows($q)===1&&db_fetch_assoc($q)['action_type']==='suspend'){
+      $error='activation_suspended_for_new_execution';
+      return false;
+    }
+    return true;
 }
 
 /** Re-check immutable install roots and current PAY-CTRY-001 trust immediately before execution. */
@@ -148,7 +184,24 @@ function pay_ctry_002_activation_pack_trust_for_update(array $proposal,$now_epoc
     $trusted=strtotime((string)$r['trusted_at'].' UTC');if($trusted===false||$now_epoch<$trusted){$error='installed_pack_trust_time_invalid';return false;}
     $pq=db_query('SELECT publisher_revocation_id FROM '.TB_PREF.'pay_ctry_publisher_revocations WHERE publisher_id='.(int)$r['publisher_id'].' LIMIT 2 FOR UPDATE','could not lock PAY-CTRY-002 publisher revocation custody');if(!$pq||db_num_rows($pq)>1){$error='publisher_revocation_state_ambiguous';return false;}if(db_num_rows($pq)!==0){$error='publisher_revoked_for_new_execution';return false;}
     $kq=db_query('SELECT key_revocation_id FROM '.TB_PREF.'pay_ctry_trust_key_revocations WHERE trust_key_id='.(int)$r['trust_key_id'].' LIMIT 2 FOR UPDATE','could not lock PAY-CTRY-002 key revocation custody');if(!$kq||db_num_rows($kq)>1){$error='key_revocation_state_ambiguous';return false;}if(db_num_rows($kq)!==0){$error='key_revoked_for_new_execution';return false;}
-    $sq=db_query('SELECT effective_at FROM '.TB_PREF.'pay_ctry_trust_key_supersessions WHERE predecessor_key_id='.(int)$r['trust_key_id'].' LIMIT 2 FOR UPDATE','could not lock PAY-CTRY-002 key supersession custody');if(!$sq||db_num_rows($sq)>1){$error='key_supersession_state_ambiguous';return false;}if(db_num_rows($sq)===1){$sup=db_fetch_assoc($sq);$at=strtotime((string)$sup['effective_at'].' UTC');if($at===false){$error='key_supersession_time_invalid';return false;}if($now_epoch>=$at){$error='key_superseded_for_new_execution';return false;}}
+    $sq=db_query('SELECT effective_at FROM '.TB_PREF.'pay_ctry_trust_key_supersessions WHERE predecessor_key_id='.(int)$r['trust_key_id']
+      .' LIMIT 2 FOR UPDATE','could not lock PAY-CTRY-002 key supersession custody');
+    if(!$sq||db_num_rows($sq)>1){
+      $error='key_supersession_state_ambiguous';
+      return false;
+    }
+    if(db_num_rows($sq)===1){
+      $sup=db_fetch_assoc($sq);
+      $at=strtotime((string)$sup['effective_at'].' UTC');
+      if($at===false){
+        $error='key_supersession_time_invalid';
+        return false;
+      }
+      if($now_epoch>=$at){
+        $error='key_superseded_for_new_execution';
+        return false;
+      }
+    }
     return true;
 }
 
@@ -156,7 +209,10 @@ function pay_ctry_002_activation_joined_row_for_update($proposal_id)
 {
     $sql='SELECT p.*,a.activation_approval_id,a.decision_token,a.approval_sha256,a.checker_id,a.proposal_sha256 AS approval_proposal_sha256,'
         .'i.impact_sha256 AS impact_row_sha256,i.site_installation_id AS impact_site_installation_id,i.company_id AS impact_company_id,i.scope_type AS impact_scope_type,i.legal_entity_id AS impact_legal_entity_id,i.payroll_scope_key AS impact_payroll_scope_key,i.action_type AS impact_action_type,i.effective_from AS impact_effective_from,i.effective_to AS impact_effective_to,i.dependency_lock_sha256 AS impact_dependency_lock_sha256,i.binding_snapshot_sha256 AS impact_binding_snapshot_sha256,i.open_run_count,i.open_approval_count,i.downstream_intent_count,i.blocking_finding_count,'
-        .'s.pack_version_id,s.semantic_root,s.evidence_root FROM '.TB_PREF.'pay_ctry_activation_proposals p INNER JOIN '.TB_PREF.'pay_ctry_activation_approvals a ON a.activation_proposal_id=p.activation_proposal_id INNER JOIN '.TB_PREF.'pay_ctry_activation_impact_simulations i ON i.impact_simulation_id=p.impact_simulation_id INNER JOIN '.TB_PREF.'pay_ctry_site_installations s ON s.site_installation_id=p.site_installation_id WHERE p.activation_proposal_id='.(int)$proposal_id.' LIMIT 2 FOR UPDATE';
+        .'s.pack_version_id,s.semantic_root,s.evidence_root FROM '.TB_PREF.'pay_ctry_activation_proposals p INNER JOIN '.TB_PREF
+          .'pay_ctry_activation_approvals a ON a.activation_proposal_id=p.activation_proposal_id INNER JOIN '.TB_PREF.'pay_ctry_activation_impact_simulations i ON i.impact_simulation_id=p.impact_simulation_id INNER JOIN '
+          .TB_PREF.'pay_ctry_site_installations s ON s.site_installation_id=p.site_installation_id WHERE p.activation_proposal_id='
+          .(int)$proposal_id.' LIMIT 2 FOR UPDATE';
     return pay_ctry_002_activation_fetch_one($sql);
 }
 function pay_ctry_002_activation_row_is_exact(array $r,$executor,&$error)
@@ -165,8 +221,18 @@ function pay_ctry_002_activation_row_is_exact(array $r,$executor,&$error)
     if((string)$r['decision_token']!=='approved'){$error='proposal_not_approved';return false;}
     if(!pay_ctry_002_distinct_maker_checker_executor($r['maker_id'],$r['checker_id'],$executor)){$error='three_party_separation_required';return false;}
     if((int)$r['company_id']!==pay_ctry_002_activation_company_id()){$error='company_scope_mismatch';return false;}
-    foreach(array('site_installation_id'=>'impact_site_installation_id','company_id'=>'impact_company_id','scope_type'=>'impact_scope_type','action_type'=>'impact_action_type','effective_from'=>'impact_effective_from','dependency_lock_sha256'=>'impact_dependency_lock_sha256','binding_snapshot_sha256'=>'impact_binding_snapshot_sha256') as $a=>$b)if((string)$r[$a]!== (string)$r[$b]){$error='impact_proposal_drift';return false;}
-    $le1=empty($r['legal_entity_id'])?0:(int)$r['legal_entity_id'];$le2=empty($r['impact_legal_entity_id'])?0:(int)$r['impact_legal_entity_id'];$ps1=empty($r['payroll_scope_key'])?'':(string)$r['payroll_scope_key'];$ps2=empty($r['impact_payroll_scope_key'])?'':(string)$r['impact_payroll_scope_key'];$to1=empty($r['effective_to'])?'':(string)$r['effective_to'];$to2=empty($r['impact_effective_to'])?'':(string)$r['impact_effective_to'];
+    foreach(array('site_installation_id'=>'impact_site_installation_id','company_id'=>'impact_company_id','scope_type'=>'impact_scope_type',
+      'action_type'=>'impact_action_type','effective_from'=>'impact_effective_from','dependency_lock_sha256'=>'impact_dependency_lock_sha256',
+      'binding_snapshot_sha256'=>'impact_binding_snapshot_sha256') as $a=>$b)if((string)$r[$a]!== (string)$r[$b]){
+      $error='impact_proposal_drift';
+      return false;
+    }
+    $le1=empty($r['legal_entity_id'])?0:(int)$r['legal_entity_id'];
+    $le2=empty($r['impact_legal_entity_id'])?0:(int)$r['impact_legal_entity_id'];
+    $ps1=empty($r['payroll_scope_key'])?'':(string)$r['payroll_scope_key'];
+    $ps2=empty($r['impact_payroll_scope_key'])?'':(string)$r['impact_payroll_scope_key'];
+    $to1=empty($r['effective_to'])?'':(string)$r['effective_to'];
+    $to2=empty($r['impact_effective_to'])?'':(string)$r['impact_effective_to'];
     if($le1!==$le2||$ps1!==$ps2||$to1!==$to2||!pay_ctry_002_activation_hash_equals((string)$r['proposal_sha256'],(string)$r['approval_proposal_sha256'])||!pay_ctry_002_activation_hash_equals((string)$r['impact_sha256'],(string)$r['impact_row_sha256'])){$error='approval_or_scope_drift';return false;}
     foreach(array('open_run_count','open_approval_count','downstream_intent_count','blocking_finding_count') as $k)if((int)$r[$k]!==0){$error='impact_not_clear';return false;}
     if(!in_array((string)$r['action_type'],pay_ctry_002_executable_binding_actions(),true)){$error='action_deferred_to_later_lifecycle';return false;}
@@ -208,16 +274,49 @@ function pay_ctry_002_execute_approved_activation($proposal_id,$now_epoch=null,&
         $action_hash=pay_ctry_002_execution_action_hash($row);if($action_hash===false){$error='execution_action_hash_invalid';break;}
         $assurance_event_id=pay_ctry_002_consume_execution_assurance($company,$action_hash,$now_epoch);if($assurance_event_id===false){$error='fresh_step_up_required';break;}
         $activation_key='ctry2.activation.'.substr(pay_ctry_002_hash(array('proposal_id'=>$proposal_id,'proposal_sha256'=>$row['proposal_sha256'],'approval_sha256'=>$row['approval_sha256'])),0,48);
-        $descriptor=array('activation_key'=>$activation_key,'activation_proposal_id'=>$proposal_id,'activation_approval_id'=>(int)$row['activation_approval_id'],'site_installation_id'=>(int)$row['site_installation_id'],'company_id'=>(int)$row['company_id'],'scope_type'=>(string)$row['scope_type'],'legal_entity_id'=>empty($row['legal_entity_id'])?null:(int)$row['legal_entity_id'],'payroll_scope_key'=>empty($row['payroll_scope_key'])?null:(string)$row['payroll_scope_key'],'action_type'=>(string)$row['action_type'],'effective_from'=>(string)$row['effective_from'],'effective_to'=>empty($row['effective_to'])?null:(string)$row['effective_to'],'dependency_lock_sha256'=>(string)$row['dependency_lock_sha256'],'binding_snapshot_sha256'=>(string)$row['binding_snapshot_sha256'],'proposal_sha256'=>(string)$row['proposal_sha256'],'approval_sha256'=>(string)$row['approval_sha256'],'assurance_event_id'=>$assurance_event_id,'execution_action_sha256'=>$action_hash,'executor_id'=>$actor);
+        $descriptor=array('activation_key'=>$activation_key,'activation_proposal_id'=>$proposal_id,'activation_approval_id'=>(int)$row['activation_approval_id'],
+          'site_installation_id'=>(int)$row['site_installation_id'],'company_id'=>(int)$row['company_id'],'scope_type'=>(string)$row['scope_type'],
+          'legal_entity_id'=>empty($row['legal_entity_id'])?null:(int)$row['legal_entity_id'],'payroll_scope_key'=>empty($row['payroll_scope_key'])?null:(string)$row['payroll_scope_key'],
+          'action_type'=>(string)$row['action_type'],'effective_from'=>(string)$row['effective_from'],'effective_to'=>empty($row['effective_to'])?null:(string)$row['effective_to'],
+          'dependency_lock_sha256'=>(string)$row['dependency_lock_sha256'],'binding_snapshot_sha256'=>(string)$row['binding_snapshot_sha256'],
+          'proposal_sha256'=>(string)$row['proposal_sha256'],'approval_sha256'=>(string)$row['approval_sha256'],'assurance_event_id'=>$assurance_event_id,
+          'execution_action_sha256'=>$action_hash,'executor_id'=>$actor);
         $descriptor['activation_sha256']=pay_ctry_002_hash($descriptor);if(!pay_ctry_002_validate_execution_descriptor($descriptor,$row['maker_id'],$row['checker_id'],$error))break;
         $now=gmdate('Y-m-d H:i:s',$now_epoch);
-        $sql='INSERT INTO '.TB_PREF.'pay_ctry_activations (activation_key,activation_proposal_id,activation_approval_id,site_installation_id,company_id,scope_type,legal_entity_id,payroll_scope_key,action_type,effective_from,effective_to,dependency_lock_sha256,binding_snapshot_sha256,proposal_sha256,approval_sha256,assurance_event_id,execution_action_sha256,activation_sha256,executor_id,created_at) VALUES ('.db_escape($descriptor['activation_key']).','.$proposal_id.','.(int)$descriptor['activation_approval_id'].','.(int)$descriptor['site_installation_id'].','.$company.','.db_escape($descriptor['scope_type']).','.pay_ctry_002_activation_nullable_uint_sql($descriptor['legal_entity_id']).','.pay_ctry_002_activation_nullable_text_sql($descriptor['payroll_scope_key']).','.db_escape($descriptor['action_type']).','.db_escape($descriptor['effective_from']).','.pay_ctry_002_activation_nullable_text_sql($descriptor['effective_to']).','.db_escape($descriptor['dependency_lock_sha256']).','.db_escape($descriptor['binding_snapshot_sha256']).','.db_escape($descriptor['proposal_sha256']).','.db_escape($descriptor['approval_sha256']).','.$assurance_event_id.','.db_escape($descriptor['execution_action_sha256']).','.db_escape($descriptor['activation_sha256']).','.$actor.','.db_escape($now).')';
+        $sql='INSERT INTO '.TB_PREF.'pay_ctry_activations (activation_key,activation_proposal_id,activation_approval_id,site_installation_id,company_id,scope_type,legal_entity_id,payroll_scope_key,action_type,effective_from,effective_to,dependency_lock_sha256,binding_snapshot_sha256,proposal_sha256,approval_sha256,assurance_event_id,execution_action_sha256,activation_sha256,executor_id,created_at) VALUES ('
+          .db_escape($descriptor['activation_key']).','.$proposal_id.','.(int)$descriptor['activation_approval_id'].','.(int)$descriptor['site_installation_id']
+          .','.$company.','.db_escape($descriptor['scope_type']).','.pay_ctry_002_activation_nullable_uint_sql($descriptor['legal_entity_id'])
+          .','.pay_ctry_002_activation_nullable_text_sql($descriptor['payroll_scope_key']).','.db_escape($descriptor['action_type'])
+          .','.db_escape($descriptor['effective_from']).','.pay_ctry_002_activation_nullable_text_sql($descriptor['effective_to'])
+          .','.db_escape($descriptor['dependency_lock_sha256']).','.db_escape($descriptor['binding_snapshot_sha256']).','
+          .db_escape($descriptor['proposal_sha256']).','.db_escape($descriptor['approval_sha256']).','.$assurance_event_id
+          .','.db_escape($descriptor['execution_action_sha256']).','.db_escape($descriptor['activation_sha256']).','.$actor
+          .','.db_escape($now).')';
         if(!db_query($sql,'could not append PAY-CTRY-002 activation execution')){$error='activation_insert_failed';break;}$activation_id=pay_ctry_002_activation_insert_id();if($activation_id<=0){$error='activation_identity_missing';break;}
-        $binding=array('activation_id'=>$activation_id,'predecessor_binding_id'=>is_array($leaf)?(int)$leaf['binding_id']:null,'site_installation_id'=>(int)$row['site_installation_id'],'company_id'=>$company,'scope_type'=>(string)$row['scope_type'],'legal_entity_id'=>empty($row['legal_entity_id'])?null:(int)$row['legal_entity_id'],'payroll_scope_key'=>empty($row['payroll_scope_key'])?null:(string)$row['payroll_scope_key'],'action_type'=>(string)$row['action_type'],'effective_from'=>(string)$row['effective_from'],'effective_to'=>empty($row['effective_to'])?null:(string)$row['effective_to'],'activation_sha256'=>$descriptor['activation_sha256'],'bound_by'=>$actor);
+        $binding=array('activation_id'=>$activation_id,'predecessor_binding_id'=>is_array($leaf)?(int)$leaf['binding_id']:null,
+          'site_installation_id'=>(int)$row['site_installation_id'],'company_id'=>$company,'scope_type'=>(string)$row['scope_type'],
+          'legal_entity_id'=>empty($row['legal_entity_id'])?null:(int)$row['legal_entity_id'],'payroll_scope_key'=>empty($row['payroll_scope_key'])?null:(string)$row['payroll_scope_key'],
+          'action_type'=>(string)$row['action_type'],'effective_from'=>(string)$row['effective_from'],'effective_to'=>empty($row['effective_to'])?null:(string)$row['effective_to'],
+          'activation_sha256'=>$descriptor['activation_sha256'],'bound_by'=>$actor);
         $binding['binding_sha256']=pay_ctry_002_hash($binding);if(!pay_ctry_002_validate_binding_descriptor($binding,$pred_action,$error))break;
-        $bsql='INSERT INTO '.TB_PREF.'pay_ctry_activation_bindings (activation_id,predecessor_binding_id,site_installation_id,company_id,scope_type,legal_entity_id,payroll_scope_key,action_type,effective_from,effective_to,activation_sha256,binding_sha256,bound_by,created_at) VALUES ('.$activation_id.','.pay_ctry_002_activation_nullable_uint_sql($binding['predecessor_binding_id']).','.(int)$binding['site_installation_id'].','.$company.','.db_escape($binding['scope_type']).','.pay_ctry_002_activation_nullable_uint_sql($binding['legal_entity_id']).','.pay_ctry_002_activation_nullable_text_sql($binding['payroll_scope_key']).','.db_escape($binding['action_type']).','.db_escape($binding['effective_from']).','.pay_ctry_002_activation_nullable_text_sql($binding['effective_to']).','.db_escape($binding['activation_sha256']).','.db_escape($binding['binding_sha256']).','.$actor.','.db_escape($now).')';
+        $bsql='INSERT INTO '.TB_PREF.'pay_ctry_activation_bindings (activation_id,predecessor_binding_id,site_installation_id,company_id,scope_type,legal_entity_id,payroll_scope_key,action_type,effective_from,effective_to,activation_sha256,binding_sha256,bound_by,created_at) VALUES ('
+          .$activation_id.','.pay_ctry_002_activation_nullable_uint_sql($binding['predecessor_binding_id']).','.(int)$binding['site_installation_id']
+          .','.$company.','.db_escape($binding['scope_type']).','.pay_ctry_002_activation_nullable_uint_sql($binding['legal_entity_id'])
+          .','.pay_ctry_002_activation_nullable_text_sql($binding['payroll_scope_key']).','.db_escape($binding['action_type'])
+          .','.db_escape($binding['effective_from']).','.pay_ctry_002_activation_nullable_text_sql($binding['effective_to'])
+          .','.db_escape($binding['activation_sha256']).','.db_escape($binding['binding_sha256']).','.$actor.','.db_escape($now)
+          .')';
         if(!db_query($bsql,'could not append PAY-CTRY-002 activation binding')){$error='binding_insert_failed';break;}$binding_id=pay_ctry_002_activation_insert_id();if($binding_id<=0){$error='binding_identity_missing';break;}
-        if(!function_exists('append_domain_audit_event')||append_domain_audit_event(array('company_id'=>$company,'legal_entity_id'=>empty($row['legal_entity_id'])?0:(int)$row['legal_entity_id'],'entity_type'=>'pay_ctry_activation','entity_key'=>array('activation_id'=>$activation_id,'binding_id'=>$binding_id),'action'=>'pay.ctry.activation.executed','reason_code'=>'independently_approved_country_pack_activation','before'=>array('predecessor_binding_id'=>$binding['predecessor_binding_id']),'after'=>array('action_type'=>$binding['action_type'],'effective_from'=>$binding['effective_from'],'scope_type'=>$binding['scope_type']),'restricted_diff'=>array('maker_checker_executor_distinct'=>true,'fresh_step_up_consumed'=>true,'impact_open_run_count'=>0,'impact_open_approval_count'=>0,'impact_downstream_intent_count'=>0,'impact_blocking_finding_count'=>0,'runtime_resolver_changed'=>false,'suspension_authority_added'=>false,'outbox_delivery_added'=>false,'historical_payroll_accounting_rows_rewritten'=>0)))===false){$error='activation_audit_failed';break;}
+        if(!function_exists('append_domain_audit_event')||append_domain_audit_event(array('company_id'=>$company,'legal_entity_id'=>empty($row['legal_entity_id'])?0:(int)$row['legal_entity_id'],
+          'entity_type'=>'pay_ctry_activation','entity_key'=>array('activation_id'=>$activation_id,'binding_id'=>$binding_id),
+          'action'=>'pay.ctry.activation.executed','reason_code'=>'independently_approved_country_pack_activation','before'=>array('predecessor_binding_id'=>$binding['predecessor_binding_id']),
+          'after'=>array('action_type'=>$binding['action_type'],'effective_from'=>$binding['effective_from'],'scope_type'=>$binding['scope_type']),
+          'restricted_diff'=>array('maker_checker_executor_distinct'=>true,'fresh_step_up_consumed'=>true,'impact_open_run_count'=>0,
+          'impact_open_approval_count'=>0,'impact_downstream_intent_count'=>0,'impact_blocking_finding_count'=>0,'runtime_resolver_changed'=>false,
+          'suspension_authority_added'=>false,'outbox_delivery_added'=>false,'historical_payroll_accounting_rows_rewritten'=>0)))===false){
+          $error='activation_audit_failed';
+          break;
+        }
         $ok=true;$out=array('activation_id'=>$activation_id,'binding_id'=>$binding_id,'activation_sha256'=>$descriptor['activation_sha256'],'binding_sha256'=>$binding['binding_sha256'],'status'=>'executed');
     }while(false);
     if($ok)commit_transaction();else cancel_transaction();

@@ -1746,7 +1746,9 @@ function create_rfq_from_requisition($requisition_id, $supplier_ids = array(), $
     try {
         if (!begin_transaction()) return false;
         $queries = array('header'=>'SELECT * FROM '.TB_PREF.'purch_requisitions WHERE id='.(int)$requisition_id.' FOR UPDATE',
-            'lines'=>'SELECT line.*, item.description AS stock_description, item.units AS stock_units, item.inactive AS stock_inactive, unit.decimals AS stock_decimals FROM '.TB_PREF.'purch_requisition_lines line LEFT JOIN '.TB_PREF.'stock_master item ON item.stock_id=line.stock_id LEFT JOIN '.TB_PREF.'item_units unit ON unit.abbr=item.units WHERE line.requisition_id='.(int)$requisition_id.' ORDER BY line.id FOR UPDATE');
+            'lines'=>'SELECT line.*, item.description AS stock_description, item.units AS stock_units, item.inactive AS stock_inactive, unit.decimals AS stock_decimals FROM '
+              .TB_PREF.'purch_requisition_lines line LEFT JOIN '.TB_PREF.'stock_master item ON item.stock_id=line.stock_id LEFT JOIN '
+              .TB_PREF.'item_units unit ON unit.abbr=item.units WHERE line.requisition_id='.(int)$requisition_id.' ORDER BY line.id FOR UPDATE');
         $snapshot = array();
         foreach ($queries as $key=>$query) $snapshot[$key] = read_requisition_rfq_rows($query);
         if (count($snapshot['header']) !== 1) throw new RuntimeException('Requisition is unavailable.');

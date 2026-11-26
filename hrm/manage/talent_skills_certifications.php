@@ -168,7 +168,8 @@ if ($action !== '' && !check_csrf_token()) {
     else display_notification(_('Performance finalized with immutable event ID ').(int)$result['performance_workflow_event_id']._(' and deterministic aggregate rating ').htmlspecialchars((string)$result['aggregate_rating_value'], ENT_QUOTES, 'UTF-8'));
 }
 
-display_note(_('This governed surface is limited to authenticated company-scoped SA_HRSETTINGS users. It appends immutable definitions/evidence and reads one exact employee at a time. From database version 1.0.960 the bounded performance surface may register cycles, review subjects and minimized assessment evidence. From 1.0.964 it may append only open-to-submitted and submitted-to-reviewed workflow events; from 1.0.965 reviewed subjects may be finalized using a deterministic mean of immutable manager/reviewer numeric ratings. These workflow/score artifacts are descriptive evidence only: they cannot mutate legacy appraisal, compensation, payroll/accounting, or make employment decisions. performance export remains disabled.'), 0, 1);
+display_note(_('This governed surface is limited to authenticated company-scoped SA_HRSETTINGS users. It appends immutable definitions/evidence and reads one exact employee at a time. From database version 1.0.960 the bounded performance surface may register cycles, review subjects and minimized assessment evidence. From 1.0.964 it may append only open-to-submitted and submitted-to-reviewed workflow events; from 1.0.965 reviewed subjects may be finalized using a deterministic mean of immutable manager/reviewer numeric ratings. These workflow/score artifacts are descriptive evidence only: they cannot mutate legacy appraisal, compensation, payroll/accounting, or make employment decisions. performance export remains disabled.'),
+	0, 1);
 
 start_form(); hidden('_token', ensure_csrf_token()); hidden('tal_action', 'skill_definition');
 start_table(TABLESTYLE2); table_section_title(_('Register skill definition'));

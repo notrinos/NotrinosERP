@@ -88,7 +88,14 @@ function can_process() {
 //-------------------------------------------------------------------------------------------------
 
 if (isset($_POST['submit']) && can_process()) {
-	update_company_prefs(get_post( array('retained_earnings_act', 'profit_loss_year_act', 'debtors_act', 'pyt_discount_act', 'creditors_act', 'freight_act', 'deferred_income_act', 'exchange_diff_act', 'bank_charge_act', 'default_sales_act', 'default_sales_discount_act', 'default_prompt_payment_act', 'default_inventory_act', 'default_cogs_act', 'depreciation_period', 'default_loss_on_asset_disposal_act', 'default_adj_act', 'default_inv_sales_act', 'default_wip_act', 'legal_text', 'past_due_days', 'default_workorder_required', 'default_dim_required', 'default_receival_required', 'default_delivery_required', 'default_quote_valid_days', 'grn_clearing_act', 'tax_algorithm', 'no_zero_lines_amount', 'show_po_item_codes', 'accounts_alpha', 'loc_notification', 'print_invoice_no', 'allow_negative_prices', 'print_item_images_on_quote', 'allow_negative_stock'=> 0, 'accumulate_shipping'=> 0, 'po_over_receive' => 0.0, 'po_over_charge' => 0.0, 'default_credit_limit'=>0.0)));
+	update_company_prefs(get_post( array('retained_earnings_act', 'profit_loss_year_act', 'debtors_act', 'pyt_discount_act',
+		'creditors_act', 'freight_act', 'deferred_income_act', 'exchange_diff_act', 'bank_charge_act', 'default_sales_act', 'default_sales_discount_act',
+		'default_prompt_payment_act', 'default_inventory_act', 'default_cogs_act', 'depreciation_period', 'default_loss_on_asset_disposal_act',
+		'default_adj_act', 'default_inv_sales_act', 'default_wip_act', 'legal_text', 'past_due_days', 'default_workorder_required',
+		'default_dim_required', 'default_receival_required', 'default_delivery_required', 'default_quote_valid_days', 'grn_clearing_act',
+		'tax_algorithm', 'no_zero_lines_amount', 'show_po_item_codes', 'accounts_alpha', 'loc_notification', 'print_invoice_no',
+		'allow_negative_prices', 'print_item_images_on_quote', 'allow_negative_stock'=> 0, 'accumulate_shipping'=> 0, 'po_over_receive' => 0.0,
+		'po_over_charge' => 0.0, 'default_credit_limit'=>0.0)));
 
 	display_notification(_('The general GL setup has been updated.'));
 }

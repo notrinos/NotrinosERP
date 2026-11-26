@@ -135,10 +135,9 @@ function get_item_locations($show_inactive, $fixed_asset = 0) {
 //------------------------------------------------------------------------------------
 
 function set_reorder_level($stock_id, $loc_code, $reorder_level) {
-	$sql = "UPDATE ".TB_PREF."loc_stock SET reorder_level = $reorder_level
-		WHERE stock_id = ".db_escape($stock_id)." AND loc_code = ".db_escape($loc_code);
+	$sql = "UPDATE ".TB_PREF."loc_stock SET reorder_level = ? WHERE stock_id = ? AND loc_code = ?";
 
-	db_query($sql, 'an item reorder could not be set');
+	db_execute($sql, array((float)$reorder_level, $stock_id, $loc_code), 'an item reorder could not be set');
 }
 
 //------------------------------------------------------------------------------------

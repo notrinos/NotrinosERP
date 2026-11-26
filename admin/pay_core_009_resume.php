@@ -8,7 +8,10 @@ if (PHP_SAPI !== 'cli') {
 $path_to_root=dirname(__DIR__);
 function pc9_cli_os_user(){foreach(array('USERNAME','USER') as $key){$u=trim((string)getenv($key));if($u!=='')return $u;}if(function_exists('posix_geteuid')&&function_exists('posix_getpwuid')){$p=@posix_getpwuid(posix_geteuid());if(is_array($p)&&!empty($p['name']))return (string)$p['name'];}return '';}
 $options=cli_command_options(array_slice($argv,1));
-if($options===false||array_diff(array_keys($options),array('company','run-id','user-id','chunk-size'))||!isset($options['company'],$options['run-id'],$options['user-id'])||preg_match('/^\d+$/D',$options['company'])!==1||preg_match('/^[1-9]\d*$/D',$options['run-id'])!==1||preg_match('/^[1-9]\d*$/D',$options['user-id'])!==1||(isset($options['chunk-size'])&&preg_match('/^[1-9]\d*$/D',$options['chunk-size'])!==1))cli_command_exit(false,'invalid_arguments');
+if($options===false||array_diff(array_keys($options),array('company','run-id','user-id','chunk-size'))||!isset($options['company'],
+	$options['run-id'],$options['user-id'])||preg_match('/^\d+$/D',$options['company'])!==1||preg_match('/^[1-9]\d*$/D',$options['run-id'])!==1||preg_match('/^[1-9]\d*$/D',
+	$options['user-id'])!==1||(isset($options['chunk-size'])&&preg_match('/^[1-9]\d*$/D',$options['chunk-size'])!==1))cli_command_exit(false,
+	'invalid_arguments');
 $company=(int)$options['company'];$run_id=(int)$options['run-id'];$user_id=(int)$options['user-id'];$chunk=isset($options['chunk-size'])?(int)$options['chunk-size']:null;
 $db_connections=array();require $path_to_root.'/config_db.php';
 if(!isset($db_connections[$company])||!is_array($db_connections[$company]))cli_command_exit(false,'unknown_company');
@@ -36,7 +39,21 @@ if(!isset($db_version)||(string)$db_version!=='1.0.669')cli_command_exit(false,'
 if(!set_global_connection($company))cli_command_exit(false,'database_connection_failed');
 $company_version=isset($SysPrefs->prefs['version_id'])?(string)$SysPrefs->prefs['version_id']:'';if($company_version!=='1.0.669')cli_command_exit(false,'company_version_mismatch',array('company_version'=>$company_version));
 $user=get_user($user_id);if(!$user||!empty($user['inactive']))cli_command_exit(false,'user_identity_rejected');$role=get_security_role((int)$user['role_id']);if(!$role)cli_command_exit(false,'security_role_missing');
-$cu=new current_user();$cu->company=$company;$cu->cur_con=$company;$cu->user=$user_id;$cu->access=(int)$user['role_id'];$cu->loginname=(string)$user['login_id'];$cu->username=$cu->loginname;$cu->name=(string)$user['real_name'];$cu->logged=true;$cu->role_set=array();foreach($role['areas'] as $code){$code=(int)$code;if(in_array($code&~0xff,$role['sections']))$cu->role_set[]=$code;}$_SESSION['wa_current_user']=$cu;
+$cu=new current_user();
+$cu->company=$company;
+$cu->cur_con=$company;
+$cu->user=$user_id;
+$cu->access=(int)$user['role_id'];
+$cu->loginname=(string)$user['login_id'];
+$cu->username=$cu->loginname;
+$cu->name=(string)$user['real_name'];
+$cu->logged=true;
+$cu->role_set=array();
+foreach($role['areas'] as $code){
+	$code=(int)$code;
+	if(in_array($code&~0xff,$role['sections']))$cu->role_set[]=$code;
+}
+$_SESSION['wa_current_user']=$cu;
 if(!user_check_access('SA_HRM_EXECUTE_PAY_CORE_RUN'))cli_command_exit(false,'execute_access_denied');
 $error=null;$result=hrm_pay_core_009_run_chunk($run_id,'cli',$chunk,$error);if($result===false)cli_command_exit(false,'resume_failed',array('reason'=>(string)$error));
 $status=hrm_pay_core_009_status($run_id,$status_error);if($status===false)cli_command_exit(false,'status_failed',array('reason'=>(string)$status_error));

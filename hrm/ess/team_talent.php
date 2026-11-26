@@ -41,7 +41,8 @@ if ($performance_enabled) {
 }
 
 hrm_ess_002_emit_shell_start(_('Team Talent Profile'), 'team');
-echo '<p>' . _('This read-only view uses the authenticated manager session and the current effective date only. Direct team membership and explicitly approved, unrevoked ESS-002 team-view delegation are resolved server-side; this route accepts no employee selector or historical as-of date. Evidence hashes, source/credential/actor references, payroll/compensation data and export are excluded.') . '</p>';
+echo '<p>' . _('This read-only view uses the authenticated manager session and the current effective date only. Direct team membership and explicitly approved, unrevoked ESS-002 team-view delegation are resolved server-side; this route accepts no employee selector or historical as-of date. Evidence hashes, source/credential/actor references, payroll/compensation data and export are excluded.')
+	. '</p>';
 hrm_ess_002_ui_table(
     _('Skills'),
     array(_('Employee'), _('Skill'), _('Category'), _('Evidence type'), _('Proficiency'), _('Evidence date'), _('Valid from'), _('Valid to'), _('Scope')),

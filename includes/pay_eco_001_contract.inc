@@ -121,7 +121,20 @@ function pay_eco_001_publisher_profile_payload(array $profile){return array(
  'requested_at'=>(string)$profile['requested_at']
 );}
 function pay_eco_001_publisher_profile_sha256(array $profile){return pay_eco_001_hash(pay_eco_001_publisher_profile_payload($profile));}
-function pay_eco_001_validate_publisher_profile($profile,&$error){$error=null;$fields=array('publisher_id','profile_code','identity_evidence_sha256','support_policy_sha256','security_contact_sha256','terms_sha256','requested_by','requested_at','profile_sha256');if(!pay_eco_001_exact_fields($profile,$fields))return pay_eco_001_fail($error,'publisher_profile_fields_invalid');if(!pay_eco_001_positive_id($profile['publisher_id'])||!pay_eco_001_positive_id($profile['requested_by'])||!pay_eco_001_token($profile['profile_code']))return pay_eco_001_fail($error,'publisher_profile_identity_invalid');foreach(array('identity_evidence_sha256','support_policy_sha256','security_contact_sha256','terms_sha256','profile_sha256') as $field)if(!pay_eco_001_sha($profile[$field]))return pay_eco_001_fail($error,'publisher_profile_hash_invalid');if(pay_eco_001_time($profile['requested_at'])===false)return pay_eco_001_fail($error,'publisher_profile_time_invalid');if(!hash_equals(pay_eco_001_publisher_profile_sha256($profile),(string)$profile['profile_sha256']))return pay_eco_001_fail($error,'publisher_profile_digest_mismatch');return true;}
+function pay_eco_001_validate_publisher_profile($profile,&$error){
+	$error=null;
+	$fields=array('publisher_id','profile_code','identity_evidence_sha256','support_policy_sha256','security_contact_sha256',
+		'terms_sha256','requested_by','requested_at','profile_sha256');
+	if(!pay_eco_001_exact_fields($profile,$fields))return pay_eco_001_fail($error,'publisher_profile_fields_invalid');
+	if(!pay_eco_001_positive_id($profile['publisher_id'])||!pay_eco_001_positive_id($profile['requested_by'])||!pay_eco_001_token($profile['profile_code']))return pay_eco_001_fail($error,
+		'publisher_profile_identity_invalid');
+	foreach(array('identity_evidence_sha256','support_policy_sha256','security_contact_sha256','terms_sha256','profile_sha256') as $field)if(!pay_eco_001_sha($profile[$field]))return pay_eco_001_fail($error,
+		'publisher_profile_hash_invalid');
+	if(pay_eco_001_time($profile['requested_at'])===false)return pay_eco_001_fail($error,'publisher_profile_time_invalid');
+	if(!hash_equals(pay_eco_001_publisher_profile_sha256($profile),(string)$profile['profile_sha256']))return pay_eco_001_fail($error,
+		'publisher_profile_digest_mismatch');
+	return true;
+}
 
 function pay_eco_001_pack_candidate_payload(array $candidate){return array(
  'publisher_profile_id'=>(int)$candidate['publisher_profile_id'],
@@ -137,7 +150,21 @@ function pay_eco_001_pack_candidate_payload(array $candidate){return array(
  'submitted_at'=>(string)$candidate['submitted_at']
 );}
 function pay_eco_001_pack_candidate_sha256(array $candidate){return pay_eco_001_hash(pay_eco_001_pack_candidate_payload($candidate));}
-function pay_eco_001_validate_pack_candidate($candidate,&$error){$error=null;$fields=array('publisher_profile_id','pack_version_id','candidate_code','compatibility_sha256','certification_sha256','support_sha256','vulnerability_sha256','revocation_state_sha256','sandbox_profile_sha256','submitted_by','submitted_at','candidate_sha256');if(!pay_eco_001_exact_fields($candidate,$fields))return pay_eco_001_fail($error,'pack_candidate_fields_invalid');if(!pay_eco_001_positive_id($candidate['publisher_profile_id'])||!pay_eco_001_positive_id($candidate['pack_version_id'])||!pay_eco_001_positive_id($candidate['submitted_by'])||!pay_eco_001_token($candidate['candidate_code']))return pay_eco_001_fail($error,'pack_candidate_identity_invalid');foreach(array('compatibility_sha256','certification_sha256','support_sha256','vulnerability_sha256','revocation_state_sha256','sandbox_profile_sha256','candidate_sha256') as $field)if(!pay_eco_001_sha($candidate[$field]))return pay_eco_001_fail($error,'pack_candidate_hash_invalid');if(pay_eco_001_time($candidate['submitted_at'])===false)return pay_eco_001_fail($error,'pack_candidate_time_invalid');if(!hash_equals(pay_eco_001_pack_candidate_sha256($candidate),(string)$candidate['candidate_sha256']))return pay_eco_001_fail($error,'pack_candidate_digest_mismatch');return true;}
+function pay_eco_001_validate_pack_candidate($candidate,&$error){
+	$error=null;
+	$fields=array('publisher_profile_id','pack_version_id','candidate_code','compatibility_sha256','certification_sha256','support_sha256',
+		'vulnerability_sha256','revocation_state_sha256','sandbox_profile_sha256','submitted_by','submitted_at','candidate_sha256');
+	if(!pay_eco_001_exact_fields($candidate,$fields))return pay_eco_001_fail($error,'pack_candidate_fields_invalid');
+	if(!pay_eco_001_positive_id($candidate['publisher_profile_id'])||!pay_eco_001_positive_id($candidate['pack_version_id'])||!pay_eco_001_positive_id($candidate['submitted_by'])||!pay_eco_001_token($candidate['candidate_code']))return pay_eco_001_fail($error,
+		'pack_candidate_identity_invalid');
+	foreach(array('compatibility_sha256','certification_sha256','support_sha256','vulnerability_sha256','revocation_state_sha256',
+		'sandbox_profile_sha256','candidate_sha256') as $field)if(!pay_eco_001_sha($candidate[$field]))return pay_eco_001_fail($error,
+		'pack_candidate_hash_invalid');
+	if(pay_eco_001_time($candidate['submitted_at'])===false)return pay_eco_001_fail($error,'pack_candidate_time_invalid');
+	if(!hash_equals(pay_eco_001_pack_candidate_sha256($candidate),(string)$candidate['candidate_sha256']))return pay_eco_001_fail($error,
+		'pack_candidate_digest_mismatch');
+	return true;
+}
 
 function pay_eco_001_catalog_decisions(){return array('defer','reject','admit_for_review');}
 function pay_eco_001_catalog_decision_payload(array $decision){return array(
@@ -153,7 +180,22 @@ function pay_eco_001_catalog_decision_payload(array $decision){return array(
  'decided_at'=>(string)$decision['decided_at']
 );}
 function pay_eco_001_catalog_decision_sha256(array $decision){return pay_eco_001_hash(pay_eco_001_catalog_decision_payload($decision));}
-function pay_eco_001_validate_catalog_decision($decision,&$error){$error=null;$fields=array('catalog_candidate_id','decision','trust_snapshot_sha256','certification_snapshot_sha256','compatibility_snapshot_sha256','vulnerability_snapshot_sha256','decision_reason_sha256','maker_id','checker_id','decided_at','decision_sha256');if(!pay_eco_001_exact_fields($decision,$fields))return pay_eco_001_fail($error,'catalog_decision_fields_invalid');if(!pay_eco_001_positive_id($decision['catalog_candidate_id'])||!pay_eco_001_positive_id($decision['maker_id'])||!pay_eco_001_positive_id($decision['checker_id'])||(int)$decision['maker_id']===(int)$decision['checker_id'])return pay_eco_001_fail($error,'catalog_decision_separation_invalid');if(!in_array($decision['decision'],pay_eco_001_catalog_decisions(),true))return pay_eco_001_fail($error,'catalog_decision_value_invalid');foreach(array('trust_snapshot_sha256','certification_snapshot_sha256','compatibility_snapshot_sha256','vulnerability_snapshot_sha256','decision_reason_sha256','decision_sha256') as $field)if(!pay_eco_001_sha($decision[$field]))return pay_eco_001_fail($error,'catalog_decision_hash_invalid');if(pay_eco_001_time($decision['decided_at'])===false)return pay_eco_001_fail($error,'catalog_decision_time_invalid');if(!hash_equals(pay_eco_001_catalog_decision_sha256($decision),(string)$decision['decision_sha256']))return pay_eco_001_fail($error,'catalog_decision_digest_mismatch');return true;}
+function pay_eco_001_validate_catalog_decision($decision,&$error){
+	$error=null;
+	$fields=array('catalog_candidate_id','decision','trust_snapshot_sha256','certification_snapshot_sha256','compatibility_snapshot_sha256',
+		'vulnerability_snapshot_sha256','decision_reason_sha256','maker_id','checker_id','decided_at','decision_sha256');
+	if(!pay_eco_001_exact_fields($decision,$fields))return pay_eco_001_fail($error,'catalog_decision_fields_invalid');
+	if(!pay_eco_001_positive_id($decision['catalog_candidate_id'])||!pay_eco_001_positive_id($decision['maker_id'])||!pay_eco_001_positive_id($decision['checker_id'])||(int)$decision['maker_id']===(int)$decision['checker_id'])return pay_eco_001_fail($error,
+		'catalog_decision_separation_invalid');
+	if(!in_array($decision['decision'],pay_eco_001_catalog_decisions(),true))return pay_eco_001_fail($error,'catalog_decision_value_invalid');
+	foreach(array('trust_snapshot_sha256','certification_snapshot_sha256','compatibility_snapshot_sha256','vulnerability_snapshot_sha256',
+		'decision_reason_sha256','decision_sha256') as $field)if(!pay_eco_001_sha($decision[$field]))return pay_eco_001_fail($error,
+		'catalog_decision_hash_invalid');
+	if(pay_eco_001_time($decision['decided_at'])===false)return pay_eco_001_fail($error,'catalog_decision_time_invalid');
+	if(!hash_equals(pay_eco_001_catalog_decision_sha256($decision),(string)$decision['decision_sha256']))return pay_eco_001_fail($error,
+		'catalog_decision_digest_mismatch');
+	return true;
+}
 
 
 /** Partner onboarding reuses the already accepted PAY-CTRY trust/install authorities; no role is auto-granted. */
@@ -241,7 +283,13 @@ function pay_eco_001_validate_sandbox_evaluation($evaluation,&$error){
  return true;
 }
 /** The caller may identify only the immutable candidate; profile, suite, result, actor and time are server-derived. */
-function pay_eco_001_validate_sandbox_evaluation_request($request,&$error){$error=null;$fields=array('catalog_candidate_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'sandbox_evaluation_request_fields_invalid');if(!pay_eco_001_positive_id($request['catalog_candidate_id']))return pay_eco_001_fail($error,'sandbox_evaluation_request_identity_invalid');return true;}
+function pay_eco_001_validate_sandbox_evaluation_request($request,&$error){
+	$error=null;
+	$fields=array('catalog_candidate_id');
+	if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'sandbox_evaluation_request_fields_invalid');
+	if(!pay_eco_001_positive_id($request['catalog_candidate_id']))return pay_eco_001_fail($error,'sandbox_evaluation_request_identity_invalid');
+	return true;
+}
 
 /** Dependency-integrity scan profile. Vulnerability intelligence correlation remains explicitly unconfigured. */
 function pay_eco_001_dependency_scan_profile(){return array(
@@ -359,8 +407,31 @@ function pay_eco_001_vulnerability_correlation_payload(array $c){return array(
  'correlated_by'=>(int)$c['correlated_by'],'correlated_at'=>(string)$c['correlated_at']
 );}
 function pay_eco_001_vulnerability_correlation_sha256(array $c){return pay_eco_001_hash(pay_eco_001_vulnerability_correlation_payload($c));}
-function pay_eco_001_validate_vulnerability_correlation($c,&$error){$error=null;$fields=array('dependency_scan_id','vulnerability_snapshot_id','subject_inventory_sha256','matched_advisories_sha256','result','max_severity','findings_sha256','correlated_by','correlated_at','correlation_sha256');if(!pay_eco_001_exact_fields($c,$fields))return pay_eco_001_fail($error,'vulnerability_correlation_fields_invalid');foreach(array('dependency_scan_id','vulnerability_snapshot_id','correlated_by') as $field)if(!pay_eco_001_positive_id($c[$field]))return pay_eco_001_fail($error,'vulnerability_correlation_identity_invalid');foreach(array('subject_inventory_sha256','matched_advisories_sha256','findings_sha256','correlation_sha256') as $field)if(!pay_eco_001_sha($c[$field]))return pay_eco_001_fail($error,'vulnerability_correlation_hash_invalid');if(!in_array($c['result'],pay_eco_001_vulnerability_correlation_results(),true))return pay_eco_001_fail($error,'vulnerability_correlation_result_invalid');if($c['result']==='passed'&&$c['max_severity']!=='none')return pay_eco_001_fail($error,'vulnerability_correlation_pass_severity_invalid');if($c['result']==='failed'&&!in_array($c['max_severity'],pay_eco_001_vulnerability_severities(),true))return pay_eco_001_fail($error,'vulnerability_correlation_fail_severity_invalid');if(pay_eco_001_time($c['correlated_at'])===false)return pay_eco_001_fail($error,'vulnerability_correlation_time_invalid');if(!hash_equals(pay_eco_001_vulnerability_correlation_sha256($c),(string)$c['correlation_sha256']))return pay_eco_001_fail($error,'vulnerability_correlation_digest_mismatch');return true;}
-function pay_eco_001_validate_vulnerability_correlation_request($request,&$error){$error=null;$fields=array('dependency_scan_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'vulnerability_correlation_request_fields_invalid');if(!pay_eco_001_positive_id($request['dependency_scan_id']))return pay_eco_001_fail($error,'vulnerability_correlation_request_identity_invalid');return true;}
+function pay_eco_001_validate_vulnerability_correlation($c,&$error){
+	$error=null;
+	$fields=array('dependency_scan_id','vulnerability_snapshot_id','subject_inventory_sha256','matched_advisories_sha256','result',
+		'max_severity','findings_sha256','correlated_by','correlated_at','correlation_sha256');
+	if(!pay_eco_001_exact_fields($c,$fields))return pay_eco_001_fail($error,'vulnerability_correlation_fields_invalid');
+	foreach(array('dependency_scan_id','vulnerability_snapshot_id','correlated_by') as $field)if(!pay_eco_001_positive_id($c[$field]))return pay_eco_001_fail($error,
+		'vulnerability_correlation_identity_invalid');
+	foreach(array('subject_inventory_sha256','matched_advisories_sha256','findings_sha256','correlation_sha256') as $field)if(!pay_eco_001_sha($c[$field]))return pay_eco_001_fail($error,
+		'vulnerability_correlation_hash_invalid');
+	if(!in_array($c['result'],pay_eco_001_vulnerability_correlation_results(),true))return pay_eco_001_fail($error,'vulnerability_correlation_result_invalid');
+	if($c['result']==='passed'&&$c['max_severity']!=='none')return pay_eco_001_fail($error,'vulnerability_correlation_pass_severity_invalid');
+	if($c['result']==='failed'&&!in_array($c['max_severity'],pay_eco_001_vulnerability_severities(),true))return pay_eco_001_fail($error,
+		'vulnerability_correlation_fail_severity_invalid');
+	if(pay_eco_001_time($c['correlated_at'])===false)return pay_eco_001_fail($error,'vulnerability_correlation_time_invalid');
+	if(!hash_equals(pay_eco_001_vulnerability_correlation_sha256($c),(string)$c['correlation_sha256']))return pay_eco_001_fail($error,
+		'vulnerability_correlation_digest_mismatch');
+	return true;
+}
+function pay_eco_001_validate_vulnerability_correlation_request($request,&$error){
+	$error=null;
+	$fields=array('dependency_scan_id');
+	if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'vulnerability_correlation_request_fields_invalid');
+	if(!pay_eco_001_positive_id($request['dependency_scan_id']))return pay_eco_001_fail($error,'vulnerability_correlation_request_identity_invalid');
+	return true;
+}
 
 
 /** Signed/reproducible artifact-admission policy. Admission is evidence-only and never publishes or installs a pack. */
@@ -406,7 +477,11 @@ function pay_eco_001_artifact_admission_payload(array $a){return array(
 );}
 function pay_eco_001_artifact_admission_sha256(array $a){return pay_eco_001_hash(pay_eco_001_artifact_admission_payload($a));}
 function pay_eco_001_validate_artifact_admission($a,&$error){
- $error=null;$fields=array('catalog_candidate_id','verification_report_id','sandbox_evaluation_id','dependency_scan_id','vulnerability_correlation_id','admission_profile_sha256','manifest_sha256','semantic_root','evidence_root','artifact_inventory_sha256','reproducibility_sha256','signature_attestation_sha256','trust_snapshot_sha256','result','admission_findings_sha256','admitted_by','admitted_at','admission_sha256');
+ $error=null;
+ $fields=array('catalog_candidate_id','verification_report_id','sandbox_evaluation_id','dependency_scan_id','vulnerability_correlation_id',
+   'admission_profile_sha256','manifest_sha256','semantic_root','evidence_root','artifact_inventory_sha256','reproducibility_sha256',
+   'signature_attestation_sha256','trust_snapshot_sha256','result','admission_findings_sha256','admitted_by','admitted_at',
+   'admission_sha256');
  if(!pay_eco_001_exact_fields($a,$fields))return pay_eco_001_fail($error,'artifact_admission_fields_invalid');
  foreach(array('catalog_candidate_id','verification_report_id','sandbox_evaluation_id','dependency_scan_id','vulnerability_correlation_id','admitted_by') as $field)if(!pay_eco_001_positive_id($a[$field]))return pay_eco_001_fail($error,'artifact_admission_identity_invalid');
  foreach(array('admission_profile_sha256','manifest_sha256','semantic_root','evidence_root','artifact_inventory_sha256','reproducibility_sha256','signature_attestation_sha256','trust_snapshot_sha256','admission_findings_sha256','admission_sha256') as $field)if(!pay_eco_001_sha($a[$field]))return pay_eco_001_fail($error,'artifact_admission_hash_invalid');
@@ -415,7 +490,13 @@ function pay_eco_001_validate_artifact_admission($a,&$error){
  if(pay_eco_001_time($a['admitted_at'])===false)return pay_eco_001_fail($error,'artifact_admission_time_invalid');
  if(!hash_equals(pay_eco_001_artifact_admission_sha256($a),(string)$a['admission_sha256']))return pay_eco_001_fail($error,'artifact_admission_digest_mismatch');return true;
 }
-function pay_eco_001_validate_artifact_admission_request($request,&$error){$error=null;$fields=array('catalog_candidate_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'artifact_admission_request_fields_invalid');if(!pay_eco_001_positive_id($request['catalog_candidate_id']))return pay_eco_001_fail($error,'artifact_admission_request_identity_invalid');return true;}
+function pay_eco_001_validate_artifact_admission_request($request,&$error){
+	$error=null;
+	$fields=array('catalog_candidate_id');
+	if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'artifact_admission_request_fields_invalid');
+	if(!pay_eco_001_positive_id($request['catalog_candidate_id']))return pay_eco_001_fail($error,'artifact_admission_request_identity_invalid');
+	return true;
+}
 
 
 
@@ -593,13 +674,62 @@ function pay_eco_001_marketplace_profile(){return array(
  'historical_rewrite_authority'=>false
 );}
 function pay_eco_001_marketplace_profile_sha256(){return pay_eco_001_hash(pay_eco_001_marketplace_profile());}
-function pay_eco_001_validate_marketplace_installation_request($request,&$error){$error=null;$fields=array('catalog_publication_id','site_installation_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'marketplace_installation_request_fields_invalid');if(!pay_eco_001_positive_id($request['catalog_publication_id'])||!pay_eco_001_positive_id($request['site_installation_id']))return pay_eco_001_fail($error,'marketplace_installation_request_identity_invalid');return true;}
-function pay_eco_001_marketplace_installation_payload(array $e){return array('catalog_publication_id'=>(int)$e['catalog_publication_id'],'site_installation_id'=>(int)$e['site_installation_id'],'pack_version_id'=>(int)$e['pack_version_id'],'publication_sha256'=>(string)$e['publication_sha256'],'receipt_sha256'=>(string)$e['receipt_sha256'],'recorded_by'=>(int)$e['recorded_by'],'recorded_at'=>(string)$e['recorded_at']);}
+function pay_eco_001_validate_marketplace_installation_request($request,&$error){
+	$error=null;
+	$fields=array('catalog_publication_id','site_installation_id');
+	if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'marketplace_installation_request_fields_invalid');
+	if(!pay_eco_001_positive_id($request['catalog_publication_id'])||!pay_eco_001_positive_id($request['site_installation_id']))return pay_eco_001_fail($error,
+		'marketplace_installation_request_identity_invalid');
+	return true;
+}
+function pay_eco_001_marketplace_installation_payload(array $e){
+	return array('catalog_publication_id'=>(int)$e['catalog_publication_id'],'site_installation_id'=>(int)$e['site_installation_id'],
+		'pack_version_id'=>(int)$e['pack_version_id'],'publication_sha256'=>(string)$e['publication_sha256'],'receipt_sha256'=>(string)$e['receipt_sha256'],
+		'recorded_by'=>(int)$e['recorded_by'],'recorded_at'=>(string)$e['recorded_at']);
+}
 function pay_eco_001_marketplace_installation_sha256(array $e){return pay_eco_001_hash(pay_eco_001_marketplace_installation_payload($e));}
-function pay_eco_001_validate_marketplace_installation_evidence($e,&$error){$error=null;$fields=array('catalog_publication_id','site_installation_id','pack_version_id','publication_sha256','receipt_sha256','recorded_by','recorded_at','marketplace_installation_sha256');if(!pay_eco_001_exact_fields($e,$fields))return pay_eco_001_fail($error,'marketplace_installation_fields_invalid');foreach(array('catalog_publication_id','site_installation_id','pack_version_id','recorded_by') as $f)if(!pay_eco_001_positive_id($e[$f]))return pay_eco_001_fail($error,'marketplace_installation_identity_invalid');foreach(array('publication_sha256','receipt_sha256','marketplace_installation_sha256') as $f)if(!pay_eco_001_sha($e[$f]))return pay_eco_001_fail($error,'marketplace_installation_digest_invalid');if(pay_eco_001_time($e['recorded_at'])===false)return pay_eco_001_fail($error,'marketplace_installation_time_invalid');if(!hash_equals(pay_eco_001_marketplace_installation_sha256($e),(string)$e['marketplace_installation_sha256']))return pay_eco_001_fail($error,'marketplace_installation_digest_mismatch');return true;}
-function pay_eco_001_validate_marketplace_activation_request($request,&$error){$error=null;$fields=array('marketplace_installation_id','activation_id','binding_id');if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'marketplace_activation_request_fields_invalid');foreach($fields as $f)if(!pay_eco_001_positive_id($request[$f]))return pay_eco_001_fail($error,'marketplace_activation_request_identity_invalid');return true;}
-function pay_eco_001_marketplace_activation_payload(array $e){return array('marketplace_installation_id'=>(int)$e['marketplace_installation_id'],'activation_id'=>(int)$e['activation_id'],'binding_id'=>(int)$e['binding_id'],'company_id'=>(int)$e['company_id'],'scope_type'=>(string)$e['scope_type'],'activation_sha256'=>(string)$e['activation_sha256'],'binding_sha256'=>(string)$e['binding_sha256'],'recorded_by'=>(int)$e['recorded_by'],'recorded_at'=>(string)$e['recorded_at']);}
+function pay_eco_001_validate_marketplace_installation_evidence($e,&$error){
+	$error=null;
+	$fields=array('catalog_publication_id','site_installation_id','pack_version_id','publication_sha256','receipt_sha256','recorded_by',
+		'recorded_at','marketplace_installation_sha256');
+	if(!pay_eco_001_exact_fields($e,$fields))return pay_eco_001_fail($error,'marketplace_installation_fields_invalid');
+	foreach(array('catalog_publication_id','site_installation_id','pack_version_id','recorded_by') as $f)if(!pay_eco_001_positive_id($e[$f]))return pay_eco_001_fail($error,
+		'marketplace_installation_identity_invalid');
+	foreach(array('publication_sha256','receipt_sha256','marketplace_installation_sha256') as $f)if(!pay_eco_001_sha($e[$f]))return pay_eco_001_fail($error,
+		'marketplace_installation_digest_invalid');
+	if(pay_eco_001_time($e['recorded_at'])===false)return pay_eco_001_fail($error,'marketplace_installation_time_invalid');
+	if(!hash_equals(pay_eco_001_marketplace_installation_sha256($e),(string)$e['marketplace_installation_sha256']))return pay_eco_001_fail($error,
+		'marketplace_installation_digest_mismatch');
+	return true;
+}
+function pay_eco_001_validate_marketplace_activation_request($request,&$error){
+	$error=null;
+	$fields=array('marketplace_installation_id','activation_id','binding_id');
+	if(!pay_eco_001_exact_fields($request,$fields))return pay_eco_001_fail($error,'marketplace_activation_request_fields_invalid');
+	foreach($fields as $f)if(!pay_eco_001_positive_id($request[$f]))return pay_eco_001_fail($error,'marketplace_activation_request_identity_invalid');
+	return true;
+}
+function pay_eco_001_marketplace_activation_payload(array $e){
+	return array('marketplace_installation_id'=>(int)$e['marketplace_installation_id'],'activation_id'=>(int)$e['activation_id'],
+		'binding_id'=>(int)$e['binding_id'],'company_id'=>(int)$e['company_id'],'scope_type'=>(string)$e['scope_type'],'activation_sha256'=>(string)$e['activation_sha256'],
+		'binding_sha256'=>(string)$e['binding_sha256'],'recorded_by'=>(int)$e['recorded_by'],'recorded_at'=>(string)$e['recorded_at']);
+}
 function pay_eco_001_marketplace_activation_sha256(array $e){return pay_eco_001_hash(pay_eco_001_marketplace_activation_payload($e));}
-function pay_eco_001_validate_marketplace_activation_evidence($e,&$error){$error=null;$fields=array('marketplace_installation_id','activation_id','binding_id','company_id','scope_type','activation_sha256','binding_sha256','recorded_by','recorded_at','marketplace_activation_sha256');if(!pay_eco_001_exact_fields($e,$fields))return pay_eco_001_fail($error,'marketplace_activation_fields_invalid');foreach(array('marketplace_installation_id','activation_id','binding_id','recorded_by') as $f)if(!pay_eco_001_positive_id($e[$f]))return pay_eco_001_fail($error,'marketplace_activation_identity_invalid');if((int)$e['company_id']<0||!in_array($e['scope_type'],array('company','legal_entity','payroll_scope'),true))return pay_eco_001_fail($error,'marketplace_activation_scope_invalid');foreach(array('activation_sha256','binding_sha256','marketplace_activation_sha256') as $f)if(!pay_eco_001_sha($e[$f]))return pay_eco_001_fail($error,'marketplace_activation_digest_invalid');if(pay_eco_001_time($e['recorded_at'])===false)return pay_eco_001_fail($error,'marketplace_activation_time_invalid');if(!hash_equals(pay_eco_001_marketplace_activation_sha256($e),(string)$e['marketplace_activation_sha256']))return pay_eco_001_fail($error,'marketplace_activation_digest_mismatch');return true;}
+function pay_eco_001_validate_marketplace_activation_evidence($e,&$error){
+	$error=null;
+	$fields=array('marketplace_installation_id','activation_id','binding_id','company_id','scope_type','activation_sha256','binding_sha256',
+		'recorded_by','recorded_at','marketplace_activation_sha256');
+	if(!pay_eco_001_exact_fields($e,$fields))return pay_eco_001_fail($error,'marketplace_activation_fields_invalid');
+	foreach(array('marketplace_installation_id','activation_id','binding_id','recorded_by') as $f)if(!pay_eco_001_positive_id($e[$f]))return pay_eco_001_fail($error,
+		'marketplace_activation_identity_invalid');
+	if((int)$e['company_id']<0||!in_array($e['scope_type'],array('company','legal_entity','payroll_scope'),true))return pay_eco_001_fail($error,
+		'marketplace_activation_scope_invalid');
+	foreach(array('activation_sha256','binding_sha256','marketplace_activation_sha256') as $f)if(!pay_eco_001_sha($e[$f]))return pay_eco_001_fail($error,
+		'marketplace_activation_digest_invalid');
+	if(pay_eco_001_time($e['recorded_at'])===false)return pay_eco_001_fail($error,'marketplace_activation_time_invalid');
+	if(!hash_equals(pay_eco_001_marketplace_activation_sha256($e),(string)$e['marketplace_activation_sha256']))return pay_eco_001_fail($error,
+		'marketplace_activation_digest_mismatch');
+	return true;
+}
 
 ?>

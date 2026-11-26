@@ -15,15 +15,26 @@ function pay_ctry_007_schema_columns(){return array(
 'pay_ctry_update_notice_delivery_attempts'=>array('delivery_attempt_id','delivery_outbox_id','attempt_no','provider_code','delivery_status','result_sha256','error_code','delivery_attempt_sha256','attempted_by','attempted_at','created_at'));
 }
 function pay_ctry_007_required_indexes(){return array(
-'pay_ctry_catalog_releases'=>array('uq_pct7_cr_release'=>array(1,array('catalog_code','release_no')),'uq_pct7_cr_sha'=>array(1,array('release_sha256')),'uq_pct7_cr_pred'=>array(1,array('predecessor_catalog_release_id')),'ix_pct7_cr_root'=>array(0,array('catalog_root_sha256','released_at')),'fk_pct7_cr_publisher'=>array(0,array('publisher_id')),'fk_pct7_cr_signer'=>array(0,array('signer_id')),'fk_pct7_cr_key'=>array(0,array('trust_key_id'))),
+'pay_ctry_catalog_releases'=>array('uq_pct7_cr_release'=>array(1,array('catalog_code','release_no')),'uq_pct7_cr_sha'=>array(1,
+	array('release_sha256')),'uq_pct7_cr_pred'=>array(1,array('predecessor_catalog_release_id')),'ix_pct7_cr_root'=>array(0,
+	array('catalog_root_sha256','released_at')),'fk_pct7_cr_publisher'=>array(0,array('publisher_id')),'fk_pct7_cr_signer'=>array(0,
+	array('signer_id')),'fk_pct7_cr_key'=>array(0,array('trust_key_id'))),
 'pay_ctry_catalog_release_admissions'=>array('uq_pct7_ca_release'=>array(1,array('catalog_release_id')),'uq_pct7_ca_sha'=>array(1,array('admission_sha256')),'ix_pct7_ca_checker'=>array(0,array('checker_id','decided_at'))),
 'pay_ctry_update_notices'=>array('uq_pct7_un_key'=>array(1,array('notice_key')),'uq_pct7_un_dedupe'=>array(1,array('dedupe_key')),'uq_pct7_un_sha'=>array(1,array('notice_sha256')),'ix_pct7_un_pack'=>array(0,array('pack_code','current_pack_version','successor_pack_version')),'ix_pct7_un_deadline'=>array(0,array('severity','deadline_at')),'fk_pct7_un_release'=>array(0,array('catalog_release_id'))),
 'pay_ctry_update_notice_applicability'=>array('uq_pct7_na_sha'=>array(1,array('applicability_sha256')),'ix_pct7_na_notice'=>array(0,array('update_notice_id','company_id')),'ix_pct7_na_scope'=>array(0,array('company_id','scope_type','legal_entity_id','payroll_scope_key'))),
 'pay_ctry_update_notice_audiences'=>array('uq_pct7_au_key'=>array(1,array('audience_key')),'uq_pct7_au_sha'=>array(1,array('audience_sha256')),'ix_pct7_au_notice'=>array(0,array('update_notice_id','notice_applicability_id')),'ix_pct7_au_type'=>array(0,array('audience_type','selected_at')),'fk_pct7_au_app'=>array(0,array('notice_applicability_id'))),
-'pay_ctry_update_notice_recipient_events'=>array('uq_pct7_re_key'=>array(1,array('recipient_event_key')),'uq_pct7_re_stream'=>array(1,array('notice_audience_id','recipient_user_id','event_no')),'uq_pct7_re_pred'=>array(1,array('predecessor_recipient_event_id')),'uq_pct7_re_sha'=>array(1,array('recipient_event_sha256')),'ix_pct7_re_user'=>array(0,array('recipient_user_id','occurred_at')),'ix_pct7_re_notice'=>array(0,array('update_notice_id','notice_applicability_id')),'fk_pct7_re_app'=>array(0,array('notice_applicability_id'))),
+'pay_ctry_update_notice_recipient_events'=>array('uq_pct7_re_key'=>array(1,array('recipient_event_key')),'uq_pct7_re_stream'=>array(1,
+	array('notice_audience_id','recipient_user_id','event_no')),'uq_pct7_re_pred'=>array(1,array('predecessor_recipient_event_id')),
+	'uq_pct7_re_sha'=>array(1,array('recipient_event_sha256')),'ix_pct7_re_user'=>array(0,array('recipient_user_id','occurred_at')),
+	'ix_pct7_re_notice'=>array(0,array('update_notice_id','notice_applicability_id')),'fk_pct7_re_app'=>array(0,array('notice_applicability_id'))),
 'pay_ctry_update_notice_acknowledgements'=>array('uq_pct7_ack_recipient'=>array(1,array('recipient_event_id')),'uq_pct7_ack_sha'=>array(1,array('acknowledgement_sha256')),'ix_pct7_ack_user'=>array(0,array('recipient_user_id','acknowledged_at')),'ix_pct7_ack_notice'=>array(0,array('update_notice_id','notice_applicability_id')),'fk_pct7_ack_app'=>array(0,array('notice_applicability_id'))),
-'pay_ctry_update_notice_lifecycle_events'=>array('uq_pct7_le_key'=>array(1,array('lifecycle_event_key')),'uq_pct7_le_sha'=>array(1,array('lifecycle_sha256')),'ix_pct7_le_notice'=>array(0,array('update_notice_id','notice_applicability_id','occurred_at')),'ix_pct7_le_recipient'=>array(0,array('recipient_event_id','event_type','occurred_at')),'fk_pct7_le_app'=>array(0,array('notice_applicability_id'))),
-'pay_ctry_update_notice_delivery_outbox'=>array('uq_pct7_ob_key'=>array(1,array('outbox_key')),'uq_pct7_ob_recipient_channel'=>array(1,array('recipient_event_id','channel')),'uq_pct7_ob_sha'=>array(1,array('outbox_sha256')),'ix_pct7_ob_user'=>array(0,array('recipient_user_id','channel','queued_at')),'ix_pct7_ob_notice'=>array(0,array('update_notice_id','notice_applicability_id')),'fk_pct7_ob_app'=>array(0,array('notice_applicability_id'))),
+'pay_ctry_update_notice_lifecycle_events'=>array('uq_pct7_le_key'=>array(1,array('lifecycle_event_key')),'uq_pct7_le_sha'=>array(1,
+	array('lifecycle_sha256')),'ix_pct7_le_notice'=>array(0,array('update_notice_id','notice_applicability_id','occurred_at')),
+	'ix_pct7_le_recipient'=>array(0,array('recipient_event_id','event_type','occurred_at')),'fk_pct7_le_app'=>array(0,array('notice_applicability_id'))),
+'pay_ctry_update_notice_delivery_outbox'=>array('uq_pct7_ob_key'=>array(1,array('outbox_key')),'uq_pct7_ob_recipient_channel'=>array(1,
+	array('recipient_event_id','channel')),'uq_pct7_ob_sha'=>array(1,array('outbox_sha256')),'ix_pct7_ob_user'=>array(0,array('recipient_user_id',
+	'channel','queued_at')),'ix_pct7_ob_notice'=>array(0,array('update_notice_id','notice_applicability_id')),'fk_pct7_ob_app'=>array(0,
+	array('notice_applicability_id'))),
 'pay_ctry_update_notice_delivery_attempts'=>array('uq_pct7_da_attempt'=>array(1,array('delivery_outbox_id','attempt_no')),'uq_pct7_da_sha'=>array(1,array('delivery_attempt_sha256')),'ix_pct7_da_status'=>array(0,array('delivery_outbox_id','delivery_status','attempted_at'))));}
 /**
  * Normalize information-schema rows to stable PAY-CTRY-007 index attributes.

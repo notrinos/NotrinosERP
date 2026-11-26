@@ -155,7 +155,11 @@ elseif(is_array($assured)&&$assured['operation']==='cancel'){
         elseif($auth_method==='local_password')hidden('route_action','request_change');else hidden('route_action','start_request_step_up');
         echo '<table class="tablestyle2" role="presentation">';
         foreach(hrm_ess_self_change_allowed_fields() as $field){$maxlength=$field==='address'?255:100;$id='ess-field-'.$field;
-            echo '<tr><td class="label"><label for="'.htmlspecialchars($id,ENT_QUOTES,'UTF-8').'">'.htmlspecialchars($labels[$field],ENT_QUOTES,'UTF-8').':</label></td><td><input id="'.htmlspecialchars($id,ENT_QUOTES,'UTF-8').'" style="width:min(100%,420px)" type="text" name="'.htmlspecialchars($field,ENT_QUOTES,'UTF-8').'" value="'.htmlspecialchars((string)$values[$field],ENT_QUOTES,'UTF-8').'" maxlength="'.$maxlength.'" autocomplete="off"></td></tr>';}
+            echo '<tr><td class="label"><label for="'.htmlspecialchars($id,ENT_QUOTES,'UTF-8').'">'.htmlspecialchars($labels[$field],
+              ENT_QUOTES,'UTF-8').':</label></td><td><input id="'.htmlspecialchars($id,ENT_QUOTES,'UTF-8').'" style="width:min(100%,420px)" type="text" name="'
+              .htmlspecialchars($field,ENT_QUOTES,'UTF-8').'" value="'.htmlspecialchars((string)$values[$field],ENT_QUOTES,
+              'UTF-8').'" maxlength="'.$maxlength.'" autocomplete="off"></td></tr>';
+            }
         if(!$confirming&&$auth_method==='local_password')echo '<tr><td class="label"><label for="ess-current-password-request">'._('Current password:').'</label></td><td><input id="ess-current-password-request" type="password" name="current_password" maxlength="512" autocomplete="current-password" required></td></tr>';
         echo '</table>';
         if($confirming)submit_center('confirm_self_change',_('Confirm My Change Request'));

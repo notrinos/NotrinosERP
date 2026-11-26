@@ -280,23 +280,70 @@ function db_set_charset($db, $charset) {
 }
 
 /**
- * Execute a SQL statement with placeholder substitution for compatibility with PDO-style helpers.
+ * Put SQL values in place of the ? placeholders of a statement.
+ *
+ * A ? inside quoted text, a quoted name or a comment is not a placeholder. Each value is inserted as it is and never
+ * searched again, so a value that holds a ?, a quote or a backslash stays one value.
+ *
+ * @param string $sql SQL statement containing ? placeholders.
+ * @param array $values SQL text of each value (already escaped and quoted), in placeholder order.
+ *
+ * @return string|false The statement, or false when the number of placeholders and values differ.
+ */
+function db_bind_placeholders($sql, $values) {
+	$values = array_values($values);
+	$bound = '';
+	$used = 0;
+	$length = strlen($sql);
+	for ($i = 0; $i < $length; $i++) {
+		$char = $sql[$i];
+		if ($char === "'" || $char === '"' || $char === '`') {
+			$end = $i + 1;
+			while ($end < $length && $sql[$end] !== $char)
+				$end += ($sql[$end] === '\\' && $char !== '`') ? 2 : 1;
+			$bound .= substr($sql, $i, $end - $i + 1);
+			$i = $end;
+		} elseif ($char === '#' || ($char === '-' && substr($sql, $i, 3) === '-- ')) {
+			$end = strpos($sql, "\n", $i);
+			$end = $end === false ? $length : $end;
+			$bound .= substr($sql, $i, $end - $i);
+			$i = $end - 1;
+		} elseif ($char === '/' && substr($sql, $i, 2) === '/*') {
+			$end = strpos($sql, '*/', $i + 2);
+			$end = $end === false ? $length : $end + 2;
+			$bound .= substr($sql, $i, $end - $i);
+			$i = $end - 1;
+		} elseif ($char === '?') {
+			if ($used >= count($values))
+				return false;
+			$bound .= $values[$used++];
+		} else
+			$bound .= $char;
+	}
+	return $used === count($values) ? $bound : false;
+}
+
+/**
+ * Execute a SQL statement with ? placeholders; every value is escaped and quoted by db_escape().
  *
  * @param string $sql SQL statement containing '?' placeholders.
  * @param array $params Ordered parameter values.
  * @param string|null $err_msg Optional error context.
  *
- * @return mixed Query result from db_query.
+ * @return mixed Query result from db_query, or false when the placeholders and values do not match.
  */
 function db_query_params($sql, $params = array(), $err_msg = null) {
-	if (!empty($params)) {
-		foreach ($params as $param) {
-			$escaped_param = db_escape($param);
-			$sql = preg_replace('/\?/', $escaped_param, $sql, 1);
-		}
+	$values = array();
+	foreach ($params as $param)
+		$values[] = $param === null ? 'NULL' : db_escape($param);
+	$bound = db_bind_placeholders($sql, $values);
+	if ($bound === false) {
+		if ($err_msg != null)
+			check_db_error($err_msg, $sql);
+		return false;
 	}
 
-	return db_query($sql, $err_msg);
+	return db_query($bound, $err_msg);
 }
 
 /**

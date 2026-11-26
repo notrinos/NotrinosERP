@@ -211,6 +211,8 @@ function hrm_pay_rule_004_create_draft_version($rule,$predecessor_version_id=nul
 function hrm_pay_rule_004_read_version_internal($rule_version_id,$for_update=false,&$error=null)
 {
     $error=null;if(!is_int($rule_version_id)||$rule_version_id<=0){$error='rule_version_id_invalid';return false;}
-    $sql='SELECT r.rule_key,r.rule_type,v.*,e.regulatory_evidence_id,e.jurisdiction_token,e.legal_reference,e.source_evidence_ref,e.source_sha256,e.effective_from evidence_effective_from,e.effective_to evidence_effective_to,DATE_FORMAT(e.captured_at,\'%Y-%m-%dT%H:%i:%sZ\') captured_at,e.created_by evidence_created_by,e.evidence_sha256 FROM '.TB_PREF.'hrm_pay_rule_rule_versions v JOIN '.TB_PREF.'hrm_pay_rule_rules r ON r.rule_id=v.rule_id JOIN '.TB_PREF.'hrm_pay_rule_regulatory_evidence e ON e.rule_version_id=v.rule_version_id WHERE v.rule_version_id='.(int)$rule_version_id.' LIMIT 2'.($for_update?' FOR UPDATE':'');
+    $sql='SELECT r.rule_key,r.rule_type,v.*,e.regulatory_evidence_id,e.jurisdiction_token,e.legal_reference,e.source_evidence_ref,e.source_sha256,e.effective_from evidence_effective_from,e.effective_to evidence_effective_to,DATE_FORMAT(e.captured_at,\'%Y-%m-%dT%H:%i:%sZ\') captured_at,e.created_by evidence_created_by,e.evidence_sha256 FROM '
+      .TB_PREF.'hrm_pay_rule_rule_versions v JOIN '.TB_PREF.'hrm_pay_rule_rules r ON r.rule_id=v.rule_id JOIN '.TB_PREF.'hrm_pay_rule_regulatory_evidence e ON e.rule_version_id=v.rule_version_id WHERE v.rule_version_id='
+      .(int)$rule_version_id.' LIMIT 2'.($for_update?' FOR UPDATE':'');
     $q=db_query($sql);if(!$q||db_num_rows($q)!==1){$error='rule_version_not_found_or_ambiguous';return false;}return db_fetch_assoc($q);
 }

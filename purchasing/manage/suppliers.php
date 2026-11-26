@@ -130,7 +130,12 @@ function handle_submit(&$supplier_id) {
 	}
 	$is_new = !$supplier_id;
 	if ($supplier_id)  {
-		if (!update_supplier($_POST['supplier_id'], $_POST['supp_name'], $_POST['supp_ref'], $_POST['address'], $_POST['supp_address'], $_POST['gst_no'], $_POST['website'], $_POST['supp_account_no'], $_POST['bank_account'], input_num('credit_limit', 0), $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['curr_code'], $_POST['payment_terms'], $_POST['payable_account'], $_POST['purchase_account'], $_POST['payment_discount_account'], $_POST['notes'], $_POST['tax_group_id'], check_value('tax_included'), get_post('vendor_tier', 'standard'), get_post('vendor_category', ''), input_num('evaluation_frequency_months', 6), get_post('certifications', ''), get_post('approved_categories', ''))) {
+		if (!update_supplier($_POST['supplier_id'], $_POST['supp_name'], $_POST['supp_ref'], $_POST['address'], $_POST['supp_address'],
+			$_POST['gst_no'], $_POST['website'], $_POST['supp_account_no'], $_POST['bank_account'], input_num('credit_limit', 0), $_POST['dimension_id'],
+			$_POST['dimension2_id'], $_POST['curr_code'], $_POST['payment_terms'], $_POST['payable_account'], $_POST['purchase_account'],
+			$_POST['payment_discount_account'], $_POST['notes'], $_POST['tax_group_id'], check_value('tax_included'), get_post('vendor_tier',
+			'standard'), get_post('vendor_category', ''), input_num('evaluation_frequency_months', 6), get_post('certifications', ''),
+			get_post('approved_categories', ''))) {
 			cancel_transaction();
 			display_error(_("The supplier could not be saved. Check the tracking selections and retry."));
 			return;
@@ -140,7 +145,12 @@ function handle_submit(&$supplier_id) {
 		$Ajax->activate('supplier_id'); // in case of status change
 	} 
 	else {
-		if (!add_supplier($_POST['supp_name'], $_POST['supp_ref'], $_POST['address'], $_POST['supp_address'], $_POST['gst_no'], $_POST['website'], $_POST['supp_account_no'], $_POST['bank_account'], input_num('credit_limit',0), $_POST['dimension_id'], $_POST['dimension2_id'], $_POST['curr_code'], $_POST['payment_terms'], $_POST['payable_account'], $_POST['purchase_account'], $_POST['payment_discount_account'], $_POST['notes'], $_POST['tax_group_id'], check_value('tax_included'), get_post('vendor_tier', 'standard'), get_post('vendor_category', ''), input_num('evaluation_frequency_months', 6), get_post('certifications', ''), get_post('approved_categories', ''))) {
+		if (!add_supplier($_POST['supp_name'], $_POST['supp_ref'], $_POST['address'], $_POST['supp_address'], $_POST['gst_no'],
+			$_POST['website'], $_POST['supp_account_no'], $_POST['bank_account'], input_num('credit_limit',0), $_POST['dimension_id'],
+			$_POST['dimension2_id'], $_POST['curr_code'], $_POST['payment_terms'], $_POST['payable_account'], $_POST['purchase_account'],
+			$_POST['payment_discount_account'], $_POST['notes'], $_POST['tax_group_id'], check_value('tax_included'), get_post('vendor_tier',
+			'standard'), get_post('vendor_category', ''), input_num('evaluation_frequency_months', 6), get_post('certifications', ''),
+			get_post('approved_categories', ''))) {
 			cancel_transaction();
 			display_error(_("The supplier could not be saved. Check the tracking selections and retry."));
 			return;

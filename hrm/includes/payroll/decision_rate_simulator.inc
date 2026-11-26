@@ -63,7 +63,10 @@ function hrm_payroll_decision_table_simulate($artifact, $facts, $as_of, &$receip
         elseif($plan['hit_policy']==='sum'){$outputs=array();foreach($plan['outputs'] as $col)$outputs[$col['name']]=$col['type']==='integer'?'0':'0';foreach($selected as $row)foreach($row['outputs'] as $name=>$value)$outputs[$name]=hrm_payroll_decimal_add($outputs[$name],(string)$value);}
         else{$row=$selected[0];$outputs=$row['outputs'];foreach($plan['outputs'] as $col)if(!array_key_exists($col['name'],$outputs)&&array_key_exists('default',$col))$outputs[$col['name']]=$col['default'];}
     }
-    $receipt=array('simulator_version'=>HRM_PAY_RULE_003_SIMULATOR_VERSION,'plan_hash'=>$plan['plan_hash'],'artifact_hash'=>$plan['artifact_hash'],'table_id'=>$plan['table_id'],'as_of'=>$as_of,'matched_row_ids'=>array_map(function($r){return $r['row_id'];},$selected),'outputs'=>$outputs,'explanations'=>array_map(function($r){return array('row_id'=>$r['row_id'],'label'=>$r['explanation_label'],'source_ids'=>$r['source_ids']);},$selected));
+    $receipt=array('simulator_version'=>HRM_PAY_RULE_003_SIMULATOR_VERSION,'plan_hash'=>$plan['plan_hash'],'artifact_hash'=>$plan['artifact_hash'],
+      'table_id'=>$plan['table_id'],'as_of'=>$as_of,'matched_row_ids'=>array_map(function($r){return $r['row_id'];},$selected),
+      'outputs'=>$outputs,'explanations'=>array_map(function($r){return array('row_id'=>$r['row_id'],'label'=>$r['explanation_label'],
+      'source_ids'=>$r['source_ids']);},$selected));
     $receipt['receipt_hash']=hash('sha256',json_encode(hrm_payroll_decision_table_canonicalize($receipt),JSON_UNESCAPED_SLASHES)); $error=null; return true;
 }
 
@@ -78,7 +81,11 @@ function hrm_payroll_rate_table_simulate($artifact, $input, $as_of, &$receipt, &
     if(!hrm_payroll_rate_table_decimal($input))return hrm_payroll_rule_sim_fail($error,'rate_input_invalid');
     if(!hrm_payroll_rule_date_in_interval($as_of,$plan['legal_interval']['from'],$plan['legal_interval']['to']))return hrm_payroll_rule_sim_fail($error,'rate_as_of_outside_legal_interval');
     $b=hrm_payroll_rate_table_match_bracket($plan,$input);if($b===null&&$plan['gap_policy']==='reject')return hrm_payroll_rule_sim_fail($error,'rate_no_hit');
-    $receipt=array('simulator_version'=>HRM_PAY_RULE_003_SIMULATOR_VERSION,'plan_hash'=>$plan['plan_hash'],'artifact_hash'=>$plan['artifact_hash'],'table_id'=>$plan['table_id'],'as_of'=>$as_of,'input'=>$input,'matched_bracket_id'=>$b?$b['bracket_id']:null,'values'=>$b?array('base_amount'=>$b['base_amount'],'fixed_amount'=>$b['fixed_amount'],'marginal_rate'=>$b['marginal_rate'],'floor'=>$b['floor'],'cap'=>$b['cap'],'employee_rate'=>$b['employee_rate'],'employer_rate'=>$b['employer_rate']):null,'explanation'=>$b?array('label'=>$b['explanation_label'],'source_ids'=>$b['source_ids']):null,'rounding'=>$plan['rounding']);
+    $receipt=array('simulator_version'=>HRM_PAY_RULE_003_SIMULATOR_VERSION,'plan_hash'=>$plan['plan_hash'],'artifact_hash'=>$plan['artifact_hash'],
+      'table_id'=>$plan['table_id'],'as_of'=>$as_of,'input'=>$input,'matched_bracket_id'=>$b?$b['bracket_id']:null,'values'=>$b?array('base_amount'=>$b['base_amount'],
+      'fixed_amount'=>$b['fixed_amount'],'marginal_rate'=>$b['marginal_rate'],'floor'=>$b['floor'],'cap'=>$b['cap'],'employee_rate'=>$b['employee_rate'],
+      'employer_rate'=>$b['employer_rate']):null,'explanation'=>$b?array('label'=>$b['explanation_label'],'source_ids'=>$b['source_ids']):null,
+      'rounding'=>$plan['rounding']);
     $receipt['receipt_hash']=hash('sha256',json_encode(hrm_payroll_decision_table_canonicalize($receipt),JSON_UNESCAPED_SLASHES));$error=null;return true;
 }
 

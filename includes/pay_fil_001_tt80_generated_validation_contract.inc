@@ -36,7 +36,11 @@ function pay_fil_001_tt80_generated_validation_contract_sha256(){return pay_fil_
 function pay_fil_001_tt80_validate_generated_candidate(array $generated,&$error=null)
 {
     $error=null;
-    foreach(array('payload','payload_sha256','byte_length','renderer_id','renderer_version','schema_id','schema_version','media_type','model_sha256','semantic_mapping_sha256','semantic_review_sha256','activation_contract_sha256','generation_authority','development_runtime_generation_allowed','artifact_publication_allowed','production_generation_allowed','production_signing_allowed','production_credentials_allowed','production_transmission_allowed','network_authority_allowed','portal_submission_allowed','historical_mutation_allowed') as $k)
+    foreach(array('payload','payload_sha256','byte_length','renderer_id','renderer_version','schema_id','schema_version',
+      'media_type','model_sha256','semantic_mapping_sha256','semantic_review_sha256','activation_contract_sha256','generation_authority',
+      'development_runtime_generation_allowed','artifact_publication_allowed','production_generation_allowed','production_signing_allowed',
+      'production_credentials_allowed','production_transmission_allowed','network_authority_allowed','portal_submission_allowed',
+      'historical_mutation_allowed') as $k)
         if(!array_key_exists($k,$generated))return pay_fil_001_fail($error,'tt80_generated_candidate_incomplete');
     $profile=pay_fil_001_tt80_generated_validation_profile();
     if(!is_string($generated['payload'])||$generated['payload']===''||strlen($generated['payload'])!==(int)$generated['byte_length']

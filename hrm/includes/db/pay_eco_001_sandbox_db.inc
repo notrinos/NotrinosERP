@@ -63,10 +63,28 @@ function pay_eco_001_write_sandbox_evaluation($request,&$error,$now_epoch=null)
     if($actor<=0||$now_epoch<=0||!pay_eco_001_onboarding_access(PAY_ECO_001_SANDBOX_EVALUATION_PERMISSION))return pay_eco_001_fail($error,'sandbox_evaluation_authority_denied');
     if(!pay_eco_001_onboarding_owned_transaction($error))return false;$ok=false;$out=false;
     do{
-        $candidate=pay_eco_001_onboarding_exact_row('SELECT c.catalog_candidate_id,c.publisher_profile_id,c.pack_version_id,c.candidate_code,c.compatibility_sha256,c.certification_sha256,c.support_sha256,c.vulnerability_sha256,c.revocation_state_sha256,c.sandbox_profile_sha256,c.submitted_by,c.submitted_at,c.candidate_sha256,v.manifest_sha256,v.semantic_root,v.evidence_root FROM '.TB_PREF.'pay_eco_001_pack_candidates c INNER JOIN '.TB_PREF.'pay_ctry_pack_versions v ON v.pack_version_id=c.pack_version_id WHERE c.catalog_candidate_id='.(int)$request['catalog_candidate_id'].' LIMIT 2 FOR UPDATE',$error,false);if($candidate===false)break;
-        $candidate_payload=array('publisher_profile_id'=>(int)$candidate['publisher_profile_id'],'pack_version_id'=>(int)$candidate['pack_version_id'],'candidate_code'=>(string)$candidate['candidate_code'],'compatibility_sha256'=>(string)$candidate['compatibility_sha256'],'certification_sha256'=>(string)$candidate['certification_sha256'],'support_sha256'=>(string)$candidate['support_sha256'],'vulnerability_sha256'=>(string)$candidate['vulnerability_sha256'],'revocation_state_sha256'=>(string)$candidate['revocation_state_sha256'],'sandbox_profile_sha256'=>(string)$candidate['sandbox_profile_sha256'],'submitted_by'=>(int)$candidate['submitted_by'],'submitted_at'=>gmdate('Y-m-d\\TH:i:s\\Z',strtotime((string)$candidate['submitted_at'].' UTC')),'candidate_sha256'=>(string)$candidate['candidate_sha256']);
+        $candidate=pay_eco_001_onboarding_exact_row('SELECT c.catalog_candidate_id,c.publisher_profile_id,c.pack_version_id,c.candidate_code,c.compatibility_sha256,c.certification_sha256,c.support_sha256,c.vulnerability_sha256,c.revocation_state_sha256,c.sandbox_profile_sha256,c.submitted_by,c.submitted_at,c.candidate_sha256,v.manifest_sha256,v.semantic_root,v.evidence_root FROM '
+          .TB_PREF.'pay_eco_001_pack_candidates c INNER JOIN '.TB_PREF.'pay_ctry_pack_versions v ON v.pack_version_id=c.pack_version_id WHERE c.catalog_candidate_id='
+          .(int)$request['catalog_candidate_id'].' LIMIT 2 FOR UPDATE',$error,false);
+        if($candidate===false)break;
+        $candidate_payload=array('publisher_profile_id'=>(int)$candidate['publisher_profile_id'],'pack_version_id'=>(int)$candidate['pack_version_id'],
+          'candidate_code'=>(string)$candidate['candidate_code'],'compatibility_sha256'=>(string)$candidate['compatibility_sha256'],
+          'certification_sha256'=>(string)$candidate['certification_sha256'],'support_sha256'=>(string)$candidate['support_sha256'],
+          'vulnerability_sha256'=>(string)$candidate['vulnerability_sha256'],'revocation_state_sha256'=>(string)$candidate['revocation_state_sha256'],
+          'sandbox_profile_sha256'=>(string)$candidate['sandbox_profile_sha256'],'submitted_by'=>(int)$candidate['submitted_by'],
+          'submitted_at'=>gmdate('Y-m-d\\TH:i:s\\Z',strtotime((string)$candidate['submitted_at'].' UTC')),'candidate_sha256'=>(string)$candidate['candidate_sha256']);
         if(pay_eco_001_time($candidate_payload['submitted_at'])===false||!pay_eco_001_validate_pack_candidate($candidate_payload,$error)){$error='sandbox_candidate_integrity_invalid';break;}
-        $verification=pay_eco_001_onboarding_exact_row('SELECT verification_report_id,report_sha256 FROM '.TB_PREF.'pay_ctry_verification_reports WHERE pack_version_id='.(int)$candidate['pack_version_id']." AND final_status='accepted' ORDER BY verification_report_id DESC LIMIT 1",$error,false);if($verification===false){if($error==='onboarding_state_missing')$error='sandbox_accepted_verification_required';break;}if(!pay_eco_001_sha((string)$verification['report_sha256'])){$error='sandbox_verification_digest_invalid';break;}
+        $verification=pay_eco_001_onboarding_exact_row('SELECT verification_report_id,report_sha256 FROM '.TB_PREF.'pay_ctry_verification_reports WHERE pack_version_id='
+          .(int)$candidate['pack_version_id']." AND final_status='accepted' ORDER BY verification_report_id DESC LIMIT 1",
+          $error,false);
+        if($verification===false){
+          if($error==='onboarding_state_missing')$error='sandbox_accepted_verification_required';
+          break;
+        }
+        if(!pay_eco_001_sha((string)$verification['report_sha256'])){
+          $error='sandbox_verification_digest_invalid';
+          break;
+        }
         $inventory=pay_eco_001_sandbox_artifact_inventory((int)$candidate['pack_version_id'],$error);if($inventory===false)break;
         $findings=pay_eco_001_sandbox_findings($candidate,$inventory);$iso=pay_eco_001_onboarding_now_iso($now_epoch);
         $evaluation=array(
@@ -91,9 +109,21 @@ function pay_eco_001_write_sandbox_evaluation($request,&$error,$now_epoch=null)
             $ok=true;$out=array('sandbox_evaluation_id'=>(int)$existing['sandbox_evaluation_id'],'result'=>(string)$existing['result'],'evaluation_sha256'=>(string)$existing['evaluation_sha256'],'replayed'=>true);break;
         }
         $now=gmdate('Y-m-d H:i:s',$now_epoch);
-        $sql='INSERT INTO '.TB_PREF.'pay_eco_001_sandbox_evaluations (catalog_candidate_id,sandbox_profile_sha256,conformance_suite_sha256,manifest_sha256,semantic_root,evidence_root,artifact_inventory_sha256,result,findings_sha256,evaluated_by,evaluated_at,evaluation_sha256,created_at) VALUES ('.(int)$evaluation['catalog_candidate_id'].','.pay_ctry_001_sql_hex($evaluation['sandbox_profile_sha256']).','.pay_ctry_001_sql_hex($evaluation['conformance_suite_sha256']).','.pay_ctry_001_sql_hex($evaluation['manifest_sha256']).','.pay_ctry_001_sql_hex($evaluation['semantic_root']).','.pay_ctry_001_sql_hex($evaluation['evidence_root']).','.pay_ctry_001_sql_hex($evaluation['artifact_inventory_sha256']).','.pay_ctry_001_sql_hex($evaluation['result']).','.pay_ctry_001_sql_hex($evaluation['findings_sha256']).','.$actor.','.pay_ctry_001_sql_hex($now).','.pay_ctry_001_sql_hex($evaluation['evaluation_sha256']).','.pay_ctry_001_sql_hex($now).')';
+        $sql='INSERT INTO '.TB_PREF.'pay_eco_001_sandbox_evaluations (catalog_candidate_id,sandbox_profile_sha256,conformance_suite_sha256,manifest_sha256,semantic_root,evidence_root,artifact_inventory_sha256,result,findings_sha256,evaluated_by,evaluated_at,evaluation_sha256,created_at) VALUES ('
+          .(int)$evaluation['catalog_candidate_id'].','.pay_ctry_001_sql_hex($evaluation['sandbox_profile_sha256']).','.pay_ctry_001_sql_hex($evaluation['conformance_suite_sha256'])
+          .','.pay_ctry_001_sql_hex($evaluation['manifest_sha256']).','.pay_ctry_001_sql_hex($evaluation['semantic_root'])
+          .','.pay_ctry_001_sql_hex($evaluation['evidence_root']).','.pay_ctry_001_sql_hex($evaluation['artifact_inventory_sha256'])
+          .','.pay_ctry_001_sql_hex($evaluation['result']).','.pay_ctry_001_sql_hex($evaluation['findings_sha256']).','.$actor
+          .','.pay_ctry_001_sql_hex($now).','.pay_ctry_001_sql_hex($evaluation['evaluation_sha256']).','.pay_ctry_001_sql_hex($now)
+          .')';
         if(!db_query($sql)){$error='sandbox_evaluation_insert_failed';break;}$id=pay_ctry_001_insert_id();if($id<=0){$error='sandbox_evaluation_identity_missing';break;}
-        if(!pay_eco_001_onboarding_audit('pay_eco_sandbox_evaluation',array('sandbox_evaluation_id'=>$id),'pay.eco.sandbox_evaluation.appended','declarative_conformance_evaluated',array('catalog_candidate_id'=>(int)$evaluation['catalog_candidate_id'],'verification_report_id'=>(int)$verification['verification_report_id'],'result'=>(string)$evaluation['result'],'sandbox_profile_sha256'=>(string)$evaluation['sandbox_profile_sha256'],'conformance_suite_sha256'=>(string)$evaluation['conformance_suite_sha256'],'evaluation_sha256'=>(string)$evaluation['evaluation_sha256'],'sandbox_execution'=>false,'dependency_vulnerability_scanning'=>false,'marketplace_publication'=>false,'pack_installation'=>false,'company_activation'=>false,'payroll_execution'=>false,'historical_payroll_accounting_rows_rewritten'=>0),$actor,$error))break;
+        if(!pay_eco_001_onboarding_audit('pay_eco_sandbox_evaluation',array('sandbox_evaluation_id'=>$id),'pay.eco.sandbox_evaluation.appended',
+          'declarative_conformance_evaluated',array('catalog_candidate_id'=>(int)$evaluation['catalog_candidate_id'],'verification_report_id'=>(int)$verification['verification_report_id'],
+          'result'=>(string)$evaluation['result'],'sandbox_profile_sha256'=>(string)$evaluation['sandbox_profile_sha256'],
+          'conformance_suite_sha256'=>(string)$evaluation['conformance_suite_sha256'],'evaluation_sha256'=>(string)$evaluation['evaluation_sha256'],
+          'sandbox_execution'=>false,'dependency_vulnerability_scanning'=>false,'marketplace_publication'=>false,'pack_installation'=>false,
+          'company_activation'=>false,'payroll_execution'=>false,'historical_payroll_accounting_rows_rewritten'=>0),$actor,
+          $error))break;
         $ok=true;$out=array('sandbox_evaluation_id'=>$id,'result'=>$evaluation['result'],'evaluation_sha256'=>$evaluation['evaluation_sha256'],'replayed'=>false);
     }while(false);
     if($ok)commit_transaction();else cancel_transaction();

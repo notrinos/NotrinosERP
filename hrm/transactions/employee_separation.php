@@ -169,6 +169,9 @@ start_form(); start_table(TABLESTYLE2); label_cell(_('Employee:'));
 employees_list_cells(null, 'employee_id', null, true, true, false, false, array('layout_class'=>'combo-layout-equal','format'=>'employee_separation_authoritative_employee_list',
     'employee_name_batch' => array('as_of' => $employee_separation_selector_as_of, 'target' => 'employee_separation_selector_name_batch'))); end_row();
 date_row(_('Separation Date:'), 'separation_date'); check_row(_('Is Resignation:'), 'is_resignation'); label_row(_('Calculated EOS Preview:'), $eos_preview_available ? price_format($eos_amount) : _('Not calculated')); end_table(1);
-submit_center('Calculate', _('Calculate EOS Preview')); submit_center('Process', _('Submit Separation for Approval')); if ((string)$current_task_status['status'] === 'not_created') submit_center('CreateSeparationTask', _('Create Separation Acknowledgement Task')); elseif ((string)$current_task_status['status'] === 'pending') submit_center('CompleteSeparationTask', _('Complete Separation Acknowledgement Task'));
+submit_center('Calculate', _('Calculate EOS Preview'));
+submit_center('Process', _('Submit Separation for Approval'));
+if ((string)$current_task_status['status'] === 'not_created') submit_center('CreateSeparationTask', _('Create Separation Acknowledgement Task'));
+elseif ((string)$current_task_status['status'] === 'pending') submit_center('CompleteSeparationTask', _('Complete Separation Acknowledgement Task'));
 if ((string)$current_task_document_status['status'] === 'not_linked') { start_table(TABLESTYLE2); text_row(_('Supporting Document Access Key:'), 'separation_document_access_key', null, 64, 64); end_table(1); submit_center('LinkSeparationDocument', _('Link Separation Supporting Document')); }
 end_form(); end_page();

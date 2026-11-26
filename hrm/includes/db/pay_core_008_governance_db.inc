@@ -72,8 +72,18 @@ function hrm_pay_core_008_append_validator_definition(array $input,&$error=null)
 {
     $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_MANAGE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
     $v=hrm_pay_core_008_validator_definition($input,$error);if($v===false)return false;$app=hrm_pay_core_004_canonical_json($v['applicability']);
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_validator_defs (validator_key,validator_version,domain,severity,origin,capability,purpose,input_contract_sha256,output_contract_sha256,threshold_policy_sha256,applicability_json,definition_sha256,created_by) VALUES ('.db_escape($v['validator_key']).','.db_escape($v['validator_version']).','.db_escape($v['domain']).','.db_escape($v['severity']).','.db_escape($v['origin']).','.db_escape($v['capability']).','.db_escape($v['purpose']).','.db_escape($v['input_contract_sha256']).','.db_escape($v['output_contract_sha256']).','.hrm_pay_core_008_sql_token($v['threshold_policy_sha256']).','.db_escape($app).','.db_escape($v['definition_sha256']).','.$actor.')';
-    if(!db_query($sql)){$same=hrm_pay_core_008_one('SELECT validator_definition_id,definition_sha256 FROM '.TB_PREF.'hrm_pay_validation_validator_defs WHERE validator_key='.db_escape($v['validator_key']).' AND validator_version='.db_escape($v['validator_version']).' LIMIT 2');if($same&&hash_equals($same['definition_sha256'],$v['definition_sha256']))return (int)$same['validator_definition_id'];$error='validator_definition_conflict';return false;}
+    $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_validator_defs (validator_key,validator_version,domain,severity,origin,capability,purpose,input_contract_sha256,output_contract_sha256,threshold_policy_sha256,applicability_json,definition_sha256,created_by) VALUES ('
+      .db_escape($v['validator_key']).','.db_escape($v['validator_version']).','.db_escape($v['domain']).','.db_escape($v['severity'])
+      .','.db_escape($v['origin']).','.db_escape($v['capability']).','.db_escape($v['purpose']).','.db_escape($v['input_contract_sha256'])
+      .','.db_escape($v['output_contract_sha256']).','.hrm_pay_core_008_sql_token($v['threshold_policy_sha256']).','.db_escape($app)
+      .','.db_escape($v['definition_sha256']).','.$actor.')';
+    if(!db_query($sql)){
+      $same=hrm_pay_core_008_one('SELECT validator_definition_id,definition_sha256 FROM '.TB_PREF.'hrm_pay_validation_validator_defs WHERE validator_key='
+        .db_escape($v['validator_key']).' AND validator_version='.db_escape($v['validator_version']).' LIMIT 2');
+      if($same&&hash_equals($same['definition_sha256'],$v['definition_sha256']))return (int)$same['validator_definition_id'];
+      $error='validator_definition_conflict';
+      return false;
+    }
     return (int)db_insert_id();
 }
 
@@ -81,7 +91,10 @@ function hrm_pay_core_008_append_threshold_policy(array $input,&$error=null)
 {
     $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_MANAGE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
     $p=hrm_pay_core_008_threshold_policy($input,$error);if($p===false)return false;
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_threshold_policies (policy_key,version_no,measure,unit_code,currency_code,mode,tolerance,effective_from,effective_to,policy_sha256,created_by) VALUES ('.db_escape($p['policy_key']).','.$p['version_no'].','.db_escape($p['measure']).','.db_escape($p['unit_code']).','.hrm_pay_core_008_sql_token($p['currency_code']).','.db_escape($p['mode']).','.db_escape($p['tolerance']).','.db_escape($p['effective_from']).','.hrm_pay_core_008_sql_token($p['effective_to']).','.db_escape($p['policy_sha256']).','.$actor.')';
+    $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_threshold_policies (policy_key,version_no,measure,unit_code,currency_code,mode,tolerance,effective_from,effective_to,policy_sha256,created_by) VALUES ('
+      .db_escape($p['policy_key']).','.$p['version_no'].','.db_escape($p['measure']).','.db_escape($p['unit_code']).','.hrm_pay_core_008_sql_token($p['currency_code'])
+      .','.db_escape($p['mode']).','.db_escape($p['tolerance']).','.db_escape($p['effective_from']).','.hrm_pay_core_008_sql_token($p['effective_to'])
+      .','.db_escape($p['policy_sha256']).','.$actor.')';
     if(!db_query($sql)){$same=hrm_pay_core_008_one('SELECT threshold_policy_id,policy_sha256 FROM '.TB_PREF.'hrm_pay_validation_threshold_policies WHERE policy_key='.db_escape($p['policy_key']).' AND version_no='.$p['version_no'].' LIMIT 2');if($same&&hash_equals($same['policy_sha256'],$p['policy_sha256']))return (int)$same['threshold_policy_id'];$error='threshold_policy_conflict';return false;}
     return (int)db_insert_id();
 }
@@ -90,11 +103,22 @@ function hrm_pay_core_008_append_pack_binding($validator_definition_id,array $in
 {
     $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_MANAGE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
     $r=hrm_pay_core_008_one('SELECT * FROM '.TB_PREF.'hrm_pay_validation_validator_defs WHERE validator_definition_id='.(int)$validator_definition_id.' LIMIT 2');if(!$r){$error='validator_definition_missing';return false;}
-    $app=json_decode($r['applicability_json'],true);$v=hrm_pay_core_008_validator_definition(array('validator_key'=>$r['validator_key'],'validator_version'=>$r['validator_version'],'domain'=>$r['domain'],'severity'=>$r['severity'],'origin'=>$r['origin'],'capability'=>$r['capability'],'purpose'=>$r['purpose'],'input_contract_sha256'=>$r['input_contract_sha256'],'output_contract_sha256'=>$r['output_contract_sha256'],'threshold_policy_sha256'=>$r['threshold_policy_sha256'],'applicability'=>$app),$ve);
+    $app=json_decode($r['applicability_json'],true);
+    $v=hrm_pay_core_008_validator_definition(array('validator_key'=>$r['validator_key'],'validator_version'=>$r['validator_version'],
+      'domain'=>$r['domain'],'severity'=>$r['severity'],'origin'=>$r['origin'],'capability'=>$r['capability'],'purpose'=>$r['purpose'],
+      'input_contract_sha256'=>$r['input_contract_sha256'],'output_contract_sha256'=>$r['output_contract_sha256'],'threshold_policy_sha256'=>$r['threshold_policy_sha256'],
+      'applicability'=>$app),$ve);
     if($v===false||!hash_equals($r['definition_sha256'],$v['definition_sha256'])){$error='validator_definition_hash_drift';return false;}
     $b=hrm_pay_core_008_pack_binding($input,$v,$error);if($b===false)return false;
     $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_pack_bindings (pack_key,pack_version,validator_definition_id,capability,artifact_sha256,binding_sha256,created_by) VALUES ('.db_escape($b['pack_key']).','.db_escape($b['pack_version']).','.(int)$validator_definition_id.','.db_escape($b['capability']).','.db_escape($b['artifact_sha256']).','.db_escape($b['binding_sha256']).','.$actor.')';
-    if(!db_query($sql)){$same=hrm_pay_core_008_one('SELECT pack_binding_id,binding_sha256 FROM '.TB_PREF.'hrm_pay_validation_pack_bindings WHERE pack_key='.db_escape($b['pack_key']).' AND pack_version='.db_escape($b['pack_version']).' AND validator_definition_id='.(int)$validator_definition_id.' LIMIT 2');if($same&&hash_equals($same['binding_sha256'],$b['binding_sha256']))return (int)$same['pack_binding_id'];$error='pack_binding_conflict';return false;}
+    if(!db_query($sql)){
+      $same=hrm_pay_core_008_one('SELECT pack_binding_id,binding_sha256 FROM '.TB_PREF.'hrm_pay_validation_pack_bindings WHERE pack_key='
+        .db_escape($b['pack_key']).' AND pack_version='.db_escape($b['pack_version']).' AND validator_definition_id='.(int)$validator_definition_id
+        .' LIMIT 2');
+      if($same&&hash_equals($same['binding_sha256'],$b['binding_sha256']))return (int)$same['pack_binding_id'];
+      $error='pack_binding_conflict';
+      return false;
+    }
     return (int)db_insert_id();
 }
 
@@ -103,7 +127,11 @@ function hrm_pay_core_008_execute_validator($validator_definition_id,array $scop
     $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_EXECUTE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
     $s=hrm_pay_core_008_assert_object_scope($scope,$error);if($s===false)return false;
     $vr=hrm_pay_core_008_one('SELECT * FROM '.TB_PREF.'hrm_pay_validation_validator_defs WHERE validator_definition_id='.(int)$validator_definition_id.' LIMIT 2');if(!$vr){$error='validator_definition_missing';return false;}
-    $app=json_decode($vr['applicability_json'],true);$v=hrm_pay_core_008_validator_definition(array('validator_key'=>$vr['validator_key'],'validator_version'=>$vr['validator_version'],'domain'=>$vr['domain'],'severity'=>$vr['severity'],'origin'=>$vr['origin'],'capability'=>$vr['capability'],'purpose'=>$vr['purpose'],'input_contract_sha256'=>$vr['input_contract_sha256'],'output_contract_sha256'=>$vr['output_contract_sha256'],'threshold_policy_sha256'=>$vr['threshold_policy_sha256'],'applicability'=>$app),$ve);
+    $app=json_decode($vr['applicability_json'],true);
+    $v=hrm_pay_core_008_validator_definition(array('validator_key'=>$vr['validator_key'],'validator_version'=>$vr['validator_version'],
+      'domain'=>$vr['domain'],'severity'=>$vr['severity'],'origin'=>$vr['origin'],'capability'=>$vr['capability'],'purpose'=>$vr['purpose'],
+      'input_contract_sha256'=>$vr['input_contract_sha256'],'output_contract_sha256'=>$vr['output_contract_sha256'],'threshold_policy_sha256'=>$vr['threshold_policy_sha256'],
+      'applicability'=>$app),$ve);
     if($v===false||!hash_equals($vr['definition_sha256'],$v['definition_sha256'])){$error='validator_definition_hash_drift';return false;}
     if($v['origin']==='pack'){
         $pb=hrm_pay_core_008_one('SELECT * FROM '.TB_PREF.'hrm_pay_validation_pack_bindings WHERE validator_definition_id='.(int)$validator_definition_id.' LIMIT 2');
@@ -118,10 +146,21 @@ function hrm_pay_core_008_execute_validator($validator_definition_id,array $scop
     $manage=hrm_pay_core_008_manage_transaction();if($manage)begin_transaction();
     $same=hrm_pay_core_008_one('SELECT validation_run_id,execution_sha256 FROM '.TB_PREF.'hrm_pay_validation_runs WHERE validator_definition_id='.(int)$validator_definition_id.' AND payroll_relationship_id='.$s['payroll_relationship_id'].' AND idempotency_key='.db_escape($idempotency_key).' LIMIT 2 FOR UPDATE');
     if($same){if(hash_equals((string)$same['execution_sha256'],$e['execution_sha256'])){if($manage)commit_transaction();return (int)$same['validation_run_id'];}if($manage)cancel_transaction();$error='validation_command_conflict';return false;}
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_runs (validator_definition_id,legal_entity_id,payroll_relationship_id,worker_id,person_id,assignment_id,calendar_period_id,result_id,result_sha256,source_sha256,evidence_set_sha256,idempotency_key,outcome,finding_set_sha256,execution_sha256,executed_by) VALUES ('.(int)$validator_definition_id.','.$s['legal_entity_id'].','.$s['payroll_relationship_id'].','.hrm_pay_core_008_sql_id($s['worker_id']).','.hrm_pay_core_008_sql_id($s['person_id']).','.hrm_pay_core_008_sql_id($s['assignment_id']).','.hrm_pay_core_008_sql_id($s['calendar_period_id']).','.(int)$result_id.','.db_escape($e['result_sha256']).','.db_escape($e['source_sha256']).','.db_escape($e['evidence_set_sha256']).','.db_escape($e['idempotency_key']).','.db_escape($e['outcome']).','.db_escape($e['finding_set_sha256']).','.db_escape($e['execution_sha256']).','.$actor.')';
+    $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_runs (validator_definition_id,legal_entity_id,payroll_relationship_id,worker_id,person_id,assignment_id,calendar_period_id,result_id,result_sha256,source_sha256,evidence_set_sha256,idempotency_key,outcome,finding_set_sha256,execution_sha256,executed_by) VALUES ('
+      .(int)$validator_definition_id.','.$s['legal_entity_id'].','.$s['payroll_relationship_id'].','.hrm_pay_core_008_sql_id($s['worker_id'])
+      .','.hrm_pay_core_008_sql_id($s['person_id']).','.hrm_pay_core_008_sql_id($s['assignment_id']).','.hrm_pay_core_008_sql_id($s['calendar_period_id'])
+      .','.(int)$result_id.','.db_escape($e['result_sha256']).','.db_escape($e['source_sha256']).','.db_escape($e['evidence_set_sha256'])
+      .','.db_escape($e['idempotency_key']).','.db_escape($e['outcome']).','.db_escape($e['finding_set_sha256']).','.db_escape($e['execution_sha256'])
+      .','.$actor.')';
     if(!db_query($sql)){if($manage)cancel_transaction();$error='validation_insert_failed';return false;}
     $run=(int)db_insert_id();
-    foreach($e['findings'] as $f)if(!db_query('INSERT INTO '.TB_PREF.'hrm_pay_validation_findings (validation_run_id,finding_key,code,severity,evidence_sha256,finding_sha256) VALUES ('.$run.','.db_escape($f['finding_key']).','.db_escape($f['code']).','.db_escape($f['severity']).','.db_escape($f['evidence_sha256']).','.db_escape($f['finding_sha256']).')')){if($manage)cancel_transaction();$error='finding_insert_failed';return false;}
+    foreach($e['findings'] as $f)if(!db_query('INSERT INTO '.TB_PREF.'hrm_pay_validation_findings (validation_run_id,finding_key,code,severity,evidence_sha256,finding_sha256) VALUES ('
+      .$run.','.db_escape($f['finding_key']).','.db_escape($f['code']).','.db_escape($f['severity']).','.db_escape($f['evidence_sha256'])
+      .','.db_escape($f['finding_sha256']).')')){
+      if($manage)cancel_transaction();
+      $error='finding_insert_failed';
+      return false;
+    }
     if($manage)commit_transaction();return $run;
 }
 
@@ -171,7 +210,10 @@ function hrm_pay_core_008_record_signoff(array $scope,$result_set_sha,$validatio
     $x=hrm_pay_core_008_signoff($s,$derived_result,$derived_validation,$derived_resolution,$state,$command,$actor,$executors,$resolvers,$error);if($x===false){if($manage)cancel_transaction();return false;}
     $same=hrm_pay_core_008_one('SELECT signoff_id,signoff_sha256 FROM '.TB_PREF.'hrm_pay_validation_signoffs WHERE payroll_relationship_id='.$s['payroll_relationship_id'].' AND command_key='.db_escape($command).' LIMIT 2 FOR UPDATE');
     if($same){if(hash_equals((string)$same['signoff_sha256'],$x['signoff_sha256'])){if($manage)commit_transaction();return (int)$same['signoff_id'];}if($manage)cancel_transaction();$error='signoff_command_conflict';return false;}
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_signoffs (legal_entity_id,payroll_relationship_id,calendar_period_id,result_set_sha256,validation_set_sha256,resolution_set_sha256,signoff_state,command_key,signoff_sha256,signer_id) VALUES ('.$s['legal_entity_id'].','.$s['payroll_relationship_id'].','.$s['calendar_period_id'].','.db_escape($derived_result).','.db_escape($derived_validation).','.db_escape($derived_resolution).','.db_escape($state).','.db_escape($command).','.db_escape($x['signoff_sha256']).','.$actor.')';
+    $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_signoffs (legal_entity_id,payroll_relationship_id,calendar_period_id,result_set_sha256,validation_set_sha256,resolution_set_sha256,signoff_state,command_key,signoff_sha256,signer_id) VALUES ('
+      .$s['legal_entity_id'].','.$s['payroll_relationship_id'].','.$s['calendar_period_id'].','.db_escape($derived_result)
+      .','.db_escape($derived_validation).','.db_escape($derived_resolution).','.db_escape($state).','.db_escape($command)
+      .','.db_escape($x['signoff_sha256']).','.$actor.')';
     if(!db_query($sql)){if($manage)cancel_transaction();$error='signoff_insert_failed';return false;}
     $id=(int)db_insert_id();if($manage)commit_transaction();return $id;
 }
@@ -199,7 +241,10 @@ function hrm_pay_core_008_record_variance($kind,array $scope,$current_result_id,
     }
     $sha=hrm_pay_core_008_hash(array($v,$threshold_policy_sha));$manage=hrm_pay_core_008_manage_transaction();if($manage)begin_transaction();
     $same=hrm_pay_core_008_one('SELECT variance_id FROM '.TB_PREF.'hrm_pay_validation_variances WHERE variance_sha256='.db_escape($sha).' LIMIT 2 FOR UPDATE');if($same){if($manage)commit_transaction();return (int)$same['variance_id'];}
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_variances (variance_kind,legal_entity_id,payroll_relationship_id,current_result_id,comparison_result_id,current_result_sha256,comparison_result_sha256,currency,measure_set_json,threshold_policy_sha256,variance_sha256,executed_by) VALUES ('.db_escape($kind).','.$s['legal_entity_id'].','.$s['payroll_relationship_id'].','.(int)$current_result_id.','.(int)$comparison_result_id.','.db_escape($cr['result_sha256']).','.db_escape($pr['result_sha256']).','.db_escape($ct['currency']).','.db_escape(hrm_pay_core_004_canonical_json($v['measures'])).','.hrm_pay_core_008_sql_token($threshold_policy_sha).','.db_escape($sha).','.$actor.')';
+    $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_variances (variance_kind,legal_entity_id,payroll_relationship_id,current_result_id,comparison_result_id,current_result_sha256,comparison_result_sha256,currency,measure_set_json,threshold_policy_sha256,variance_sha256,executed_by) VALUES ('
+      .db_escape($kind).','.$s['legal_entity_id'].','.$s['payroll_relationship_id'].','.(int)$current_result_id.','.(int)$comparison_result_id
+      .','.db_escape($cr['result_sha256']).','.db_escape($pr['result_sha256']).','.db_escape($ct['currency']).','.db_escape(hrm_pay_core_004_canonical_json($v['measures']))
+      .','.hrm_pay_core_008_sql_token($threshold_policy_sha).','.db_escape($sha).','.$actor.')';
     if(!db_query($sql)){if($manage)cancel_transaction();$error='variance_insert_failed';return false;}
     $id=(int)db_insert_id();if($manage)commit_transaction();return $id;
 }
@@ -210,7 +255,12 @@ function hrm_pay_core_008_record_reconciliation($kind,array $scope,$result_set_s
     $s=hrm_pay_core_008_assert_object_scope($scope,$error);if($s===false)return false;
     if($threshold_policy!==null){$threshold_policy=hrm_pay_core_008_require_threshold_policy($threshold_policy,$error);if($threshold_policy===false)return false;}
     $r=hrm_pay_core_008_reconciliation($kind,$s,$result_set_sha,$source_evidence_sha,$expected,$actual,$unit,$currency,$threshold_policy,$as_of,$evidence_sha,$error);if($r===false)return false;
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_reconciliations (reconciliation_kind,legal_entity_id,payroll_relationship_id,calendar_period_id,result_set_sha256,source_evidence_sha256,expected_value,actual_value,difference_value,unit_code,currency_code,threshold_policy_sha256,reconciliation_state,evidence_sha256,reconciliation_sha256,reviewed_by) VALUES ('.db_escape($kind).','.$s['legal_entity_id'].','.$s['payroll_relationship_id'].','.hrm_pay_core_008_sql_id($s['calendar_period_id']).','.db_escape($result_set_sha).','.db_escape($source_evidence_sha).','.db_escape($r['expected_value']).','.db_escape($r['actual_value']).','.db_escape($r['difference_value']).','.db_escape($unit).','.hrm_pay_core_008_sql_token($currency).','.hrm_pay_core_008_sql_token($r['threshold_policy_sha256']).','.db_escape($r['reconciliation_state']).','.db_escape($r['evidence_sha256']).','.db_escape($r['reconciliation_sha256']).','.$actor.')';
+    $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_reconciliations (reconciliation_kind,legal_entity_id,payroll_relationship_id,calendar_period_id,result_set_sha256,source_evidence_sha256,expected_value,actual_value,difference_value,unit_code,currency_code,threshold_policy_sha256,reconciliation_state,evidence_sha256,reconciliation_sha256,reviewed_by) VALUES ('
+      .db_escape($kind).','.$s['legal_entity_id'].','.$s['payroll_relationship_id'].','.hrm_pay_core_008_sql_id($s['calendar_period_id'])
+      .','.db_escape($result_set_sha).','.db_escape($source_evidence_sha).','.db_escape($r['expected_value']).','.db_escape($r['actual_value'])
+      .','.db_escape($r['difference_value']).','.db_escape($unit).','.hrm_pay_core_008_sql_token($currency).','.hrm_pay_core_008_sql_token($r['threshold_policy_sha256'])
+      .','.db_escape($r['reconciliation_state']).','.db_escape($r['evidence_sha256']).','.db_escape($r['reconciliation_sha256'])
+      .','.$actor.')';
     if(!db_query($sql)){$same=hrm_pay_core_008_one('SELECT reconciliation_id FROM '.TB_PREF.'hrm_pay_validation_reconciliations WHERE reconciliation_sha256='.db_escape($r['reconciliation_sha256']).' LIMIT 2');if($same)return (int)$same['reconciliation_id'];$error='reconciliation_insert_failed';return false;}
     return (int)db_insert_id();
 }
@@ -230,7 +280,9 @@ function hrm_pay_core_008_record_recovery($subject_type,$subject_sha,$action,$so
 {
     $error=null;$actor=current_user_id_or_zero();if($actor<=0||!hrm_pay_core_008_access('SA_HRM_EXECUTE_PAY_CORE_VALIDATION')){$error='access_denied';return false;}
     $r=hrm_pay_core_008_recovery($subject_type,$subject_sha,$action,$source_sha,$evidence_sha,$actor,$error);if($r===false)return false;
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_recovery_evidence (subject_type,subject_sha256,action_token,source_sha256,evidence_sha256,recovery_sha256,executed_by) VALUES ('.db_escape($r['subject_type']).','.db_escape($r['subject_sha256']).','.db_escape($r['action_token']).','.db_escape($r['source_sha256']).','.db_escape($r['evidence_sha256']).','.db_escape($r['recovery_sha256']).','.$actor.')';
+    $sql='INSERT INTO '.TB_PREF.'hrm_pay_validation_recovery_evidence (subject_type,subject_sha256,action_token,source_sha256,evidence_sha256,recovery_sha256,executed_by) VALUES ('
+      .db_escape($r['subject_type']).','.db_escape($r['subject_sha256']).','.db_escape($r['action_token']).','.db_escape($r['source_sha256'])
+      .','.db_escape($r['evidence_sha256']).','.db_escape($r['recovery_sha256']).','.$actor.')';
     if(!db_query($sql)){$same=hrm_pay_core_008_one('SELECT recovery_evidence_id FROM '.TB_PREF.'hrm_pay_validation_recovery_evidence WHERE recovery_sha256='.db_escape($r['recovery_sha256']).' LIMIT 2');if($same)return (int)$same['recovery_evidence_id'];$error='recovery_insert_failed';return false;}
     return (int)db_insert_id();
 }

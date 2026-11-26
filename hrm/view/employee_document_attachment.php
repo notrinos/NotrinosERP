@@ -21,6 +21,11 @@ $attachment=get_attachment((int)$doc['attachment_id']);if(!$attachment){http_res
 if((int)$attachment['type_no']!==ST_EMPLOYEE){http_response_code(403);exit();}
 $employee_number=resolve_employee_number($doc['employee_id']);if($employee_number===false){http_response_code(404);exit();}
 if((int)$attachment['trans_no']!==$employee_number){http_response_code(403);exit();}
-$custom=attachment_custom_data_array(isset($attachment['custom_data'])?$attachment['custom_data']:'');if(!isset($custom['storage_backend'])||$custom['storage_backend']!=='hrm_private_v1'||!isset($custom['content_state'])||$custom['content_state']!=='available'||!isset($custom['plaintext_sha256'])||!attachment_hash_equals($custom['plaintext_sha256'],$doc['content_sha256'])){http_response_code(404);exit();}
+$custom=attachment_custom_data_array(isset($attachment['custom_data'])?$attachment['custom_data']:'');
+if(!isset($custom['storage_backend'])||$custom['storage_backend']!=='hrm_private_v1'||!isset($custom['content_state'])||$custom['content_state']!=='available'||!isset($custom['plaintext_sha256'])||!attachment_hash_equals($custom['plaintext_sha256'],
+	$doc['content_sha256'])){
+	http_response_code(404);
+	exit();
+}
 hrm_log_sensitive_field_access(HRM_FIELD_RESTRICTED_DOCUMENT,HRM_FIELD_ACTION_VIEW,isset($_GET['dl'])?'granted_content_download':'granted_content_view');
 stream_attachment_file($attachment,isset($_GET['dl'])?'download':'inline');

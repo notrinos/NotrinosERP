@@ -12,10 +12,16 @@
 require_once __DIR__.'/item_tracking_maintenance_db.inc';
 
 /** Serialize native item defaults, retained intent and all dependent SQL. */
-function update_item($stock_id, $description, $long_description, $category_id, $tax_type_id, $units, $mb_flag, $sales_account, $inventory_account, $cogs_account, $adjustment_account, $wip_account, $dimension_id, $dimension2_id, $no_sale, $editable, $no_purchase, $depreciation_method = 'D', $depreciation_rate=100, $depreciation_factor=1, $depreciation_start=null, $fa_class_id=null, $tracking=null) {
+function update_item($stock_id, $description, $long_description, $category_id, $tax_type_id, $units, $mb_flag, $sales_account,
+	$inventory_account, $cogs_account, $adjustment_account, $wip_account, $dimension_id, $dimension2_id, $no_sale, $editable,
+	$no_purchase, $depreciation_method = 'D', $depreciation_rate=100, $depreciation_factor=1, $depreciation_start=null, $fa_class_id=null,
+	$tracking=null) {
 	if (dimension_writer_stock_id($stock_id) === false) return false;
 	return dimension_ordinary_master_write('stock_master', $stock_id,
-		array('dimension_id'=>$dimension_id, 'dimension2_id'=>$dimension2_id), function($next) use ($stock_id, $description, $long_description, $category_id, $tax_type_id, $units, $mb_flag, $sales_account, $inventory_account, $cogs_account, $adjustment_account, $wip_account, $dimension_id, $dimension2_id, $no_sale, $editable, $no_purchase, $depreciation_method, $depreciation_rate, $depreciation_factor, $depreciation_start, $fa_class_id, $tracking) {
+		array('dimension_id'=>$dimension_id, 'dimension2_id'=>$dimension2_id), function($next) use ($stock_id, $description, $long_description,
+			$category_id, $tax_type_id, $units, $mb_flag, $sales_account, $inventory_account, $cogs_account, $adjustment_account, $wip_account,
+			$dimension_id, $dimension2_id, $no_sale, $editable, $no_purchase, $depreciation_method, $depreciation_rate, $depreciation_factor,
+			$depreciation_start, $fa_class_id, $tracking) {
 		$dimension_id = $next['dimension_id']; $dimension2_id = $next['dimension2_id'];
         $before=item_dimension_stock_metadata_row($stock_id);if(!$before)return false;
 		$sql = "UPDATE ".TB_PREF."stock_master SET long_description=".db_escape($long_description).",
@@ -64,7 +70,10 @@ function update_item($stock_id, $description, $long_description, $category_id, $
 function add_item($stock_id, $description, $long_description, $category_id, $tax_type_id, $units, $mb_flag,	$sales_account, $inventory_account, $cogs_account, $adjustment_account,	$wip_account, $dimension_id, $dimension2_id, $no_sale, $editable, $no_purchase, $depreciation_method='D', $depreciation_rate=100,  $depreciation_factor=1, $depreciation_start=null, $fa_class_id=null, $tracking=null) {
 	if (dimension_writer_stock_id($stock_id) === false) return false;
 	return dimension_ordinary_master_write('stock_master', null,
-		array('dimension_id'=>$dimension_id, 'dimension2_id'=>$dimension2_id), function($next) use ($stock_id, $description, $long_description, $category_id, $tax_type_id, $units, $mb_flag, $sales_account, $inventory_account, $cogs_account, $adjustment_account, $wip_account, $dimension_id, $dimension2_id, $no_sale, $editable, $no_purchase, $depreciation_method, $depreciation_rate, $depreciation_factor, $depreciation_start, $fa_class_id, $tracking) {
+		array('dimension_id'=>$dimension_id, 'dimension2_id'=>$dimension2_id), function($next) use ($stock_id, $description, $long_description,
+			$category_id, $tax_type_id, $units, $mb_flag, $sales_account, $inventory_account, $cogs_account, $adjustment_account, $wip_account,
+			$dimension_id, $dimension2_id, $no_sale, $editable, $no_purchase, $depreciation_method, $depreciation_rate, $depreciation_factor,
+			$depreciation_start, $fa_class_id, $tracking) {
 		$dimension_id = $next['dimension_id']; $dimension2_id = $next['dimension2_id'];
         if(!db_query('SELECT custom_data FROM '.TB_PREF.'stock_master LIMIT 0'))return false;
 		$tracking_cols = '';

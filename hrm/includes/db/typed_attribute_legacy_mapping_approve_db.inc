@@ -22,7 +22,12 @@ function hrm_typed_attribute_legacy_mapping_approve($mapping_version_id)
     begin_transaction();$ok=true;$return_id=false;$target=false;$rows=array();$successor=array();$leaf_ids=array();$max_version=0;
     $q=db_query('SELECT legacy_key FROM '.TB_PREF.'hrm_attribute_legacy_mapping_versions WHERE mapping_version_id='.(int)$mapping_version_id.' LIMIT 2','could not locate legacy mapping draft');
     if(!$q||db_num_rows($q)!==1)$ok=false;else{$z=db_fetch_assoc($q);$legacy_key=(string)$z['legacy_key'];}
-    if($ok){$r=db_query('SELECT mapping_version_id,legacy_key,version_no,predecessor_id,attribute_code,subject_type,mapping_status,effective_from,effective_to,qualified_review_ref,approved_at,approved_by,created_by FROM '.TB_PREF.'hrm_attribute_legacy_mapping_versions WHERE legacy_key='.db_escape($legacy_key).' ORDER BY version_no,mapping_version_id FOR UPDATE','could not lock legacy mapping approval chain');if(!$r)$ok=false;}
+    if($ok){
+      $r=db_query('SELECT mapping_version_id,legacy_key,version_no,predecessor_id,attribute_code,subject_type,mapping_status,effective_from,effective_to,qualified_review_ref,approved_at,approved_by,created_by FROM '
+        .TB_PREF.'hrm_attribute_legacy_mapping_versions WHERE legacy_key='.db_escape($legacy_key).' ORDER BY version_no,mapping_version_id FOR UPDATE',
+        'could not lock legacy mapping approval chain');
+      if(!$r)$ok=false;
+    }
     while($ok&&($row=db_fetch_assoc($r))){$id=(int)$row['mapping_version_id'];$rows[$id]=$row;$max_version=max($max_version,(int)$row['version_no']);if($row['predecessor_id']!==null){$pred=(int)$row['predecessor_id'];if(isset($successor[$pred])||!isset($rows[$pred])){$ok=false;break;}$successor[$pred]=$id;}}
     if($ok){foreach($rows as $id=>$row)if(!isset($successor[$id]))$leaf_ids[]=$id;if(count($leaf_ids)>1||!isset($rows[$mapping_version_id]))$ok=false;}
     if($ok){$target=$rows[$mapping_version_id];$definition=hrm_typed_attribute_definition_resolve_state((string)$target['attribute_code'],(string)$target['effective_from'].' 00:00:00',true);

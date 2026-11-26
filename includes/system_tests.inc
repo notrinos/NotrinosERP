@@ -18,16 +18,49 @@ $test_level = array(
 	3 => _('Required ')
 );
 
-// test mysql server version
+include_once(__DIR__.'/db/database_charset.inc');
+
+/**
+ * True for a supported database server: MariaDB 10.5 or later, or MySQL 8.0 or later (owner decision D-04).
+ *
+ * @param string $version Result of SELECT VERSION(), for example 10.5.13-MariaDB or 8.0.21.
+ * @return bool
+ */
+function database_server_version_supported($version)
+{
+	$version = preg_replace('/^5\.5\.5-/', '', (string)$version);
+	if (!preg_match('/^(\d+\.\d+\.\d+)/', $version, $matches))
+		return false;
+	return stripos($version, 'mariadb') !== false
+		? version_compare($matches[1], '10.5.0', '>=')
+		: version_compare($matches[1], '8.0.0', '>=');
+}
+
+// test database server version
 function tst_mysql() {
-	$test['descr'] = _('MySQL version'). ' >=4.1';
+	$test['descr'] = _('Database server version').' >= MariaDB 10.5 / MySQL 8.0';
 	$test['type'] = 3;
 	$test['test'] = db_get_version();
-	if (!($test['result'] = ($test['test']>='4.1'))) {
-		$db_str = explode('-', $test['test']);
-		$test['result'] = ($db_str[1] == 'MariaDB');
-	}
-	$test['comments'] = _('Upgrade MySQL server to version at least 4.1');
+	$test['result'] = database_server_version_supported($test['test']);
+	$test['comments'] = _('Upgrade the database server to MariaDB 10.5 or MySQL 8.0 or later');
+
+	return $test;
+}
+
+/**
+ * Tables of the current company that still store text as utf8 (3 bytes per character), which cannot hold emoji or
+ * some Asian characters. A fresh install has none.
+ */
+function tst_database_charset() {
+	global $db_connections;
+
+	$company = user_company();
+	$left = db_tables_needing_utf8mb4($db_connections[$company]['tbpref']);
+	$test['descr'] = _('Company tables store text as utf8mb4');
+	$test['type'] = 2;
+	$test['test'] = $left ? sprintf(_('%d tables need conversion'), count($left)) : _('Yes');
+	$test['result'] = !$left;
+	$test['comments'] = sprintf(_('After a backup, run: php admin/convert_database_charset.php convert --company=%d'), $company);
 
 	return $test;
 }
@@ -415,7 +448,7 @@ function display_system_tests($install = false) {
 	else
 		$system_tests = array('tst_mysql', 'tst_php', 'tst_curl', 'tst_zip', 'tst_server', 'tst_system', 'tst_browser',
 			'tst_gettext', 'tst_debug', 'tst_logging',
-			'tst_dbversion', 'tst_subdirs', 'tst_langs', 'tst_tmpdir', 'tst_sessionpath',
+			'tst_dbversion', 'tst_database_charset', 'tst_subdirs', 'tst_langs', 'tst_tmpdir', 'tst_sessionpath',
 			'tst_install', 'tst_dbconfig', 'tst_config', 'tst_extconfig'
 		);
 

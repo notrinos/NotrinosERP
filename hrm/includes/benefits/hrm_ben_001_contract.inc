@@ -17,8 +17,50 @@ function hrm_ben_001_decimal_compare($a,$b){$x=hrm_ben_001_micros($a);$y=hrm_ben
 function hrm_ben_001_currency($v){$v=strtoupper(trim((string)$v));return preg_match('/^[A-Z]{3}$/D',$v)?$v:false;}
 function hrm_ben_001_effective($from,$to,$asof){$f=hrm_ben_001_date($from);$a=hrm_ben_001_date($asof);$t=$to===null||$to===''?null:hrm_ben_001_date($to);return $f!==false&&$a!==false&&($t===null||$t!==false)&&$f<=$a&&($t===null||$t>=$a);}
 function hrm_ben_001_resolve_exact(array $rows,$asof){$o=array();foreach($rows as $r)if(hrm_ben_001_effective($r['effective_from'],$r['effective_to']??null,$asof))$o[]=$r;return count($o)===1?$o[0]:false;}
-function hrm_ben_001_eligibility_predicates(){return array('assignment_id'=>'assignment_id','assignment_ids'=>'assignment_id','employment_id'=>'employment_id','employment_ids'=>'employment_id','legal_entity_id'=>'legal_entity_id','legal_entity_ids'=>'legal_entity_id','grade_id'=>'grade_id','grade_ids'=>'grade_id','job_id'=>'job_id','job_ids'=>'job_id','work_location_id'=>'work_location_id','work_location_ids'=>'work_location_id','assignment_type_code'=>'assignment_type_code','assignment_type_codes'=>'assignment_type_code','employment_status'=>'employment_status','employment_statuses'=>'employment_status');}
-function hrm_ben_001_evaluate_scope_match(array $scope,$payload){$r=is_array($payload)?$payload:json_decode((string)$payload,true);if(!is_array($r))return false;$allowed=hrm_ben_001_eligibility_predicates();foreach($r as $k=>$v){if(!isset($allowed[$k]))return false;$scope_key=$allowed[$k];if(!array_key_exists($scope_key,$scope)||$scope[$scope_key]===null)return false;if(is_array($v)){if(count($v)<1||!in_array((string)$scope[$scope_key],array_map('strval',$v),true))return false;}elseif((string)$scope[$scope_key]!== (string)$v)return false;}return true;}
-function hrm_ben_001_minimized_provider_payload(array $x){$need=array('operation_code','participant_reference_sha256','dependant_reference_sha256s','plan_code','plan_version_token','effective_date');foreach($need as $k)if(!array_key_exists($k,$x))return false;if(hrm_ben_001_token($x['operation_code'],64)===false||hrm_ben_001_sha256($x['participant_reference_sha256'])===false||!is_array($x['dependant_reference_sha256s'])||hrm_ben_001_token($x['plan_code'],64)===false||hrm_ben_001_token($x['plan_version_token'],64)===false||hrm_ben_001_date($x['effective_date'])===false)return false;$deps=array();foreach($x['dependant_reference_sha256s'] as $h){$h=hrm_ben_001_sha256($h);if($h===false)return false;$deps[]=$h;}sort($deps,SORT_STRING);return array('operation_code'=>$x['operation_code'],'participant_reference_sha256'=>strtolower($x['participant_reference_sha256']),'dependant_reference_sha256s'=>$deps,'plan_code'=>$x['plan_code'],'plan_version_token'=>$x['plan_version_token'],'effective_date'=>$x['effective_date']);}
-function hrm_ben_001_cost(array $v){foreach(array('employee_fixed_amount','employer_fixed_amount','currency_code','unit_code') as $k)if(!isset($v[$k]))return false;$ee=hrm_ben_001_decimal($v['employee_fixed_amount']);$er=hrm_ben_001_decimal($v['employer_fixed_amount']);$c=hrm_ben_001_currency($v['currency_code']);$u=hrm_ben_001_token($v['unit_code'],32);if($ee===false||$er===false||$c===false||$u===false||hrm_ben_001_decimal_compare($ee,'0')<0||hrm_ben_001_decimal_compare($er,'0')<0)return false;return array('employee_amount'=>$ee,'employer_amount'=>$er,'currency_code'=>$c,'unit_code'=>$u);}
+function hrm_ben_001_eligibility_predicates(){
+	return array('assignment_id'=>'assignment_id','assignment_ids'=>'assignment_id','employment_id'=>'employment_id','employment_ids'=>'employment_id',
+		'legal_entity_id'=>'legal_entity_id','legal_entity_ids'=>'legal_entity_id','grade_id'=>'grade_id','grade_ids'=>'grade_id',
+		'job_id'=>'job_id','job_ids'=>'job_id','work_location_id'=>'work_location_id','work_location_ids'=>'work_location_id','assignment_type_code'=>'assignment_type_code',
+		'assignment_type_codes'=>'assignment_type_code','employment_status'=>'employment_status','employment_statuses'=>'employment_status');
+}
+function hrm_ben_001_evaluate_scope_match(array $scope,$payload){
+	$r=is_array($payload)?$payload:json_decode((string)$payload,true);
+	if(!is_array($r))return false;
+	$allowed=hrm_ben_001_eligibility_predicates();
+	foreach($r as $k=>$v){
+		if(!isset($allowed[$k]))return false;
+		$scope_key=$allowed[$k];
+		if(!array_key_exists($scope_key,$scope)||$scope[$scope_key]===null)return false;
+		if(is_array($v)){
+			if(count($v)<1||!in_array((string)$scope[$scope_key],array_map('strval',$v),true))return false;
+		}elseif((string)$scope[$scope_key]!== (string)$v)return false;
+	}
+	return true;
+}
+function hrm_ben_001_minimized_provider_payload(array $x){
+	$need=array('operation_code','participant_reference_sha256','dependant_reference_sha256s','plan_code','plan_version_token',
+		'effective_date');
+	foreach($need as $k)if(!array_key_exists($k,$x))return false;
+	if(hrm_ben_001_token($x['operation_code'],64)===false||hrm_ben_001_sha256($x['participant_reference_sha256'])===false||!is_array($x['dependant_reference_sha256s'])||hrm_ben_001_token($x['plan_code'],
+		64)===false||hrm_ben_001_token($x['plan_version_token'],64)===false||hrm_ben_001_date($x['effective_date'])===false)return false;
+	$deps=array();
+	foreach($x['dependant_reference_sha256s'] as $h){
+		$h=hrm_ben_001_sha256($h);
+		if($h===false)return false;
+		$deps[]=$h;
+	}
+	sort($deps,SORT_STRING);
+	return array('operation_code'=>$x['operation_code'],'participant_reference_sha256'=>strtolower($x['participant_reference_sha256']),
+		'dependant_reference_sha256s'=>$deps,'plan_code'=>$x['plan_code'],'plan_version_token'=>$x['plan_version_token'],'effective_date'=>$x['effective_date']);
+}
+function hrm_ben_001_cost(array $v){
+	foreach(array('employee_fixed_amount','employer_fixed_amount','currency_code','unit_code') as $k)if(!isset($v[$k]))return false;
+	$ee=hrm_ben_001_decimal($v['employee_fixed_amount']);
+	$er=hrm_ben_001_decimal($v['employer_fixed_amount']);
+	$c=hrm_ben_001_currency($v['currency_code']);
+	$u=hrm_ben_001_token($v['unit_code'],32);
+	if($ee===false||$er===false||$c===false||$u===false||hrm_ben_001_decimal_compare($ee,'0')<0||hrm_ben_001_decimal_compare($er,
+		'0')<0)return false;
+	return array('employee_amount'=>$ee,'employer_amount'=>$er,'currency_code'=>$c,'unit_code'=>$u);
+}
 ?>

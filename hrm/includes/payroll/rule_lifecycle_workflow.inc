@@ -144,7 +144,12 @@ function hrm_pay_rule_004_publish_version($rule_version_id,$lifecycle_review_id,
         if(!$q||db_num_rows($q)>1)$ok=false;
         elseif(db_num_rows($q)===1){
             $binding=hrm_pay_rule_004_publication_binding($version,$review,$preview,(int)$actor_id,array(),$emergency,$error);
-            if($binding===false)$ok=false;else{$r=db_fetch_assoc($q);if((int)$r['lifecycle_review_id']===(int)$lifecycle_review_id&&(int)$r['publisher_id']===(int)$binding['publisher_id']&&(string)$r['impact_scope_token']===$binding['impact_scope_token']&&(string)$r['impact_preview_sha256']===$binding['impact_preview_sha256']&&(string)$r['publication_sha256']===$binding['publication_sha256'])$return_id=(int)$r['publication_id'];else$ok=false;}
+            if($binding===false)$ok=false;
+            else{
+              $r=db_fetch_assoc($q);
+              if((int)$r['lifecycle_review_id']===(int)$lifecycle_review_id&&(int)$r['publisher_id']===(int)$binding['publisher_id']&&(string)$r['impact_scope_token']===$binding['impact_scope_token']&&(string)$r['impact_preview_sha256']===$binding['impact_preview_sha256']&&(string)$r['publication_sha256']===$binding['publication_sha256'])$return_id=(int)$r['publication_id'];
+              else$ok=false;
+            }
         }
     }
     if($ok&&$return_id===false){$intervals=hrm_pay_rule_004_active_intervals_for_rule((int)$version['rule_id'],(int)$rule_version_id);if($intervals===false)$ok=false;else{$binding=hrm_pay_rule_004_publication_binding($version,$review,$preview,(int)$actor_id,$intervals,$emergency,$error);if($binding===false)$ok=false;}}
@@ -184,13 +189,25 @@ function hrm_pay_rule_004_terminal_transition($rule_version_id,$event_type,$succ
     if($ok){$lock=db_query('SELECT rule_id FROM '.TB_PREF.'hrm_pay_rule_rules WHERE rule_id='.(int)$version['rule_id'].' LIMIT 1 FOR UPDATE');if(!$lock||db_num_rows($lock)!==1)$ok=false;}
     $publication=false;if($ok){$q=db_query('SELECT publication_id,rule_version_id,lifecycle_review_id,publisher_id,impact_scope_token,impact_preview_sha256,publication_sha256 FROM '.TB_PREF.'hrm_pay_rule_lifecycle_publications WHERE rule_version_id='.(int)$rule_version_id.' LIMIT 2 FOR UPDATE');if(!$q||db_num_rows($q)!==1)$ok=false;else$publication=db_fetch_assoc($q);}
     $binding=false;if($ok){$binding=hrm_pay_rule_004_lifecycle_event_binding($publication,$version,$event_type,$successor_rule_version_id,$reason_token,(int)$actor_id,$event_at,$error);if($binding===false)$ok=false;}
-    if($ok){$q=db_query('SELECT event_id,event_type,successor_rule_version_id,actor_id,reason_token,DATE_FORMAT(event_at,\'%Y-%m-%dT%H:%i:%sZ\') event_at,event_sha256 FROM '.TB_PREF.'hrm_pay_rule_lifecycle_events WHERE publication_id='.(int)$publication['publication_id'].' LIMIT 2 FOR UPDATE');if(!$q||db_num_rows($q)>1)$ok=false;elseif(db_num_rows($q)===1){$r=db_fetch_assoc($q);$succ=$r['successor_rule_version_id']===null?null:(int)$r['successor_rule_version_id'];if((string)$r['event_type']===$binding['event_type']&&$succ===$binding['successor_rule_version_id']&&(int)$r['actor_id']===$binding['actor_id']&&(string)$r['reason_token']===$binding['reason_token']&&(string)$r['event_at']===$binding['event_at']&&(string)$r['event_sha256']===$binding['event_sha256'])$return_id=(int)$r['event_id'];else$ok=false;}}
+    if($ok){
+      $q=db_query('SELECT event_id,event_type,successor_rule_version_id,actor_id,reason_token,DATE_FORMAT(event_at,\'%Y-%m-%dT%H:%i:%sZ\') event_at,event_sha256 FROM '
+        .TB_PREF.'hrm_pay_rule_lifecycle_events WHERE publication_id='.(int)$publication['publication_id'].' LIMIT 2 FOR UPDATE');
+      if(!$q||db_num_rows($q)>1)$ok=false;
+      elseif(db_num_rows($q)===1){
+        $r=db_fetch_assoc($q);
+        $succ=$r['successor_rule_version_id']===null?null:(int)$r['successor_rule_version_id'];
+        if((string)$r['event_type']===$binding['event_type']&&$succ===$binding['successor_rule_version_id']&&(int)$r['actor_id']===$binding['actor_id']&&(string)$r['reason_token']===$binding['reason_token']&&(string)$r['event_at']===$binding['event_at']&&(string)$r['event_sha256']===$binding['event_sha256'])$return_id=(int)$r['event_id'];
+        else$ok=false;
+      }
+    }
     if($ok&&$return_id===false&&$event_type==='superseded'){
         $q=db_query('SELECT v.rule_version_id,v.rule_id,p.publication_id FROM '.TB_PREF.'hrm_pay_rule_rule_versions v JOIN '.TB_PREF.'hrm_pay_rule_lifecycle_publications p ON p.rule_version_id=v.rule_version_id WHERE v.rule_version_id='.(int)$successor_rule_version_id.' LIMIT 2 FOR UPDATE');
         if(!$q||db_num_rows($q)!==1)$ok=false;else{$s=db_fetch_assoc($q);if((int)$s['rule_id']!==(int)$version['rule_id']||hrm_pay_rule_004_publication_terminal_event((int)$s['publication_id'])!==false)$ok=false;}
     }
     if($ok&&$return_id===false){$db_event_at=str_replace('T',' ',rtrim($binding['event_at'],'Z'));$ok=db_query('INSERT INTO '.TB_PREF.'hrm_pay_rule_lifecycle_events (rule_version_id,publication_id,event_type,successor_rule_version_id,actor_id,reason_token,event_at,event_sha256) VALUES ('.
-        (int)$rule_version_id.','.(int)$publication['publication_id'].','.db_escape($binding['event_type']).','.($binding['successor_rule_version_id']===null?'NULL':(int)$binding['successor_rule_version_id']).','.(int)$binding['actor_id'].','.db_escape($binding['reason_token']).','.db_escape($db_event_at).','.db_escape($binding['event_sha256']).')','could not append PAY-RULE-004 terminal lifecycle event')!==false;
+        (int)$rule_version_id.','.(int)$publication['publication_id'].','.db_escape($binding['event_type']).','.($binding['successor_rule_version_id']===null?'NULL':(int)$binding['successor_rule_version_id'])
+          .','.(int)$binding['actor_id'].','.db_escape($binding['reason_token']).','.db_escape($db_event_at).','.db_escape($binding['event_sha256'])
+          .')','could not append PAY-RULE-004 terminal lifecycle event')!==false;
         if($ok){$return_id=(int)db_insert_id();if($return_id<=0)$ok=false;}
         if($ok){$audit=append_domain_audit_event(array('company_id'=>function_exists('user_company')?(int)user_company():0,'legal_entity_id'=>0,'entity_type'=>'pay_rule_004_lifecycle_event',
             'entity_key'=>array('rule_version_id'=>(int)$rule_version_id,'event_id'=>$return_id),'action'=>'pay.rule_004.'.$binding['event_type'],'reason_code'=>$binding['reason_token'],
@@ -244,7 +261,14 @@ function hrm_pay_rule_004_declare_emergency_change($rule_version_id,$incident_re
     $version=hrm_pay_rule_004_read_version_internal((int)$rule_version_id,true,$error);if($version===false)$ok=false;
     if($ok){$lock=db_query('SELECT rule_id FROM '.TB_PREF.'hrm_pay_rule_rules WHERE rule_id='.(int)$version['rule_id'].' LIMIT 1 FOR UPDATE');if(!$lock||db_num_rows($lock)!==1)$ok=false;}
     $binding=false;if($ok){$binding=hrm_pay_rule_004_emergency_binding($version,$incident_reference,$reason_token,(int)$actor_id,$declared_at,$error);if($binding===false)$ok=false;}
-    if($ok){$existing=hrm_pay_rule_004_read_emergency_change_internal((int)$rule_version_id,true,$error);if($existing===false)$ok=false;elseif(is_array($existing)){if((int)$existing['requester_id']===$binding['requester_id']&&(string)$existing['incident_reference']===$binding['incident_reference']&&(string)$existing['reason_token']===$binding['reason_token']&&(string)$existing['declared_at']===$binding['declared_at']&&(string)$existing['emergency_sha256']===$binding['emergency_sha256'])$return_id=(int)$existing['emergency_change_id'];else$ok=false;}}
+    if($ok){
+      $existing=hrm_pay_rule_004_read_emergency_change_internal((int)$rule_version_id,true,$error);
+      if($existing===false)$ok=false;
+      elseif(is_array($existing)){
+        if((int)$existing['requester_id']===$binding['requester_id']&&(string)$existing['incident_reference']===$binding['incident_reference']&&(string)$existing['reason_token']===$binding['reason_token']&&(string)$existing['declared_at']===$binding['declared_at']&&(string)$existing['emergency_sha256']===$binding['emergency_sha256'])$return_id=(int)$existing['emergency_change_id'];
+        else$ok=false;
+      }
+    }
     if($ok&&$return_id===false){$q=db_query('SELECT lifecycle_review_id FROM '.TB_PREF.'hrm_pay_rule_lifecycle_reviews WHERE rule_version_id='.(int)$rule_version_id.' LIMIT 1 FOR UPDATE');if(!$q||db_num_rows($q)>0)$ok=false;}
     if($ok&&$return_id===false){$q=db_query('SELECT publication_id FROM '.TB_PREF.'hrm_pay_rule_lifecycle_publications WHERE rule_version_id='.(int)$rule_version_id.' LIMIT 1 FOR UPDATE');if(!$q||db_num_rows($q)>0)$ok=false;}
     if($ok&&$return_id===false){$db_declared=str_replace('T',' ',rtrim($binding['declared_at'],'Z'));$ok=db_query('INSERT INTO '.TB_PREF.'hrm_pay_rule_emergency_changes (rule_version_id,requester_id,incident_reference,reason_token,declared_at,emergency_sha256) VALUES ('.
@@ -278,7 +302,14 @@ function hrm_pay_rule_004_read_lifecycle($rule_version_id,&$error=null)
     if(!current_user_has_access('SA_HRM_VIEW_PAY_RULE_LIFECYCLE')){$error='unauthorized';return false;}
     $version=hrm_pay_rule_004_read_version_internal((int)$rule_version_id,false,$error);if($version===false)return false;
     $reviews=array();$q=db_query('SELECT lifecycle_review_id,review_decision,reason_token,reviewer_id,review_sha256,reviewed_at FROM '.TB_PREF.'hrm_pay_rule_lifecycle_reviews WHERE rule_version_id='.(int)$rule_version_id.' ORDER BY lifecycle_review_id');if(!$q){$error='review_read_failed';return false;}while($r=db_fetch_assoc($q))$reviews[]=$r;
-    $publication=false;$q=db_query('SELECT publication_id,lifecycle_review_id,publisher_id,impact_scope_token,impact_preview_sha256,publication_sha256,published_at FROM '.TB_PREF.'hrm_pay_rule_lifecycle_publications WHERE rule_version_id='.(int)$rule_version_id.' LIMIT 2');if(!$q||db_num_rows($q)>1){$error='publication_read_ambiguous';return false;}if(db_num_rows($q)===1)$publication=db_fetch_assoc($q);
+    $publication=false;
+    $q=db_query('SELECT publication_id,lifecycle_review_id,publisher_id,impact_scope_token,impact_preview_sha256,publication_sha256,published_at FROM '
+      .TB_PREF.'hrm_pay_rule_lifecycle_publications WHERE rule_version_id='.(int)$rule_version_id.' LIMIT 2');
+    if(!$q||db_num_rows($q)>1){
+      $error='publication_read_ambiguous';
+      return false;
+    }
+    if(db_num_rows($q)===1)$publication=db_fetch_assoc($q);
     $emergency=hrm_pay_rule_004_read_emergency_change_internal((int)$rule_version_id,false,$emergency_error);if($emergency===false){$error=$emergency_error;return false;}
     $event=$publication!==false?hrm_pay_rule_004_publication_terminal_event((int)$publication['publication_id']):false;
     $state=hrm_pay_rule_004_state_from_evidence($publication,$event);if($state===false){$error='lifecycle_state_invalid';return false;}

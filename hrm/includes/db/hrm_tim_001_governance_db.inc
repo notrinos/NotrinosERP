@@ -4,7 +4,22 @@ require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(dirname(__FILE__)).'/time/hrm_tim_001_contract.inc');
 include_once(dirname(__FILE__).'/pay_core_003_governance_db.inc');
 
-function hrm_tim_001_insert_idempotent($table,$id_col,$hash_col,$hash,$sql,&$error){$q=db_query('SELECT '.$id_col.','.$hash_col.' FROM '.TB_PREF.$table.' WHERE '.$hash_col.'='.db_escape($hash).' LIMIT 2 FOR UPDATE');if(!$q||db_num_rows($q)>1){$error='idempotency_state_invalid';return false;}if(db_num_rows($q)===1){$r=db_fetch_assoc($q);return (int)$r[$id_col];}if(!db_query($sql,'could not append HRM-TIM-001 custody')){$error='insert_failed';return false;}return (int)db_insert_id();}
+function hrm_tim_001_insert_idempotent($table,$id_col,$hash_col,$hash,$sql,&$error){
+	$q=db_query('SELECT '.$id_col.','.$hash_col.' FROM '.TB_PREF.$table.' WHERE '.$hash_col.'='.db_escape($hash).' LIMIT 2 FOR UPDATE');
+	if(!$q||db_num_rows($q)>1){
+		$error='idempotency_state_invalid';
+		return false;
+	}
+	if(db_num_rows($q)===1){
+		$r=db_fetch_assoc($q);
+		return (int)$r[$id_col];
+	}
+	if(!db_query($sql,'could not append HRM-TIM-001 custody')){
+		$error='insert_failed';
+		return false;
+	}
+	return (int)db_insert_id();
+}
 function hrm_tim_001_db_date($v){return hrm_tim_001_date($v)!==false?db_escape($v):false;}
 
 /** Resolve Worker/Employment/Legal Entity only from governed Assignment state. */
@@ -15,7 +30,19 @@ function hrm_tim_001_resolve_assignment_scope($assignment_id,$as_of,$for_update=
         .'FROM '.TB_PREF.'hrm_assignments a INNER JOIN '.TB_PREF.'hrm_employments h ON h.employment_id=a.employment_id '
         .'WHERE a.assignment_id='.$assignment_id.' AND (a.effective_from IS NULL OR a.effective_from<='.$d.') AND (a.effective_to IS NULL OR a.effective_to>='.$d.') '
         .'AND (h.start_date IS NULL OR h.start_date<='.$d.') AND (h.end_date IS NULL OR h.end_date>='.$d.') LIMIT 2'.($for_update?' FOR UPDATE':'');
-    $q=db_query($sql,'could not resolve HRM-TIM-001 assignment scope');if(!$q||db_num_rows($q)!==1){$error='assignment_scope_ambiguous_or_missing';return false;}$r=db_fetch_assoc($q);foreach(array('assignment_id','employment_id','worker_id','legal_entity_id') as $k)if((int)$r[$k]<=0){$error='assignment_scope_incomplete';return false;}return array('assignment_id'=>(int)$r['assignment_id'],'employment_id'=>(int)$r['employment_id'],'worker_id'=>(int)$r['worker_id'],'legal_entity_id'=>(int)$r['legal_entity_id'],'manager_assignment_id'=>empty($r['manager_assignment_id'])?null:(int)$r['manager_assignment_id'],'work_location_id'=>empty($r['work_location_id'])?null:(int)$r['work_location_id'],'legacy_shift_id'=>empty($r['legacy_shift_id'])?null:(int)$r['legacy_shift_id']);
+    $q=db_query($sql,'could not resolve HRM-TIM-001 assignment scope');
+    if(!$q||db_num_rows($q)!==1){
+      $error='assignment_scope_ambiguous_or_missing';
+      return false;
+    }
+    $r=db_fetch_assoc($q);
+    foreach(array('assignment_id','employment_id','worker_id','legal_entity_id') as $k)if((int)$r[$k]<=0){
+      $error='assignment_scope_incomplete';
+      return false;
+    }
+    return array('assignment_id'=>(int)$r['assignment_id'],'employment_id'=>(int)$r['employment_id'],'worker_id'=>(int)$r['worker_id'],
+      'legal_entity_id'=>(int)$r['legal_entity_id'],'manager_assignment_id'=>empty($r['manager_assignment_id'])?null:(int)$r['manager_assignment_id'],
+      'work_location_id'=>empty($r['work_location_id'])?null:(int)$r['work_location_id'],'legacy_shift_id'=>empty($r['legacy_shift_id'])?null:(int)$r['legacy_shift_id']);
 }
 function hrm_tim_001_resolve_payroll_relationship($assignment_id,$as_of,$for_update=false,&$error=null)
 {
@@ -23,7 +50,18 @@ function hrm_tim_001_resolve_payroll_relationship($assignment_id,$as_of,$for_upd
     $sql='SELECT r.payroll_relationship_id,r.worker_id,r.employment_id,r.legal_entity_id,m.assignment_id FROM '.TB_PREF.'hrm_payroll_relationship_members m INNER JOIN '.TB_PREF.'hrm_payroll_relationships r ON r.payroll_relationship_id=m.payroll_relationship_id '
         .'WHERE m.assignment_id='.(int)$assignment_id.' AND m.effective_from<='.$d.' AND (m.effective_to IS NULL OR m.effective_to>='.$d.') '
         .'AND r.effective_from<='.$d.' AND (r.effective_to IS NULL OR r.effective_to>='.$d.') LIMIT 2'.($for_update?' FOR UPDATE':'');
-    $q=db_query($sql,'could not resolve HRM-TIM-001 payroll relationship');if(!$q||db_num_rows($q)!==1){$error='payroll_relationship_ambiguous_or_missing';return false;}$r=db_fetch_assoc($q);if((int)$r['worker_id']!==$scope['worker_id']||(int)$r['assignment_id']!==$scope['assignment_id']||(int)$r['legal_entity_id']!==$scope['legal_entity_id']||(!empty($r['employment_id'])&&(int)$r['employment_id']!==$scope['employment_id'])){$error='payroll_relationship_scope_mismatch';return false;}$scope['payroll_relationship_id']=(int)$r['payroll_relationship_id'];return $scope;
+    $q=db_query($sql,'could not resolve HRM-TIM-001 payroll relationship');
+    if(!$q||db_num_rows($q)!==1){
+      $error='payroll_relationship_ambiguous_or_missing';
+      return false;
+    }
+    $r=db_fetch_assoc($q);
+    if((int)$r['worker_id']!==$scope['worker_id']||(int)$r['assignment_id']!==$scope['assignment_id']||(int)$r['legal_entity_id']!==$scope['legal_entity_id']||(!empty($r['employment_id'])&&(int)$r['employment_id']!==$scope['employment_id'])){
+      $error='payroll_relationship_scope_mismatch';
+      return false;
+    }
+    $scope['payroll_relationship_id']=(int)$r['payroll_relationship_id'];
+    return $scope;
 }
 function hrm_tim_001_actor_worker_id(){global $path_to_root;if(!function_exists('get_hrm_ess_current_self_scope'))@include_once($path_to_root.'/hrm/includes/db/ess_self_scope_db.inc');if(!function_exists('get_hrm_ess_current_self_scope'))return false;$s=get_hrm_ess_current_self_scope();return is_array($s)&&!empty($s['worker_id'])?(int)$s['worker_id']:false;}
 function hrm_tim_001_actor_can_review_scope(array $scope,$as_of)
@@ -95,13 +133,31 @@ function hrm_tim_001_ingest_raw_event($assignment_id,array $event,&$error=null)
     $resolve_error=null;
     $resolved=hrm_tim_001_local_to_utc($local,$event['timezone_name']??'',array_key_exists('utc_offset_minutes',$event)?$event['utc_offset_minutes']:null,$resolve_error);
     if($resolved===false){$error=$resolve_error?:'raw_event_time_resolution_invalid';return false;}
-    $command=hrm_tim_001_token($event['ingest_command_key']??'',128);$channel=hrm_tim_001_token($event['source_channel']??'',32);$source_key=hrm_tim_001_token($event['source_event_key']??'',128);$recorded=hrm_tim_001_utc_datetime($event['recorded_at_utc']??'');$type=(string)($event['event_type']??'');$payload=(string)($event['source_payload_sha256']??'');$pred=empty($event['predecessor_event_id'])?null:(int)$event['predecessor_event_id'];
+    $command=hrm_tim_001_token($event['ingest_command_key']??'',128);
+    $channel=hrm_tim_001_token($event['source_channel']??'',32);
+    $source_key=hrm_tim_001_token($event['source_event_key']??'',128);
+    $recorded=hrm_tim_001_utc_datetime($event['recorded_at_utc']??'');
+    $type=(string)($event['event_type']??'');
+    $payload=(string)($event['source_payload_sha256']??'');
+    $pred=empty($event['predecessor_event_id'])?null:(int)$event['predecessor_event_id'];
     if($command===false||$channel===false||$source_key===false||$recorded===false||!in_array($type,array('clock_in','clock_out','manual_anchor','legacy_attendance'),true)||!is_sha256_hex($payload)){$error='raw_event_identity_invalid';return false;}
     begin_transaction();
     /* Exact command replay is stable even after assignment/workflow state advances. */
     $q=db_query('SELECT raw_event_id,assignment_id,source_channel,source_event_key,recorded_at_utc,effective_local_at,timezone_name,effective_utc_at,utc_offset_minutes,event_type,source_payload_sha256,predecessor_event_id,ingest_command_key,event_sha256,recorded_by FROM '.TB_PREF.'hrm_time_raw_events WHERE ingest_command_key='.db_escape($command).' LIMIT 2 FOR UPDATE');
     if(!$q||db_num_rows($q)>1){cancel_transaction();$error='ingest_command_state_invalid';return false;}
-    if(db_num_rows($q)===1){$old=db_fetch_assoc($q);$same=(int)$old['assignment_id']===(int)$assignment_id&&(string)$old['source_channel']===$channel&&(string)$old['source_event_key']===$source_key&&(string)$old['recorded_at_utc']===$recorded&&(string)$old['effective_local_at']===$local&&(string)$old['timezone_name']===(string)($event['timezone_name']??'')&&(string)$old['effective_utc_at']===$resolved['utc']&&(int)$old['utc_offset_minutes']===(int)$resolved['offset_minutes']&&(string)$old['event_type']===$type&&hash_equals((string)$old['source_payload_sha256'],$payload)&&((empty($old['predecessor_event_id'])?null:(int)$old['predecessor_event_id'])===$pred)&&(int)$old['recorded_by']===$actor;if($same){commit_transaction();return array('raw_event_id'=>(int)$old['raw_event_id'],'event_sha256'=>$old['event_sha256'],'effective_utc_at'=>$old['effective_utc_at'],'replay'=>true);}cancel_transaction();$error='ingest_command_replay_mismatch';return false;}
+    if(db_num_rows($q)===1){
+      $old=db_fetch_assoc($q);
+      $same=(int)$old['assignment_id']===(int)$assignment_id&&(string)$old['source_channel']===$channel&&(string)$old['source_event_key']===$source_key&&(string)$old['recorded_at_utc']===$recorded&&(string)$old['effective_local_at']===$local&&(string)$old['timezone_name']===(string)($event['timezone_name']??'')&&(string)$old['effective_utc_at']===$resolved['utc']&&(int)$old['utc_offset_minutes']===(int)$resolved['offset_minutes']&&(string)$old['event_type']===$type&&hash_equals((string)$old['source_payload_sha256'],
+        $payload)&&((empty($old['predecessor_event_id'])?null:(int)$old['predecessor_event_id'])===$pred)&&(int)$old['recorded_by']===$actor;
+      if($same){
+        commit_transaction();
+        return array('raw_event_id'=>(int)$old['raw_event_id'],'event_sha256'=>$old['event_sha256'],'effective_utc_at'=>$old['effective_utc_at'],
+          'replay'=>true);
+      }
+      cancel_transaction();
+      $error='ingest_command_replay_mismatch';
+      return false;
+    }
     $scope=hrm_tim_001_resolve_assignment_scope($assignment_id,$work_date,true,$error);
     if($scope===false){cancel_transaction();return false;}
     foreach(array('worker_id','employment_id','legal_entity_id') as $k){
@@ -138,7 +194,11 @@ function hrm_tim_001_ingest_raw_event($assignment_id,array $event,&$error=null)
         commit_transaction();$error='conflicting_duplicate_raw_event';return false;
     }
     $sql='INSERT INTO '.TB_PREF.'hrm_time_raw_events (worker_id,employment_id,assignment_id,legal_entity_id,source_channel,source_event_key,recorded_at_utc,effective_local_at,timezone_name,effective_utc_at,utc_offset_minutes,event_type,source_payload_sha256,predecessor_event_id,ingest_command_key,event_sha256,recorded_by) VALUES ('
-        .$scope['worker_id'].','.$scope['employment_id'].','.$scope['assignment_id'].','.$scope['legal_entity_id'].','.db_escape($desc['source_channel']).','.db_escape($desc['source_event_key']).','.db_escape($desc['recorded_at_utc']).','.db_escape($desc['effective_local_at']).','.db_escape($desc['timezone_name']).','.db_escape($desc['effective_utc_at']).','.(int)$desc['utc_offset_minutes'].','.db_escape($desc['event_type']).','.db_escape($desc['source_payload_sha256']).','.($desc['predecessor_event_id']===null?'NULL':(int)$desc['predecessor_event_id']).','.db_escape($desc['ingest_command_key']).','.db_escape($desc['event_sha256']).','.$actor.')';
+        .$scope['worker_id'].','.$scope['employment_id'].','.$scope['assignment_id'].','.$scope['legal_entity_id'].','.db_escape($desc['source_channel'])
+          .','.db_escape($desc['source_event_key']).','.db_escape($desc['recorded_at_utc']).','.db_escape($desc['effective_local_at'])
+          .','.db_escape($desc['timezone_name']).','.db_escape($desc['effective_utc_at']).','.(int)$desc['utc_offset_minutes']
+          .','.db_escape($desc['event_type']).','.db_escape($desc['source_payload_sha256']).','.($desc['predecessor_event_id']===null?'NULL':(int)$desc['predecessor_event_id'])
+          .','.db_escape($desc['ingest_command_key']).','.db_escape($desc['event_sha256']).','.$actor.')';
     $id=hrm_tim_001_insert_idempotent('hrm_time_raw_events','raw_event_id','event_sha256',$desc['event_sha256'],$sql,$error);
     if($id===false){cancel_transaction();return false;}
     commit_transaction();return array('raw_event_id'=>$id,'event_sha256'=>$desc['event_sha256'],'effective_utc_at'=>$desc['effective_utc_at'],'replay'=>false);
@@ -155,7 +215,35 @@ function hrm_tim_001_review_time($assignment_id,array $review,array $raw_event_i
     /* Exact command replay returns immutable evidence before moving-state validation. */
     $q=db_query('SELECT reviewed_entry_id,assignment_id,work_date,period_start_utc,period_end_utc,reviewer_id,review_sha256 FROM '.TB_PREF.'hrm_time_reviewed_entries WHERE review_command_key='.db_escape($cmd).' LIMIT 2 FOR UPDATE');
     if(!$q||db_num_rows($q)>1){cancel_transaction();$error='review_command_state_invalid';return false;}
-    if(db_num_rows($q)===1){$old=db_fetch_assoc($q);$oldid=(int)$old['reviewed_entry_id'];$lq=db_query('SELECT raw_event_id FROM '.TB_PREF.'hrm_time_reviewed_event_links WHERE reviewed_entry_id='.$oldid.' ORDER BY raw_event_id FOR UPDATE');$oldids=array();while($lq&&$z=db_fetch_assoc($lq))$oldids[]=(int)$z['raw_event_id'];$aq=db_query('SELECT allocation_id,allocation_sha256,quantity_minutes,allocation_category FROM '.TB_PREF.'hrm_time_reviewed_allocations WHERE reviewed_entry_id='.$oldid.' ORDER BY allocation_id FOR UPDATE');$oldallocs=array();$final_allocs=array();$allocation_ids=array();while($aq&&$a=db_fetch_assoc($aq)){$allocation_ids[]=(int)$a['allocation_id'];$oldallocs[]=array((string)$a['allocation_category'],(int)$a['quantity_minutes']);$final_allocs[]=array('allocation_id'=>(int)$a['allocation_id'],'allocation_sha256'=>$a['allocation_sha256'],'quantity_minutes'=>(int)$a['quantity_minutes'],'allocation_category'=>$a['allocation_category']);}sort($oldallocs);$same=$lq&&$aq&&(int)$old['assignment_id']===(int)$assignment_id&&(int)$old['reviewer_id']===$actor&&(string)$old['work_date']===$date&&(string)$old['period_start_utc']===$start&&(string)$old['period_end_utc']===$end&&$oldids===$ids&&$oldallocs===$requested_allocs;if($same&&$final_allocs){$allocation_set_sha=hrm_tim_001_hash($final_allocs);commit_transaction();return array('reviewed_entry_id'=>$oldid,'review_sha256'=>$old['review_sha256'],'allocation_ids'=>$allocation_ids,'allocation_set_sha256'=>$allocation_set_sha,'replay'=>true);}cancel_transaction();$error='review_command_replay_mismatch';return false;}
+    if(db_num_rows($q)===1){
+      $old=db_fetch_assoc($q);
+      $oldid=(int)$old['reviewed_entry_id'];
+      $lq=db_query('SELECT raw_event_id FROM '.TB_PREF.'hrm_time_reviewed_event_links WHERE reviewed_entry_id='.$oldid.' ORDER BY raw_event_id FOR UPDATE');
+      $oldids=array();
+      while($lq&&$z=db_fetch_assoc($lq))$oldids[]=(int)$z['raw_event_id'];
+      $aq=db_query('SELECT allocation_id,allocation_sha256,quantity_minutes,allocation_category FROM '.TB_PREF.'hrm_time_reviewed_allocations WHERE reviewed_entry_id='
+        .$oldid.' ORDER BY allocation_id FOR UPDATE');
+      $oldallocs=array();
+      $final_allocs=array();
+      $allocation_ids=array();
+      while($aq&&$a=db_fetch_assoc($aq)){
+        $allocation_ids[]=(int)$a['allocation_id'];
+        $oldallocs[]=array((string)$a['allocation_category'],(int)$a['quantity_minutes']);
+        $final_allocs[]=array('allocation_id'=>(int)$a['allocation_id'],'allocation_sha256'=>$a['allocation_sha256'],'quantity_minutes'=>(int)$a['quantity_minutes'],
+          'allocation_category'=>$a['allocation_category']);
+      }
+      sort($oldallocs);
+      $same=$lq&&$aq&&(int)$old['assignment_id']===(int)$assignment_id&&(int)$old['reviewer_id']===$actor&&(string)$old['work_date']===$date&&(string)$old['period_start_utc']===$start&&(string)$old['period_end_utc']===$end&&$oldids===$ids&&$oldallocs===$requested_allocs;
+      if($same&&$final_allocs){
+        $allocation_set_sha=hrm_tim_001_hash($final_allocs);
+        commit_transaction();
+        return array('reviewed_entry_id'=>$oldid,'review_sha256'=>$old['review_sha256'],'allocation_ids'=>$allocation_ids,
+          'allocation_set_sha256'=>$allocation_set_sha,'replay'=>true);
+      }
+      cancel_transaction();
+      $error='review_command_replay_mismatch';
+      return false;
+    }
     $scope=hrm_tim_001_resolve_assignment_scope($assignment_id,$date,true,$error);
     if($scope===false||!hrm_tim_001_actor_can_review_scope($scope,$date)){cancel_transaction();$error=$error?:'review_scope_denied';return false;}
     $rel=hrm_tim_001_resolve_payroll_relationship($assignment_id,$date,true,$error);
@@ -209,7 +297,10 @@ function hrm_tim_001_review_time($assignment_id,array $review,array $raw_event_i
     if(($prev===false&&$pred!==null)||($prev!==false&&$pred!==(int)$prev['reviewed_entry_id'])){cancel_transaction();$error='stale_review_predecessor';return false;}
 
     $sql='INSERT INTO '.TB_PREF.'hrm_time_reviewed_entries (worker_id,employment_id,assignment_id,legal_entity_id,work_date,period_start_utc,period_end_utc,duration_minutes,source_event_set_sha256,source_event_count,work_pattern_sha256,review_command_key,predecessor_entry_id,reviewer_id,review_sha256) VALUES ('
-        .$scope['worker_id'].','.$scope['employment_id'].','.$scope['assignment_id'].','.$scope['legal_entity_id'].','.db_escape($desc['work_date']).','.db_escape($desc['period_start_utc']).','.db_escape($desc['period_end_utc']).','.(int)$desc['duration_minutes'].','.db_escape($event_set_sha).','.count($events).','.db_escape($desc['work_pattern_sha256']).','.db_escape($desc['review_command_key']).','.($pred===null?'NULL':$pred).','.$actor.','.db_escape($desc['review_sha256']).')';
+        .$scope['worker_id'].','.$scope['employment_id'].','.$scope['assignment_id'].','.$scope['legal_entity_id'].','.db_escape($desc['work_date'])
+          .','.db_escape($desc['period_start_utc']).','.db_escape($desc['period_end_utc']).','.(int)$desc['duration_minutes']
+          .','.db_escape($event_set_sha).','.count($events).','.db_escape($desc['work_pattern_sha256']).','.db_escape($desc['review_command_key'])
+          .','.($pred===null?'NULL':$pred).','.$actor.','.db_escape($desc['review_sha256']).')';
     $review_id=hrm_tim_001_insert_idempotent('hrm_time_reviewed_entries','reviewed_entry_id','review_sha256',$desc['review_sha256'],$sql,$error);
     if($review_id===false){cancel_transaction();return false;}
     foreach($events as $r){
@@ -236,7 +327,17 @@ function hrm_tim_001_approve_time($reviewed_entry_id,$approval_evidence_sha256,$
     /* Return the original immutable result for an exact command replay, even if later state has advanced. */
     $q=db_query('SELECT approval_id,reviewed_entry_id,approval_evidence_sha256,approver_id,approval_sha256 FROM '.TB_PREF.'hrm_time_approvals WHERE approval_command_key='.db_escape($cmd).' LIMIT 2 FOR UPDATE');
     if(!$q||db_num_rows($q)>1){cancel_transaction();$error='approval_command_state_invalid';return false;}
-    if(db_num_rows($q)===1){$old=db_fetch_assoc($q);if((int)$old['reviewed_entry_id']===$reviewed_entry_id&&(int)$old['approver_id']===$actor&&hash_equals((string)$old['approval_evidence_sha256'],$approval_evidence_sha256)){commit_transaction();return array('approval_id'=>(int)$old['approval_id'],'approval_sha256'=>$old['approval_sha256'],'replay'=>true);}cancel_transaction();$error='approval_command_replay_mismatch';return false;}
+    if(db_num_rows($q)===1){
+      $old=db_fetch_assoc($q);
+      if((int)$old['reviewed_entry_id']===$reviewed_entry_id&&(int)$old['approver_id']===$actor&&hash_equals((string)$old['approval_evidence_sha256'],
+        $approval_evidence_sha256)){
+        commit_transaction();
+        return array('approval_id'=>(int)$old['approval_id'],'approval_sha256'=>$old['approval_sha256'],'replay'=>true);
+      }
+      cancel_transaction();
+      $error='approval_command_replay_mismatch';
+      return false;
+    }
 
     $q=db_query('SELECT * FROM '.TB_PREF.'hrm_time_reviewed_entries WHERE reviewed_entry_id='.$reviewed_entry_id.' LIMIT 2 FOR UPDATE');
     $r=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
@@ -274,12 +375,21 @@ function hrm_tim_001_create_payroll_mapping(array $x,&$error=null)
 
     $q=db_query('SELECT d.input_definition_id,d.element_version_id,d.value_type,d.unit_token,v.effective_from,v.effective_to FROM '.TB_PREF.'hrm_pay_input_definitions d INNER JOIN '.TB_PREF.'hrm_pay_element_versions v ON v.element_version_id=d.element_version_id WHERE d.input_definition_id='.(int)$desc['input_definition_id'].' LIMIT 2 FOR UPDATE');
     $d=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
-    if(!$d||(int)$d['element_version_id']!==(int)$desc['element_version_id']||(string)$d['value_type']!=='decimal'||!in_array((string)$desc['unit_token'],array('minutes','hours'),true)||(string)$d['unit_token']!==(string)$desc['unit_token']||$desc['effective_from']<(string)$d['effective_from']||(!empty($d['effective_to'])&&($desc['effective_to']===null||$desc['effective_to']>(string)$d['effective_to']))){cancel_transaction();$error='pay_core_003_mapping_target_invalid';return false;}
+    if(!$d||(int)$d['element_version_id']!==(int)$desc['element_version_id']||(string)$d['value_type']!=='decimal'||!in_array((string)$desc['unit_token'],
+      array('minutes','hours'),true)||(string)$d['unit_token']!==(string)$desc['unit_token']||$desc['effective_from']<(string)$d['effective_from']||(!empty($d['effective_to'])&&($desc['effective_to']===null||$desc['effective_to']>(string)$d['effective_to']))){
+      cancel_transaction();
+      $error='pay_core_003_mapping_target_invalid';
+      return false;
+    }
     $q=db_query('SELECT mapping_id,effective_from,effective_to FROM '.TB_PREF.'hrm_time_payroll_input_mappings WHERE legal_entity_id='.(int)$desc['legal_entity_id'].' AND allocation_category='.db_escape($desc['allocation_category']).' ORDER BY effective_from DESC,mapping_id DESC LIMIT 1 FOR UPDATE');
     $prev=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;$pred=empty($desc['predecessor_mapping_id'])?null:(int)$desc['predecessor_mapping_id'];
     if(($prev===false&&$pred!==null)||($prev!==false&&$pred!==(int)$prev['mapping_id'])||($prev!==false&&$desc['effective_from']<=(string)$prev['effective_from'])){cancel_transaction();$error='mapping_predecessor_or_order_invalid';return false;}
     if($prev!==false&&!empty($prev['effective_to'])&&$desc['effective_from']<=(string)$prev['effective_to']){cancel_transaction();$error='mapping_effective_overlap';return false;}
-    $sql='INSERT INTO '.TB_PREF.'hrm_time_payroll_input_mappings (legal_entity_id,allocation_category,effective_from,effective_to,element_version_id,input_definition_id,unit_token,predecessor_mapping_id,mapping_sha256,created_by) VALUES ('.(int)$desc['legal_entity_id'].','.db_escape($desc['allocation_category']).','.db_escape($desc['effective_from']).','.($desc['effective_to']===null?'NULL':db_escape($desc['effective_to'])).','.(int)$desc['element_version_id'].','.(int)$desc['input_definition_id'].','.db_escape($desc['unit_token']).','.($pred===null?'NULL':$pred).','.db_escape($desc['mapping_sha256']).','.$actor.')';
+    $sql='INSERT INTO '.TB_PREF.'hrm_time_payroll_input_mappings (legal_entity_id,allocation_category,effective_from,effective_to,element_version_id,input_definition_id,unit_token,predecessor_mapping_id,mapping_sha256,created_by) VALUES ('
+      .(int)$desc['legal_entity_id'].','.db_escape($desc['allocation_category']).','.db_escape($desc['effective_from']).','
+      .($desc['effective_to']===null?'NULL':db_escape($desc['effective_to'])).','.(int)$desc['element_version_id'].','.(int)$desc['input_definition_id']
+      .','.db_escape($desc['unit_token']).','.($pred===null?'NULL':$pred).','.db_escape($desc['mapping_sha256']).','.$actor
+      .')';
     $id=hrm_tim_001_insert_idempotent('hrm_time_payroll_input_mappings','mapping_id','mapping_sha256',$desc['mapping_sha256'],$sql,$error);
     if($id===false){cancel_transaction();return false;}
     commit_transaction();return array('mapping_id'=>$id,'mapping_sha256'=>$desc['mapping_sha256'],'replay'=>false);
@@ -294,11 +404,24 @@ function hrm_tim_001_send_approved_time_to_payroll($approval_id,$allocation_id,$
     /* Command replay is resolved before moving-state checks so a completed command is stable. */
     $q=db_query('SELECT receipt_id,approval_id,allocation_id,payroll_period_id,approved_input_id,approved_input_sha256,receipt_sha256,executed_by FROM '.TB_PREF.'hrm_time_payroll_input_receipts WHERE command_key='.db_escape($cmd).' LIMIT 2 FOR UPDATE');
     if(!$q||db_num_rows($q)>1){cancel_transaction();$error='adapter_command_state_invalid';return false;}
-    if(db_num_rows($q)===1){$old=db_fetch_assoc($q);if((int)$old['approval_id']===$approval_id&&(int)$old['allocation_id']===$allocation_id&&(int)$old['payroll_period_id']===$period&&(int)$old['executed_by']===$actor){commit_transaction();return array('receipt_id'=>(int)$old['receipt_id'],'receipt_sha256'=>$old['receipt_sha256'],'approved_input_id'=>(int)$old['approved_input_id'],'approved_input_sha256'=>$old['approved_input_sha256'],'replay'=>true);}cancel_transaction();$error='adapter_command_replay_mismatch';return false;}
+    if(db_num_rows($q)===1){
+      $old=db_fetch_assoc($q);
+      if((int)$old['approval_id']===$approval_id&&(int)$old['allocation_id']===$allocation_id&&(int)$old['payroll_period_id']===$period&&(int)$old['executed_by']===$actor){
+        commit_transaction();
+        return array('receipt_id'=>(int)$old['receipt_id'],'receipt_sha256'=>$old['receipt_sha256'],'approved_input_id'=>(int)$old['approved_input_id'],
+          'approved_input_sha256'=>$old['approved_input_sha256'],'replay'=>true);
+      }
+      cancel_transaction();
+      $error='adapter_command_replay_mismatch';
+      return false;
+    }
     $q=db_query('SELECT receipt_id FROM '.TB_PREF.'hrm_time_payroll_input_receipts WHERE approval_id='.$approval_id.' AND allocation_id='.$allocation_id.' LIMIT 2 FOR UPDATE');
     if(!$q||db_num_rows($q)>0){cancel_transaction();$error='approved_allocation_already_exported';return false;}
 
-    $q=db_query('SELECT p.approval_id,p.approval_sha256,p.reviewed_entry_id,r.review_sha256,r.work_date,r.assignment_id,r.legal_entity_id,r.work_pattern_sha256,a.allocation_id,a.payroll_relationship_id,a.allocation_category,a.quantity_minutes,a.allocation_sha256 FROM '.TB_PREF.'hrm_time_approvals p INNER JOIN '.TB_PREF.'hrm_time_reviewed_entries r ON r.reviewed_entry_id=p.reviewed_entry_id AND r.review_sha256=p.review_sha256 INNER JOIN '.TB_PREF.'hrm_time_reviewed_allocations a ON a.reviewed_entry_id=r.reviewed_entry_id WHERE p.approval_id='.$approval_id.' AND a.allocation_id='.$allocation_id.' LIMIT 2 FOR UPDATE');
+    $q=db_query('SELECT p.approval_id,p.approval_sha256,p.reviewed_entry_id,r.review_sha256,r.work_date,r.assignment_id,r.legal_entity_id,r.work_pattern_sha256,a.allocation_id,a.payroll_relationship_id,a.allocation_category,a.quantity_minutes,a.allocation_sha256 FROM '
+      .TB_PREF.'hrm_time_approvals p INNER JOIN '.TB_PREF.'hrm_time_reviewed_entries r ON r.reviewed_entry_id=p.reviewed_entry_id AND r.review_sha256=p.review_sha256 INNER JOIN '
+      .TB_PREF.'hrm_time_reviewed_allocations a ON a.reviewed_entry_id=r.reviewed_entry_id WHERE p.approval_id='.$approval_id
+      .' AND a.allocation_id='.$allocation_id.' LIMIT 2 FOR UPDATE');
     $x=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
     if(!$x){cancel_transaction();$error='approved_allocation_missing';return false;}
     $q=db_query('SELECT reviewed_entry_id FROM '.TB_PREF.'hrm_time_reviewed_entries WHERE predecessor_entry_id='.(int)$x['reviewed_entry_id'].' LIMIT 1 FOR UPDATE');
@@ -311,21 +434,42 @@ function hrm_tim_001_send_approved_time_to_payroll($approval_id,$allocation_id,$
     $rel=hrm_tim_001_resolve_payroll_relationship((int)$x['assignment_id'],$x['work_date'],true,$error);
     if($rel===false||(int)$x['payroll_relationship_id']!==$rel['payroll_relationship_id']){cancel_transaction();$error=$error?:'payroll_relationship_changed';return false;}
 
-    $q=db_query('SELECT lp.period_id,lp.status legacy_status,c.calendar_period_id,cp.calendar_version_id,cp.period_start,cp.period_end,g.legal_entity_id FROM '.TB_PREF.'payroll_periods lp INNER JOIN '.TB_PREF.'hrm_payroll_legacy_period_conversion_receipts c ON c.legacy_period_id=lp.period_id INNER JOIN '.TB_PREF.'hrm_payroll_calendar_periods cp ON cp.calendar_period_id=c.calendar_period_id INNER JOIN '.TB_PREF.'hrm_payroll_group_enrollments ge ON ge.payroll_relationship_id='.(int)$rel['payroll_relationship_id'].' AND ge.effective_from<='.db_escape($x['work_date']).' AND (ge.effective_to IS NULL OR ge.effective_to>='.db_escape($x['work_date']).') INNER JOIN '.TB_PREF.'hrm_payroll_group_versions gv ON gv.group_version_id=ge.group_version_id AND gv.calendar_version_id=cp.calendar_version_id AND gv.effective_from<='.db_escape($x['work_date']).' AND (gv.effective_to IS NULL OR gv.effective_to>='.db_escape($x['work_date']).') INNER JOIN '.TB_PREF.'hrm_payroll_groups g ON g.payroll_group_id=gv.payroll_group_id WHERE lp.period_id='.$period.' AND lp.status=0 AND lp.from_date<='.db_escape($x['work_date']).' AND lp.to_date>='.db_escape($x['work_date']).' AND cp.period_start<='.db_escape($x['work_date']).' AND cp.period_end>='.db_escape($x['work_date']).' AND g.legal_entity_id='.(int)$x['legal_entity_id'].' AND EXISTS (SELECT 1 FROM '.TB_PREF.'hrm_payroll_legacy_period_reconciliations rr WHERE rr.conversion_receipt_id=c.conversion_receipt_id AND rr.status_token=\'reconciled\' AND NOT EXISTS (SELECT 1 FROM '.TB_PREF.'hrm_payroll_legacy_period_reconciliations newer WHERE newer.conversion_receipt_id=rr.conversion_receipt_id AND newer.reconciliation_id>rr.reconciliation_id)) LIMIT 2 FOR UPDATE');
+    $q=db_query('SELECT lp.period_id,lp.status legacy_status,c.calendar_period_id,cp.calendar_version_id,cp.period_start,cp.period_end,g.legal_entity_id FROM '
+      .TB_PREF.'payroll_periods lp INNER JOIN '.TB_PREF.'hrm_payroll_legacy_period_conversion_receipts c ON c.legacy_period_id=lp.period_id INNER JOIN '
+      .TB_PREF.'hrm_payroll_calendar_periods cp ON cp.calendar_period_id=c.calendar_period_id INNER JOIN '.TB_PREF.'hrm_payroll_group_enrollments ge ON ge.payroll_relationship_id='
+      .(int)$rel['payroll_relationship_id'].' AND ge.effective_from<='.db_escape($x['work_date']).' AND (ge.effective_to IS NULL OR ge.effective_to>='
+      .db_escape($x['work_date']).') INNER JOIN '.TB_PREF.'hrm_payroll_group_versions gv ON gv.group_version_id=ge.group_version_id AND gv.calendar_version_id=cp.calendar_version_id AND gv.effective_from<='
+      .db_escape($x['work_date']).' AND (gv.effective_to IS NULL OR gv.effective_to>='.db_escape($x['work_date']).') INNER JOIN '
+      .TB_PREF.'hrm_payroll_groups g ON g.payroll_group_id=gv.payroll_group_id WHERE lp.period_id='.$period.' AND lp.status=0 AND lp.from_date<='
+      .db_escape($x['work_date']).' AND lp.to_date>='.db_escape($x['work_date']).' AND cp.period_start<='.db_escape($x['work_date'])
+      .' AND cp.period_end>='.db_escape($x['work_date']).' AND g.legal_entity_id='.(int)$x['legal_entity_id'].' AND EXISTS (SELECT 1 FROM '
+      .TB_PREF.'hrm_payroll_legacy_period_reconciliations rr WHERE rr.conversion_receipt_id=c.conversion_receipt_id AND rr.status_token=\'reconciled\' AND NOT EXISTS (SELECT 1 FROM '
+      .TB_PREF.'hrm_payroll_legacy_period_reconciliations newer WHERE newer.conversion_receipt_id=rr.conversion_receipt_id AND newer.reconciliation_id>rr.reconciliation_id)) LIMIT 2 FOR UPDATE');
     $ps=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
     if(!$ps){cancel_transaction();$error='payroll_period_stale_or_out_of_scope';return false;}
-    $q=db_query('SELECT mapping_id,element_version_id,input_definition_id,unit_token,mapping_sha256 FROM '.TB_PREF.'hrm_time_payroll_input_mappings WHERE legal_entity_id='.(int)$x['legal_entity_id'].' AND allocation_category='.db_escape($x['allocation_category']).' AND effective_from<='.db_escape($x['work_date']).' AND (effective_to IS NULL OR effective_to>='.db_escape($x['work_date']).') ORDER BY effective_from DESC,mapping_id DESC LIMIT 1 FOR UPDATE');
+    $q=db_query('SELECT mapping_id,element_version_id,input_definition_id,unit_token,mapping_sha256 FROM '.TB_PREF.'hrm_time_payroll_input_mappings WHERE legal_entity_id='
+      .(int)$x['legal_entity_id'].' AND allocation_category='.db_escape($x['allocation_category']).' AND effective_from<='
+      .db_escape($x['work_date']).' AND (effective_to IS NULL OR effective_to>='.db_escape($x['work_date']).') ORDER BY effective_from DESC,mapping_id DESC LIMIT 1 FOR UPDATE');
     $m=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
     if(!$m){cancel_transaction();$error='governed_mapping_missing_or_ambiguous';return false;}
     $value=$m['unit_token']==='minutes'?(string)(int)$x['quantity_minutes']:hrm_tim_001_minutes_to_decimal_hours((int)$x['quantity_minutes']);
     if($value===false){cancel_transaction();$error='adapter_quantity_invalid';return false;}
 
     $source_sha=hrm_tim_001_hash(array('approval_sha256'=>$x['approval_sha256'],'allocation_sha256'=>$x['allocation_sha256'],'mapping_sha256'=>$m['mapping_sha256'],'adapter_version'=>HRM_TIM_001_PAYROLL_ADAPTER_VERSION));
-    $candidate=array('payroll_relationship_id'=>$rel['payroll_relationship_id'],'assignment_id'=>(int)$x['assignment_id'],'element_version_id'=>(int)$m['element_version_id'],'input_definition_id'=>(int)$m['input_definition_id'],'effective_date'=>$x['work_date'],'value_type'=>'decimal','value'=>$value,'source_kind'=>'hrm_tim_001_approved_time','source_event_id'=>$approval_id.':'.$allocation_id,'source_sha256'=>$source_sha,'approval_evidence_sha256'=>$x['approval_sha256']);
+    $candidate=array('payroll_relationship_id'=>$rel['payroll_relationship_id'],'assignment_id'=>(int)$x['assignment_id'],
+      'element_version_id'=>(int)$m['element_version_id'],'input_definition_id'=>(int)$m['input_definition_id'],'effective_date'=>$x['work_date'],
+      'value_type'=>'decimal','value'=>$value,'source_kind'=>'hrm_tim_001_approved_time','source_event_id'=>$approval_id.':'
+      .$allocation_id,'source_sha256'=>$source_sha,'approval_evidence_sha256'=>$x['approval_sha256']);
     $pc3=hrm_pay_core_003_write_approved_input($candidate,$error);
     if($pc3===false){cancel_transaction();return false;}
-    $receipt_sha=hrm_tim_001_hash(array('approval_id'=>$approval_id,'allocation_id'=>$allocation_id,'mapping_id'=>(int)$m['mapping_id'],'payroll_period_id'=>$period,'calendar_period_id'=>(int)$ps['calendar_period_id'],'payroll_relationship_id'=>$rel['payroll_relationship_id'],'assignment_id'=>(int)$x['assignment_id'],'approved_input_id'=>(int)$pc3['approved_input_id'],'approved_input_sha256'=>$pc3['input_sha256'],'adapter_version'=>HRM_TIM_001_PAYROLL_ADAPTER_VERSION,'command_key'=>$cmd,'executed_by'=>$actor));
-    $sql='INSERT INTO '.TB_PREF.'hrm_time_payroll_input_receipts (approval_id,allocation_id,mapping_id,payroll_period_id,calendar_period_id,payroll_relationship_id,assignment_id,approved_input_id,approved_input_sha256,adapter_version,command_key,receipt_sha256,executed_by) VALUES ('.$approval_id.','.$allocation_id.','.(int)$m['mapping_id'].','.$period.','.(int)$ps['calendar_period_id'].','.$rel['payroll_relationship_id'].','.(int)$x['assignment_id'].','.(int)$pc3['approved_input_id'].','.db_escape($pc3['input_sha256']).','.db_escape(HRM_TIM_001_PAYROLL_ADAPTER_VERSION).','.db_escape($cmd).','.db_escape($receipt_sha).','.$actor.')';
+    $receipt_sha=hrm_tim_001_hash(array('approval_id'=>$approval_id,'allocation_id'=>$allocation_id,'mapping_id'=>(int)$m['mapping_id'],
+      'payroll_period_id'=>$period,'calendar_period_id'=>(int)$ps['calendar_period_id'],'payroll_relationship_id'=>$rel['payroll_relationship_id'],
+      'assignment_id'=>(int)$x['assignment_id'],'approved_input_id'=>(int)$pc3['approved_input_id'],'approved_input_sha256'=>$pc3['input_sha256'],
+      'adapter_version'=>HRM_TIM_001_PAYROLL_ADAPTER_VERSION,'command_key'=>$cmd,'executed_by'=>$actor));
+    $sql='INSERT INTO '.TB_PREF.'hrm_time_payroll_input_receipts (approval_id,allocation_id,mapping_id,payroll_period_id,calendar_period_id,payroll_relationship_id,assignment_id,approved_input_id,approved_input_sha256,adapter_version,command_key,receipt_sha256,executed_by) VALUES ('
+      .$approval_id.','.$allocation_id.','.(int)$m['mapping_id'].','.$period.','.(int)$ps['calendar_period_id'].','.$rel['payroll_relationship_id']
+      .','.(int)$x['assignment_id'].','.(int)$pc3['approved_input_id'].','.db_escape($pc3['input_sha256']).','.db_escape(HRM_TIM_001_PAYROLL_ADAPTER_VERSION)
+      .','.db_escape($cmd).','.db_escape($receipt_sha).','.$actor.')';
     $rid=hrm_tim_001_insert_idempotent('hrm_time_payroll_input_receipts','receipt_id','receipt_sha256',$receipt_sha,$sql,$error);
     if($rid===false){cancel_transaction();return false;}
     commit_transaction();return array('receipt_id'=>$rid,'receipt_sha256'=>$receipt_sha,'approved_input_id'=>(int)$pc3['approved_input_id'],'approved_input_sha256'=>$pc3['input_sha256'],'replay'=>false);
@@ -334,14 +478,44 @@ function hrm_tim_001_migrate_legacy_attendance($attendance_id,&$error=null)
 {
     $error=null;$actor=current_user_id_or_zero();$attendance_id=(int)$attendance_id;if($actor<=0||!current_user_has_access('SA_HRM_MIGRATE_TIME')||$attendance_id<=0){$error='access_denied';return false;}
     begin_transaction();$q=db_query('SELECT * FROM '.TB_PREF.'attendance WHERE attendance_id='.$attendance_id.' LIMIT 2 FOR UPDATE');$a=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;if(!$a){cancel_transaction();$error='legacy_attendance_missing';return false;}$attendance_sha=hrm_tim_001_hash($a);
-    $q=db_query('SELECT legacy_receipt_id,attendance_sha256,migration_status FROM '.TB_PREF.'hrm_time_legacy_attendance_receipts WHERE attendance_id='.$attendance_id.' LIMIT 2 FOR UPDATE');if($q&&db_num_rows($q)===1){$r=db_fetch_assoc($q);if(hash_equals($r['attendance_sha256'],$attendance_sha)){commit_transaction();return array('legacy_receipt_id'=>(int)$r['legacy_receipt_id'],'status'=>$r['migration_status']);}cancel_transaction();$error='legacy_attendance_changed_after_custody';return false;}
-    $date=hrm_tim_001_date($a['date']??'');$employee_id=(string)($a['employee_id']??'');$q=db_query('SELECT m.worker_id,m.employee_number,m.employee_id,a.assignment_id,h.employment_id,h.legal_entity_id FROM '.TB_PREF.'hrm_employee_worker_map m INNER JOIN '.TB_PREF.'hrm_employments h ON h.worker_id=m.worker_id INNER JOIN '.TB_PREF.'hrm_assignments a ON a.employment_id=h.employment_id WHERE m.employee_id='.db_escape($employee_id).' AND m.retired_at IS NULL AND '.($date===false?'1=0':'(h.start_date IS NULL OR h.start_date<='.db_escape($date).') AND (h.end_date IS NULL OR h.end_date>='.db_escape($date).') AND (a.effective_from IS NULL OR a.effective_from<='.db_escape($date).') AND (a.effective_to IS NULL OR a.effective_to>='.db_escape($date).')').' LIMIT 2 FOR UPDATE');$map=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
+    $q=db_query('SELECT legacy_receipt_id,attendance_sha256,migration_status FROM '.TB_PREF.'hrm_time_legacy_attendance_receipts WHERE attendance_id='
+      .$attendance_id.' LIMIT 2 FOR UPDATE');
+    if($q&&db_num_rows($q)===1){
+      $r=db_fetch_assoc($q);
+      if(hash_equals($r['attendance_sha256'],$attendance_sha)){
+        commit_transaction();
+        return array('legacy_receipt_id'=>(int)$r['legacy_receipt_id'],'status'=>$r['migration_status']);
+      }
+      cancel_transaction();
+      $error='legacy_attendance_changed_after_custody';
+      return false;
+    }
+    $date=hrm_tim_001_date($a['date']??'');
+    $employee_id=(string)($a['employee_id']??'');
+    $q=db_query('SELECT m.worker_id,m.employee_number,m.employee_id,a.assignment_id,h.employment_id,h.legal_entity_id FROM '
+      .TB_PREF.'hrm_employee_worker_map m INNER JOIN '.TB_PREF.'hrm_employments h ON h.worker_id=m.worker_id INNER JOIN '
+      .TB_PREF.'hrm_assignments a ON a.employment_id=h.employment_id WHERE m.employee_id='.db_escape($employee_id).' AND m.retired_at IS NULL AND '
+      .($date===false?'1=0':'(h.start_date IS NULL OR h.start_date<='.db_escape($date).') AND (h.end_date IS NULL OR h.end_date>='
+      .db_escape($date).') AND (a.effective_from IS NULL OR a.effective_from<='.db_escape($date).') AND (a.effective_to IS NULL OR a.effective_to>='
+      .db_escape($date).')').' LIMIT 2 FOR UPDATE');
+    $map=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
     $e1=null;$e2=null;$regular=hrm_tim_001_decimal_hours_to_minutes_exact($a['regular_hours']??'0',$e1);$overtime=hrm_tim_001_decimal_hours_to_minutes_exact($a['overtime_hours']??'0',$e2);$approved=(int)($a['approved']??0)===1?1:0;
     $status='quarantined';$reason='unresolved_identity';if($date!==false&&$map&&$regular!==false&&$overtime!==false){if($approved){$status='approved_legacy_fact';$reason='legacy_origin_no_raw_clock_provenance';}else{$status='unapproved_legacy_fact';$reason='legacy_origin_not_approved';}}elseif($regular===false||$overtime===false){$reason='legacy_quantity_not_exact_minute';}
     /* Legacy rows are custody facts only. We preserve approved status and exact minute totals but never fabricate raw clock, timezone, work-pattern, reviewer or payroll mapping history. */
     $receipt_sha=hrm_tim_001_hash(array('attendance_id'=>$attendance_id,'attendance_sha256'=>$attendance_sha,'migration_status'=>$status,'regular_minutes'=>$regular,'overtime_minutes'=>$overtime,'legacy_approved'=>$approved,'reason_token'=>$reason,'executed_by'=>$actor));
-    $sql='INSERT INTO '.TB_PREF.'hrm_time_legacy_attendance_receipts (attendance_id,attendance_sha256,migration_status,regular_minutes,overtime_minutes,legacy_approved,raw_event_id,reviewed_entry_id,approval_id,reason_token,receipt_sha256,executed_by) VALUES ('.$attendance_id.','.db_escape($attendance_sha).','.db_escape($status).','.($regular===false?'NULL':(int)$regular).','.($overtime===false?'NULL':(int)$overtime).','.$approved.',NULL,NULL,NULL,'.db_escape($reason).','.db_escape($receipt_sha).','.$actor.')';
-    $rid=hrm_tim_001_insert_idempotent('hrm_time_legacy_attendance_receipts','legacy_receipt_id','receipt_sha256',$receipt_sha,$sql,$error);if($rid===false){cancel_transaction();return false;}commit_transaction();return array('legacy_receipt_id'=>$rid,'status'=>$status,'reason'=>$reason,'attendance_sha256'=>$attendance_sha,'regular_minutes'=>$regular,'overtime_minutes'=>$overtime,'legacy_approved'=>$approved);
+    $sql='INSERT INTO '.TB_PREF.'hrm_time_legacy_attendance_receipts (attendance_id,attendance_sha256,migration_status,regular_minutes,overtime_minutes,legacy_approved,raw_event_id,reviewed_entry_id,approval_id,reason_token,receipt_sha256,executed_by) VALUES ('
+      .$attendance_id.','.db_escape($attendance_sha).','.db_escape($status).','.($regular===false?'NULL':(int)$regular).','
+      .($overtime===false?'NULL':(int)$overtime).','.$approved.',NULL,NULL,NULL,'.db_escape($reason).','.db_escape($receipt_sha)
+      .','.$actor.')';
+    $rid=hrm_tim_001_insert_idempotent('hrm_time_legacy_attendance_receipts','legacy_receipt_id','receipt_sha256',$receipt_sha,
+      $sql,$error);
+    if($rid===false){
+      cancel_transaction();
+      return false;
+    }
+    commit_transaction();
+    return array('legacy_receipt_id'=>$rid,'status'=>$status,'reason'=>$reason,'attendance_sha256'=>$attendance_sha,'regular_minutes'=>$regular,
+      'overtime_minutes'=>$overtime,'legacy_approved'=>$approved);
 }
 
 ?>

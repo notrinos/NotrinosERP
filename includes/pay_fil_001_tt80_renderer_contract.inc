@@ -87,11 +87,23 @@ function pay_fil_001_validate_tt80_render_model(array $m, &$error=null)
     if (pay_fil_001_uint($b['company_id'])===false || pay_fil_001_posint($b['legal_entity_id'])===false || !is_sha256_hex($b['obligation_sha256']) || !is_sha256_hex($b['source_set_sha256']) || !is_sha256_hex($b['semantic_mapping_sha256']) || $b['currency_code']!=='VND') { $error='tt80_source_binding_invalid'; return false; }
     $h=$m['header'];
     foreach(array('record_id','service_name','service_version','provider_info','declaration_kind','sequence_no','period','period_start','period_end','prepared_on','signer_name','signed_on') as $k) if(!array_key_exists($k,$h)) { $error='tt80_header_field_missing'; return false; }
-    if(pay_fil_001_tt80_text($h['record_id'],64,$error,'record_id')===false || pay_fil_001_tt80_text($h['service_name'],128,$error,'service_name')===false || pay_fil_001_tt80_text($h['service_version'],32,$error,'service_version')===false || pay_fil_001_tt80_text($h['provider_info'],160,$error,'provider_info')===false || !in_array($h['declaration_kind'],array('C','B'),true) || pay_fil_001_posint($h['sequence_no'])===false || preg_match('#^[1-4]/20[0-9]{2}$#D',(string)$h['period'])!==1 || pay_fil_001_date($h['period_start'])===false || pay_fil_001_date($h['period_end'])===false || pay_fil_001_date($h['prepared_on'])===false || pay_fil_001_tt80_text($h['signer_name'],160,$error,'signer_name')===false || pay_fil_001_date($h['signed_on'])===false) { if(!$error)$error='tt80_header_invalid'; return false; }
+    if(pay_fil_001_tt80_text($h['record_id'],64,$error,'record_id')===false || pay_fil_001_tt80_text($h['service_name'],128,
+      $error,'service_name')===false || pay_fil_001_tt80_text($h['service_version'],32,$error,'service_version')===false || pay_fil_001_tt80_text($h['provider_info'],
+      160,$error,'provider_info')===false || !in_array($h['declaration_kind'],array('C','B'),true) || pay_fil_001_posint($h['sequence_no'])===false || preg_match('#^[1-4]/20[0-9]{2}$#D',
+      (string)$h['period'])!==1 || pay_fil_001_date($h['period_start'])===false || pay_fil_001_date($h['period_end'])===false || pay_fil_001_date($h['prepared_on'])===false || pay_fil_001_tt80_text($h['signer_name'],
+      160,$error,'signer_name')===false || pay_fil_001_date($h['signed_on'])===false) {
+      if(!$error)$error='tt80_header_invalid';
+      return false;
+    }
     $q=(int)substr((string)$h['period'],0,1);$y=(int)substr((string)$h['period'],2);$expectedStart=sprintf('%04d-%02d-01',$y,(($q-1)*3)+1);$endMonth=$q*3;$expectedEnd=date('Y-m-t',strtotime(sprintf('%04d-%02d-01',$y,$endMonth)));
     if($h['period_start']!==$expectedStart||$h['period_end']!==$expectedEnd){$error='tt80_quarter_dates_invalid';return false;}
     $t=$m['taxpayer'];foreach(array('tax_code','name','address','ward_name','ward_code','district_code','district_name','province_code','province_name','phone','fax','email','business_activity') as $k) if(!array_key_exists($k,$t)){ $error='tt80_taxpayer_field_missing'; return false; }
-    if(pay_fil_001_tt80_text($t['tax_code'],32,$error,'tax_code')===false||pay_fil_001_tt80_text($t['name'],200,$error,'taxpayer_name')===false||pay_fil_001_tt80_text($t['address'],240,$error,'taxpayer_address')===false||pay_fil_001_tt80_text($t['ward_name'],160,$error,'ward_name')===false||pay_fil_001_tt80_text($t['ward_code'],64,$error,'ward_code')===false||pay_fil_001_tt80_text($t['district_code'],64,$error,'district_code',true)===false||pay_fil_001_tt80_text($t['district_name'],160,$error,'district_name',true)===false||pay_fil_001_tt80_text($t['province_code'],64,$error,'province_code')===false||pay_fil_001_tt80_text($t['province_name'],160,$error,'province_name')===false||pay_fil_001_tt80_text($t['phone'],64,$error,'phone',true)===false||pay_fil_001_tt80_text($t['fax'],64,$error,'fax',true)===false||pay_fil_001_tt80_text($t['email'],160,$error,'email',true)===false)return false;
+    if(pay_fil_001_tt80_text($t['tax_code'],32,$error,'tax_code')===false||pay_fil_001_tt80_text($t['name'],200,$error,'taxpayer_name')===false||pay_fil_001_tt80_text($t['address'],
+      240,$error,'taxpayer_address')===false||pay_fil_001_tt80_text($t['ward_name'],160,$error,'ward_name')===false||pay_fil_001_tt80_text($t['ward_code'],
+      64,$error,'ward_code')===false||pay_fil_001_tt80_text($t['district_code'],64,$error,'district_code',true)===false||pay_fil_001_tt80_text($t['district_name'],
+      160,$error,'district_name',true)===false||pay_fil_001_tt80_text($t['province_code'],64,$error,'province_code')===false||pay_fil_001_tt80_text($t['province_name'],
+      160,$error,'province_name')===false||pay_fil_001_tt80_text($t['phone'],64,$error,'phone',true)===false||pay_fil_001_tt80_text($t['fax'],
+      64,$error,'fax',true)===false||pay_fil_001_tt80_text($t['email'],160,$error,'email',true)===false)return false;
     if(pay_fil_001_tt80_text($t['business_activity'],240,$error,'business_activity',true)===false)return false;
     $o=$m['tax_office'];foreach(array('code','name') as $k)if(!array_key_exists($k,$o)){$error='tt80_tax_office_field_missing';return false;}
     if(pay_fil_001_tt80_text($o['code'],64,$error,'tax_office_code',true)===false||pay_fil_001_tt80_text($o['name'],160,$error,'tax_office_name',true)===false)return false;
@@ -110,13 +122,98 @@ function pay_fil_001_validate_tt80_render_model(array $m, &$error=null)
 function pay_fil_001_render_tt80_xml_candidate(array $model, &$error=null)
 {
     $m=pay_fil_001_validate_tt80_render_model($model,$error);if($m===false)return false;$p=pay_fil_001_tt80_renderer_profile();$h=$m['header'];$t=$m['taxpayer'];$o=$m['tax_office'];$agent=$m['tax_agent'];$extension=$m['extension'];$i=$m['indicators'];
-    $e='pay_fil_001_tt80_escape';$x=array();$x[]='<?xml version="1.0" encoding="UTF-8"?>';$x[]='<HSoThueDTu xmlns="'.$p['namespace'].'">';$x[]='  <HSoKhaiThue id="'.$e($h['record_id']).'">';$x[]='    <TTinChung>';$x[]='      <TTinDVu>';$x[]='        <maDVu>NotrinosERP</maDVu>';$x[]='        <tenDVu>'.$e($h['service_name']).'</tenDVu>';$x[]='        <pbanDVu>'.$e($h['service_version']).'</pbanDVu>';$x[]='        <ttinNhaCCapDVu>'.$e($h['provider_info']).'</ttinNhaCCapDVu>';$x[]='      </TTinDVu>';$x[]='      <TTinTKhaiThue>';$x[]='        <TKhaiThue>';$x[]='          <maTKhai>864</maTKhai>';$x[]='          <tenTKhai>TK khấu trừ thuế thu nhập cá nhân Mẫu 05/KK-TNCN (TT80/2021)</tenTKhai>';$x[]='          <moTaBMau/>';$x[]='          <pbanTKhaiXML>2.9.3</pbanTKhaiXML>';$x[]='          <loaiTKhai>'.$e($h['declaration_kind']).'</loaiTKhai>';$x[]='          <soLan>'.(int)$h['sequence_no'].'</soLan>';$x[]='          <KyKKhaiThue>';$x[]='            <kieuKy>Q</kieuKy>';$x[]='            <kyKKhai>'.$e($h['period']).'</kyKKhai>';$x[]='            <kyKKhaiTuNgay>'.$e($h['period_start']).'</kyKKhaiTuNgay>';$x[]='            <kyKKhaiDenNgay>'.$e($h['period_end']).'</kyKKhaiDenNgay>';$x[]='            <kyKKhaiTuThang/>';$x[]='            <kyKKhaiDenThang/>';$x[]='          </KyKKhaiThue>';$x[]='          <maCQTNoiNop/>';$x[]='          <tenCQTNoiNop/>';$x[]='          <ngayLapTKhai>'.$e($h['prepared_on']).'</ngayLapTKhai>';$x[]='          <GiaHan>';$x[]='            <maLyDoGiaHan/>';$x[]='            <lyDoGiaHan/>';$x[]='          </GiaHan>';$x[]='          <nguoiKy>'.$e($h['signer_name']).'</nguoiKy>';$x[]='          <ngayKy>'.$e($h['signed_on']).'</ngayKy>';$x[]='          <nganhNgheKD/>';$x[]='        </TKhaiThue>';$x[]='        <NNT>';$x[]='          <mst>'.$e($t['tax_code']).'</mst>';$x[]='          <tenNNT>'.$e($t['name']).'</tenNNT>';$x[]='          <dchiNNT>'.$e($t['address']).'</dchiNNT>';$x[]='          <tenXaNNT>'.$e($t['ward_name']).'</tenXaNNT>';$x[]='          <maXaNNT>'.$e($t['ward_code']).'</maXaNNT>';$x[]='          <maHuyenNNT>'.$e($t['district_code']).'</maHuyenNNT>';$x[]='          <tenHuyenNNT>'.$e($t['district_name']).'</tenHuyenNNT>';$x[]='          <maTinhNNT>'.$e($t['province_code']).'</maTinhNNT>';$x[]='          <tenTinhNNT>'.$e($t['province_name']).'</tenTinhNNT>';$x[]='          <dthoaiNNT>'.$e($t['phone']).'</dthoaiNNT>';$x[]='          <faxNNT>'.$e($t['fax']).'</faxNNT>';$x[]='          <emailNNT>'.$e($t['email']).'</emailNNT>';$x[]='        </NNT>';$x[]='        <DLyThue>';$x[]='          <mstDLyThue>'.$e($t['tax_code']).'</mstDLyThue>';$x[]='          <tenDLyThue/>';$x[]='          <dchiDLyThue/>';$x[]='          <maHuyenDLyThue/>';$x[]='          <tenHuyenDLyThue/>';$x[]='          <maTinhDLyThue/>';$x[]='          <tenTinhDLyThue/>';$x[]='          <dthoaiDLyThue/>';$x[]='          <faxDLyThue/>';$x[]='          <emailDLyThue/>';$x[]='          <soHDongDLyThue/>';$x[]='          <ngayKyHDDLyThue>'.$e($h['signed_on']).'</ngayKyHDDLyThue>';$x[]='          <NVienDLy>';$x[]='            <tenNVienDLyThue/>';$x[]='            <cchiHNghe/>';$x[]='          </NVienDLy>';$x[]='        </DLyThue>';$x[]='      </TTinTKhaiThue>';$x[]='    </TTinChung>';$x[]='    <CTieuTKhaiChinh>';
+    $e='pay_fil_001_tt80_escape';
+    $x=array();
+    $x[]='<?xml version="1.0" encoding="UTF-8"?>';
+    $x[]='<HSoThueDTu xmlns="'.$p['namespace'].'">';
+    $x[]='  <HSoKhaiThue id="'.$e($h['record_id']).'">';
+    $x[]='    <TTinChung>';
+    $x[]='      <TTinDVu>';
+    $x[]='        <maDVu>NotrinosERP</maDVu>';
+    $x[]='        <tenDVu>'.$e($h['service_name']).'</tenDVu>';
+    $x[]='        <pbanDVu>'.$e($h['service_version']).'</pbanDVu>';
+    $x[]='        <ttinNhaCCapDVu>'.$e($h['provider_info']).'</ttinNhaCCapDVu>';
+    $x[]='      </TTinDVu>';
+    $x[]='      <TTinTKhaiThue>';
+    $x[]='        <TKhaiThue>';
+    $x[]='          <maTKhai>864</maTKhai>';
+    $x[]='          <tenTKhai>TK khấu trừ thuế thu nhập cá nhân Mẫu 05/KK-TNCN (TT80/2021)</tenTKhai>';
+    $x[]='          <moTaBMau/>';
+    $x[]='          <pbanTKhaiXML>2.9.3</pbanTKhaiXML>';
+    $x[]='          <loaiTKhai>'.$e($h['declaration_kind']).'</loaiTKhai>';
+    $x[]='          <soLan>'.(int)$h['sequence_no'].'</soLan>';
+    $x[]='          <KyKKhaiThue>';
+    $x[]='            <kieuKy>Q</kieuKy>';
+    $x[]='            <kyKKhai>'.$e($h['period']).'</kyKKhai>';
+    $x[]='            <kyKKhaiTuNgay>'.$e($h['period_start']).'</kyKKhaiTuNgay>';
+    $x[]='            <kyKKhaiDenNgay>'.$e($h['period_end']).'</kyKKhaiDenNgay>';
+    $x[]='            <kyKKhaiTuThang/>';
+    $x[]='            <kyKKhaiDenThang/>';
+    $x[]='          </KyKKhaiThue>';
+    $x[]='          <maCQTNoiNop/>';
+    $x[]='          <tenCQTNoiNop/>';
+    $x[]='          <ngayLapTKhai>'.$e($h['prepared_on']).'</ngayLapTKhai>';
+    $x[]='          <GiaHan>';
+    $x[]='            <maLyDoGiaHan/>';
+    $x[]='            <lyDoGiaHan/>';
+    $x[]='          </GiaHan>';
+    $x[]='          <nguoiKy>'.$e($h['signer_name']).'</nguoiKy>';
+    $x[]='          <ngayKy>'.$e($h['signed_on']).'</ngayKy>';
+    $x[]='          <nganhNgheKD/>';
+    $x[]='        </TKhaiThue>';
+    $x[]='        <NNT>';
+    $x[]='          <mst>'.$e($t['tax_code']).'</mst>';
+    $x[]='          <tenNNT>'.$e($t['name']).'</tenNNT>';
+    $x[]='          <dchiNNT>'.$e($t['address']).'</dchiNNT>';
+    $x[]='          <tenXaNNT>'.$e($t['ward_name']).'</tenXaNNT>';
+    $x[]='          <maXaNNT>'.$e($t['ward_code']).'</maXaNNT>';
+    $x[]='          <maHuyenNNT>'.$e($t['district_code']).'</maHuyenNNT>';
+    $x[]='          <tenHuyenNNT>'.$e($t['district_name']).'</tenHuyenNNT>';
+    $x[]='          <maTinhNNT>'.$e($t['province_code']).'</maTinhNNT>';
+    $x[]='          <tenTinhNNT>'.$e($t['province_name']).'</tenTinhNNT>';
+    $x[]='          <dthoaiNNT>'.$e($t['phone']).'</dthoaiNNT>';
+    $x[]='          <faxNNT>'.$e($t['fax']).'</faxNNT>';
+    $x[]='          <emailNNT>'.$e($t['email']).'</emailNNT>';
+    $x[]='        </NNT>';
+    $x[]='        <DLyThue>';
+    $x[]='          <mstDLyThue>'.$e($t['tax_code']).'</mstDLyThue>';
+    $x[]='          <tenDLyThue/>';
+    $x[]='          <dchiDLyThue/>';
+    $x[]='          <maHuyenDLyThue/>';
+    $x[]='          <tenHuyenDLyThue/>';
+    $x[]='          <maTinhDLyThue/>';
+    $x[]='          <tenTinhDLyThue/>';
+    $x[]='          <dthoaiDLyThue/>';
+    $x[]='          <faxDLyThue/>';
+    $x[]='          <emailDLyThue/>';
+    $x[]='          <soHDongDLyThue/>';
+    $x[]='          <ngayKyHDDLyThue>'.$e($h['signed_on']).'</ngayKyHDDLyThue>';
+    $x[]='          <NVienDLy>';
+    $x[]='            <tenNVienDLyThue/>';
+    $x[]='            <cchiHNghe/>';
+    $x[]='          </NVienDLy>';
+    $x[]='        </DLyThue>';
+    $x[]='      </TTinTKhaiThue>';
+    $x[]='    </TTinChung>';
+    $x[]='    <CTieuTKhaiChinh>';
     foreach(pay_fil_001_tt80_indicator_fields() as $k)$x[]='      <'.$k.'>'.($k==='ct15'?($i[$k]?'true':'false'):$e($i[$k])).'</'.$k.'>';
     $x[]='    </CTieuTKhaiChinh>';$x[]='    <PLuc/>';$x[]='  </HSoKhaiThue>';$x[]='</HSoThueDTu>';
     $xml=implode("\n",$x)."\n";
     $xml=str_replace(
-        array('<maCQTNoiNop/>','<tenCQTNoiNop/>','<maLyDoGiaHan/>','<lyDoGiaHan/>','<nganhNgheKD/>','<mstDLyThue>'.$e($t['tax_code']).'</mstDLyThue>','<tenDLyThue/>','<dchiDLyThue/>','<maHuyenDLyThue/>','<tenHuyenDLyThue/>','<maTinhDLyThue/>','<tenTinhDLyThue/>','<dthoaiDLyThue/>','<faxDLyThue/>','<emailDLyThue/>','<soHDongDLyThue/>','<ngayKyHDDLyThue>'.$e($h['signed_on']).'</ngayKyHDDLyThue>','<tenNVienDLyThue/>','<cchiHNghe/>'),
-        array('<maCQTNoiNop>'.$e($o['code']).'</maCQTNoiNop>','<tenCQTNoiNop>'.$e($o['name']).'</tenCQTNoiNop>','<maLyDoGiaHan>'.$e($extension['reason_code']).'</maLyDoGiaHan>','<lyDoGiaHan>'.$e($extension['reason']).'</lyDoGiaHan>','<nganhNgheKD>'.$e($t['business_activity']).'</nganhNgheKD>','<mstDLyThue>'.$e($agent['tax_code']).'</mstDLyThue>','<tenDLyThue>'.$e($agent['name']).'</tenDLyThue>','<dchiDLyThue>'.$e($agent['address']).'</dchiDLyThue>','<maHuyenDLyThue>'.$e($agent['district_code']).'</maHuyenDLyThue>','<tenHuyenDLyThue>'.$e($agent['district_name']).'</tenHuyenDLyThue>','<maTinhDLyThue>'.$e($agent['province_code']).'</maTinhDLyThue>','<tenTinhDLyThue>'.$e($agent['province_name']).'</tenTinhDLyThue>','<dthoaiDLyThue>'.$e($agent['phone']).'</dthoaiDLyThue>','<faxDLyThue>'.$e($agent['fax']).'</faxDLyThue>','<emailDLyThue>'.$e($agent['email']).'</emailDLyThue>','<soHDongDLyThue>'.$e($agent['contract_number']).'</soHDongDLyThue>','<ngayKyHDDLyThue>'.$e($agent['contract_signed_on']).'</ngayKyHDDLyThue>','<tenNVienDLyThue>'.$e($agent['employee_name']).'</tenNVienDLyThue>','<cchiHNghe>'.$e($agent['professional_certificate']).'</cchiHNghe>'),
+        array('<maCQTNoiNop/>','<tenCQTNoiNop/>','<maLyDoGiaHan/>','<lyDoGiaHan/>','<nganhNgheKD/>','<mstDLyThue>'.$e($t['tax_code'])
+          .'</mstDLyThue>','<tenDLyThue/>','<dchiDLyThue/>','<maHuyenDLyThue/>','<tenHuyenDLyThue/>','<maTinhDLyThue/>','<tenTinhDLyThue/>',
+          '<dthoaiDLyThue/>','<faxDLyThue/>','<emailDLyThue/>','<soHDongDLyThue/>','<ngayKyHDDLyThue>'.$e($h['signed_on'])
+          .'</ngayKyHDDLyThue>','<tenNVienDLyThue/>','<cchiHNghe/>'),
+        array('<maCQTNoiNop>'.$e($o['code']).'</maCQTNoiNop>','<tenCQTNoiNop>'.$e($o['name']).'</tenCQTNoiNop>','<maLyDoGiaHan>'
+          .$e($extension['reason_code']).'</maLyDoGiaHan>','<lyDoGiaHan>'.$e($extension['reason']).'</lyDoGiaHan>','<nganhNgheKD>'
+          .$e($t['business_activity']).'</nganhNgheKD>','<mstDLyThue>'.$e($agent['tax_code']).'</mstDLyThue>','<tenDLyThue>'
+          .$e($agent['name']).'</tenDLyThue>','<dchiDLyThue>'.$e($agent['address']).'</dchiDLyThue>','<maHuyenDLyThue>'.$e($agent['district_code'])
+          .'</maHuyenDLyThue>','<tenHuyenDLyThue>'.$e($agent['district_name']).'</tenHuyenDLyThue>','<maTinhDLyThue>'.$e($agent['province_code'])
+          .'</maTinhDLyThue>','<tenTinhDLyThue>'.$e($agent['province_name']).'</tenTinhDLyThue>','<dthoaiDLyThue>'.$e($agent['phone'])
+          .'</dthoaiDLyThue>','<faxDLyThue>'.$e($agent['fax']).'</faxDLyThue>','<emailDLyThue>'.$e($agent['email']).'</emailDLyThue>',
+          '<soHDongDLyThue>'.$e($agent['contract_number']).'</soHDongDLyThue>','<ngayKyHDDLyThue>'.$e($agent['contract_signed_on'])
+          .'</ngayKyHDDLyThue>','<tenNVienDLyThue>'.$e($agent['employee_name']).'</tenNVienDLyThue>','<cchiHNghe>'.$e($agent['professional_certificate'])
+          .'</cchiHNghe>'),
         $xml
     );
     return array('payload'=>$xml,'payload_sha256'=>hash('sha256',$xml),'byte_length'=>strlen($xml),'renderer_id'=>$p['renderer_id'],'renderer_version'=>$p['renderer_version'],'schema_id'=>$p['form_id'],'schema_version'=>$p['schema_version'],'media_type'=>$p['media_type'],'official_schema_claimed'=>false,'production_generation_allowed'=>false,'submission_authorized'=>false);

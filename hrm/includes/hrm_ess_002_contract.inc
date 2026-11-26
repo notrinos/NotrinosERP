@@ -16,11 +16,55 @@ function hrm_ess_002_today(){if(function_exists('Today')&&function_exists('date2
 /** Check the fixed-size token format before looking up a durable replay receipt. */
 function hrm_ess_002_action_nonce_format_valid($nonce){return is_string($nonce)&&preg_match('/^[a-f0-9]{48}$/D',$nonce)===1;}
 /** Generate strong nonce bytes on supported PHP versions without a weak fallback. */
-function hrm_ess_002_random_bytes($length){$length=(int)$length;if($length<=0)return false;$bytes=false;if(function_exists('random_bytes')){try{$bytes=random_bytes($length);}catch(Exception $e){$bytes=false;}}if($bytes===false&&function_exists('openssl_random_pseudo_bytes')){$strong=false;$bytes=openssl_random_pseudo_bytes($length,$strong);if(!$strong)$bytes=false;}return is_string($bytes)&&strlen($bytes)===$length?$bytes:false;}
-function hrm_ess_002_issue_action_nonce($scope){$scope=hrm_ess_002_token($scope,32);if($scope===false)return false;if(!isset($_SESSION['hrm_ess_002_action_nonces'])||!is_array($_SESSION['hrm_ess_002_action_nonces']))$_SESSION['hrm_ess_002_action_nonces']=array();if(!isset($_SESSION['hrm_ess_002_action_nonces'][$scope])||!is_array($_SESSION['hrm_ess_002_action_nonces'][$scope]))$_SESSION['hrm_ess_002_action_nonces'][$scope]=array();$bytes=hrm_ess_002_random_bytes(24);if($bytes===false)return false;$n=bin2hex($bytes);array_unshift($_SESSION['hrm_ess_002_action_nonces'][$scope],$n);$_SESSION['hrm_ess_002_action_nonces'][$scope]=array_slice(array_values(array_unique($_SESSION['hrm_ess_002_action_nonces'][$scope])),0,5);return $n;}
-function hrm_ess_002_validate_action_nonce($scope,$nonce){$scope=hrm_ess_002_token($scope,32);$nonce=hrm_ess_002_token($nonce,64);if($scope===false||$nonce===false||empty($_SESSION['hrm_ess_002_action_nonces'][$scope])||!is_array($_SESSION['hrm_ess_002_action_nonces'][$scope]))return false;foreach($_SESSION['hrm_ess_002_action_nonces'][$scope] as $known)if(is_string($known)&&hash_equals($known,$nonce))return true;return false;}
+function hrm_ess_002_random_bytes($length){
+	$length=(int)$length;
+	if($length<=0)return false;
+	$bytes=false;
+	if(function_exists('random_bytes')){
+		try{
+			$bytes=random_bytes($length);
+		}catch(Exception $e){
+			$bytes=false;
+		}
+	}
+	if($bytes===false&&function_exists('openssl_random_pseudo_bytes')){
+		$strong=false;
+		$bytes=openssl_random_pseudo_bytes($length,$strong);
+		if(!$strong)$bytes=false;
+	}
+	return is_string($bytes)&&strlen($bytes)===$length?$bytes:false;
+}
+function hrm_ess_002_issue_action_nonce($scope){
+	$scope=hrm_ess_002_token($scope,32);
+	if($scope===false)return false;
+	if(!isset($_SESSION['hrm_ess_002_action_nonces'])||!is_array($_SESSION['hrm_ess_002_action_nonces']))$_SESSION['hrm_ess_002_action_nonces']=array();
+	if(!isset($_SESSION['hrm_ess_002_action_nonces'][$scope])||!is_array($_SESSION['hrm_ess_002_action_nonces'][$scope]))$_SESSION['hrm_ess_002_action_nonces'][$scope]=array();
+	$bytes=hrm_ess_002_random_bytes(24);
+	if($bytes===false)return false;
+	$n=bin2hex($bytes);
+	array_unshift($_SESSION['hrm_ess_002_action_nonces'][$scope],$n);
+	$_SESSION['hrm_ess_002_action_nonces'][$scope]=array_slice(array_values(array_unique($_SESSION['hrm_ess_002_action_nonces'][$scope])),
+		0,5);
+	return $n;
+}
+function hrm_ess_002_validate_action_nonce($scope,$nonce){
+	$scope=hrm_ess_002_token($scope,32);
+	$nonce=hrm_ess_002_token($nonce,64);
+	if($scope===false||$nonce===false||empty($_SESSION['hrm_ess_002_action_nonces'][$scope])||!is_array($_SESSION['hrm_ess_002_action_nonces'][$scope]))return false;
+	foreach($_SESSION['hrm_ess_002_action_nonces'][$scope] as $known)if(is_string($known)&&hash_equals($known,$nonce))return true;
+	return false;
+}
 function hrm_ess_002_consume_action_nonce($scope,$nonce){if(!hrm_ess_002_validate_action_nonce($scope,$nonce))return false;$known=&$_SESSION['hrm_ess_002_action_nonces'][$scope];$known=array_values(array_filter($known,function($v)use($nonce){return !is_string($v)||!hash_equals($v,$nonce);}));return true;}
 function hrm_ess_002_actor_id(){if(!isset($_SESSION['wa_current_user']))return 0;$u=$_SESSION['wa_current_user'];if(isset($u->user)&&is_numeric($u->user))return (int)$u->user;if(isset($u->id)&&is_numeric($u->id))return (int)$u->id;return 0;}
 /** Map internal error tokens to safe, localized employee-facing text. */
-function hrm_ess_002_safe_error($error){$error=is_string($error)?$error:'';if(strpos($error,'unauthorized')!==false||strpos($error,'scope_denied')!==false||strpos($error,'authority_denied')!==false)return _('You are not authorized to complete this action in the current scope.');if(strpos($error,'stale')!==false||strpos($error,'missing')!==false||strpos($error,'ambiguous')!==false||strpos($error,'state_invalid')!==false||strpos($error,'not_pending')!==false)return _('The record or approval state changed. Reload and review it before trying again.');if(strpos($error,'invalid')!==false||strpos($error,'mismatch')!==false||strpos($error,'window')!==false)return _('Some required details are invalid. Check the form and try again.');if(strpos($error,'workflow')!==false||strpos($error,'approval')!==false||strpos($error,'insert_failed')!==false||strpos($error,'execution')!==false)return _('The governed workflow could not complete this action. Contact HR support if the problem persists.');return _('This action could not be completed. Try again or contact HR support.');}
+function hrm_ess_002_safe_error($error){
+	$error=is_string($error)?$error:'';
+	if(strpos($error,'unauthorized')!==false||strpos($error,'scope_denied')!==false||strpos($error,'authority_denied')!==false)return _('You are not authorized to complete this action in the current scope.');
+	if(strpos($error,'stale')!==false||strpos($error,'missing')!==false||strpos($error,'ambiguous')!==false||strpos($error,'state_invalid')!==false||strpos($error,
+		'not_pending')!==false)return _('The record or approval state changed. Reload and review it before trying again.');
+	if(strpos($error,'invalid')!==false||strpos($error,'mismatch')!==false||strpos($error,'window')!==false)return _('Some required details are invalid. Check the form and try again.');
+	if(strpos($error,'workflow')!==false||strpos($error,'approval')!==false||strpos($error,'insert_failed')!==false||strpos($error,
+		'execution')!==false)return _('The governed workflow could not complete this action. Contact HR support if the problem persists.');
+	return _('This action could not be completed. Try again or contact HR support.');
+}
 ?>

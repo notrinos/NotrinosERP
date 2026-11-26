@@ -42,7 +42,10 @@ function pay_rec_001_validate_filing_completion_evidence(array $context,array $e
         ||!is_string($evidence['local_validator'])||trim($evidence['local_validator'])===''||!is_string($evidence['local_validator_version'])||trim($evidence['local_validator_version'])===''||$evidence['local_validator_result']!=='PASS'
         ||$evidence['production_transmission_required_for_closure']!==false||$evidence['production_transmission_allowed']!==false||$evidence['portal_submission_allowed']!==false)
         return pay_rec_001_fail($error,'filing_completion_evidence_invalid');
-    $receipt=array('policy_sha256'=>pay_rec_001_filing_completion_policy_sha256(),'close_mode'=>$context['close_mode'],'terminal_state'=>$policy['development_terminal_state'],'obligation_sha256'=>$context['obligation_sha256'],'source_set_sha256'=>$context['source_set_sha256'],'generated_payload_sha256'=>$evidence['generated_payload_sha256'],'generated_validation_receipt_sha256'=>$evidence['generated_validation_receipt_sha256'],'local_validator_result'=>'PASS','repository_xsd_validation'=>'PASS','statutory_acceptance_claimed'=>false,'production_close_allowed'=>false);
+    $receipt=array('policy_sha256'=>pay_rec_001_filing_completion_policy_sha256(),'close_mode'=>$context['close_mode'],'terminal_state'=>$policy['development_terminal_state'],
+      'obligation_sha256'=>$context['obligation_sha256'],'source_set_sha256'=>$context['source_set_sha256'],'generated_payload_sha256'=>$evidence['generated_payload_sha256'],
+      'generated_validation_receipt_sha256'=>$evidence['generated_validation_receipt_sha256'],'local_validator_result'=>'PASS',
+      'repository_xsd_validation'=>'PASS','statutory_acceptance_claimed'=>false,'production_close_allowed'=>false);
     $receipt['completion_receipt_sha256']=pay_rec_001_hash($receipt);return $receipt;
 }
 ?>

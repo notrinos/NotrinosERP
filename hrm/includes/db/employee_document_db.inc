@@ -443,8 +443,8 @@ function get_expiring_documents($days_ahead=30) {
 			JOIN ".TB_PREF."document_types t ON d.doc_type_id = t.doc_type_id
 			JOIN ".TB_PREF."employees e ON d.employee_id = e.employee_id
 			WHERE d.expiry_date IS NOT NULL
-			AND d.expiry_date <= '$future'
+			AND d.expiry_date <= ?
 			AND d.expiry_date >= CURDATE()
 			ORDER BY d.expiry_date ASC";
-	return db_query($sql, 'could not get expiring documents');
+	return db_query_params($sql, array($future), 'could not get expiring documents');
 }

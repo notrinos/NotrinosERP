@@ -222,7 +222,12 @@ function pay_ctry_002_validate_runtime_snapshot(array $v,&$error=null)
     $error=null;
     foreach(array('run_id','company_id','scope_type','from_date','to_date','resolution_state','snapshot_sha256','captured_by') as $k)
         if(!array_key_exists($k,$v)){$error='missing_'.$k;return false;}
-    if(pay_ctry_002_uint($v['run_id'],false)===false||pay_ctry_002_uint($v['captured_by'],false)===false||!pay_ctry_002_validate_scope($v,$error)||!pay_ctry_002_validate_interval($v['from_date'],$v['to_date'],$error)||!in_array((string)$v['resolution_state'],pay_ctry_002_runtime_resolution_states(),true)||pay_ctry_002_sha256($v['snapshot_sha256'])===false){if($error===null)$error='runtime_snapshot_invalid';return false;}
+    if(pay_ctry_002_uint($v['run_id'],false)===false||pay_ctry_002_uint($v['captured_by'],false)===false||!pay_ctry_002_validate_scope($v,
+      $error)||!pay_ctry_002_validate_interval($v['from_date'],$v['to_date'],$error)||!in_array((string)$v['resolution_state'],
+      pay_ctry_002_runtime_resolution_states(),true)||pay_ctry_002_sha256($v['snapshot_sha256'])===false){
+      if($error===null)$error='runtime_snapshot_invalid';
+      return false;
+    }
     if((string)$v['resolution_state']==='governed'&&(!isset($v['binding_id'])||pay_ctry_002_uint($v['binding_id'],false)===false||!isset($v['binding_sha256'])||pay_ctry_002_sha256($v['binding_sha256'])===false)){$error='governed_snapshot_binding_missing';return false;}
     return true;
 }

@@ -33,8 +33,27 @@ function pay_api_001_request_webhook_reprocess($company_id,$webhook_dead_letter_
     if(!pay_api_001_runtime_require_company($company,$error))return false;$now=pay_api_001_runtime_now();$manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();$dead=pay_api_001_webhook_reprocess_dead_letter($dead_id,$company,$error);if(!$dead){if($manage)cancel_transaction();return false;}
     $auth=db_query('SELECT webhook_reprocess_authorization_id FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_authorizations WHERE webhook_dead_letter_id='.$dead_id.' LIMIT 1 FOR UPDATE');if(!$auth||db_num_rows($auth)>0){if($manage)cancel_transaction();$error='webhook_reprocess_already_authorized';return false;}
     $sha=pay_api_001_provisioning_hash(array('company_id'=>$company,'webhook_dead_letter_id'=>$dead_id,'dead_letter_sha256'=>(string)$dead['dead_letter_sha256'],'reason_code'=>$reason,'requested_by'=>$actor));if($sha===false){if($manage)cancel_transaction();$error='webhook_reprocess_request_hash_failed';return false;}
-    $old=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_requests WHERE request_sha256='.db_escape($sha).' LIMIT 2 FOR UPDATE','could not read PAY-API-001 reprocess request replay');if($old){if((int)$old['webhook_dead_letter_id']!==$dead_id||(int)$old['requested_by']!==$actor||(string)$old['reason_code']!==$reason){if($manage)cancel_transaction();$error='webhook_reprocess_request_replay_mismatch';return false;}if($manage)commit_transaction();return array('webhook_reprocess_request_id'=>(int)$old['webhook_reprocess_request_id'],'request_sha256'=>$sha,'replayed'=>true);}
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_requests (webhook_dead_letter_id,reason_code,request_sha256,requested_by,requested_at,created_at) VALUES ('.$dead_id.','.db_escape($reason).','.db_escape($sha).','.$actor.','.db_escape($now).','.db_escape($now).')';if(!db_query($sql)){if($manage)cancel_transaction();$error='webhook_reprocess_request_insert_failed';return false;}$id=(int)db_insert_id();if($manage)commit_transaction();return array('webhook_reprocess_request_id'=>$id,'request_sha256'=>$sha,'replayed'=>false);
+    $old=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_requests WHERE request_sha256='
+      .db_escape($sha).' LIMIT 2 FOR UPDATE','could not read PAY-API-001 reprocess request replay');
+    if($old){
+      if((int)$old['webhook_dead_letter_id']!==$dead_id||(int)$old['requested_by']!==$actor||(string)$old['reason_code']!==$reason){
+        if($manage)cancel_transaction();
+        $error='webhook_reprocess_request_replay_mismatch';
+        return false;
+      }
+      if($manage)commit_transaction();
+      return array('webhook_reprocess_request_id'=>(int)$old['webhook_reprocess_request_id'],'request_sha256'=>$sha,'replayed'=>true);
+    }
+    $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_requests (webhook_dead_letter_id,reason_code,request_sha256,requested_by,requested_at,created_at) VALUES ('
+      .$dead_id.','.db_escape($reason).','.db_escape($sha).','.$actor.','.db_escape($now).','.db_escape($now).')';
+    if(!db_query($sql)){
+      if($manage)cancel_transaction();
+      $error='webhook_reprocess_request_insert_failed';
+      return false;
+    }
+    $id=(int)db_insert_id();
+    if($manage)commit_transaction();
+    return array('webhook_reprocess_request_id'=>$id,'request_sha256'=>$sha,'replayed'=>false);
 }
 
 function pay_api_001_review_webhook_reprocess($company_id,$webhook_reprocess_request_id,$decision_code,&$error=null)
@@ -42,10 +61,48 @@ function pay_api_001_review_webhook_reprocess($company_id,$webhook_reprocess_req
     $error=null;$actor=current_user_id_or_zero();$company=pay_api_001_uint_value($company_id,true,4294967295);$request_id=pay_api_001_positive_id($webhook_reprocess_request_id);$decision=in_array($decision_code,array('approve','reject'),true)?$decision_code:false;
     if($actor<=0||!pay_api_001_runtime_access('SA_HRM_REVIEW_PAY_API_REPROCESS')||$company===false||$request_id===false||$decision===false||!pay_api_001_webhook_reprocess_runtime_enabled('review')){$error='webhook_reprocess_review_access_or_version_denied';return false;}
     if(!pay_api_001_runtime_require_company($company,$error))return false;$now=pay_api_001_runtime_now();$manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();
-    $sql='SELECT r.*,d.dead_letter_sha256,e.company_id FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_requests r INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_dead_letters d ON d.webhook_dead_letter_id=r.webhook_dead_letter_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_outbox o ON o.webhook_outbox_id=d.webhook_outbox_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_events e ON e.webhook_event_id=o.webhook_event_id WHERE r.webhook_reprocess_request_id='.$request_id.' LIMIT 2 FOR UPDATE';$r=pay_api_001_runtime_one($sql,'could not lock PAY-API-001 reprocess request');if(!$r||(int)$r['company_id']!==$company||(int)$r['requested_by']===$actor){if($manage)cancel_transaction();$error='webhook_reprocess_review_scope_or_sod_invalid';return false;}
+    $sql='SELECT r.*,d.dead_letter_sha256,e.company_id FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_requests r INNER JOIN '
+      .TB_PREF.'hrm_pay_api_001_webhook_dead_letters d ON d.webhook_dead_letter_id=r.webhook_dead_letter_id INNER JOIN '.TB_PREF
+      .'hrm_pay_api_001_webhook_outbox o ON o.webhook_outbox_id=d.webhook_outbox_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_events e ON e.webhook_event_id=o.webhook_event_id WHERE r.webhook_reprocess_request_id='
+      .$request_id.' LIMIT 2 FOR UPDATE';
+    $r=pay_api_001_runtime_one($sql,'could not lock PAY-API-001 reprocess request');
+    if(!$r||(int)$r['company_id']!==$company||(int)$r['requested_by']===$actor){
+      if($manage)cancel_transaction();
+      $error='webhook_reprocess_review_scope_or_sod_invalid';
+      return false;
+    }
     $auth=db_query('SELECT webhook_reprocess_authorization_id FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_authorizations WHERE webhook_dead_letter_id='.(int)$r['webhook_dead_letter_id'].' LIMIT 1 FOR UPDATE');if(!$auth||db_num_rows($auth)>0){if($manage)cancel_transaction();$error='webhook_reprocess_already_authorized';return false;}
-    $old=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_reviews WHERE webhook_reprocess_request_id='.$request_id.' LIMIT 2 FOR UPDATE','could not read PAY-API-001 reprocess review replay');$sha=pay_api_001_provisioning_hash(array('webhook_reprocess_request_id'=>$request_id,'request_sha256'=>(string)$r['request_sha256'],'decision_code'=>$decision,'reviewed_by'=>$actor));if($sha===false){if($manage)cancel_transaction();$error='webhook_reprocess_review_hash_failed';return false;}if($old){if((string)$old['decision_code']!==$decision||(int)$old['reviewed_by']!==$actor||!hash_equals((string)$old['review_sha256'],$sha)){if($manage)cancel_transaction();$error='webhook_reprocess_review_replay_mismatch';return false;}if($manage)commit_transaction();return array('webhook_reprocess_review_id'=>(int)$old['webhook_reprocess_review_id'],'review_sha256'=>$sha,'decision_code'=>$decision,'replayed'=>true);}
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_reviews (webhook_reprocess_request_id,decision_code,request_sha256,reviewed_by,reviewed_at,review_sha256,created_at) VALUES ('.$request_id.','.db_escape($decision).','.db_escape($r['request_sha256']).','.$actor.','.db_escape($now).','.db_escape($sha).','.db_escape($now).')';if(!db_query($sql)){if($manage)cancel_transaction();$error='webhook_reprocess_review_insert_failed';return false;}$id=(int)db_insert_id();if($manage)commit_transaction();return array('webhook_reprocess_review_id'=>$id,'review_sha256'=>$sha,'decision_code'=>$decision,'replayed'=>false);
+    $old=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_reviews WHERE webhook_reprocess_request_id='
+      .$request_id.' LIMIT 2 FOR UPDATE','could not read PAY-API-001 reprocess review replay');
+    $sha=pay_api_001_provisioning_hash(array('webhook_reprocess_request_id'=>$request_id,'request_sha256'=>(string)$r['request_sha256'],
+      'decision_code'=>$decision,'reviewed_by'=>$actor));
+    if($sha===false){
+      if($manage)cancel_transaction();
+      $error='webhook_reprocess_review_hash_failed';
+      return false;
+    }
+    if($old){
+      if((string)$old['decision_code']!==$decision||(int)$old['reviewed_by']!==$actor||!hash_equals((string)$old['review_sha256'],
+        $sha)){
+        if($manage)cancel_transaction();
+        $error='webhook_reprocess_review_replay_mismatch';
+        return false;
+      }
+      if($manage)commit_transaction();
+      return array('webhook_reprocess_review_id'=>(int)$old['webhook_reprocess_review_id'],'review_sha256'=>$sha,'decision_code'=>$decision,
+        'replayed'=>true);
+    }
+    $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_reviews (webhook_reprocess_request_id,decision_code,request_sha256,reviewed_by,reviewed_at,review_sha256,created_at) VALUES ('
+      .$request_id.','.db_escape($decision).','.db_escape($r['request_sha256']).','.$actor.','.db_escape($now).','.db_escape($sha)
+      .','.db_escape($now).')';
+    if(!db_query($sql)){
+      if($manage)cancel_transaction();
+      $error='webhook_reprocess_review_insert_failed';
+      return false;
+    }
+    $id=(int)db_insert_id();
+    if($manage)commit_transaction();
+    return array('webhook_reprocess_review_id'=>$id,'review_sha256'=>$sha,'decision_code'=>$decision,'replayed'=>false);
 }
 
 function pay_api_001_approve_webhook_reprocess($company_id,$webhook_reprocess_request_id,$decision_code,&$error=null)
@@ -53,11 +110,89 @@ function pay_api_001_approve_webhook_reprocess($company_id,$webhook_reprocess_re
     $error=null;$actor=current_user_id_or_zero();$company=pay_api_001_uint_value($company_id,true,4294967295);$request_id=pay_api_001_positive_id($webhook_reprocess_request_id);$decision=in_array($decision_code,array('approve','reject'),true)?$decision_code:false;
     if($actor<=0||!pay_api_001_runtime_access('SA_HRM_APPROVE_PAY_API_REPROCESS')||$company===false||$request_id===false||$decision===false||!pay_api_001_webhook_reprocess_runtime_enabled('approve')){$error='webhook_reprocess_approval_access_or_version_denied';return false;}
     if(!pay_api_001_runtime_require_company($company,$error))return false;$now=pay_api_001_runtime_now();$manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();
-    $sql='SELECT r.*,v.webhook_reprocess_review_id,v.decision_code review_decision,v.review_sha256,v.reviewed_by,d.dead_letter_sha256,e.company_id FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_requests r INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_reviews v ON v.webhook_reprocess_request_id=r.webhook_reprocess_request_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_dead_letters d ON d.webhook_dead_letter_id=r.webhook_dead_letter_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_outbox o ON o.webhook_outbox_id=d.webhook_outbox_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_events e ON e.webhook_event_id=o.webhook_event_id WHERE r.webhook_reprocess_request_id='.$request_id.' LIMIT 2 FOR UPDATE';$r=pay_api_001_runtime_one($sql,'could not lock PAY-API-001 reprocess approval context');if(!$r||(int)$r['company_id']!==$company||(string)$r['review_decision']!=='approve'||$actor===(int)$r['requested_by']||$actor===(int)$r['reviewed_by']||(int)$r['requested_by']===(int)$r['reviewed_by']){if($manage)cancel_transaction();$error='webhook_reprocess_approval_scope_review_or_sod_invalid';return false;}
-    $old=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_approvals WHERE webhook_reprocess_request_id='.$request_id.' LIMIT 2 FOR UPDATE','could not read PAY-API-001 reprocess approval replay');$approval_sha=pay_api_001_provisioning_hash(array('webhook_reprocess_request_id'=>$request_id,'webhook_reprocess_review_id'=>(int)$r['webhook_reprocess_review_id'],'request_sha256'=>(string)$r['request_sha256'],'review_sha256'=>(string)$r['review_sha256'],'decision_code'=>$decision,'approved_by'=>$actor));if($approval_sha===false){if($manage)cancel_transaction();$error='webhook_reprocess_approval_hash_failed';return false;}
-    if($old){if((string)$old['decision_code']!==$decision||(int)$old['approved_by']!==$actor||!hash_equals((string)$old['approval_sha256'],$approval_sha)){if($manage)cancel_transaction();$error='webhook_reprocess_approval_replay_mismatch';return false;}if($decision==='approve'){$auth=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_authorizations WHERE webhook_dead_letter_id='.(int)$r['webhook_dead_letter_id'].' LIMIT 2 FOR UPDATE','could not read PAY-API-001 reprocess authorization replay');if(!$auth){if($manage)cancel_transaction();$error='webhook_reprocess_authorization_missing_after_approval';return false;}$out=array('webhook_reprocess_authorization_id'=>(int)$auth['webhook_reprocess_authorization_id'],'authorization_sha256'=>(string)$auth['authorization_sha256']);}else{$out=array('webhook_reprocess_authorization_id'=>null,'authorization_sha256'=>null);}if($manage)commit_transaction();return $out+array('webhook_reprocess_approval_id'=>(int)$old['webhook_reprocess_approval_id'],'approval_sha256'=>$approval_sha,'decision_code'=>$decision,'replayed'=>true);}
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_approvals (webhook_reprocess_request_id,webhook_reprocess_review_id,decision_code,request_sha256,review_sha256,approved_by,approved_at,approval_sha256,created_at) VALUES ('.$request_id.','.(int)$r['webhook_reprocess_review_id'].','.db_escape($decision).','.db_escape($r['request_sha256']).','.db_escape($r['review_sha256']).','.$actor.','.db_escape($now).','.db_escape($approval_sha).','.db_escape($now).')';if(!db_query($sql)){if($manage)cancel_transaction();$error='webhook_reprocess_approval_insert_failed';return false;}$approval_id=(int)db_insert_id();$auth_id=null;$auth_sha=null;
-    if($decision==='approve'){$existing=db_query('SELECT webhook_reprocess_authorization_id FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_authorizations WHERE webhook_dead_letter_id='.(int)$r['webhook_dead_letter_id'].' LIMIT 1 FOR UPDATE');if(!$existing||db_num_rows($existing)>0){if($manage)cancel_transaction();$error='webhook_reprocess_dead_letter_already_authorized';return false;}$auth_sha=pay_api_001_provisioning_hash(array('webhook_dead_letter_id'=>(int)$r['webhook_dead_letter_id'],'dead_letter_sha256'=>(string)$r['dead_letter_sha256'],'request_sha256'=>(string)$r['request_sha256'],'review_sha256'=>(string)$r['review_sha256'],'approval_sha256'=>$approval_sha,'reason_code'=>(string)$r['reason_code'],'requested_by'=>(int)$r['requested_by'],'reviewed_by'=>(int)$r['reviewed_by'],'approved_by'=>$actor));if($auth_sha===false){if($manage)cancel_transaction();$error='webhook_reprocess_authorization_hash_failed';return false;}$sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_authorizations (webhook_dead_letter_id,reason_code,request_sha256,requested_by,reviewed_by,approved_by,authorization_sha256,approved_at,created_at) VALUES ('.(int)$r['webhook_dead_letter_id'].','.db_escape($r['reason_code']).','.db_escape($r['request_sha256']).','.(int)$r['requested_by'].','.(int)$r['reviewed_by'].','.$actor.','.db_escape($auth_sha).','.db_escape($now).','.db_escape($now).')';if(!db_query($sql)){if($manage)cancel_transaction();$error='webhook_reprocess_authorization_insert_failed';return false;}$auth_id=(int)db_insert_id();}
+    $sql='SELECT r.*,v.webhook_reprocess_review_id,v.decision_code review_decision,v.review_sha256,v.reviewed_by,d.dead_letter_sha256,e.company_id FROM '
+      .TB_PREF.'hrm_pay_api_001_webhook_reprocess_requests r INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_reviews v ON v.webhook_reprocess_request_id=r.webhook_reprocess_request_id INNER JOIN '
+      .TB_PREF.'hrm_pay_api_001_webhook_dead_letters d ON d.webhook_dead_letter_id=r.webhook_dead_letter_id INNER JOIN '.TB_PREF
+      .'hrm_pay_api_001_webhook_outbox o ON o.webhook_outbox_id=d.webhook_outbox_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_events e ON e.webhook_event_id=o.webhook_event_id WHERE r.webhook_reprocess_request_id='
+      .$request_id.' LIMIT 2 FOR UPDATE';
+    $r=pay_api_001_runtime_one($sql,'could not lock PAY-API-001 reprocess approval context');
+    if(!$r||(int)$r['company_id']!==$company||(string)$r['review_decision']!=='approve'||$actor===(int)$r['requested_by']||$actor===(int)$r['reviewed_by']||(int)$r['requested_by']===(int)$r['reviewed_by']){
+      if($manage)cancel_transaction();
+      $error='webhook_reprocess_approval_scope_review_or_sod_invalid';
+      return false;
+    }
+    $old=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_approvals WHERE webhook_reprocess_request_id='
+      .$request_id.' LIMIT 2 FOR UPDATE','could not read PAY-API-001 reprocess approval replay');
+    $approval_sha=pay_api_001_provisioning_hash(array('webhook_reprocess_request_id'=>$request_id,'webhook_reprocess_review_id'=>(int)$r['webhook_reprocess_review_id'],
+      'request_sha256'=>(string)$r['request_sha256'],'review_sha256'=>(string)$r['review_sha256'],'decision_code'=>$decision,
+      'approved_by'=>$actor));
+    if($approval_sha===false){
+      if($manage)cancel_transaction();
+      $error='webhook_reprocess_approval_hash_failed';
+      return false;
+    }
+    if($old){
+      if((string)$old['decision_code']!==$decision||(int)$old['approved_by']!==$actor||!hash_equals((string)$old['approval_sha256'],
+        $approval_sha)){
+        if($manage)cancel_transaction();
+        $error='webhook_reprocess_approval_replay_mismatch';
+        return false;
+      }
+      if($decision==='approve'){
+        $auth=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_authorizations WHERE webhook_dead_letter_id='
+          .(int)$r['webhook_dead_letter_id'].' LIMIT 2 FOR UPDATE','could not read PAY-API-001 reprocess authorization replay');
+        if(!$auth){
+          if($manage)cancel_transaction();
+          $error='webhook_reprocess_authorization_missing_after_approval';
+          return false;
+        }
+        $out=array('webhook_reprocess_authorization_id'=>(int)$auth['webhook_reprocess_authorization_id'],'authorization_sha256'=>(string)$auth['authorization_sha256']);
+      }else{
+        $out=array('webhook_reprocess_authorization_id'=>null,'authorization_sha256'=>null);
+      }
+      if($manage)commit_transaction();
+      return $out+array('webhook_reprocess_approval_id'=>(int)$old['webhook_reprocess_approval_id'],'approval_sha256'=>$approval_sha,
+        'decision_code'=>$decision,'replayed'=>true);
+    }
+    $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_approvals (webhook_reprocess_request_id,webhook_reprocess_review_id,decision_code,request_sha256,review_sha256,approved_by,approved_at,approval_sha256,created_at) VALUES ('
+      .$request_id.','.(int)$r['webhook_reprocess_review_id'].','.db_escape($decision).','.db_escape($r['request_sha256'])
+      .','.db_escape($r['review_sha256']).','.$actor.','.db_escape($now).','.db_escape($approval_sha).','.db_escape($now)
+      .')';
+    if(!db_query($sql)){
+      if($manage)cancel_transaction();
+      $error='webhook_reprocess_approval_insert_failed';
+      return false;
+    }
+    $approval_id=(int)db_insert_id();
+    $auth_id=null;
+    $auth_sha=null;
+    if($decision==='approve'){
+      $existing=db_query('SELECT webhook_reprocess_authorization_id FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_authorizations WHERE webhook_dead_letter_id='
+        .(int)$r['webhook_dead_letter_id'].' LIMIT 1 FOR UPDATE');
+      if(!$existing||db_num_rows($existing)>0){
+        if($manage)cancel_transaction();
+        $error='webhook_reprocess_dead_letter_already_authorized';
+        return false;
+      }
+      $auth_sha=pay_api_001_provisioning_hash(array('webhook_dead_letter_id'=>(int)$r['webhook_dead_letter_id'],'dead_letter_sha256'=>(string)$r['dead_letter_sha256'],
+        'request_sha256'=>(string)$r['request_sha256'],'review_sha256'=>(string)$r['review_sha256'],'approval_sha256'=>$approval_sha,
+        'reason_code'=>(string)$r['reason_code'],'requested_by'=>(int)$r['requested_by'],'reviewed_by'=>(int)$r['reviewed_by'],
+        'approved_by'=>$actor));
+      if($auth_sha===false){
+        if($manage)cancel_transaction();
+        $error='webhook_reprocess_authorization_hash_failed';
+        return false;
+      }
+      $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_authorizations (webhook_dead_letter_id,reason_code,request_sha256,requested_by,reviewed_by,approved_by,authorization_sha256,approved_at,created_at) VALUES ('
+        .(int)$r['webhook_dead_letter_id'].','.db_escape($r['reason_code']).','.db_escape($r['request_sha256']).','.(int)$r['requested_by']
+        .','.(int)$r['reviewed_by'].','.$actor.','.db_escape($auth_sha).','.db_escape($now).','.db_escape($now).')';
+      if(!db_query($sql)){
+        if($manage)cancel_transaction();
+        $error='webhook_reprocess_authorization_insert_failed';
+        return false;
+      }
+      $auth_id=(int)db_insert_id();
+    }
     if($manage)commit_transaction();return array('webhook_reprocess_approval_id'=>$approval_id,'approval_sha256'=>$approval_sha,'decision_code'=>$decision,'webhook_reprocess_authorization_id'=>$auth_id,'authorization_sha256'=>$auth_sha,'replayed'=>false);
 }
 
@@ -68,9 +203,20 @@ function pay_api_001_webhook_reprocess_execution_context($company_id,$webhook_re
     $error=null;$actor=current_user_id_or_zero();$company=pay_api_001_uint_value($company_id,true,4294967295);$authorization_id=pay_api_001_positive_id($webhook_reprocess_authorization_id);$t=$unix_time===null?time():pay_api_001_uint_value($unix_time,true,PHP_INT_MAX);
     if($actor<=0||!pay_api_001_runtime_access('SA_HRM_EXECUTE_PAY_API_REPROCESS')||$company===false||$authorization_id===false||$t===false||!pay_api_001_webhook_reprocess_runtime_enabled('reserve')){$error='webhook_reprocess_execution_access_or_version_denied';return false;}
     if(!pay_api_001_runtime_require_company($company,$error))return false;$now=gmdate('Y-m-d H:i:s',$t);$manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();
-    $sql='SELECT a.*,d.webhook_outbox_id,d.last_attempt_id,d.dead_letter_sha256,d.reason_code dead_letter_reason_code,o.webhook_target_id,o.queue_key_sha256,o.payload_sha256 outbox_payload_sha256,e.company_id,e.event_type,e.payload_json,e.payload_sha256 event_payload_sha256,r.requested_by governance_requested_by,v.reviewed_by governance_reviewed_by,p.approved_by governance_approved_by FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_authorizations a INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_dead_letters d ON d.webhook_dead_letter_id=a.webhook_dead_letter_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_outbox o ON o.webhook_outbox_id=d.webhook_outbox_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_events e ON e.webhook_event_id=o.webhook_event_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_requests r ON r.webhook_dead_letter_id=a.webhook_dead_letter_id AND r.request_sha256=a.request_sha256 INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_reviews v ON v.webhook_reprocess_request_id=r.webhook_reprocess_request_id AND v.decision_code=\'approve\' INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_approvals p ON p.webhook_reprocess_request_id=r.webhook_reprocess_request_id AND p.webhook_reprocess_review_id=v.webhook_reprocess_review_id AND p.decision_code=\'approve\' WHERE a.webhook_reprocess_authorization_id='.$authorization_id.' LIMIT 2 FOR UPDATE';
+    $sql='SELECT a.*,d.webhook_outbox_id,d.last_attempt_id,d.dead_letter_sha256,d.reason_code dead_letter_reason_code,o.webhook_target_id,o.queue_key_sha256,o.payload_sha256 outbox_payload_sha256,e.company_id,e.event_type,e.payload_json,e.payload_sha256 event_payload_sha256,r.requested_by governance_requested_by,v.reviewed_by governance_reviewed_by,p.approved_by governance_approved_by FROM '
+      .TB_PREF.'hrm_pay_api_001_webhook_reprocess_authorizations a INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_dead_letters d ON d.webhook_dead_letter_id=a.webhook_dead_letter_id INNER JOIN '
+      .TB_PREF.'hrm_pay_api_001_webhook_outbox o ON o.webhook_outbox_id=d.webhook_outbox_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_events e ON e.webhook_event_id=o.webhook_event_id INNER JOIN '
+      .TB_PREF.'hrm_pay_api_001_webhook_reprocess_requests r ON r.webhook_dead_letter_id=a.webhook_dead_letter_id AND r.request_sha256=a.request_sha256 INNER JOIN '
+      .TB_PREF.'hrm_pay_api_001_webhook_reprocess_reviews v ON v.webhook_reprocess_request_id=r.webhook_reprocess_request_id AND v.decision_code=\'approve\' INNER JOIN '
+      .TB_PREF.'hrm_pay_api_001_webhook_reprocess_approvals p ON p.webhook_reprocess_request_id=r.webhook_reprocess_request_id AND p.webhook_reprocess_review_id=v.webhook_reprocess_review_id AND p.decision_code=\'approve\' WHERE a.webhook_reprocess_authorization_id='
+      .$authorization_id.' LIMIT 2 FOR UPDATE';
     $row=pay_api_001_runtime_one($sql,'could not lock PAY-API-001 reprocess authorization context');
-    if(!$row||(int)$row['company_id']!==$company||(string)$row['event_type']!==PAY_API_001_WEBHOOK_EVENT_TYPE||!hash_equals((string)$row['outbox_payload_sha256'],(string)$row['event_payload_sha256'])||(int)$row['requested_by']!==(int)$row['governance_requested_by']||(int)$row['reviewed_by']!==(int)$row['governance_reviewed_by']||(int)$row['approved_by']!==(int)$row['governance_approved_by']){if($manage)cancel_transaction();$error='webhook_reprocess_execution_scope_payload_or_governance_invalid';return false;}
+    if(!$row||(int)$row['company_id']!==$company||(string)$row['event_type']!==PAY_API_001_WEBHOOK_EVENT_TYPE||!hash_equals((string)$row['outbox_payload_sha256'],
+      (string)$row['event_payload_sha256'])||(int)$row['requested_by']!==(int)$row['governance_requested_by']||(int)$row['reviewed_by']!==(int)$row['governance_reviewed_by']||(int)$row['approved_by']!==(int)$row['governance_approved_by']){
+      if($manage)cancel_transaction();
+      $error='webhook_reprocess_execution_scope_payload_or_governance_invalid';
+      return false;
+    }
     if($actor===(int)$row['requested_by']||$actor===(int)$row['reviewed_by']||$actor===(int)$row['approved_by']){if($manage)cancel_transaction();$error='webhook_reprocess_executor_sod_invalid';return false;}
     $attempt=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_delivery_attempts WHERE webhook_outbox_id='.(int)$row['webhook_outbox_id'].' ORDER BY attempt_no DESC LIMIT 1 FOR UPDATE','could not lock PAY-API-001 reprocess predecessor attempt');
     if(!$attempt||(int)$attempt['webhook_delivery_attempt_id']!==(int)$row['last_attempt_id']){if($manage)cancel_transaction();$error='webhook_reprocess_predecessor_attempt_changed';return false;}
@@ -79,19 +225,54 @@ function pay_api_001_webhook_reprocess_execution_context($company_id,$webhook_re
     $target=pay_api_001_webhook_active_target((int)$row['webhook_target_id'],$company,$now,$error);$cfg=$target?pay_api_001_webhook_runtime_configuration((int)$row['webhook_target_id'],$company,$now,$error):false;
     if(!$target||!$cfg){if($manage)cancel_transaction();return false;}if(!hash_equals((string)$target['signing_key_ref_sha256'],(string)$cfg['signing_profile']['secret_ref_sha256'])){if($manage)cancel_transaction();$error='webhook_reprocess_signing_reference_mismatch';return false;}
     $next=(int)$attempt['attempt_no']+1;if($next<2||$next>4294967295){if($manage)cancel_transaction();$error='webhook_reprocess_attempt_ordinal_invalid';return false;}
-    if($manage)commit_transaction();return array('company_id'=>$company,'actor_id'=>$actor,'authorization'=>$row,'outbox'=>array('webhook_outbox_id'=>(int)$row['webhook_outbox_id'],'webhook_target_id'=>(int)$row['webhook_target_id'],'event_type'=>(string)$row['event_type'],'payload_json'=>(string)$row['payload_json'],'payload_sha256'=>(string)$row['outbox_payload_sha256'],'queue_key_sha256'=>(string)$row['queue_key_sha256']),'target'=>$target,'delivery_policy'=>$cfg['delivery_policy'],'tls_policy'=>$cfg['tls_policy'],'signing_profile'=>$cfg['signing_profile'],'previous_attempt'=>$attempt,'next_attempt_no'=>$next,'loaded_at'=>$now,'unix_time'=>$t);
+    if($manage)commit_transaction();
+    return array('company_id'=>$company,'actor_id'=>$actor,'authorization'=>$row,'outbox'=>array('webhook_outbox_id'=>(int)$row['webhook_outbox_id'],
+      'webhook_target_id'=>(int)$row['webhook_target_id'],'event_type'=>(string)$row['event_type'],'payload_json'=>(string)$row['payload_json'],
+      'payload_sha256'=>(string)$row['outbox_payload_sha256'],'queue_key_sha256'=>(string)$row['queue_key_sha256']),'target'=>$target,
+      'delivery_policy'=>$cfg['delivery_policy'],'tls_policy'=>$cfg['tls_policy'],'signing_profile'=>$cfg['signing_profile'],
+      'previous_attempt'=>$attempt,'next_attempt_no'=>$next,'loaded_at'=>$now,'unix_time'=>$t);
 }
 
 /** Append exactly one immutable dispatch reservation for one independently authorized dead letter. */
 function pay_api_001_webhook_reserve_reprocess_dispatch(array $context,array $request,&$error=null)
 {
-    $error=null;$company=pay_api_001_uint_value($context['company_id']??null,true,4294967295);$actor=pay_api_001_positive_id($context['actor_id']??null);$authorization_id=pay_api_001_positive_id($context['authorization']['webhook_reprocess_authorization_id']??null);$dead_id=pay_api_001_positive_id($context['authorization']['webhook_dead_letter_id']??null);$outbox=pay_api_001_positive_id($context['outbox']['webhook_outbox_id']??null);$prev_id=pay_api_001_positive_id($context['previous_attempt']['webhook_delivery_attempt_id']??null);$attempt_no=pay_api_001_uint_value($context['next_attempt_no']??null,true,4294967295);$session_actor=current_user_id_or_zero();$t=time();
-    if($company===false||$actor===false||$authorization_id===false||$dead_id===false||$outbox===false||$prev_id===false||$attempt_no===false||$attempt_no<2||$session_actor!==$actor||!pay_api_001_runtime_access('SA_HRM_EXECUTE_PAY_API_REPROCESS')||!pay_api_001_webhook_reprocess_runtime_enabled('reserve')||!pay_api_001_webhook_curl_request_valid($request)||$request['webhook_outbox_id']!==$outbox||!hash_equals((string)($context['outbox']['payload_sha256']??''),(string)$request['payload_sha256'])||!hash_equals((string)($context['outbox']['queue_key_sha256']??''),(string)$request['queue_key_sha256'])||strtolower((string)($context['tls_policy']['destination_host']??''))!==$request['host']||(string)($context['tls_policy']['minimum_tls_version']??'')!==$request['minimum_tls_version']){$error='webhook_reprocess_reservation_input_invalid';return false;}
+    $error=null;
+    $company=pay_api_001_uint_value($context['company_id']??null,true,4294967295);
+    $actor=pay_api_001_positive_id($context['actor_id']??null);
+    $authorization_id=pay_api_001_positive_id($context['authorization']['webhook_reprocess_authorization_id']??null);
+    $dead_id=pay_api_001_positive_id($context['authorization']['webhook_dead_letter_id']??null);
+    $outbox=pay_api_001_positive_id($context['outbox']['webhook_outbox_id']??null);
+    $prev_id=pay_api_001_positive_id($context['previous_attempt']['webhook_delivery_attempt_id']??null);
+    $attempt_no=pay_api_001_uint_value($context['next_attempt_no']??null,true,4294967295);
+    $session_actor=current_user_id_or_zero();
+    $t=time();
+    if($company===false||$actor===false||$authorization_id===false||$dead_id===false||$outbox===false||$prev_id===false||$attempt_no===false||$attempt_no<2||$session_actor!==$actor||!pay_api_001_runtime_access('SA_HRM_EXECUTE_PAY_API_REPROCESS')||!pay_api_001_webhook_reprocess_runtime_enabled('reserve')||!pay_api_001_webhook_curl_request_valid($request)||$request['webhook_outbox_id']!==$outbox||!hash_equals((string)($context['outbox']['payload_sha256']??''),
+      (string)$request['payload_sha256'])||!hash_equals((string)($context['outbox']['queue_key_sha256']??''),(string)$request['queue_key_sha256'])||strtolower((string)($context['tls_policy']['destination_host']??''))!==$request['host']||(string)($context['tls_policy']['minimum_tls_version']??'')!==$request['minimum_tls_version']){
+      $error='webhook_reprocess_reservation_input_invalid';
+      return false;
+    }
     if(!pay_api_001_runtime_require_company($company,$error))return false;$manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();$fresh=pay_api_001_webhook_reprocess_execution_context($company,$authorization_id,$t,$error);
-    if($fresh===false){if($manage)cancel_transaction();return false;}if((int)$fresh['actor_id']!==$actor||(int)$fresh['authorization']['webhook_dead_letter_id']!==$dead_id||(int)$fresh['outbox']['webhook_outbox_id']!==$outbox||(int)$fresh['previous_attempt']['webhook_delivery_attempt_id']!==$prev_id||(int)$fresh['next_attempt_no']!==$attempt_no||!hash_equals((string)($context['authorization']['authorization_sha256']??''),(string)$fresh['authorization']['authorization_sha256'])||!hash_equals((string)($context['target']['target_sha256']??''),(string)$fresh['target']['target_sha256'])||(int)($context['delivery_policy']['webhook_delivery_policy_id']??0)!==(int)$fresh['delivery_policy']['webhook_delivery_policy_id']||(int)($context['tls_policy']['webhook_egress_tls_policy_id']??0)!==(int)$fresh['tls_policy']['webhook_egress_tls_policy_id']||(int)($context['signing_profile']['webhook_signing_profile_id']??0)!==(int)$fresh['signing_profile']['webhook_signing_profile_id']){if($manage)cancel_transaction();$error='webhook_reprocess_reservation_context_changed';return false;}
-    $now=gmdate('Y-m-d H:i:s',$t);$replay=pay_api_001_provisioning_hash(array('webhook_reprocess_authorization_id'=>$authorization_id,'authorization_sha256'=>(string)$fresh['authorization']['authorization_sha256'],'webhook_dead_letter_id'=>$dead_id,'dead_letter_sha256'=>(string)$fresh['authorization']['dead_letter_sha256'],'webhook_outbox_id'=>$outbox,'previous_attempt_id'=>$prev_id,'previous_attempt_sha256'=>(string)$fresh['previous_attempt']['attempt_sha256'],'attempt_no'=>$attempt_no,'dispatch_request_sha256'=>$request['request_sha256'],'payload_sha256'=>$request['payload_sha256']));$reservation_sha=pay_api_001_provisioning_hash(array('replay_key_sha256'=>$replay,'reserved_by'=>$actor,'reserved_at'=>$now));
+    if($fresh===false){
+      if($manage)cancel_transaction();
+      return false;
+    }
+    if((int)$fresh['actor_id']!==$actor||(int)$fresh['authorization']['webhook_dead_letter_id']!==$dead_id||(int)$fresh['outbox']['webhook_outbox_id']!==$outbox||(int)$fresh['previous_attempt']['webhook_delivery_attempt_id']!==$prev_id||(int)$fresh['next_attempt_no']!==$attempt_no||!hash_equals((string)($context['authorization']['authorization_sha256']??''),
+      (string)$fresh['authorization']['authorization_sha256'])||!hash_equals((string)($context['target']['target_sha256']??''),
+      (string)$fresh['target']['target_sha256'])||(int)($context['delivery_policy']['webhook_delivery_policy_id']??0)!==(int)$fresh['delivery_policy']['webhook_delivery_policy_id']||(int)($context['tls_policy']['webhook_egress_tls_policy_id']??0)!==(int)$fresh['tls_policy']['webhook_egress_tls_policy_id']||(int)($context['signing_profile']['webhook_signing_profile_id']??0)!==(int)$fresh['signing_profile']['webhook_signing_profile_id']){
+      if($manage)cancel_transaction();
+      $error='webhook_reprocess_reservation_context_changed';
+      return false;
+    }
+    $now=gmdate('Y-m-d H:i:s',$t);
+    $replay=pay_api_001_provisioning_hash(array('webhook_reprocess_authorization_id'=>$authorization_id,'authorization_sha256'=>(string)$fresh['authorization']['authorization_sha256'],
+      'webhook_dead_letter_id'=>$dead_id,'dead_letter_sha256'=>(string)$fresh['authorization']['dead_letter_sha256'],'webhook_outbox_id'=>$outbox,
+      'previous_attempt_id'=>$prev_id,'previous_attempt_sha256'=>(string)$fresh['previous_attempt']['attempt_sha256'],'attempt_no'=>$attempt_no,
+      'dispatch_request_sha256'=>$request['request_sha256'],'payload_sha256'=>$request['payload_sha256']));
+    $reservation_sha=pay_api_001_provisioning_hash(array('replay_key_sha256'=>$replay,'reserved_by'=>$actor,'reserved_at'=>$now));
     if($replay===false||$reservation_sha===false){if($manage)cancel_transaction();$error='webhook_reprocess_reservation_hash_failed';return false;}
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_dispatch_reservations (webhook_reprocess_authorization_id,webhook_dead_letter_id,webhook_outbox_id,previous_attempt_id,dispatch_request_sha256,replay_key_sha256,reservation_sha256,reserved_by,reserved_at,created_at) VALUES ('.$authorization_id.','.$dead_id.','.$outbox.','.$prev_id.','.db_escape($request['request_sha256']).','.db_escape($replay).','.db_escape($reservation_sha).','.$actor.','.db_escape($now).','.db_escape($now).')';
+    $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_dispatch_reservations (webhook_reprocess_authorization_id,webhook_dead_letter_id,webhook_outbox_id,previous_attempt_id,dispatch_request_sha256,replay_key_sha256,reservation_sha256,reserved_by,reserved_at,created_at) VALUES ('
+      .$authorization_id.','.$dead_id.','.$outbox.','.$prev_id.','.db_escape($request['request_sha256']).','.db_escape($replay)
+      .','.db_escape($reservation_sha).','.$actor.','.db_escape($now).','.db_escape($now).')';
     if(!db_query($sql)){if($manage)cancel_transaction();$error='webhook_reprocess_reservation_insert_failed';return false;}$id=(int)db_insert_id();if($manage)commit_transaction();return array('webhook_reprocess_dispatch_reservation_id'=>$id,'attempt_no'=>$attempt_no,'replay_key_sha256'=>$replay,'reservation_sha256'=>$reservation_sha);
 }
 
@@ -99,26 +280,112 @@ function pay_api_001_webhook_reserve_reprocess_dispatch(array $context,array $re
 function pay_api_001_record_reprocessed_webhook_delivery($company_id,$webhook_reprocess_dispatch_reservation_id,array $result,&$error=null)
 {
     $error=null;$actor=current_user_id_or_zero();$company=pay_api_001_uint_value($company_id,true,4294967295);$reservation_id=pay_api_001_positive_id($webhook_reprocess_dispatch_reservation_id);$evidence=pay_api_001_webhook_delivery_result_evidence($result,$error);
-    if($actor<=0||!pay_api_001_runtime_access('SA_HRM_EXECUTE_PAY_API_REPROCESS')||$company===false||$reservation_id===false||$evidence===false||!pay_api_001_webhook_reprocess_runtime_enabled('execute')){$error=$error?:'webhook_reprocess_record_access_or_version_denied';return false;}if(!pay_api_001_runtime_require_company($company,$error))return false;$now=pay_api_001_runtime_now();$manage=pay_api_001_runtime_manage_transaction();if($manage)begin_transaction();
-    $sql='SELECT r.*,a.authorization_sha256,a.requested_by,a.reviewed_by,a.approved_by,d.last_attempt_id,e.company_id,p.attempt_no previous_attempt_no,p.attempt_sha256 previous_attempt_sha256 FROM '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_dispatch_reservations r INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_authorizations a ON a.webhook_reprocess_authorization_id=r.webhook_reprocess_authorization_id AND a.webhook_dead_letter_id=r.webhook_dead_letter_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_dead_letters d ON d.webhook_dead_letter_id=r.webhook_dead_letter_id AND d.webhook_outbox_id=r.webhook_outbox_id AND d.last_attempt_id=r.previous_attempt_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_outbox o ON o.webhook_outbox_id=r.webhook_outbox_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_events e ON e.webhook_event_id=o.webhook_event_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_delivery_attempts p ON p.webhook_delivery_attempt_id=r.previous_attempt_id AND p.webhook_outbox_id=r.webhook_outbox_id WHERE r.webhook_reprocess_dispatch_reservation_id='.$reservation_id.' LIMIT 2 FOR UPDATE';$r=pay_api_001_runtime_one($sql,'could not lock PAY-API-001 reprocess dispatch reservation');
+    if($actor<=0||!pay_api_001_runtime_access('SA_HRM_EXECUTE_PAY_API_REPROCESS')||$company===false||$reservation_id===false||$evidence===false||!pay_api_001_webhook_reprocess_runtime_enabled('execute')){
+      $error=$error?:'webhook_reprocess_record_access_or_version_denied';
+      return false;
+    }
+    if(!pay_api_001_runtime_require_company($company,$error))return false;
+    $now=pay_api_001_runtime_now();
+    $manage=pay_api_001_runtime_manage_transaction();
+    if($manage)begin_transaction();
+    $sql='SELECT r.*,a.authorization_sha256,a.requested_by,a.reviewed_by,a.approved_by,d.last_attempt_id,e.company_id,p.attempt_no previous_attempt_no,p.attempt_sha256 previous_attempt_sha256 FROM '
+      .TB_PREF.'hrm_pay_api_001_webhook_reprocess_dispatch_reservations r INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_reprocess_authorizations a ON a.webhook_reprocess_authorization_id=r.webhook_reprocess_authorization_id AND a.webhook_dead_letter_id=r.webhook_dead_letter_id INNER JOIN '
+      .TB_PREF.'hrm_pay_api_001_webhook_dead_letters d ON d.webhook_dead_letter_id=r.webhook_dead_letter_id AND d.webhook_outbox_id=r.webhook_outbox_id AND d.last_attempt_id=r.previous_attempt_id INNER JOIN '
+      .TB_PREF.'hrm_pay_api_001_webhook_outbox o ON o.webhook_outbox_id=r.webhook_outbox_id INNER JOIN '.TB_PREF.'hrm_pay_api_001_webhook_events e ON e.webhook_event_id=o.webhook_event_id INNER JOIN '
+      .TB_PREF.'hrm_pay_api_001_webhook_delivery_attempts p ON p.webhook_delivery_attempt_id=r.previous_attempt_id AND p.webhook_outbox_id=r.webhook_outbox_id WHERE r.webhook_reprocess_dispatch_reservation_id='
+      .$reservation_id.' LIMIT 2 FOR UPDATE';
+    $r=pay_api_001_runtime_one($sql,'could not lock PAY-API-001 reprocess dispatch reservation');
     if(!$r||(int)$r['company_id']!==$company||(int)$r['reserved_by']!==$actor||$actor===(int)$r['requested_by']||$actor===(int)$r['reviewed_by']||$actor===(int)$r['approved_by']){if($manage)cancel_transaction();$error='webhook_reprocess_record_scope_or_sod_invalid';return false;}
-    $latest=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_delivery_attempts WHERE webhook_outbox_id='.(int)$r['webhook_outbox_id'].' ORDER BY attempt_no DESC LIMIT 1 FOR UPDATE','could not lock PAY-API-001 reprocess latest attempt');if(!$latest||(int)$latest['webhook_delivery_attempt_id']!==(int)$r['previous_attempt_id']){if($manage)cancel_transaction();$error='webhook_reprocess_record_predecessor_changed_or_already_recorded';return false;}
+    $latest=pay_api_001_runtime_one('SELECT * FROM '.TB_PREF.'hrm_pay_api_001_webhook_delivery_attempts WHERE webhook_outbox_id='
+      .(int)$r['webhook_outbox_id'].' ORDER BY attempt_no DESC LIMIT 1 FOR UPDATE','could not lock PAY-API-001 reprocess latest attempt');
+    if(!$latest||(int)$latest['webhook_delivery_attempt_id']!==(int)$r['previous_attempt_id']){
+      if($manage)cancel_transaction();
+      $error='webhook_reprocess_record_predecessor_changed_or_already_recorded';
+      return false;
+    }
     $attempt_no=(int)$r['previous_attempt_no']+1;if($attempt_no<2||$attempt_no>4294967295){if($manage)cancel_transaction();$error='webhook_reprocess_record_attempt_ordinal_invalid';return false;}
-    $response_sha=$evidence['definite_provider_response']?pay_api_001_provisioning_hash(array('webhook_reprocess_dispatch_reservation_id'=>$reservation_id,'webhook_outbox_id'=>(int)$r['webhook_outbox_id'],'attempt_no'=>$attempt_no,'http_status_code'=>$evidence['http_status_code'],'response_headers_sha256'=>$evidence['response_headers_sha256'],'response_body_sha256'=>$evidence['response_body_sha256'],'response_body_bytes'=>$evidence['response_body_bytes'],'response_content_type_sha256'=>$evidence['response_content_type_sha256'])):null;
-    $attempt_sha=pay_api_001_provisioning_hash(array('webhook_outbox_id'=>(int)$r['webhook_outbox_id'],'attempt_no'=>$attempt_no,'reprocess_authorization_sha256'=>(string)$r['authorization_sha256'],'reprocess_reservation_sha256'=>(string)$r['reservation_sha256'],'previous_attempt_sha256'=>(string)$r['previous_attempt_sha256'],'outcome_code'=>$evidence['outcome_code'],'http_status_code'=>$evidence['http_status_code'],'response_sha256'=>$response_sha,'error_code'=>$evidence['error_code'],'attempted_by'=>$actor,'attempted_at'=>$now));if($attempt_sha===false||($evidence['definite_provider_response']&&$response_sha===false)){if($manage)cancel_transaction();$error='webhook_reprocess_evidence_hash_failed';return false;}
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_delivery_attempts (webhook_outbox_id,attempt_no,outcome_code,http_status_code,provider_reference_sha256,response_sha256,error_code,attempt_sha256,attempted_by,attempted_at,created_at) VALUES ('.(int)$r['webhook_outbox_id'].','.$attempt_no.','.db_escape($evidence['outcome_code']).','.($evidence['http_status_code']===null?'NULL':(int)$evidence['http_status_code']).',NULL,'.($response_sha===null?'NULL':db_escape($response_sha)).','.($evidence['error_code']===null?'NULL':db_escape($evidence['error_code'])).','.db_escape($attempt_sha).','.$actor.','.db_escape($now).','.db_escape($now).')';if(!db_query($sql)){if($manage)cancel_transaction();$error='webhook_reprocess_attempt_insert_failed';return false;}$attempt_id=(int)db_insert_id();$response_id=null;
-    if($evidence['definite_provider_response']){$sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_provider_responses (webhook_delivery_attempt_id,http_status_code,provider_reference_sha256,response_headers_sha256,response_body_sha256,response_body_bytes,response_sha256,recorded_at,created_at) VALUES ('.$attempt_id.','.(int)$evidence['http_status_code'].',NULL,'.db_escape($evidence['response_headers_sha256']).','.db_escape($evidence['response_body_sha256']).','.(int)$evidence['response_body_bytes'].','.db_escape($response_sha).','.db_escape($now).','.db_escape($now).')';if(!db_query($sql)){if($manage)cancel_transaction();$error='webhook_reprocess_provider_response_insert_failed';return false;}$response_id=(int)db_insert_id();}
+    $response_sha=$evidence['definite_provider_response']?pay_api_001_provisioning_hash(array('webhook_reprocess_dispatch_reservation_id'=>$reservation_id,
+      'webhook_outbox_id'=>(int)$r['webhook_outbox_id'],'attempt_no'=>$attempt_no,'http_status_code'=>$evidence['http_status_code'],
+      'response_headers_sha256'=>$evidence['response_headers_sha256'],'response_body_sha256'=>$evidence['response_body_sha256'],
+      'response_body_bytes'=>$evidence['response_body_bytes'],'response_content_type_sha256'=>$evidence['response_content_type_sha256'])):null;
+    $attempt_sha=pay_api_001_provisioning_hash(array('webhook_outbox_id'=>(int)$r['webhook_outbox_id'],'attempt_no'=>$attempt_no,
+      'reprocess_authorization_sha256'=>(string)$r['authorization_sha256'],'reprocess_reservation_sha256'=>(string)$r['reservation_sha256'],
+      'previous_attempt_sha256'=>(string)$r['previous_attempt_sha256'],'outcome_code'=>$evidence['outcome_code'],'http_status_code'=>$evidence['http_status_code'],
+      'response_sha256'=>$response_sha,'error_code'=>$evidence['error_code'],'attempted_by'=>$actor,'attempted_at'=>$now));
+    if($attempt_sha===false||($evidence['definite_provider_response']&&$response_sha===false)){
+      if($manage)cancel_transaction();
+      $error='webhook_reprocess_evidence_hash_failed';
+      return false;
+    }
+    $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_delivery_attempts (webhook_outbox_id,attempt_no,outcome_code,http_status_code,provider_reference_sha256,response_sha256,error_code,attempt_sha256,attempted_by,attempted_at,created_at) VALUES ('
+      .(int)$r['webhook_outbox_id'].','.$attempt_no.','.db_escape($evidence['outcome_code']).','.($evidence['http_status_code']===null?'NULL':(int)$evidence['http_status_code'])
+      .',NULL,'.($response_sha===null?'NULL':db_escape($response_sha)).','.($evidence['error_code']===null?'NULL':db_escape($evidence['error_code']))
+      .','.db_escape($attempt_sha).','.$actor.','.db_escape($now).','.db_escape($now).')';
+    if(!db_query($sql)){
+      if($manage)cancel_transaction();
+      $error='webhook_reprocess_attempt_insert_failed';
+      return false;
+    }
+    $attempt_id=(int)db_insert_id();
+    $response_id=null;
+    if($evidence['definite_provider_response']){
+      $sql='INSERT INTO '.TB_PREF.'hrm_pay_api_001_webhook_provider_responses (webhook_delivery_attempt_id,http_status_code,provider_reference_sha256,response_headers_sha256,response_body_sha256,response_body_bytes,response_sha256,recorded_at,created_at) VALUES ('
+        .$attempt_id.','.(int)$evidence['http_status_code'].',NULL,'.db_escape($evidence['response_headers_sha256']).','.db_escape($evidence['response_body_sha256'])
+        .','.(int)$evidence['response_body_bytes'].','.db_escape($response_sha).','.db_escape($now).','.db_escape($now).')';
+      if(!db_query($sql)){
+        if($manage)cancel_transaction();
+        $error='webhook_reprocess_provider_response_insert_failed';
+        return false;
+      }
+      $response_id=(int)db_insert_id();
+    }
     if($manage)commit_transaction();return array('webhook_delivery_attempt_id'=>$attempt_id,'webhook_provider_response_id'=>$response_id,'attempt_no'=>$attempt_no,'classification'=>$evidence['outcome_code'],'http_status'=>$evidence['http_status_code']);
 }
 
 /** Execute exactly one independently authorized dead-letter resend; never loops, retries, or receives inbound webhooks. */
 function pay_api_001_reprocess_authorized_webhook_dead_letter($company_id,$webhook_reprocess_authorization_id,$endpoint_resolver,$secret_resolver,&$error=null)
 {
-    $error=null;if(!is_callable($endpoint_resolver)||!is_callable($secret_resolver)||!pay_api_001_webhook_reprocess_runtime_enabled('execute')){$error='webhook_reprocess_executor_input_or_version_denied';return false;}if(!pay_api_001_runtime_manage_transaction()){$error='webhook_reprocess_outer_transaction_denied';return false;}$t=time();$context=pay_api_001_webhook_reprocess_execution_context($company_id,$webhook_reprocess_authorization_id,$t,$error);if($context===false)return false;
-    $endpoint=pay_api_001_webhook_resolve_endpoint($context['target'],$endpoint_resolver,$error);if($endpoint===false)return false;$secret_ref=array('company_id'=>$context['company_id'],'ref_kind'=>(string)$context['signing_profile']['ref_kind'],'provider_key'=>(string)$context['signing_profile']['provider_key'],'provider_reference_sha256'=>(string)$context['signing_profile']['provider_reference_sha256'],'secret_ref_sha256'=>(string)$context['signing_profile']['secret_ref_sha256']);$secret=pay_api_001_webhook_resolve_signing_secret($secret_ref,$secret_resolver,$error);if($secret===false)return false;
-    $delivery=array('webhook_outbox_id'=>(int)$context['outbox']['webhook_outbox_id'],'event_type'=>(string)$context['outbox']['event_type'],'payload_json'=>(string)$context['outbox']['payload_json'],'payload_sha256'=>(string)$context['outbox']['payload_sha256'],'queue_key_sha256'=>(string)$context['outbox']['queue_key_sha256']);$request=pay_api_001_webhook_signed_request($delivery,$context['tls_policy'],$context['signing_profile'],$context['target'],$endpoint,$secret,$t,$error);$secret='';if($request===false)return false;
-    $reservation=pay_api_001_webhook_reserve_reprocess_dispatch($context,$request,$error);if($reservation===false)return false;$result=pay_api_001_webhook_curl_transport($request);if(!is_array($result)){$error='webhook_reprocess_transport_result_invalid';return false;}$persist=pay_api_001_record_reprocessed_webhook_delivery($context['company_id'],$reservation['webhook_reprocess_dispatch_reservation_id'],$result,$error);if($persist===false){$error='webhook_reprocess_evidence_persistence_failed_after_dispatch_reservation'.($error?':'.$error:'');return false;}
-    return array('webhook_reprocess_dispatch_reservation_id'=>$reservation['webhook_reprocess_dispatch_reservation_id'],'webhook_delivery_attempt_id'=>$persist['webhook_delivery_attempt_id'],'webhook_provider_response_id'=>$persist['webhook_provider_response_id'],'attempt_no'=>$persist['attempt_no'],'classification'=>$persist['classification'],'http_status'=>$persist['http_status'],'retry_executed'=>false,'reprocess_executed'=>true,'inbound_processed'=>false);
+    $error=null;
+    if(!is_callable($endpoint_resolver)||!is_callable($secret_resolver)||!pay_api_001_webhook_reprocess_runtime_enabled('execute')){
+      $error='webhook_reprocess_executor_input_or_version_denied';
+      return false;
+    }
+    if(!pay_api_001_runtime_manage_transaction()){
+      $error='webhook_reprocess_outer_transaction_denied';
+      return false;
+    }
+    $t=time();
+    $context=pay_api_001_webhook_reprocess_execution_context($company_id,$webhook_reprocess_authorization_id,$t,$error);
+    if($context===false)return false;
+    $endpoint=pay_api_001_webhook_resolve_endpoint($context['target'],$endpoint_resolver,$error);
+    if($endpoint===false)return false;
+    $secret_ref=array('company_id'=>$context['company_id'],'ref_kind'=>(string)$context['signing_profile']['ref_kind'],'provider_key'=>(string)$context['signing_profile']['provider_key'],
+      'provider_reference_sha256'=>(string)$context['signing_profile']['provider_reference_sha256'],'secret_ref_sha256'=>(string)$context['signing_profile']['secret_ref_sha256']);
+    $secret=pay_api_001_webhook_resolve_signing_secret($secret_ref,$secret_resolver,$error);
+    if($secret===false)return false;
+    $delivery=array('webhook_outbox_id'=>(int)$context['outbox']['webhook_outbox_id'],'event_type'=>(string)$context['outbox']['event_type'],
+      'payload_json'=>(string)$context['outbox']['payload_json'],'payload_sha256'=>(string)$context['outbox']['payload_sha256'],
+      'queue_key_sha256'=>(string)$context['outbox']['queue_key_sha256']);
+    $request=pay_api_001_webhook_signed_request($delivery,$context['tls_policy'],$context['signing_profile'],$context['target'],
+      $endpoint,$secret,$t,$error);
+    $secret='';
+    if($request===false)return false;
+    $reservation=pay_api_001_webhook_reserve_reprocess_dispatch($context,$request,$error);
+    if($reservation===false)return false;
+    $result=pay_api_001_webhook_curl_transport($request);
+    if(!is_array($result)){
+      $error='webhook_reprocess_transport_result_invalid';
+      return false;
+    }
+    $persist=pay_api_001_record_reprocessed_webhook_delivery($context['company_id'],$reservation['webhook_reprocess_dispatch_reservation_id'],
+      $result,$error);
+    if($persist===false){
+      $error='webhook_reprocess_evidence_persistence_failed_after_dispatch_reservation'.($error?':'.$error:'');
+      return false;
+    }
+    return array('webhook_reprocess_dispatch_reservation_id'=>$reservation['webhook_reprocess_dispatch_reservation_id'],'webhook_delivery_attempt_id'=>$persist['webhook_delivery_attempt_id'],
+      'webhook_provider_response_id'=>$persist['webhook_provider_response_id'],'attempt_no'=>$persist['attempt_no'],'classification'=>$persist['classification'],
+      'http_status'=>$persist['http_status'],'retry_executed'=>false,'reprocess_executed'=>true,'inbound_processed'=>false);
 }
 
 ?>
