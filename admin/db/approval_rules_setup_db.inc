@@ -64,6 +64,8 @@ function get_approvable_transaction_types()
 		ST_HRM_COMPENSATION_GO_LIVE,
 		// Benefit life events whose type needs approval
 		ST_HRM_BENEFIT_LIFE_EVENT,
+		// Payroll retro correction plans
+		ST_HRM_PAYROLL_RETRO_PLAN,
 	);
 
 	$result = array();

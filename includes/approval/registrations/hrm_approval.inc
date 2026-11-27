@@ -235,6 +235,21 @@ function ensure_hrm_approval_transaction_registration()
 			'independent_approval' => true,
 		));
 	}
+	// Payroll retro correction plans; approval numbers come from the plans.
+	if (defined('ST_HRM_PAYROLL_RETRO_PLAN')) {
+		register_systype_db_info(ST_HRM_PAYROLL_RETRO_PLAN, array(
+			TB_PREF . 'hrm_pay_retro_plans', null, 'retro_plan_id', 'retro_plan_id', 'created_at'
+		));
+		ApprovalWorkflow::registerTransactionType(ST_HRM_PAYROLL_RETRO_PLAN, array(
+			'label'          => _('Payroll Retro Correction Plan'),
+			'application'    => 'HRM',
+			'executor'       => 'execute_approved_payroll_retro_plan',
+			'amount_getter'  => null,
+			'draft_renderer' => null,
+			'edit_url'       => '',
+			'independent_approval' => true,
+		));
+	}
 
 if (defined('ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT')) {
 		register_systype_db_info(ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT, array(
@@ -1527,6 +1542,22 @@ function record_payroll_period_registered_submission($data,$draft_id)
     global $path_to_root;
     require_once $path_to_root.'/hrm/includes/db/pay_glb_001_native_approval_db.inc';
     return pay_glb_001_native_approval_submitted($data,$draft_id);
+}
+
+/**
+ * Shared-workflow executor of a payroll retro correction plan. On final approval it records the plan approval with the
+ * final approver as checker; the retro writers are loaded only when a plan is decided.
+ *
+ * @param array $draft_data Draft payload: retro_plan_id and plan_sha256
+ * @param int $reserved_trans_no Reserved approval number (not used)
+ * @param int $draft_id Shared approval draft id
+ * @return int|false Retro approval id, or false to refuse the approval
+ */
+function execute_approved_payroll_retro_plan($draft_data, $reserved_trans_no, $draft_id)
+{
+	global $path_to_root;
+	require_once $path_to_root.'/hrm/includes/db/pay_core_007_governance_db.inc';
+	return payroll_retro_plan_record_approval($draft_data, $draft_id);
 }
 
 /** Execute the explicit native terminal or preserve the original legacy payroll terminal. */

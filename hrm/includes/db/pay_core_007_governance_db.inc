@@ -1,6 +1,6 @@
 <?php
 /**
- * Governed append-only PAY-CORE-007 writers/readers.
+ * Governed append-only PAY-CORE-007 writers/readers. Retro plans are approved in the shared approval workflow.
  * Not loaded by payroll_engine.inc. No GL/payment/bank/statutory execution is present.
  */
 require_once(__DIR__.'/../../../includes/value_helpers.inc');
@@ -309,9 +309,17 @@ function hrm_pay_core_007_propose_plan(array $input,&$error=null)
     }
     $p=hrm_pay_core_007_plan($input,$error);
     if($p===false)return false;
+    if(!(defined('ST_HRM_PAYROLL_RETRO_PLAN')&&function_exists('approval_workflow_needs_checker')
+      &&approval_workflow_needs_checker(ST_HRM_PAYROLL_RETRO_PLAN))){
+      $error='retro_plan_workflow_missing';
+      return false;
+    }
+    $manage=hrm_pay_core_007_manage_transaction();
+    if($manage)begin_transaction();
     $ctx=hrm_pay_core_007_one('SELECT provenance_state FROM '.TB_PREF.'hrm_pay_retro_contexts WHERE context_id='.$p['context_id']
       .' AND affected_result_id='.$p['affected_result_id'].' LIMIT 2');
     if(!$ctx||$ctx['provenance_state']!=='complete'){
+      if($manage)cancel_transaction();
       $error='complete_historical_context_required';
       return false;
     }
@@ -320,14 +328,27 @@ function hrm_pay_core_007_propose_plan(array $input,&$error=null)
       .db_escape($p['reason_code']).','.db_escape($p['reason_evidence_sha256']).','.db_escape($p['historical_plan_sha256'])
       .','.db_escape($p['delta_set_sha256']).','.hrm_pay_core_007_sql_token($p['bring_forward_date']).','.hrm_pay_core_007_sql_id($p['target_calendar_period_id'])
       .','.hrm_pay_core_007_sql_token($p['predecessor_result_sha256']).','.db_escape($p['plan_sha256']).','.$maker.')';
-    if(!db_query($sql)){
-      $same=hrm_pay_core_007_one('SELECT retro_plan_id,plan_sha256 FROM '.TB_PREF.'hrm_pay_retro_plans WHERE affected_result_id='
-        .$p['affected_result_id'].' AND idempotency_key='.db_escape($p['idempotency_key']).' LIMIT 2');
-      if($same&&hash_equals((string)$same['plan_sha256'],$p['plan_sha256']))return (int)$same['retro_plan_id'];
+    $q=db_query('SELECT retro_plan_id,plan_sha256 FROM '.TB_PREF.'hrm_pay_retro_plans WHERE affected_result_id='
+      .$p['affected_result_id'].' AND idempotency_key='.db_escape($p['idempotency_key']).' LIMIT 2 FOR UPDATE');
+    $same=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
+    if($same&&!hash_equals((string)$same['plan_sha256'],$p['plan_sha256'])){
+      if($manage)cancel_transaction();
       $error='plan_idempotency_conflict';
       return false;
     }
-    return (int)db_insert_id();
+    if($same)$id=(int)$same['retro_plan_id'];
+    elseif($q&&db_query($sql))$id=(int)db_insert_id();
+    else{
+      if($manage)cancel_transaction();
+      $error='plan_insert_failed';
+      return false;
+    }
+    if(payroll_retro_plan_submit($id,$p['plan_sha256'],$error)===false){
+      if($manage)cancel_transaction();
+      return false;
+    }
+    if($manage)commit_transaction();
+    return $id;
 }
 function hrm_pay_core_007_plan_from_row(array $r){
 	return array('affected_result_id'=>(int)$r['affected_result_id'],'context_id'=>(int)$r['context_id'],'plan_type'=>$r['plan_type'],
@@ -336,34 +357,95 @@ function hrm_pay_core_007_plan_from_row(array $r){
 		'target_calendar_period_id'=>$r['target_calendar_period_id']===null?null:(int)$r['target_calendar_period_id'],'predecessor_result_sha256'=>$r['predecessor_result_sha256'],
 		'plan_sha256'=>$r['plan_sha256']);
 }
-function hrm_pay_core_007_approve_plan($retro_plan_id,$approval_evidence_sha256,&$error=null)
+/**
+ * Evidence digest that binds a retro plan approval to the shared approval draft that decided it.
+ *
+ * @param int $draft_id Shared approval draft id
+ * @param string $plan_sha256 Digest of the approved retro plan
+ * @return string SHA-256 hex digest
+ */
+function payroll_retro_plan_approval_evidence($draft_id,$plan_sha256)
+{
+    return hrm_pay_core_007_hash(array('trans_type'=>(int)ST_HRM_PAYROLL_RETRO_PLAN,'approval_draft_id'=>(int)$draft_id,
+      'plan_sha256'=>(string)$plan_sha256));
+}
+/**
+ * Submit one retro plan to the shared approval workflow, once. A plan approved before the shared workflow took over
+ * keeps that approval; an open (pending, delegated or approved) draft is returned as it is; after a rejected or
+ * cancelled draft the plan can be submitted again. Runs inside the caller's transaction.
+ *
+ * @param int $retro_plan_id Retro plan id
+ * @param string $plan_sha256 Digest of that plan
+ * @param string|null $error Failure token
+ * @return array|false approval_draft_id and status (pending, approved or decided), or false
+ */
+function payroll_retro_plan_submit($retro_plan_id,$plan_sha256,&$error=null)
 {
     $error=null;
+    $q=db_query('SELECT approval_id FROM '.TB_PREF.'hrm_pay_retro_approvals WHERE retro_plan_id='.(int)$retro_plan_id.' LIMIT 1 FOR UPDATE');
+    if(!$q){
+      $error='retro_plan_approval_state_invalid';
+      return false;
+    }
+    if(db_num_rows($q)===1)
+      return array('approval_draft_id'=>0,'status'=>'decided');
+    $q=db_query('SELECT id,status,draft_data FROM '.TB_PREF.'approval_drafts WHERE trans_type='.(int)ST_HRM_PAYROLL_RETRO_PLAN
+      .' AND status IN ('.APPROVAL_STATUS_PENDING.','.APPROVAL_STATUS_APPROVED.','.APPROVAL_STATUS_DELEGATED.') ORDER BY id FOR UPDATE');
+    if(!$q){
+      $error='retro_plan_draft_state_invalid';
+      return false;
+    }
+    while($draft=db_fetch_assoc($q)){
+      // Draft data is stored HTML-encoded by db_escape(); decode it as the approval engine does.
+      $data=json_decode(html_entity_decode((string)$draft['draft_data'],ENT_QUOTES,'UTF-8'),true);
+      if(is_array($data)&&isset($data['retro_plan_id'])&&(int)$data['retro_plan_id']===(int)$retro_plan_id)
+        return array('approval_draft_id'=>(int)$draft['id'],
+          'status'=>(int)$draft['status']===APPROVAL_STATUS_APPROVED?'approved':'pending');
+    }
+    $data=array('retro_plan_id'=>(int)$retro_plan_id,'plan_sha256'=>(string)$plan_sha256);
+    $result=get_approval_workflow_service()->submit(ST_HRM_PAYROLL_RETRO_PLAN,$data,0,
+      array('summary'=>sprintf(_('Payroll retro correction plan %d'),(int)$retro_plan_id)));
+    if(!is_array($result)||empty($result['draft_id'])||$result['status']!=='pending'){
+      $error='retro_plan_submission_failed';
+      return false;
+    }
+    return array('approval_draft_id'=>(int)$result['draft_id'],'status'=>'pending');
+}
+/**
+ * Record the approval of a payroll retro plan decided in the shared workflow. Called only by the registered executor
+ * execute_approved_payroll_retro_plan() on final approval: it records the immutable approval of the plan, with the
+ * final approver as checker; the plan maker can never approve it, and the approver needs the retro review area.
+ * Materializing and executing the plan stay separate steps. Runs inside the approval transaction.
+ *
+ * @param array $draft_data Draft payload: retro_plan_id and plan_sha256
+ * @param int $draft_id Shared approval draft id
+ * @return int|false Retro approval id, or false to refuse the approval
+ */
+function payroll_retro_plan_record_approval($draft_data,$draft_id)
+{
     $checker=current_user_id_or_zero();
-    $retro_plan_id=(int)$retro_plan_id;
-    if($checker<=0||!hrm_pay_core_007_access('SA_HRM_REVIEW_PAY_CORE_RETRO')||$retro_plan_id<=0){
-      $error='access_denied';
+    if($checker<=0||!hrm_pay_core_007_access('SA_HRM_REVIEW_PAY_CORE_RETRO')||!is_array($draft_data)||empty($draft_data['retro_plan_id'])
+      ||!isset($draft_data['plan_sha256']))
       return false;
-    }
-    $p=hrm_pay_core_007_one('SELECT * FROM '.TB_PREF.'hrm_pay_retro_plans WHERE retro_plan_id='.$retro_plan_id.' LIMIT 2');
-    if(!$p){
-      $error='plan_missing';
+    $retro_plan_id=(int)$draft_data['retro_plan_id'];
+    $p=hrm_pay_core_007_one('SELECT * FROM '.TB_PREF.'hrm_pay_retro_plans WHERE retro_plan_id='.$retro_plan_id.' LIMIT 2 FOR UPDATE');
+    if(!$p||!hash_equals((string)$p['plan_sha256'],(string)$draft_data['plan_sha256']))
       return false;
-    }
-    $plan=hrm_pay_core_007_plan_from_row($p);
-    $a=hrm_pay_core_007_approval($plan,(int)$p['maker_id'],$checker,$approval_evidence_sha256,$error);
+    $error=null;
+    $a=hrm_pay_core_007_approval(hrm_pay_core_007_plan_from_row($p),(int)$p['maker_id'],$checker,
+      payroll_retro_plan_approval_evidence($draft_id,$p['plan_sha256']),$error);
     if($a===false)return false;
+    $q=db_query('SELECT approval_id,approval_sha256 FROM '.TB_PREF.'hrm_pay_retro_approvals WHERE retro_plan_id='.$retro_plan_id
+      .' LIMIT 2 FOR UPDATE');
+    if(!$q||db_num_rows($q)>1)return false;
+    if(db_num_rows($q)===1){
+      $same=db_fetch_assoc($q);
+      return hash_equals((string)$same['approval_sha256'],$a['approval_sha256'])?(int)$same['approval_id']:false;
+    }
     $sql='INSERT INTO '.TB_PREF.'hrm_pay_retro_approvals (retro_plan_id,plan_sha256,approval_evidence_sha256,approval_sha256,checker_id) VALUES ('
       .$retro_plan_id.','.db_escape($a['plan_sha256']).','.db_escape($a['approval_evidence_sha256']).','.db_escape($a['approval_sha256'])
       .','.$checker.')';
-    if(!db_query($sql)){
-      $same=hrm_pay_core_007_one('SELECT approval_id,approval_sha256 FROM '.TB_PREF.'hrm_pay_retro_approvals WHERE retro_plan_id='
-        .$retro_plan_id.' LIMIT 2');
-      if($same&&hash_equals((string)$same['approval_sha256'],$a['approval_sha256']))return (int)$same['approval_id'];
-      $error='approval_conflict';
-      return false;
-    }
-    return (int)db_insert_id();
+    return db_query($sql)?(int)db_insert_id():false;
 }
 
 /** Executor materializes the exact approved deterministic plan; originals remain immutable. */

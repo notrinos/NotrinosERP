@@ -10371,6 +10371,10 @@ msgstr ""
 msgid "Payslip employee linkage"
 msgstr ""
 
+#, php-format
+msgid "Payroll retro correction plan %d"
+msgstr ""
+
 msgid "The shared tracking admission is unavailable, so the payroll posting is refused."
 msgstr ""
 
@@ -20266,6 +20270,9 @@ msgid "Compensation Go-Live Approval"
 msgstr ""
 
 msgid "Benefit Life Event"
+msgstr ""
+
+msgid "Payroll Retro Correction Plan"
 msgstr ""
 
 msgid "You do not have permission to recover leave approvals."
