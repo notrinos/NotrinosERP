@@ -104,7 +104,6 @@ class HrmApp extends application {
 		$this->add_lapp_function(2, _('Benefit &Governance'),       'hrm/manage/benefit_governance.php?',                   'SA_HRM_MANAGE_BENEFITS', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Benefit &Adapters'),           'hrm/manage/benefit_adapters.php?',                     'SA_HRM_MANAGE_BENEFIT_PACK', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Benefit &Contributions'),      'hrm/manage/benefit_contributions.php?',                'SA_HRM_EXECUTE_BENEFIT_COSTING', MENU_MAINTENANCE);
-		$this->add_lapp_function(2, _('Benefit Life Event &Review'),  'hrm/manage/benefit_life_event_review.php?',            'SA_HRM_REVIEW_BENEFITS', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Benefit Payroll &Mapping'),    'hrm/manage/benefit_payroll_mapping.php?',              'SA_HRM_MAP_BENEFIT_PAYROLL', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Benefit Provider &Recovery'),  'hrm/manage/benefit_provider_reconciliation.php?',      'SA_HRM_RECONCILE_BENEFIT_PROVIDER', MENU_MAINTENANCE);
 		$this->add_lapp_function(2, _('Deduction Co&des'),          'hrm/manage/deduction_codes.php?',                     'SA_DEDUCTIONCODE',     MENU_MAINTENANCE);

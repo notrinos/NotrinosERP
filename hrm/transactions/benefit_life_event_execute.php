@@ -11,7 +11,7 @@ if(isset($_POST['execute_event'])){
 		$e=null;
 		$r=hrm_ben_001_execute_life_event((int)$_POST['request_id'],$e);
 		$r===false?display_error(_('Execution rejected: ').$e):display_notification(_('Life event executed under immutable receipt: ')
-			.$r['event_sha256']);
+			.$r['life_event_sha256']);
 	}
 }
 start_form();
@@ -21,6 +21,6 @@ text_row_ex(_('Life Event Request ID:'),'request_id',12,12);
 end_table(1);
 submit_center('execute_event',_('Execute Reviewed Life Event'));
 end_form();
-display_note(_('For approval-required events the executor must be distinct from requester and reviewer.'));
+display_note(_('For approval-required events the executor must be distinct from the requester and the approver.'));
 end_page();
 ?>

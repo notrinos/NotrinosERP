@@ -63,6 +63,7 @@ $systypes_array = array (
 	ST_HRM_COMPENSATION_AWARD => _('Governed Base Compensation Award'),
 	ST_HRM_COMPENSATION_OPENING_REVIEW => _('Compensation Opening Review'),
 	ST_HRM_COMPENSATION_GO_LIVE => _('Compensation Go-Live Approval'),
+	ST_HRM_BENEFIT_LIFE_EVENT => _('Benefit Life Event'),
 	ST_SALESRETURN => _('Sales RMA'),
 	ST_SALESAGREEMENT => _('Sales Agreement'),
 	ST_WH_TRANSFER_ORDER => _('Transfer Order'),

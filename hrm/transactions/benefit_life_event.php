@@ -1,6 +1,8 @@
 <?php
 $page_security='SA_HRM_ENROLL_BENEFITS';$path_to_root='../..';include($path_to_root.'/includes/session.inc');include_once($path_to_root.'/includes/ui.inc');include_once($path_to_root.'/hrm/includes/db/hrm_ben_001_enrollment_db.inc');page(_('Benefit Life Event Request'));
 $a=isset($_POST['ben_action'])?(string)$_POST['ben_action']:'';
+$approval_text=array('pending'=>_('waiting for approval in the Approval Dashboard'),'approved'=>_('approved'),
+	'decided'=>_('already reviewed'),'not_required'=>_('no approval needed'));
 if($a!==''&&!check_csrf_token())display_error(_('Invalid CSRF token.'));
 elseif($a==='type'&&user_check_access('SA_HRM_MANAGE_BENEFITS')){
 	$e=null;
@@ -18,7 +20,8 @@ elseif($a==='type'&&user_check_access('SA_HRM_MANAGE_BENEFITS')){
 		'occurrence_date'=>is_date($_POST['occurrence_date'])?date2sql($_POST['occurrence_date']):'','effective_date'=>is_date($_POST['event_effective_date'])?date2sql($_POST['event_effective_date']):'',
 		'event_evidence_sha256'=>trim((string)$_POST['event_evidence_sha256']),'idempotency_key'=>trim((string)$_POST['idempotency_key'])),
 		$e);
-	$r===false?display_error(_('Life-event request rejected: ').$e):display_notification(_('Life-event request recorded: ').$r['request_sha256']);
+	$r===false?display_error(_('Life-event request rejected: ').$e):display_notification(sprintf(_('Life-event request %d recorded, %s.'),
+		$r['life_event_request_id'],$approval_text[$r['approval_status']]));
 }
 start_form();
 hidden('_token',ensure_csrf_token());
@@ -51,5 +54,6 @@ if(user_check_access('SA_HRM_MANAGE_BENEFITS')){
 	submit_center('type_submit',_('Append Configured Event Type'));
 	end_form();
 }
-display_note(_('BEN does not invent national qualifying-life-event definitions; event types must come from explicit governed configuration.'));end_page();
+display_note(_('BEN does not invent national qualifying-life-event definitions; event types must come from explicit governed configuration.'));
+display_note(_('A life event whose type needs approval is approved by another user in the Approval Dashboard.'));end_page();
 ?>

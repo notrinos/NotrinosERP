@@ -47,6 +47,11 @@ if (!is_file($hrm_cmp_001_source))
 	$hrm_cmp_001_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/hrm_cmp_001_governance_db.inc';
 if (is_file($hrm_cmp_001_source))
 	include_once($hrm_cmp_001_source);
+$hrm_ben_001_enrollment_source = $path_to_root . '/hrm/includes/db/hrm_ben_001_enrollment_db.inc';
+if (!is_file($hrm_ben_001_enrollment_source))
+	$hrm_ben_001_enrollment_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/hrm_ben_001_enrollment_db.inc';
+if (is_file($hrm_ben_001_enrollment_source))
+	include_once($hrm_ben_001_enrollment_source);
 $hrm_lifecycle_training_assignment_source = $path_to_root . '/hrm/includes/db/lifecycle_training_assignment_command_db.inc';
 if (!is_file($hrm_lifecycle_training_assignment_source))
 	$hrm_lifecycle_training_assignment_source = dirname(dirname(dirname(dirname(__FILE__)))) . '/hrm/includes/db/lifecycle_training_assignment_command_db.inc';
@@ -209,6 +214,21 @@ function ensure_hrm_approval_transaction_registration()
 			'label'          => _('Compensation Go-Live Approval'),
 			'application'    => 'HRM',
 			'executor'       => 'execute_approved_compensation_go_live',
+			'amount_getter'  => null,
+			'draft_renderer' => null,
+			'edit_url'       => '',
+			'independent_approval' => true,
+		));
+	}
+	// Benefit life events whose type needs approval; approval numbers come from the requests.
+	if (defined('ST_HRM_BENEFIT_LIFE_EVENT')) {
+		register_systype_db_info(ST_HRM_BENEFIT_LIFE_EVENT, array(
+			TB_PREF . 'hrm_ben_life_event_requests', null, 'life_event_request_id', 'life_event_request_id', 'created_at'
+		));
+		ApprovalWorkflow::registerTransactionType(ST_HRM_BENEFIT_LIFE_EVENT, array(
+			'label'          => _('Benefit Life Event'),
+			'application'    => 'HRM',
+			'executor'       => 'execute_approved_benefit_life_event',
 			'amount_getter'  => null,
 			'draft_renderer' => null,
 			'edit_url'       => '',
@@ -984,9 +1004,8 @@ function cancel_leave_request_draft($draft_data, $draft_id, $comments)
 /**
  * Execute an approved Overtime Request draft.
  *
- * HRM-TIM-002 records immutable request-approval custody. Request approval no
- * longer writes attendance; worked/approved time must arrive independently
- * through HRM-TIM-001 before overtime qualification can occur.
+ * HRM-TIM-002 records immutable request-approval custody. Request approval
+ * does not write attendance.
  */
 function execute_approved_overtime_request($draft_data, $reserved_trans_no, $draft_id)
 {

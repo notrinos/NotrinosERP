@@ -725,19 +725,15 @@ function hrm_cmp_001_budget_spent(array $budget,&$error=null)
  * @param int|null $trans_type Compensation approval type; the base award when omitted
  * @return bool True when a submission waits for an independent approver
  */
+/**
+ * Whether a compensation approval type (the base award by default) has a shared workflow that always needs a checker.
+ *
+ * @param int|null $trans_type ST_HRM_COMPENSATION_* type, or null for the base award
+ * @return bool True when the workflow is ready
+ */
 function hrm_cmp_001_workflow_ready($trans_type=null){
 	if($trans_type===null)$trans_type=defined('ST_HRM_COMPENSATION_AWARD')?ST_HRM_COMPENSATION_AWARD:0;
-	if((int)$trans_type<=0||!class_exists('ApprovalWorkflow')||!ApprovalWorkflow::isRegistered($trans_type))return false;
-	$w=get_approval_workflow_by_type($trans_type);
-	if(!$w||empty($w['is_active'])||!empty($w['allow_self_approve']))return false;
-	$levels=get_approval_levels((int)$w['id'],true);
-	if(!$levels)return false;
-	$seen=0;
-	while($level=db_fetch_assoc($levels)){
-		$seen++;
-		if((float)$level['amount_threshold']>0)return false;
-	}
-	return $seen>0;
+	return function_exists('approval_workflow_needs_checker')&&approval_workflow_needs_checker($trans_type);
 }
 function submit_hrm_cmp_001_base_award($employee_id,$review_cycle_id,$new_amount,$award_kind,$effective_date,$purpose_code,$evidence_sha256,$idempotency_key,&$error=null)
 {

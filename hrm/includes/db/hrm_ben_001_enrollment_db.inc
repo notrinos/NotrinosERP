@@ -1,5 +1,5 @@
 <?php
-/** HRM-BEN-001 enrollment, dependant-consent and governed life-event commands. */
+/** HRM-BEN-001 enrollment, dependant-consent and life-event commands. Life events that need approval are decided in the shared approval workflow. */
 require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/hrm_ben_001_plan_db.inc');
 function hrm_ben_001_record_consent(array $x,&$error=null){
@@ -254,6 +254,13 @@ function hrm_ben_001_request_life_event(array $x,&$error=null){
 		$error='life_event_type_missing_or_scope_denied';
 		return false;
 	}
+	$needs_approval=(int)$t['approval_required']===1;
+	if($needs_approval&&!(defined('ST_HRM_BENEFIT_LIFE_EVENT')&&function_exists('approval_workflow_needs_checker')
+		&&approval_workflow_needs_checker(ST_HRM_BENEFIT_LIFE_EVENT))){
+		cancel_transaction();
+		$error='life_event_workflow_missing';
+		return false;
+	}
 	foreach(array('enrollment_before_id','enrollment_after_id') as $k)if(!empty($x[$k])){
 		$q=db_query('SELECT worker_id,legal_entity_id,plan_id FROM '.TB_PREF.'hrm_ben_enrollments WHERE enrollment_id='.(int)$x[$k]
 			.' LIMIT 2 FOR UPDATE');
@@ -280,45 +287,100 @@ function hrm_ben_001_request_life_event(array $x,&$error=null){
 		cancel_transaction();
 		return false;
 	}
-	commit_transaction();
-	return array('life_event_request_id'=>$id,'request_sha256'=>$sha,'approval_required'=>(int)$t['approval_required']);
-}
-function hrm_ben_001_review_life_event($request_id,$decision,$evidence_sha256,&$error=null){
-	$error=null;
-	$a=current_user_id_or_zero();
-	$e=hrm_ben_001_sha256($evidence_sha256);
-	if($a<=0||!hrm_ben_001_access('SA_HRM_REVIEW_BENEFITS')||!in_array($decision,array('approved','rejected'),true)||$e===false){
-		$error='life_event_review_invalid_or_unauthorized';
-		return false;
-	}
-	begin_transaction();
-	$q=db_query('SELECT * FROM '.TB_PREF.'hrm_ben_life_event_requests WHERE life_event_request_id='.(int)$request_id.' LIMIT 2 FOR UPDATE');
-	$r=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
-	if(!$r||$a===(int)$r['requested_by']){
+	$approval=$needs_approval?benefit_life_event_submit($id,$sha,$error):array('approval_draft_id'=>0,'status'=>'not_required');
+	if($approval===false){
 		cancel_transaction();
-		$error='independent_life_event_reviewer_required';
 		return false;
 	}
+	commit_transaction();
+	return array('life_event_request_id'=>$id,'request_sha256'=>$sha,'approval_required'=>(int)$t['approval_required'],
+		'approval_draft_id'=>$approval['approval_draft_id'],'approval_status'=>$approval['status']);
+}
+/**
+ * Evidence digest that binds a life-event review to the shared approval draft that decided it.
+ *
+ * @param int $draft_id Shared approval draft id
+ * @param string $request_sha256 Digest of the decided life-event request
+ * @return string SHA-256 hex digest
+ */
+function benefit_life_event_approval_evidence($draft_id,$request_sha256){
+	return hrm_ben_001_hash(array('trans_type'=>(int)ST_HRM_BENEFIT_LIFE_EVENT,'approval_draft_id'=>(int)$draft_id,
+		'request_sha256'=>(string)$request_sha256));
+}
+/**
+ * Submit one life-event request whose type needs approval to the shared approval workflow, once. A request reviewed
+ * before the shared workflow took over keeps that decision; an open (pending, delegated or approved) draft is returned
+ * as it is; after a rejected or cancelled draft the request can be submitted again. Runs inside the caller's
+ * transaction.
+ *
+ * @param int $request_id Life-event request id
+ * @param string $request_sha256 Digest of that request
+ * @param string|null $error Failure token
+ * @return array|false approval_draft_id and status (pending, approved or decided), or false
+ */
+function benefit_life_event_submit($request_id,$request_sha256,&$error=null){
+	$error=null;
 	$q=db_query('SELECT life_event_review_id FROM '.TB_PREF.'hrm_ben_life_event_reviews WHERE life_event_request_id='.(int)$request_id
 		.' LIMIT 1 FOR UPDATE');
-	if(!$q||db_num_rows($q)>0){
-		cancel_transaction();
-		$error='life_event_already_reviewed';
+	if(!$q){
+		$error='life_event_review_state_invalid';
 		return false;
 	}
-	$p=array('life_event_request_id'=>(int)$request_id,'request_sha256'=>$r['request_sha256'],'decision_token'=>$decision,'evidence_sha256'=>$e,
-		'reviewed_by'=>$a);
+	if(db_num_rows($q)===1)
+		return array('approval_draft_id'=>0,'status'=>'decided');
+	$q=db_query('SELECT id,status,draft_data FROM '.TB_PREF.'approval_drafts WHERE trans_type='.(int)ST_HRM_BENEFIT_LIFE_EVENT
+		.' AND status IN ('.APPROVAL_STATUS_PENDING.','.APPROVAL_STATUS_APPROVED.','.APPROVAL_STATUS_DELEGATED.') ORDER BY id FOR UPDATE');
+	if(!$q){
+		$error='life_event_draft_state_invalid';
+		return false;
+	}
+	while($draft=db_fetch_assoc($q)){
+		// Draft data is stored HTML-encoded by db_escape(); decode it as the approval engine does.
+		$data=json_decode(html_entity_decode((string)$draft['draft_data'],ENT_QUOTES,'UTF-8'),true);
+		if(is_array($data)&&isset($data['life_event_request_id'])&&(int)$data['life_event_request_id']===(int)$request_id)
+			return array('approval_draft_id'=>(int)$draft['id'],
+				'status'=>(int)$draft['status']===APPROVAL_STATUS_APPROVED?'approved':'pending');
+	}
+	$data=array('life_event_request_id'=>(int)$request_id,'request_sha256'=>(string)$request_sha256);
+	$result=get_approval_workflow_service()->submit(ST_HRM_BENEFIT_LIFE_EVENT,$data,0,
+		array('summary'=>sprintf(_('Benefit life event request %d'),(int)$request_id)));
+	if(!is_array($result)||empty($result['draft_id'])||$result['status']!=='pending'){
+		$error='life_event_submission_failed';
+		return false;
+	}
+	return array('approval_draft_id'=>(int)$result['draft_id'],'status'=>'pending');
+}
+/**
+ * Shared-workflow executor of a benefit life-event approval. On final approval it records the approved review of the
+ * request, with the final approver as reviewer; the requester can never review it. Executing the life event stays a
+ * separate step for a third user. Runs inside the approval transaction.
+ *
+ * @param array $draft_data Draft payload: life_event_request_id and request_sha256
+ * @param int $reserved_trans_no Reserved approval number (not used)
+ * @param int $draft_id Shared approval draft id
+ * @return int|false Life-event review id, or false to refuse the approval
+ */
+function execute_approved_benefit_life_event($draft_data,$reserved_trans_no,$draft_id){
+	$actor=current_user_id_or_zero();
+	if($actor<=0||!hrm_ben_001_access('SA_HRM_REVIEW_BENEFITS')||!is_array($draft_data)||empty($draft_data['life_event_request_id'])
+		||!isset($draft_data['request_sha256']))
+		return false;
+	$q=db_query('SELECT r.life_event_request_id,r.request_sha256,r.requested_by,t.approval_required FROM '.TB_PREF
+		.'hrm_ben_life_event_requests r INNER JOIN '.TB_PREF.'hrm_ben_life_event_type_versions t ON t.life_event_type_version_id='
+		.'r.life_event_type_version_id WHERE r.life_event_request_id='.(int)$draft_data['life_event_request_id'].' LIMIT 2 FOR UPDATE');
+	$r=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
+	if(!$r||(int)$r['approval_required']!==1||$actor===(int)$r['requested_by']||!hash_equals((string)$r['request_sha256'],
+		(string)$draft_data['request_sha256']))
+		return false;
+	$evidence=benefit_life_event_approval_evidence($draft_id,$r['request_sha256']);
+	$p=array('life_event_request_id'=>(int)$r['life_event_request_id'],'request_sha256'=>$r['request_sha256'],'decision_token'=>'approved',
+		'evidence_sha256'=>$evidence,'reviewed_by'=>$actor);
 	$sha=hrm_ben_001_hash($p);
-	if(!db_query('INSERT INTO '.TB_PREF.'hrm_ben_life_event_reviews (life_event_request_id,request_sha256,decision_token,evidence_sha256,review_sha256,reviewed_by) VALUES ('
-		.(int)$request_id.','.db_escape($r['request_sha256']).','.db_escape($decision).','.db_escape($e).','.db_escape($sha).','
-		.$a.')')){
-		cancel_transaction();
-		$error='life_event_review_insert_failed';
-		return false;
-	}
-	$id=(int)db_insert_id();
-	commit_transaction();
-	return array('life_event_review_id'=>$id,'review_sha256'=>$sha,'decision_token'=>$decision);
+	$sql='INSERT INTO '.TB_PREF.'hrm_ben_life_event_reviews (life_event_request_id,request_sha256,decision_token,evidence_sha256,'
+		.'review_sha256,reviewed_by) VALUES ('.(int)$r['life_event_request_id'].','.db_escape($r['request_sha256']).",'approved',"
+		.db_escape($evidence).','.db_escape($sha).','.$actor.')';
+	$error=null;
+	return hrm_ben_001_insert_idempotent('hrm_ben_life_event_reviews','life_event_review_id','review_sha256',$sha,$sql,$error);
 }
 function hrm_ben_001_execute_life_event($request_id,&$error=null){
 	$error=null;

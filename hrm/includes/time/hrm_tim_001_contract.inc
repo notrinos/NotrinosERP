@@ -1,8 +1,7 @@
 <?php
-/** HRM-TIM-001 deterministic work-pattern and approved-time contract. */
+/** HRM-TIM-001 deterministic work-pattern and reviewed-time contract. */
 require_once(__DIR__.'/../../../includes/value_helpers.inc');
 if (!defined('HRM_TIM_001_CONTRACT_VERSION')) define('HRM_TIM_001_CONTRACT_VERSION', '1.0');
-if (!defined('HRM_TIM_001_PAYROLL_ADAPTER_VERSION')) define('HRM_TIM_001_PAYROLL_ADAPTER_VERSION', 'approved-time-pay-core-003-v1');
 if (!defined('HRM_TIM_001_PAYROLL_CALC_AUTHORITY_ALLOWED')) define('HRM_TIM_001_PAYROLL_CALC_AUTHORITY_ALLOWED', false);
 if (!defined('HRM_TIM_001_PAYMENT_AUTHORITY_ALLOWED')) define('HRM_TIM_001_PAYMENT_AUTHORITY_ALLOWED', false);
 if (!defined('HRM_TIM_001_GL_AUTHORITY_ALLOWED')) define('HRM_TIM_001_GL_AUTHORITY_ALLOWED', false);
@@ -248,21 +247,6 @@ function hrm_tim_001_allocation_set_descriptor(array $rows,&$error=null)
     return array('allocation_count'=>count($norm),'total_minutes'=>$total,'allocation_set_sha256'=>hrm_tim_001_hash($norm));
 }
 function hrm_tim_001_allocation_set(array $rows,&$error=null){return hrm_tim_001_allocation_set_descriptor($rows,$error);}
-function hrm_tim_001_approval_descriptor(array $x,&$error=null)
-{
-    $error=null;foreach(array('reviewed_entry_id','review_sha256','allocation_set_sha256','approval_evidence_sha256','approval_command_key','reviewer_id','approver_id') as $k)if(!array_key_exists($k,$x)){$error='approval_field_missing';return false;}
-    $review=(int)$x['reviewed_entry_id'];$reviewer=(int)$x['reviewer_id'];$approver=(int)$x['approver_id'];$cmd=hrm_tim_001_token($x['approval_command_key'],128);
-    if($review<=0||$reviewer<=0||$approver<=0||$reviewer===$approver||$cmd===false||!is_sha256_hex($x['review_sha256'])||!is_sha256_hex($x['allocation_set_sha256'])||!is_sha256_hex($x['approval_evidence_sha256'])){$error=$reviewer===$approver?'self_approval_denied':'approval_invalid';return false;}
-    $p=array('reviewed_entry_id'=>$review,'review_sha256'=>$x['review_sha256'],'allocation_set_sha256'=>$x['allocation_set_sha256'],'approval_evidence_sha256'=>$x['approval_evidence_sha256'],'approval_command_key'=>$cmd,'reviewer_id'=>$reviewer,'approver_id'=>$approver);$p['approval_sha256']=hrm_tim_001_hash($p);return $p;
-}
-function hrm_tim_001_payroll_mapping_descriptor(array $x,&$error=null)
-{
-    $error=null;foreach(array('legal_entity_id','allocation_category','element_version_id','input_definition_id','unit_token','effective_from','created_by') as $k)if(!array_key_exists($k,$x)){$error='mapping_field_missing';return false;}
-    $cat=(string)$x['allocation_category'];$unit=(string)$x['unit_token'];$from=hrm_tim_001_date($x['effective_from']);$to=empty($x['effective_to'])?null:hrm_tim_001_date($x['effective_to']);$pred=empty($x['predecessor_mapping_id'])?null:(int)$x['predecessor_mapping_id'];
-    if((int)$x['legal_entity_id']<=0||(int)$x['element_version_id']<=0||(int)$x['input_definition_id']<=0||(int)$x['created_by']<=0||!in_array($cat,array('worked_time','legacy_regular','legacy_overtime','paid_break'),true)||!in_array($unit,array('minutes','hours'),true)||$from===false||($to!==null&&($to===false||$to<$from))){$error='mapping_invalid';return false;}
-    $p=array('legal_entity_id'=>(int)$x['legal_entity_id'],'allocation_category'=>$cat,'element_version_id'=>(int)$x['element_version_id'],'input_definition_id'=>(int)$x['input_definition_id'],'unit_token'=>$unit,'effective_from'=>$from,'effective_to'=>$to,'predecessor_mapping_id'=>$pred,'created_by'=>(int)$x['created_by']);$p['mapping_sha256']=hrm_tim_001_hash($p);return $p;
-}
-function hrm_tim_001_mapping_descriptor(array $x,&$error=null){if(isset($x['time_category'])&&!isset($x['allocation_category']))$x['allocation_category']=$x['time_category'];return hrm_tim_001_payroll_mapping_descriptor($x,$error);}
 function hrm_tim_001_decimal_hours_to_minutes_exact($value,&$error=null)
 {
     $error=null;$s=trim((string)$value);if(!preg_match('/^([0-9]+)(?:\.([0-9]{1,8}))?$/D',$s,$m)){$error='legacy_hours_invalid';return false;}$whole=(int)$m[1];$frac=isset($m[2])?str_pad($m[2],8,'0'):str_repeat('0',8);$scaled=$whole*100000000+(int)$frac;$num=$scaled*60;if($num%100000000!==0){$error='legacy_hours_not_exact_minute';return false;}return (int)($num/100000000);

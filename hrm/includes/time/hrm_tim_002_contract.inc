@@ -4,7 +4,6 @@ require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(__FILE__).'/hrm_tim_001_contract.inc');
 if (!defined('HRM_TIM_002_CONTRACT_VERSION')) define('HRM_TIM_002_CONTRACT_VERSION','1.0.435');
 if (!defined('HRM_TIM_002_IMPORT_NORMALIZATION_VERSION')) define('HRM_TIM_002_IMPORT_NORMALIZATION_VERSION','tim2-csv-v1');
-if (!defined('HRM_TIM_002_PAYROLL_ADAPTER_VERSION')) define('HRM_TIM_002_PAYROLL_ADAPTER_VERSION','hrm-tim-002-pay-core-003-v1');
 
 function hrm_tim_002_token($v,$max=128){return hrm_tim_001_token($v,$max);}
 function hrm_tim_002_hash($v){return hrm_tim_001_hash($v);}

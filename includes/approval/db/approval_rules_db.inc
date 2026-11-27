@@ -472,3 +472,31 @@ function workflow_has_active_levels($workflow_id, $lock_policy = false)
 
 	return $row[0] > 0;
 }
+
+/**
+ * Whether a registered transaction type has an active workflow that always needs a checker: self-approval is off,
+ * at least one level is active, and no level approves automatically below an amount threshold.
+ *
+ * Use it before recording a decision that may only be taken by an independent checker in the shared workflow.
+ *
+ * @param int $trans_type Transaction type constant (ST_*)
+ * @return bool True when every submission of the type waits for a checker
+ */
+function approval_workflow_needs_checker($trans_type)
+{
+	if ((int)$trans_type <= 0 || !class_exists('ApprovalWorkflow') || !ApprovalWorkflow::isRegistered($trans_type))
+		return false;
+	$workflow = get_approval_workflow_by_type($trans_type);
+	if (!$workflow || empty($workflow['is_active']) || !empty($workflow['allow_self_approve']))
+		return false;
+	$levels = get_approval_levels((int)$workflow['id'], true);
+	if (!$levels)
+		return false;
+	$seen = 0;
+	while ($level = db_fetch_assoc($levels)) {
+		$seen++;
+		if ((float)$level['amount_threshold'] > 0)
+			return false;
+	}
+	return $seen > 0;
+}
