@@ -4322,9 +4322,6 @@ msgstr ""
 msgid "Benefit &Contributions"
 msgstr ""
 
-msgid "Benefit Life Event &Review"
-msgstr ""
-
 msgid "Benefit Payroll &Mapping"
 msgstr ""
 
@@ -10206,6 +10203,10 @@ msgstr ""
 msgid "The Pay Grade status could not be synchronized."
 msgstr ""
 
+#, php-format
+msgid "Benefit life event request %d"
+msgstr ""
+
 msgid "Compensation go-live: "
 msgstr ""
 
@@ -12268,27 +12269,6 @@ msgid "Append Enrollment Window"
 msgstr ""
 
 msgid "BEN core is provider-neutral and country-neutral. No benefit types, rates, statutory schemes or national eligibility rules are created by this route."
-msgstr ""
-
-msgid "Benefit Life Event Review"
-msgstr ""
-
-msgid "Independent review recorded: "
-msgstr ""
-
-msgid "Review rejected: "
-msgstr ""
-
-msgid "Life Event Request ID:"
-msgstr ""
-
-msgid "Decision:"
-msgstr ""
-
-msgid "Record Independent Review"
-msgstr ""
-
-msgid "The reviewer must be distinct from the requester. Approval does not itself execute the life event."
 msgstr ""
 
 msgid "Benefit Payroll and Balance Mapping"
@@ -16615,6 +16595,9 @@ msgstr ""
 msgid "Authoritative Dependant ID:"
 msgstr ""
 
+msgid "Decision:"
+msgstr ""
+
 msgid "Granted"
 msgstr ""
 
@@ -16654,13 +16637,17 @@ msgstr ""
 msgid "Benefit Life Event Request"
 msgstr ""
 
+msgid "no approval needed"
+msgstr ""
+
 msgid "Configured event type version recorded: "
 msgstr ""
 
 msgid "Life-event type rejected: "
 msgstr ""
 
-msgid "Life-event request recorded: "
+#, php-format
+msgid "Life-event request %d recorded, %s."
 msgstr ""
 
 msgid "Life-event request rejected: "
@@ -16702,6 +16689,9 @@ msgstr ""
 msgid "BEN does not invent national qualifying-life-event definitions; event types must come from explicit governed configuration."
 msgstr ""
 
+msgid "A life event whose type needs approval is approved by another user in the Approval Dashboard."
+msgstr ""
+
 msgid "Execute Reviewed Benefit Life Event"
 msgstr ""
 
@@ -16711,10 +16701,13 @@ msgstr ""
 msgid "Life event executed under immutable receipt: "
 msgstr ""
 
+msgid "Life Event Request ID:"
+msgstr ""
+
 msgid "Execute Reviewed Life Event"
 msgstr ""
 
-msgid "For approval-required events the executor must be distinct from requester and reviewer."
+msgid "For approval-required events the executor must be distinct from the requester and the approver."
 msgstr ""
 
 msgid "Benefit Payroll and Balance Handoff"
@@ -20270,6 +20263,9 @@ msgid "Compensation Opening Review"
 msgstr ""
 
 msgid "Compensation Go-Live Approval"
+msgstr ""
+
+msgid "Benefit Life Event"
 msgstr ""
 
 msgid "You do not have permission to recover leave approvals."

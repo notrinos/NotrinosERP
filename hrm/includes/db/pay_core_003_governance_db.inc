@@ -1,34 +1,14 @@
 <?php
 /**
- * PAY-CORE-003 governed append-only writers and controlled legacy conversion.
- * This file is deliberately not included by payroll_engine.inc.
+ * PAY-CORE-003 governed append-only writers (element versions, eligibility, approved inputs) and the legacy source
+ * reader. The legacy mapping approval and conversion chain had no page or caller and was removed; its tables keep
+ * their history. This file is deliberately not included by payroll_engine.inc.
  */
 require_once(__DIR__.'/../../../includes/value_helpers.inc');
 include_once(dirname(dirname(__FILE__)).'/payroll/pay_core_003_governance.inc');
 include_once(dirname(dirname(__FILE__)).'/payroll/pay_core_003_eligibility.inc');
 include_once(dirname(dirname(__FILE__)).'/payroll/pay_core_003_legacy_mapping_review.inc');
 include_once(dirname(dirname(__FILE__)).'/payroll/pay_core_003_legacy_compatibility.inc');
-
-function hrm_pay_core_003_insert_idempotent($table,$hash_col,$hash,$sql,$id_col,&$error){
-	$q=db_query('SELECT '.$id_col.','.$hash_col.' FROM '.TB_PREF.$table.' WHERE '.$hash_col.'='.db_escape($hash).' LIMIT 2 FOR UPDATE');
-	if(!$q){
-		$error='lookup_failed';
-		return false;
-	}
-	if(db_num_rows($q)===1){
-		$x=db_fetch_assoc($q);
-		return (int)$x[$id_col];
-	}
-	if(db_num_rows($q)>1){
-		$error='ambiguous_replay';
-		return false;
-	}
-	if(!db_query($sql,'could not append PAY-CORE-003 custody')){
-		$error='insert_failed';
-		return false;
-	}
-	return (int)db_insert_id();
-}
 
 function hrm_pay_core_003_legacy_db_spec($kind)
 {
@@ -46,60 +26,7 @@ function hrm_pay_core_003_read_legacy_source($kind,$row_id,$for_update=false)
     return $q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
 }
 
-function hrm_pay_core_003_propose_mapping($source_kind,$source_row_id,array $resolution,$supersedes_mapping_plan_id=null,&$error=null)
-{
-    $error=null;$maker=current_user_id_or_zero();
-    if($maker<=0||!current_user_has_access('SA_HRM_MANAGE_PAY_CORE')){$error='access_denied';return false;}
-    $legacy=hrm_pay_core_003_read_legacy_source($source_kind,$source_row_id,false);$source_sha=$legacy?hrm_pay_core_003_legacy_source_sha256($source_kind,$legacy):false;
-    if($source_sha===false){$error='legacy_source_invalid';return false;}
-    if($source_kind==='employee_salary')$resolution['source_sha256']=$source_sha;
-    if(!hrm_pay_core_003_validate_mapping_resolution($source_kind,$resolution)){$error='resolution_invalid';return false;}
-    $supersedes=$supersedes_mapping_plan_id===null?null:(int)$supersedes_mapping_plan_id;
-    if($supersedes!==null){
-      $q=db_query('SELECT source_kind,source_row_id,source_sha256 FROM '.TB_PREF.'hrm_pay_core_003_legacy_mapping_plans WHERE mapping_plan_id='
-        .$supersedes.' LIMIT 2');
-      $p=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
-      if(!$p||$p['source_kind']!==$source_kind||(int)$p['source_row_id']!==(int)$source_row_id||!hash_equals((string)$p['source_sha256'],
-        $source_sha)){
-        $error='superseded_plan_source_mismatch';
-        return false;
-      }
-      $q=db_query('SELECT mapping_plan_id FROM '.TB_PREF.'hrm_pay_core_003_legacy_mapping_plans WHERE supersedes_mapping_plan_id='
-        .$supersedes.' LIMIT 2');
-      if(!$q||db_num_rows($q)>0){
-        $error='superseded_plan_already_replaced';
-        return false;
-      }
-    }
-    $payload_json=json_encode(hrm_pay_core_003_canonicalize($resolution),JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_PRESERVE_ZERO_FRACTION);
-    if(!is_string($payload_json)){
-      $error='resolution_encoding_failed';
-      return false;
-    }
-    $payload_sha=hash('sha256',$payload_json);
-    $plan_sha=hrm_pay_core_003_mapping_plan_hash($source_kind,$source_row_id,$source_sha,$resolution,$supersedes,$maker);
-    if($plan_sha===false){
-      $error='mapping_plan_hash_failed';
-      return false;
-    }
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_core_003_legacy_mapping_plans (source_kind,source_row_id,source_sha256,target_kind,target_payload_json,target_payload_sha256,supersedes_mapping_plan_id,mapping_plan_sha256,maker_id) VALUES ('
-      .db_escape($source_kind).','.(int)$source_row_id.','.db_escape($source_sha).','.db_escape($resolution['target_kind'])
-      .','.db_escape($payload_json).','.db_escape($payload_sha).','.($supersedes===null?'NULL':$supersedes).','.db_escape($plan_sha)
-      .','.$maker.')';
-    return hrm_pay_core_003_insert_idempotent('hrm_pay_core_003_legacy_mapping_plans','mapping_plan_sha256',$plan_sha,$sql,'mapping_plan_id',$error);
-}
 
-function hrm_pay_core_003_approve_mapping($mapping_plan_id,$decision_token,$evidence_sha256,&$error=null)
-{
-    $error=null;$checker=current_user_id_or_zero();$mapping_plan_id=(int)$mapping_plan_id;
-    if($checker<=0||!current_user_has_access('SA_HRM_REVIEW_PAY_CORE')||!in_array($decision_token,array('approved','rejected'),true)||!is_sha256_hex($evidence_sha256)){$error='access_or_evidence_invalid';return false;}
-    $q=db_query('SELECT mapping_plan_sha256,maker_id FROM '.TB_PREF.'hrm_pay_core_003_legacy_mapping_plans WHERE mapping_plan_id='.$mapping_plan_id.' LIMIT 2 FOR UPDATE');$p=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
-    if(!$p||(int)$p['maker_id']===$checker){$error='distinct_checker_required';return false;}
-    $q=db_query('SELECT mapping_plan_id FROM '.TB_PREF.'hrm_pay_core_003_legacy_mapping_plans WHERE supersedes_mapping_plan_id='.$mapping_plan_id.' LIMIT 1');if(!$q||db_num_rows($q)>0){$error='superseded_plan_not_approvable';return false;}
-    $approval_sha=hrm_pay_core_003_hash(array('mapping_plan_id'=>$mapping_plan_id,'mapping_plan_sha256'=>$p['mapping_plan_sha256'],'decision_token'=>$decision_token,'evidence_sha256'=>$evidence_sha256,'checker_id'=>$checker));
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_core_003_legacy_mapping_approvals (mapping_plan_id,mapping_plan_sha256,decision_token,evidence_sha256,approval_sha256,checker_id) VALUES ('.$mapping_plan_id.','.db_escape($p['mapping_plan_sha256']).','.db_escape($decision_token).','.db_escape($evidence_sha256).','.db_escape($approval_sha).','.$checker.')';
-    return hrm_pay_core_003_insert_idempotent('hrm_pay_core_003_legacy_mapping_approvals','approval_sha256',$approval_sha,$sql,'mapping_approval_id',$error);
-}
 
 function hrm_pay_core_003_append_element_bundle_internal(array $x,$actor,&$error)
 {
@@ -343,166 +270,7 @@ function hrm_pay_core_003_write_approved_input(array $x,&$error=null)
     return $r;
 }
 
-function hrm_pay_core_003_execute_mapping($mapping_plan_id,&$error=null)
-{
-    global $transaction_level;
-    $error = null;
-    $executor = current_user_id_or_zero();
-    $mapping_plan_id = (int)$mapping_plan_id;
-    if ($executor <= 0 || !current_user_has_access('SA_HRM_EXECUTE_PAY_CORE')) {
-        $error='access_denied';
-        return false;
-    }
-    // The receipt and all successor rows are one atomic command. Do not let a
-    // caller-owned transaction accidentally commit a target after receipt failure.
-    if (!empty($transaction_level)) {
-        $error='top_level_transaction_required';
-        return false;
-    }
-    begin_transaction();
-    $q=db_query('SELECT p.*,a.mapping_approval_id,a.approval_sha256,a.checker_id FROM '.TB_PREF
-        .'hrm_pay_core_003_legacy_mapping_plans p INNER JOIN '.TB_PREF
-        .'hrm_pay_core_003_legacy_mapping_approvals a ON a.mapping_plan_id=p.mapping_plan_id '
-        .'AND a.mapping_plan_sha256=p.mapping_plan_sha256 WHERE p.mapping_plan_id='.$mapping_plan_id
-        ." AND a.decision_token='approved' LIMIT 2 FOR UPDATE");
-    $plan=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
-    if (!$plan || $executor === (int)$plan['maker_id'] || $executor === (int)$plan['checker_id']
-        || (int)$plan['maker_id'] === (int)$plan['checker_id']) {
-        cancel_transaction(); $error='three_party_separation_required'; return false;
-    }
-    if ($plan['target_kind'] === 'documented_exception') {
-        cancel_transaction(); $error='documented_exception_not_executable'; return false;
-    }
-    $q=db_query('SELECT mapping_plan_id FROM '.TB_PREF.'hrm_pay_core_003_legacy_mapping_plans '
-        .'WHERE supersedes_mapping_plan_id='.$mapping_plan_id.' LIMIT 1 FOR UPDATE');
-    if (!$q || db_num_rows($q)>0) {
-        cancel_transaction(); $error='superseded_mapping_not_executable'; return false;
-    }
-    $q=db_query('SELECT conversion_receipt_id,executor_id FROM '.TB_PREF
-        .'hrm_pay_core_003_legacy_conversion_receipts WHERE mapping_plan_id='.$mapping_plan_id
-        .' LIMIT 2 FOR UPDATE');
-    if (!$q || db_num_rows($q)>1) {
-        cancel_transaction(); $error='conversion_state_invalid'; return false;
-    }
-    if (db_num_rows($q)===1) {
-        $receipt=db_fetch_assoc($q);
-        if ((int)$receipt['executor_id'] !== $executor) {
-            cancel_transaction(); $error='replay_executor_mismatch'; return false;
-        }
-        $receipt_id=(int)$receipt['conversion_receipt_id'];
-        commit_transaction();
-        return $receipt_id;
-    }
-    $q=db_query('SELECT conversion_receipt_id FROM '.TB_PREF.'hrm_pay_core_003_legacy_conversion_receipts '
-        .'WHERE source_kind='.db_escape($plan['source_kind']).' AND source_row_id='.(int)$plan['source_row_id']
-        .' AND source_sha256='.db_escape($plan['source_sha256']).' LIMIT 2 FOR UPDATE');
-    if (!$q || db_num_rows($q)>0) {
-        cancel_transaction(); $error='legacy_source_already_converted'; return false;
-    }
-    $legacy=hrm_pay_core_003_read_legacy_source($plan['source_kind'],(int)$plan['source_row_id'],true);
-    $source_sha=$legacy?hrm_pay_core_003_legacy_source_sha256($plan['source_kind'],$legacy):false;
-    if ($source_sha===false || !hash_equals((string)$plan['source_sha256'],$source_sha)) {
-        cancel_transaction(); $error='legacy_source_changed'; return false;
-    }
-    $resolution=json_decode($plan['target_payload_json'],true);
-    if (!is_array($resolution)
-        || !hash_equals((string)$plan['target_payload_sha256'],(string)hrm_pay_core_003_hash($resolution))
-        || !hrm_pay_core_003_validate_mapping_resolution($plan['source_kind'],$resolution)) {
-        cancel_transaction(); $error='mapping_payload_invalid'; return false;
-    }
-    $target=false;
-    if ($plan['target_kind']==='element_version_bundle') {
-        $target=hrm_pay_core_003_append_element_bundle_internal($resolution,$executor,$error);
-    } elseif ($plan['target_kind']==='eligibility_version') {
-        $target=hrm_pay_core_003_append_eligibility_internal($resolution,$executor,$error);
-    } elseif ($plan['target_kind']==='approved_input') {
-        if (trim((string)$legacy['formula'])!==''
-            || $resolution['effective_date']<$legacy['effective_from']
-            || (!empty($legacy['effective_to']) && $resolution['effective_date']>$legacy['effective_to'])) {
-            $error='legacy_employee_salary_not_safe_for_input_conversion';
-        } else {
-            $candidate=$resolution;
-            $candidate['value']=$legacy['amount'];
-            $candidate['source_sha256']=$source_sha;
-            $target=hrm_pay_core_003_append_approved_input_internal(
-                $candidate,$executor,empty($candidate['override_reason'])?true:current_user_has_access('SA_HRM_OVERRIDE_PAY_CORE_INPUT'),$error);
-        }
-    }
-    if ($target===false) {
-        cancel_transaction();
-        if ($error===null) $error='conversion_target_failed';
-        return false;
-    }
-    $target_json=json_encode(hrm_pay_core_003_canonicalize($target),JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
-    if (!is_string($target_json)) {
-        cancel_transaction(); $error='conversion_target_encoding_failed'; return false;
-    }
-    $target_sha=hash('sha256',$target_json);
-    $conversion_sha=hrm_pay_core_003_hash(array(
-        'mapping_plan_sha256'=>$plan['mapping_plan_sha256'],
-        'approval_sha256'=>$plan['approval_sha256'],
-        'source_sha256'=>$source_sha,
-        'target_set_sha256'=>$target_sha,
-        'executor_id'=>$executor,
-    ));
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_core_003_legacy_conversion_receipts '
-        .'(mapping_plan_id,mapping_approval_id,source_kind,source_row_id,source_sha256,target_kind,target_set_json,target_set_sha256,conversion_sha256,executor_id) VALUES ('
-        .$mapping_plan_id.','.(int)$plan['mapping_approval_id'].','.db_escape($plan['source_kind']).','.(int)$plan['source_row_id'].','
-        .db_escape($source_sha).','.db_escape($plan['target_kind']).','.db_escape($target_json).','.db_escape($target_sha).','
-        .db_escape($conversion_sha).','.$executor.')';
-    if (!db_query($sql)) {
-        cancel_transaction(); $error='conversion_receipt_failed'; return false;
-    }
-    $receipt_id=(int)db_insert_id();
-    commit_transaction();
-    return $receipt_id;
-}
 
-function hrm_pay_core_003_reconcile_conversion($conversion_receipt_id,$status_token,$evidence_sha256,$recovery_action='none',$supersedes_reconciliation_id=null,&$error=null)
-{
-    $error=null;$reviewer=current_user_id_or_zero();$conversion_receipt_id=(int)$conversion_receipt_id;
-    $allowed=array('reconciled','unresolved','quarantined','recovery_confirmed');if($reviewer<=0||!current_user_has_access('SA_HRM_REVIEW_PAY_CORE')||!in_array($status_token,$allowed,true)||!is_sha256_hex($evidence_sha256)){$error='access_or_evidence_invalid';return false;}
-    if(($status_token==='reconciled'&&$recovery_action!=='none')||($status_token!=='reconciled'&&hrm_pay_core_003_token($recovery_action,48)===false)){$error='recovery_action_invalid';return false;}
-    $q=db_query('SELECT source_kind,source_row_id,source_sha256,target_set_sha256,executor_id FROM '.TB_PREF.'hrm_pay_core_003_legacy_conversion_receipts WHERE conversion_receipt_id='.$conversion_receipt_id.' LIMIT 2');$r=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;if(!$r||$reviewer===(int)$r['executor_id']){$error='distinct_reviewer_required';return false;}
-    $q=db_query('SELECT reconciliation_id FROM '.TB_PREF.'hrm_pay_core_003_legacy_conversion_reconciliations WHERE conversion_receipt_id='
-      .$conversion_receipt_id.' ORDER BY reconciliation_id DESC LIMIT 1 FOR UPDATE');
-    $latest=$q&&db_num_rows($q)===1?(int)db_fetch_assoc($q)['reconciliation_id']:null;
-    $sup=$supersedes_reconciliation_id===null?null:(int)$supersedes_reconciliation_id;
-    if(($latest===null&&$sup!==null)||($latest!==null&&$sup!==$latest)){
-      $error='reconciliation_predecessor_mismatch';
-      return false;
-    }
-    $sha=hrm_pay_core_003_hash(array('conversion_receipt_id'=>$conversion_receipt_id,'source_sha256'=>$r['source_sha256'],
-      'target_set_sha256'=>$r['target_set_sha256'],'status_token'=>$status_token,'evidence_sha256'=>$evidence_sha256,'recovery_action'=>$recovery_action,
-      'supersedes_reconciliation_id'=>$sup,'reviewer_id'=>$reviewer));
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_core_003_legacy_conversion_reconciliations (conversion_receipt_id,source_kind,source_row_id,source_sha256,target_set_sha256,status_token,evidence_sha256,recovery_action,supersedes_reconciliation_id,reconciliation_sha256,reviewer_id) VALUES ('
-      .$conversion_receipt_id.','.db_escape($r['source_kind']).','.(int)$r['source_row_id'].','.db_escape($r['source_sha256'])
-      .','.db_escape($r['target_set_sha256']).','.db_escape($status_token).','.db_escape($evidence_sha256).','.db_escape($recovery_action)
-      .','.($sup===null?'NULL':$sup).','.db_escape($sha).','.$reviewer.')';
-    return hrm_pay_core_003_insert_idempotent('hrm_pay_core_003_legacy_conversion_reconciliations','reconciliation_sha256',
-      $sha,$sql,'reconciliation_id',$error);
-}
 
-function hrm_pay_core_003_record_parity_evidence($conversion_receipt_id,$status_token,$evidence_sha256,&$error=null)
-{
-    $error=null;$reviewer=current_user_id_or_zero();$conversion_receipt_id=(int)$conversion_receipt_id;if($reviewer<=0||!current_user_has_access('SA_HRM_REVIEW_PAY_CORE')||!in_array($status_token,array('match','mismatch','unresolved'),true)||!is_sha256_hex($evidence_sha256)){$error='access_or_evidence_invalid';return false;}
-    $q=db_query('SELECT source_kind,source_row_id,source_sha256,target_set_sha256,executor_id FROM '.TB_PREF.'hrm_pay_core_003_legacy_conversion_receipts WHERE conversion_receipt_id='.$conversion_receipt_id.' LIMIT 2');$r=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;if(!$r||$reviewer===(int)$r['executor_id']){$error='distinct_parity_reviewer_required';return false;}
-    $q=db_query('SELECT status_token FROM '.TB_PREF.'hrm_pay_core_003_legacy_conversion_reconciliations WHERE conversion_receipt_id='
-      .$conversion_receipt_id.' ORDER BY reconciliation_id DESC LIMIT 1');
-    $rec=$q&&db_num_rows($q)===1?db_fetch_assoc($q):false;
-    if(!$rec||!in_array($rec['status_token'],array('reconciled','recovery_confirmed'),true)){
-      $error='reconciliation_required_before_parity';
-      return false;
-    }
-    $projection=hrm_pay_core_003_parity_projection_sha256($r['source_sha256'],$r['target_set_sha256'],'legacy_compatibility');
-    $sha=hrm_pay_core_003_hash(array('conversion_receipt_id'=>$conversion_receipt_id,'projection_sha256'=>$projection,'status_token'=>$status_token,
-      'evidence_sha256'=>$evidence_sha256,'verified_by'=>$reviewer));
-    $sql='INSERT INTO '.TB_PREF.'hrm_pay_core_003_compatibility_parity_evidence (conversion_receipt_id,source_kind,source_row_id,source_sha256,target_set_sha256,projection_sha256,status_token,evidence_sha256,verified_by,parity_sha256) VALUES ('
-      .$conversion_receipt_id.','.db_escape($r['source_kind']).','.(int)$r['source_row_id'].','.db_escape($r['source_sha256'])
-      .','.db_escape($r['target_set_sha256']).','.db_escape($projection).','.db_escape($status_token).','.db_escape($evidence_sha256)
-      .','.$reviewer.','.db_escape($sha).')';
-    return hrm_pay_core_003_insert_idempotent('hrm_pay_core_003_compatibility_parity_evidence','parity_sha256',$sha,$sql,
-      'parity_evidence_id',$error);
-}
 
 function hrm_pay_core_003_can_view_sensitive_input(){return current_user_has_access('SA_HRM_VIEW_PAY_CORE')&&current_user_has_access('SA_HRM_VIEW_SALARY');}
