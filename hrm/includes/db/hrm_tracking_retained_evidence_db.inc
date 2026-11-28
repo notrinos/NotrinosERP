@@ -89,7 +89,7 @@ function hrm_dimension_approval_family_types()
         'ST_HRM_LIFECYCLE_PROMOTION','ST_HRM_LIFECYCLE_SUSPENSION','ST_HRM_LIFECYCLE_REINSTATEMENT',
         'ST_HRM_LIFECYCLE_HIRE','ST_HRM_LIFECYCLE_REHIRE','ST_HRM_COMPENSATION_AWARD',
             'ST_HRM_COMPENSATION_OPENING_REVIEW','ST_HRM_COMPENSATION_GO_LIVE','ST_HRM_BENEFIT_LIFE_EVENT',
-            'ST_HRM_PAYROLL_RETRO_PLAN') as $type)
+            'ST_HRM_PAYROLL_RETRO_PLAN','ST_HRM_PAYROLL_GL_REVIEW') as $type)
         if (defined($type)) $types[] = (int)constant($type);
     return $types;
 }

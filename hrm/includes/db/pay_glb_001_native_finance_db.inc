@@ -251,7 +251,7 @@ function pay_glb_001_native_finance_context($approval_id,$action,$key,array $inp
     $p=pay_glb_001_native_finance_principal($action,$error);
     if($p===false || !pay_glb_001_sha256($key) || !pay_glb_001_native_finance_require_schema($error))return false;
     $fields=array('gl_intent'=>array('journal_date','mapping_snapshot_sha256','source_lines'),'gl_reconcile'=>array('journal_intent_id'),
-        'gl_review'=>array('reconciliation_id','decision'),'gl_authorize'=>array('journal_intent_id'),'gl_post'=>array('authority_id'),
+        'gl_review'=>array('reconciliation_id'),'gl_authorize'=>array('journal_intent_id'),'gl_post'=>array('authority_id'),
         'gl_recovery_prepare'=>array('target_posting_id','command_kind','recovery_date','reason_code','recovery_key'),
         'gl_recovery_review'=>array('target_posting_id','command_kind','recovery_date','reason_code','recovery_key','recovery_preparation_sha256'),
         'gl_recover'=>array('recovery_command_id'));
@@ -346,7 +346,6 @@ function pay_glb_001_native_finance_context($approval_id,$action,$key,array $inp
             if(!pay_gl_001_date($input['recovery_date']) || !pay_gl_001_token($input['reason_code'],64) || !pay_gl_001_token($input['recovery_key'],128))return false;
         }
     }
-    if($action==='gl_review' && !in_array($input['decision'],array('approved','rejected'),true))return false;
     $excluded_journal=$jid;
     if($action==='gl_intent') {
         $existing=hrm_pay_core_004_read_one('SELECT journal_intent_id,prepared_by FROM '.TB_PREF.'hrm_pay_gl_001_journal_intents WHERE approval_sha256='
@@ -459,7 +458,7 @@ function pay_glb_001_native_finance_execute($approval_id,$action,$key,array $inp
                     'journal_date'=>$input['journal_date'],'currency_code'=>$scope['currency_code'],'mapping_snapshot_sha256'=>$input['mapping_snapshot_sha256'],'source_lines'=>$input['source_lines']);
                 $result=pay_gl_001_create_journal_intent($p,$error);$kind='pay_gl_journal_intent';$id_field='journal_intent_id';$sha_field='journal_sha256';
             } elseif($action==='gl_reconcile') {$result=pay_gl_001_reconcile_intent((int)$input['journal_intent_id'],$error);$kind='pay_gl_reconciliation';$id_field='reconciliation_id';$sha_field='reconciliation_sha256';
-            } elseif($action==='gl_review') {$result=pay_gl_001_review_reconciliation((int)$input['reconciliation_id'],$input['decision'],$error);$kind='pay_gl_review';$id_field='review_id';$sha_field='review_sha256';
+            } elseif($action==='gl_review') {$result=pay_gl_001_recorded_finance_review((int)$input['reconciliation_id'],$error);$kind='pay_gl_review';$id_field='review_id';$sha_field='review_sha256';
             } elseif($action==='gl_authorize') {$result=pay_gl_001_authorize_posting((int)$input['journal_intent_id'],$key,$error);$kind='pay_gl_authority';$id_field='authority_id';$sha_field='authority_sha256';
             } elseif($action==='gl_post') {$result=pay_gl_001_post_approved_intent((int)$input['authority_id'],$error);
             } elseif($action==='gl_recovery_prepare' || $action==='gl_recovery_review') {

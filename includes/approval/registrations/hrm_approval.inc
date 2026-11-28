@@ -250,6 +250,21 @@ function ensure_hrm_approval_transaction_registration()
 			'independent_approval' => true,
 		));
 	}
+	// Finance review of reconciled payroll journals; approval numbers come from the reconciliations.
+	if (defined('ST_HRM_PAYROLL_GL_REVIEW')) {
+		register_systype_db_info(ST_HRM_PAYROLL_GL_REVIEW, array(
+			TB_PREF . 'hrm_pay_gl_001_reconciliations', null, 'reconciliation_id', 'reconciliation_id', 'created_at'
+		));
+		ApprovalWorkflow::registerTransactionType(ST_HRM_PAYROLL_GL_REVIEW, array(
+			'label'          => _('Payroll Journal Finance Review'),
+			'application'    => 'HRM',
+			'executor'       => 'execute_approved_payroll_gl_review',
+			'amount_getter'  => null,
+			'draft_renderer' => null,
+			'edit_url'       => '',
+			'independent_approval' => true,
+		));
+	}
 
 if (defined('ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT')) {
 		register_systype_db_info(ST_HRM_LIFECYCLE_TRAINING_ASSIGNMENT, array(
@@ -1558,6 +1573,22 @@ function execute_approved_payroll_retro_plan($draft_data, $reserved_trans_no, $d
 	global $path_to_root;
 	require_once $path_to_root.'/hrm/includes/db/pay_core_007_governance_db.inc';
 	return payroll_retro_plan_record_approval($draft_data, $draft_id);
+}
+
+/**
+ * Shared-workflow executor of the finance review of a reconciled payroll journal. On final approval it records the
+ * review with the final approver as reviewer; the payroll GL writers are loaded only when a review is decided.
+ *
+ * @param array $draft_data Draft payload: reconciliation_id and reconciliation_sha256
+ * @param int $reserved_trans_no Reserved approval number (not used)
+ * @param int $draft_id Shared approval draft id
+ * @return int|false Review id, or false to refuse the approval
+ */
+function execute_approved_payroll_gl_review($draft_data, $reserved_trans_no, $draft_id)
+{
+	global $path_to_root;
+	require_once $path_to_root.'/hrm/includes/db/pay_gl_001_runtime_db.inc';
+	return payroll_gl_review_record_approval($draft_data, $draft_id);
 }
 
 /** Execute the explicit native terminal or preserve the original legacy payroll terminal. */

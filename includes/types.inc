@@ -76,6 +76,7 @@ define('ST_HRM_COMPENSATION_OPENING_REVIEW', 104);
 define('ST_HRM_COMPENSATION_GO_LIVE', 105);
 define('ST_HRM_BENEFIT_LIFE_EVENT', 106);
 define('ST_HRM_PAYROLL_RETRO_PLAN', 107);
+define('ST_HRM_PAYROLL_GL_REVIEW', 108);
 
 //
 //	Depreciation period types

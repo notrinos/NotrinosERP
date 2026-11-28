@@ -4,6 +4,7 @@
  *
  * This is the sole production authority for PAY-GL-001 mapping publication,
  * journal intent creation, independent reconciliation, GL posting and recovery.
+ * The finance review of a reconciled journal is decided in the shared approval workflow.
  * No payment, bank or statutory filing authority is provided here.
  */
 require_once(__DIR__.'/../../../includes/value_helpers.inc');
@@ -204,18 +205,100 @@ function pay_gl_001_reconcile_intent($journal_intent_id,&$error=null){
   $rule=false;foreach($mapping['rules'] as $mr)if(hash_equals($mr['rule_sha256'],$line['mapping_rule_sha256'])){$rule=$mr;break;}if(!$rule)return pay_gl_001_runtime_fail($error,'stale_mapping_snapshot');$proj=pay_gl_001_project_native_dimensions($axes,$rule,$error);if(!$proj||!pay_gl_001_dimension_open($proj['dimension_id'])||!pay_gl_001_dimension_open($proj['dimension2_id']))return pay_gl_001_runtime_fail($error,'mapped_dimension_closed_or_invalid');$projectionHashes[]=pay_gl_001_hash(array('allocation_sha256'=>$a['allocation_sha256'],'dimension_id'=>$proj['dimension_id'],'dimension2_id'=>$proj['dimension2_id'],'preserved_axis_sha256'=>$proj['preserved_axis_sha256']));
  }
  if(!hash_equals(pay_gl_001_journal_sha256($j),$j['journal_sha256']))return pay_gl_001_runtime_fail($error,'journal_hash_mismatch');$check=pay_gl_001_reconcile($j,$lines,$allocs,$error);if(!$check)return false;sort($projectionHashes,SORT_STRING);$projectionSet=pay_gl_001_hash($projectionHashes);$recSha=pay_gl_001_hash(array('journal_sha256'=>$j['journal_sha256'],'line_set_sha256'=>$j['line_set_sha256'],'allocation_set_sha256'=>$j['allocation_set_sha256'],'native_projection_set_sha256'=>$projectionSet,'debit_minor'=>(int)$j['debit_minor'],'credit_minor'=>(int)$j['credit_minor'],'status'=>'reconciled'));
- begin_transaction();$existing=pay_gl_001_db_one("SELECT * FROM ".TB_PREF."hrm_pay_gl_001_reconciliations WHERE journal_intent_id=".db_escape($jid)." LIMIT 2");if($existing){if(!hash_equals($existing['reconciliation_sha256'],$recSha)){cancel_transaction();return pay_gl_001_runtime_fail($error,'reconciliation_conflict');}commit_transaction();return $existing;}
- $actor=current_user_id_or_zero();$now=pay_gl_001_now();$sql="INSERT INTO ".TB_PREF."hrm_pay_gl_001_reconciliations (journal_intent_id,journal_sha256,line_set_sha256,allocation_set_sha256,native_projection_set_sha256,debit_minor,credit_minor,status,reconciliation_sha256,created_by,created_at) VALUES (".implode(',',array_map('db_escape',array($jid,$j['journal_sha256'],$j['line_set_sha256'],$j['allocation_set_sha256'],$projectionSet,$j['debit_minor'],$j['credit_minor'],'reconciled',$recSha,$actor,$now))).")";if(!db_query($sql)){cancel_transaction();return pay_gl_001_runtime_fail($error,'reconciliation_insert_failed');}$id=(int)db_insert_id();commit_transaction();return array('reconciliation_id'=>$id,'reconciliation_sha256'=>$recSha,'native_projection_set_sha256'=>$projectionSet);
+ begin_transaction();$existing=pay_gl_001_db_one("SELECT * FROM ".TB_PREF."hrm_pay_gl_001_reconciliations WHERE journal_intent_id=".db_escape($jid)." LIMIT 2");if($existing){if(!hash_equals($existing['reconciliation_sha256'],$recSha)){cancel_transaction();return pay_gl_001_runtime_fail($error,'reconciliation_conflict');}if(payroll_gl_review_submit((int)$existing['reconciliation_id'],$existing['reconciliation_sha256'],$error)===false){cancel_transaction();return false;}commit_transaction();return $existing;}
+ $actor=current_user_id_or_zero();$now=pay_gl_001_now();$sql="INSERT INTO ".TB_PREF."hrm_pay_gl_001_reconciliations (journal_intent_id,journal_sha256,line_set_sha256,allocation_set_sha256,native_projection_set_sha256,debit_minor,credit_minor,status,reconciliation_sha256,created_by,created_at) VALUES (".implode(',',array_map('db_escape',array($jid,$j['journal_sha256'],$j['line_set_sha256'],$j['allocation_set_sha256'],$projectionSet,$j['debit_minor'],$j['credit_minor'],'reconciled',$recSha,$actor,$now))).")";if(!db_query($sql)){cancel_transaction();return pay_gl_001_runtime_fail($error,'reconciliation_insert_failed');}$id=(int)db_insert_id();if(payroll_gl_review_submit($id,$recSha,$error)===false){cancel_transaction();return false;}commit_transaction();return array('reconciliation_id'=>$id,'reconciliation_sha256'=>$recSha,'native_projection_set_sha256'=>$projectionSet);
 }
 
-/** Finance review is immutable and must be independent of payroll preparation and mapping maker/checker. */
-function pay_gl_001_review_reconciliation($reconciliation_id,$decision,&$error=null){
- $error=null;if(!pay_gl_001_require_access(PAY_GL_001_REVIEW_PERMISSION,$error))return false;if(!in_array($decision,array('approved','rejected'),true))return pay_gl_001_runtime_fail($error,'review_decision_invalid');$actor=current_user_id_or_zero();
- $r=pay_gl_001_db_one("SELECT rc.*,ji.company_id,ji.prepared_by,ji.mapping_snapshot_sha256,ji.approval_sha256,ji.result_set_sha256,mv.maker_id,mv.checker_id FROM ".TB_PREF."hrm_pay_gl_001_reconciliations rc JOIN ".TB_PREF."hrm_pay_gl_001_journal_intents ji ON ji.journal_intent_id=rc.journal_intent_id JOIN ".TB_PREF."hrm_pay_gl_001_mapping_versions mv ON mv.mapping_snapshot_sha256=ji.mapping_snapshot_sha256 WHERE rc.reconciliation_id=".db_escape((int)$reconciliation_id)." LIMIT 2");
- if(!$r||!pay_gl_001_assert_scope((int)$r['company_id'],$error)||in_array($actor,array((int)$r['prepared_by'],(int)$r['maker_id'],(int)$r['checker_id']),true))return pay_gl_001_runtime_fail($error,'review_sod_denied');
+/**
+ * Payroll approval contract version of a journal (or a row joined to it): the PAY-CORE-010 version or the native v2
+ * version. Unlike pay_gl_001_require_versioned_owner() it needs no native finance owner, so the shared approval
+ * executor can use it; a native v2 review then still has to be bound inside the native finance step.
+ *
+ * @param array $p Row with approval_sha256 and result_set_sha256
+ * @param string|null $error Failure token
+ * @return string|false Contract version, or false
+ */
+function pay_gl_001_approval_contract_version(array $p,&$error=null){
+ if(!isset($p['approval_sha256'],$p['result_set_sha256']))return pay_gl_001_runtime_fail($error,'actual_journal_custody_required');
+ $q=db_query("SELECT i.projection_contract_version FROM ".TB_PREF."hrm_pay_core_010_approvals a JOIN ".TB_PREF."hrm_pay_core_010_approval_intents i ON i.approval_intent_id=a.approval_intent_id WHERE a.approval_sha256=".db_escape($p['approval_sha256'])." AND a.result_set_sha256=".db_escape($p['result_set_sha256'])." LIMIT 2");
+ if(!$q||db_num_rows($q)!==1)return pay_gl_001_runtime_fail($error,'actual_payroll_approval_version_required');$r=db_fetch_assoc($q);
+ if($r['projection_contract_version']===HRM_PAY_CORE_010_PROJECTION_CONTRACT_VERSION||$r['projection_contract_version']==='native-result-v2')return $r['projection_contract_version'];
+ return pay_gl_001_runtime_fail($error,'unsupported_payroll_approval_version');
+}
+
+/**
+ * Submit one reconciled payroll journal to the shared approval workflow for its finance review, once. A reconciliation
+ * reviewed before keeps that review; an open (pending, delegated or approved) draft is returned as it is; after a
+ * rejected or cancelled draft it is submitted again. A new draft is refused while no checker workflow exists. Runs
+ * inside the caller's transaction.
+ *
+ * @param int $reconciliation_id Reconciliation id
+ * @param string $reconciliation_sha256 Digest of that reconciliation
+ * @param string|null $error Failure token
+ * @return array|false approval_draft_id and status (pending, approved or decided), or false
+ */
+function payroll_gl_review_submit($reconciliation_id,$reconciliation_sha256,&$error=null){
+ $q=db_query("SELECT review_id FROM ".TB_PREF."hrm_pay_gl_001_reviews WHERE reconciliation_id=".(int)$reconciliation_id." LIMIT 1 FOR UPDATE");
+ if(!$q)return pay_gl_001_runtime_fail($error,'finance_review_state_invalid');
+ if(db_num_rows($q)===1)return array('approval_draft_id'=>0,'status'=>'decided');
+ if(!defined('ST_HRM_PAYROLL_GL_REVIEW')||!defined('APPROVAL_STATUS_PENDING'))return pay_gl_001_runtime_fail($error,'finance_review_workflow_missing');
+ $q=db_query("SELECT id,status,draft_data FROM ".TB_PREF."approval_drafts WHERE trans_type=".(int)ST_HRM_PAYROLL_GL_REVIEW." AND status IN (".APPROVAL_STATUS_PENDING.",".APPROVAL_STATUS_APPROVED.",".APPROVAL_STATUS_DELEGATED.") ORDER BY id FOR UPDATE");
+ if(!$q)return pay_gl_001_runtime_fail($error,'finance_review_draft_state_invalid');
+ while($draft=db_fetch_assoc($q)){
+  // Draft data is stored HTML-encoded by db_escape(); decode it as the approval engine does.
+  $data=json_decode(html_entity_decode((string)$draft['draft_data'],ENT_QUOTES,'UTF-8'),true);
+  if(is_array($data)&&isset($data['reconciliation_id'])&&(int)$data['reconciliation_id']===(int)$reconciliation_id)
+   return array('approval_draft_id'=>(int)$draft['id'],'status'=>(int)$draft['status']===APPROVAL_STATUS_APPROVED?'approved':'pending');
+ }
+ if(!function_exists('approval_workflow_needs_checker')||!approval_workflow_needs_checker(ST_HRM_PAYROLL_GL_REVIEW))return pay_gl_001_runtime_fail($error,'finance_review_workflow_missing');
+ $data=array('reconciliation_id'=>(int)$reconciliation_id,'reconciliation_sha256'=>(string)$reconciliation_sha256);
+ $result=get_approval_workflow_service()->submit(ST_HRM_PAYROLL_GL_REVIEW,$data,0,array('summary'=>sprintf(_('Payroll journal finance review %d'),(int)$reconciliation_id)));
+ if(!is_array($result)||empty($result['draft_id'])||$result['status']!=='pending')return pay_gl_001_runtime_fail($error,'finance_review_submission_failed');
+ return array('approval_draft_id'=>(int)$result['draft_id'],'status'=>'pending');
+}
+
+/**
+ * Record the finance review of a reconciled payroll journal decided in the shared workflow. Called only by the
+ * registered executor execute_approved_payroll_gl_review() on final approval: the final approver becomes the reviewer,
+ * needs the payroll GL review area and can be none of the journal preparer, the reconciler or the mapping maker and
+ * checker. The review is immutable; posting authorization stays a separate step. Runs inside the approval transaction.
+ *
+ * @param array $draft_data Draft payload: reconciliation_id and reconciliation_sha256
+ * @param int $draft_id Shared approval draft id
+ * @return int|false Review id, or false to refuse the approval
+ */
+function payroll_gl_review_record_approval($draft_data,$draft_id){
+ $error=null;$actor=current_user_id_or_zero();
+ if($actor<=0||(int)$draft_id<=0||!pay_gl_001_require_access(PAY_GL_001_REVIEW_PERMISSION,$error)||!is_array($draft_data)||empty($draft_data['reconciliation_id'])||!isset($draft_data['reconciliation_sha256']))return false;
+ $id=(int)$draft_data['reconciliation_id'];
+ $r=pay_gl_001_db_one("SELECT rc.*,ji.company_id,ji.prepared_by,ji.approval_sha256,ji.result_set_sha256,mv.maker_id,mv.checker_id FROM ".TB_PREF."hrm_pay_gl_001_reconciliations rc JOIN ".TB_PREF."hrm_pay_gl_001_journal_intents ji ON ji.journal_intent_id=rc.journal_intent_id JOIN ".TB_PREF."hrm_pay_gl_001_mapping_versions mv ON mv.mapping_snapshot_sha256=ji.mapping_snapshot_sha256 WHERE rc.reconciliation_id=".db_escape($id)." LIMIT 2 FOR UPDATE");
+ if(!$r||!hash_equals((string)$r['reconciliation_sha256'],(string)$draft_data['reconciliation_sha256'])||!pay_gl_001_assert_scope((int)$r['company_id'],$error)
+  ||in_array($actor,array((int)$r['prepared_by'],(int)$r['created_by'],(int)$r['maker_id'],(int)$r['checker_id']),true)||pay_gl_001_approval_contract_version($r,$error)===false)return false;
+ $ex=pay_gl_001_db_one("SELECT * FROM ".TB_PREF."hrm_pay_gl_001_reviews WHERE reconciliation_id=".db_escape($id)." LIMIT 2 FOR UPDATE");
+ if($ex)return $ex['decision']==='approved'&&(int)$ex['reviewer_id']===$actor?(int)$ex['review_id']:false;
+ $at=pay_gl_001_now();$sha=pay_gl_001_hash(array('reconciliation_sha256'=>$r['reconciliation_sha256'],'decision'=>'approved','reviewer_id'=>$actor,'reviewed_at'=>$at));
+ $sql="INSERT INTO ".TB_PREF."hrm_pay_gl_001_reviews (reconciliation_id,decision,reviewer_id,reviewed_at,review_sha256,created_at) VALUES (".db_escape($id).",".db_escape('approved').",".db_escape($actor).",".db_escape($at).",".db_escape($sha).",".db_escape($at).")";
+ return db_query($sql)?(int)db_insert_id():false;
+}
+
+/**
+ * The finance review the shared workflow recorded for one reconciliation, for the reviewer who decided it. The native
+ * payroll finance step binds it into native custody; this function writes nothing.
+ *
+ * @param int $reconciliation_id Reconciliation id
+ * @param string|null $error Failure token
+ * @return array|false review_id, review_sha256 and decision, or false
+ */
+function pay_gl_001_recorded_finance_review($reconciliation_id,&$error=null){
+ $error=null;if(!pay_gl_001_require_access(PAY_GL_001_REVIEW_PERMISSION,$error))return false;$actor=current_user_id_or_zero();
+ $r=pay_gl_001_db_one("SELECT rc.*,ji.company_id,ji.approval_sha256,ji.result_set_sha256 FROM ".TB_PREF."hrm_pay_gl_001_reconciliations rc JOIN ".TB_PREF."hrm_pay_gl_001_journal_intents ji ON ji.journal_intent_id=rc.journal_intent_id WHERE rc.reconciliation_id=".db_escape((int)$reconciliation_id)." LIMIT 2");
+ if(!$r||!pay_gl_001_assert_scope((int)$r['company_id'],$error))return pay_gl_001_runtime_fail($error,'reconciliation_missing_or_scope_denied');
  if(!pay_gl_001_require_versioned_owner('gl_review',$r,$error))return false;
- $at=pay_gl_001_now();$sha=pay_gl_001_hash(array('reconciliation_sha256'=>$r['reconciliation_sha256'],'decision'=>$decision,'reviewer_id'=>$actor,'reviewed_at'=>$at));begin_transaction();$ex=pay_gl_001_db_one("SELECT * FROM ".TB_PREF."hrm_pay_gl_001_reviews WHERE reconciliation_id=".db_escape((int)$reconciliation_id)." LIMIT 2");if($ex){if($ex['decision']!==$decision||(int)$ex['reviewer_id']!==$actor){cancel_transaction();return pay_gl_001_runtime_fail($error,'review_conflict');}commit_transaction();return $ex;}
- $sql="INSERT INTO ".TB_PREF."hrm_pay_gl_001_reviews (reconciliation_id,decision,reviewer_id,reviewed_at,review_sha256,created_at) VALUES (".db_escape((int)$reconciliation_id).",".db_escape($decision).",".db_escape($actor).",".db_escape($at).",".db_escape($sha).",".db_escape($at).")";if(!db_query($sql)){cancel_transaction();return pay_gl_001_runtime_fail($error,'review_insert_failed');}$id=(int)db_insert_id();commit_transaction();return array('review_id'=>$id,'review_sha256'=>$sha,'decision'=>$decision);
+ $v=pay_gl_001_db_one("SELECT * FROM ".TB_PREF."hrm_pay_gl_001_reviews WHERE reconciliation_id=".db_escape((int)$reconciliation_id)." LIMIT 2");
+ if(!$v)return pay_gl_001_runtime_fail($error,'finance_review_not_decided');
+ if((int)$v['reviewer_id']!==$actor)return pay_gl_001_runtime_fail($error,'review_sod_denied');
+ if(!hash_equals(pay_gl_001_hash(array('reconciliation_sha256'=>$r['reconciliation_sha256'],'decision'=>$v['decision'],'reviewer_id'=>(int)$v['reviewer_id'],'reviewed_at'=>$v['reviewed_at'])),(string)$v['review_sha256']))return pay_gl_001_runtime_fail($error,'review_hash_mismatch');
+ return array('review_id'=>(int)$v['review_id'],'review_sha256'=>$v['review_sha256'],'decision'=>$v['decision']);
 }
 
 /** Posting execution authorization is a distinct immutable command. */

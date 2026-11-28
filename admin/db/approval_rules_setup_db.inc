@@ -66,6 +66,8 @@ function get_approvable_transaction_types()
 		ST_HRM_BENEFIT_LIFE_EVENT,
 		// Payroll retro correction plans
 		ST_HRM_PAYROLL_RETRO_PLAN,
+		// Finance review of reconciled payroll journals
+		ST_HRM_PAYROLL_GL_REVIEW,
 	);
 
 	$result = array();
